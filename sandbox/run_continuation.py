@@ -37,7 +37,7 @@ bvp = bs.Problem(function,boundary_conditions,
                                 constraint = []
                                 )
 
-solver = algo.SingleShooting(derivative_method='csd')
+
 
 ################################################################
 #           Stuff in the input file                            #
@@ -49,43 +49,48 @@ step1 = ContinuationStep()
 step1.num_cases = 5
 step1.initial('y1',2.0)
 
-import matplotlib.pylab as pylab
-pylab.figure()
 
-################################################################
-#            Actual code for runContinuation                   #
-################################################################
+from numba.decorators import jit
+@autojit
+def run_continuation(step1,bvp):
+    import matplotlib.pylab as pylab
+    pylab.figure()
+    solver = algo.SingleShooting(derivative_method='csd')
+    ################################################################
+    #            Actual code for runContinuation                   #
+    ################################################################
 
-step1.set_bvp(bvp)
-step1.reset();
+    step1.set_bvp(bvp)
+    step1.reset();
 
-print('\nRunning continuation set 1:')
-sol_last = solinit
-total_time = 0.0;
-while not step1.complete():
-    print('Starting iteration '+str(step1.ctr+1)+'/'+str(step1.num_cases))
+    print('\nRunning continuation set 1:')
+    sol_last = solinit
+    total_time = 0.0;
+    while not step1.complete():
+        print('Starting iteration '+str(step1.ctr+1)+'/'+str(step1.num_cases))
     
-    tic()
+        tic()
     
-    bvp = step1.next()
-    sol = solver.solve(bvp,sol_last)
+        bvp = step1.next()
+        sol = solver.solve(bvp,sol_last)
     
-    # Update solution for next iteration
-    sol_last = sol
-    elapsed_time = toc()
-    total_time  += elapsed_time
-    print('Iteration %d/%d converged in %0.4f seconds\n' % (step1.ctr+1, step1.num_cases, elapsed_time))
+        # Update solution for next iteration
+        sol_last = sol
+        elapsed_time = toc()
+        total_time  += elapsed_time
+        print('Iteration %d/%d converged in %0.4f seconds\n' % (step1.ctr+1, step1.num_cases, elapsed_time))
     
-    pylab.plot(sol.x, sol.y[0,:],'-')
+        pylab.plot(sol.x, sol.y[0,:],'-')
 
-print('Continuation process completed in %0.4f seconds.\n' % total_time)
+    print('Continuation process completed in %0.4f seconds.\n' % total_time)
     
     
-################################################################
+    ################################################################
 
-pylab.title('Solution for MAT4BVP example (Mathieu\'s equation)')
-pylab.xlabel('x')
-pylab.legend(['y(0)=1.0','y(0)=1.25','y(0)=1.50','y(0)=1.75','y(0)=2.0'])
-pylab.show()
+    pylab.title('Solution for MAT4BVP example (Mathieu\'s equation)')
+    pylab.xlabel('x')
+    pylab.legend(['y(0)=1.0','y(0)=1.25','y(0)=1.50','y(0)=1.75','y(0)=2.0'])
+    pylab.show()
 
+run_continuation(step1,bvp)
 # keyboard()
