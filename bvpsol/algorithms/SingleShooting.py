@@ -188,7 +188,7 @@ class SingleShooting(Algorithm):
         r0 = None
         while True:
             if iter>self.max_iterations:
-                print "Maximum iterations exceeded!"
+                print("Maximum iterations exceeded!")
                 break
             y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
             # Propagate STM and original system together
@@ -206,7 +206,7 @@ class SingleShooting(Algorithm):
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:  
                 if self.verbose:
-                    print "Converged in "+str(iter)+" iterations."
+                    print("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
             
@@ -216,7 +216,7 @@ class SingleShooting(Algorithm):
 
             r1 = np.linalg.norm(res)
             if self.verbose:
-                print r1
+                print(r1)
             if r0 is not None:
                 beta = (r0-r1)/(alpha*r0)
                 if beta < 0:
