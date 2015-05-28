@@ -17,9 +17,9 @@ def function(X,Y,parameters,aux):
                     0])
 
 def boundary_conditions (Ya,Yb,parameters,aux):
-    return np.array([Ya[1] - aux['initial'][1],
-                     Ya[0] - aux['initial'][0],
-                     Yb[1] - aux['terminal'][1]])
+    return np.array([Ya[1] - aux['initial']['y2'],
+                     Ya[0] - aux['initial']['y1'],
+                     Yb[1] - aux['terminal']['y2']])
 def guess(X):
     return np.array([np.cos(4.0*X)   ,
                         -4.0*np.sin(4.0*X),
@@ -31,10 +31,8 @@ solinit = bs.bvpinit(np.linspace(0,math.pi,2), guess)
 
 bvp = bs.Problem(function,boundary_conditions,
                                 states = ['y1','y2'],
-                                const_names  = [],
-                                constraint_names = [], 
-                                initial_bc = [1.0, 0.0],
-                                terminal_bc = [np.nan, 0.0], 
+                                initial_bc = {'y1':1.0, 'y2':0.0},
+                                terminal_bc = {'y2':0.0}, 
                                 const = [], 
                                 constraint = []
                                 )

@@ -55,7 +55,6 @@ FunctionTemplate.compile('../bvpsol/templates/compute_control.tmpl.py',problem_d
 
 
 
-
 ########################################
 #
 #       Same as brachisto.py below

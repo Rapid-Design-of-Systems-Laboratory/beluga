@@ -1,10 +1,10 @@
-from Solution import Solution
+from .Solution import Solution
 import numpy as np
 def bvpinit(x,y,parameters=None):
     # If y is a function, evaluate y at all 'x' and return solution object
     x_val = np.array(x)
     if callable(y):
-        y_val = np.array(map(y,x)).T
+        y_val = np.array(list(map(y,x))).T
     else:
         y = np.array(y)
         if y.ndim == 1:
@@ -16,5 +16,4 @@ def bvpinit(x,y,parameters=None):
             raise ValueError("Number of columns in y should match number of elements in x")
         else:
             y_val = y
-    
     return Solution(x_val,y_val,parameters)

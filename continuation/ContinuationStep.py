@@ -1,4 +1,4 @@
-from ContinuationVariable import ContinuationVariable
+from .ContinuationVariable import ContinuationVariable
 import numpy as np
 class ContinuationStep(object):
     """Defines one continuation step in continuation set"""
