@@ -8,7 +8,7 @@ def keyboard(banner=None):
         raise None
     except:
         frame = sys.exc_info()[2].tb_frame.f_back
-    print "# Use quit() to exit :) Happy debugging!"
+    print("# Use quit() to exit :) Happy debugging!")
     # evaluate commands in current namespace
     namespace = frame.f_globals.copy()
     namespace.update(frame.f_locals)
