@@ -1,4 +1,6 @@
 # Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
+# TODO: Add to SingleShooting class
+
 from numpy import double, sign, finfo, array, zeros, dot, mod, size, inf, all, max, min, abs, mat
 from numpy.linalg import norm
 
@@ -43,9 +45,7 @@ def processOdeArgs(**kwargs):
 
     return defaults
 
-
 def ode45(vfun, vslot, vinit, **kwargs):
-
     # test input types etc
 
     # process keyword arguments
