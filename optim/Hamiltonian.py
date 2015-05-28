@@ -12,8 +12,8 @@ class Hamiltonian(object):
         self.costate_rate = []
 
     def make_costate_rate(self,costate):
-        self.costate_rate.append(str(diff(parse_expr(self.free),
-            symbols(costate))))
+        self.costate_rate.append(str(diff(parse_expr(
+        '-1*(' + self.free + ')'),symbols(costate))))
 
     def make_ctrl_partial(self,ctrl):
         self.ctrl_partial.append(str(diff(parse_expr(self.free),

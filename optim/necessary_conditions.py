@@ -60,8 +60,7 @@ def compute_necessary_conditions(problem):
     
     # Compute costate process equations
     for i in range(len(problem.state)):
-        nec_cond.ham.costate_rate.append(
-            nec_cond.ham.make_costate_rate(nec_cond.costate[i]))
+        nec_cond.ham.make_costate_rate(problem.state[i].state_var)
     
     # Compute unconstrained control partial
     for i in range(len(problem.control)):
