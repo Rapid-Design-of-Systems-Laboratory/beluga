@@ -8,6 +8,6 @@ class FunctionTemplate(object):
         f.close()
         
         code = pystache.render(tmpl,data)
-        if show:
+        if verbose:
             print(code)
         exec code in module.__dict__
