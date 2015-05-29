@@ -35,15 +35,15 @@ def guess(X):
 
 from bvpsol.algorithms import SingleShooting#, ScikitsBVPSolver
 
-import bvpsol as bs
+import bvpsol
 # import matplotlib.pylab as pylab
 
 shoot_fd  = SingleShooting(derivative_method='fd')
 shoot_csd = SingleShooting(derivative_method='csd',tolerance=1e-10)
 
-# #solinit = bs.Solution(np.linspace(0,4,5),np.array([[0,-2],[2.669,4]]))
+# #solinit = bvpsol.Solution(np.linspace(0,4,5),np.array([[0,-2],[2.669,4]]))
 # # Initial guess is just the same vector
-# solinit = bs.bvpinit(np.linspace(0,4,5),[0,2.5])
+# solinit = bvpsol.bvpinit(np.linspace(0,4,5),[0,2.5])
 # sol1 = shoot_fd.solve(twoode,twobc, solinit)
 #
 # pylab.figure()
@@ -55,8 +55,8 @@ shoot_csd = SingleShooting(derivative_method='csd',tolerance=1e-10)
 # pylab.draw()
 
 # Use guess function to generate initial guess structure
-solinit = bs.bvpinit(np.linspace(0,math.pi,10), guess)
-prob2 = bs.Problem(function,boundary_conditions,
+solinit = bvpsol.bvpinit(np.linspace(0,math.pi,10), guess)
+prob2 = bvpsol.Problem(function,boundary_conditions,
                                 states = ['y1','y2','lambda'],
                                 initial_bc = {'y1':1.0, 'y2':0.0,'lambda':0.0},
                                 terminal_bc = {'y1':0.0},

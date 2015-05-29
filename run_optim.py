@@ -1,3 +1,4 @@
+# Refactor
 from sandbox.inputFile import inputs
 from optim.necessary_conditions import compute_necessary_conditions
 from utils import *
@@ -9,8 +10,8 @@ from bvpsol.algorithms import SingleShooting#, ScikitsBVPSolver
 import bvpsol as bs
 from continuation import *
 
-import sys, os, imp
-sys.path.append(os.getcwd()+'/../')
+# import sys, os, imp
+# sys.path.append(os.getcwd()+'/../')
 
 # from optim import *
 
