@@ -2,7 +2,8 @@ import sys, os, imp
 import numpy as np
 sys.path.append(os.getcwd()+'/../')
 
-from problem import *
+import optim.Problem as Problem
+from optim.problem import *
 from continuation import *
 
 import bvpsol.algorithms
@@ -28,10 +29,11 @@ problem.control = [Variable('theta','rad')]
 problem.cost['path'] = Expression('1','s')
 
 # Define constraints
-problem.constraint = [Constraint('init','x-x_0','m'),
-                      Constraint('init','y-y_0','m'),
-                      Constraint('term','x-x_f','m'),
-                      Constraint('term','y-y_f','m')]
+problem.constraints.add_initial('x-x_0','m')  \
+                   .add_initial('y-y_0','m')  \
+                   .add_initial('v-v_0','m/s')\
+                   .add_terminal('x-x_f','m')\
+                   .add_terminal('y-y_f','m')
 
 # Define constants
 problem.constant = [Value('g','9.81')]
