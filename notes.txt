@@ -1,3 +1,5 @@
+##### 29 May 2015 - 3:05 pm Update #####
+
 - made "Beluga" class
     - class method run() that takes a problem object, instantiates a Beluga object and calls solve()
     - run() is just there to make things easier for user. 
