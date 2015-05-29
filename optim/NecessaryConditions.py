@@ -3,11 +3,20 @@ from sympy import *
 from sympy.parsing.sympy_parser import parse_expr
 
 from utils import keyboard
+import bvpsol.BVP
+import pystache, imp
 
 class NecessaryConditions(object):
     """Defines necessary conditions of optimality."""
     
-    def __init__(self):
+    compile_list = ['deriv_func','bc_func','compute_control']
+    template_prefix = '../bvpsol/templates/'
+    template_suffix = '.tmpl.py'
+    
+    # pystache renderer without HTML escapes
+    renderer = pystache.Renderer(escape=lambda u: u)
+    
+    def __init__(self, problem):
         """Initializes all of the relevant necessary conditions."""
         self.aug_cost = {}
         self.costate = []
@@ -16,6 +25,7 @@ class NecessaryConditions(object):
         self.ham_ctrl_partial = []
         self.ctrl_free = []
         self.bc = BoundaryConditions()
+        self.problem = problem
     
     def make_costate_rate(self, state):
         self.costate_rate.append(str(diff(parse_expr(
@@ -59,46 +69,134 @@ class NecessaryConditions(object):
         for i in range(len(problem.state)):
             self.ham += ' + ' + self.costate[i] + '*' + \
                 problem.state[i].process_eqn
-    
-    @classmethod
-    def compute(cls,problem):
-        """Perform variational calculus calculations on optimal control problem."""
-    
-        # Initialize necessary conditions object
-        nec_cond = cls()    
+                
+    # Compiles a function template file into a function object
+    # using the given data
+    def compile_function(self,filename,verbose=False):
+        """Compiles a function specified by filename and stores it in
+        self.compiled
+           
+        Returns: 
+            bool: True if successful
+            
+        Raises:
+            ValueError: If 'problem_data' or 'compiled' is not defined
+        """
+        f = open(filename)
+        tmpl = f.read()
+        f.close()
+        
+        if self.problem_data is None:
+            raise ValueError('Problem data not defined. Unable to compile function.')
+        
+        if self.compiled is None:
+            raise ValueError('Problem module not defined. Unable to compile function.')
+            
+        # Render the template using the data 
+        code = self.renderer.render(tmpl,self.problem_data)
+        if verbose:
+            print(code)
+        return exec(code,self.compiled.__dict__)
+        
+        
+    def get_bvp(self):
+        """Perform variational calculus calculations on optimal control problem
+           and returns an object describing the boundary value problem to be solved
+        
+        Returns: bvpsol.BVP object
+        """
     
         ## Create costate list
-        for i in range(len(problem.state)):
-            nec_cond.costate.append(problem.state[i].make_costate())
+        for i in range(len(self.problem.state)):
+            self.costate.append(self.problem.state[i].make_costate())
     
         # Build augmented cost strings
-        aug_cost_init = problem.cost['init'].expr
-        nec_cond.make_aug_cost(aug_cost_init,problem.constraint,'init')
+        aug_cost_init = self.problem.cost['init'].expr
+        self.make_aug_cost(aug_cost_init,self.problem.constraint,'init')
     
-        aug_cost_term = problem.cost['term'].expr
-        nec_cond.make_aug_cost(aug_cost_term,problem.constraint,'term')
+        aug_cost_term = self.problem.cost['term'].expr
+        self.make_aug_cost(aug_cost_term,self.problem.constraint,'term')
     
         # Compute costate conditions
-        nec_cond.make_costate_bc(problem.state,'init')
-        nec_cond.make_costate_bc(problem.state,'term')
+        self.make_costate_bc(self.problem.state,'init')
+        self.make_costate_bc(self.problem.state,'term')
     
         ## Unconstrained arc calculations
         # Construct Hamiltonian
-        nec_cond.make_ham(problem)
+        self.make_ham(self.problem)
     
         # Compute costate process equations
-        for i in range(len(problem.state)):
-            nec_cond.make_costate_rate(problem.state[i].state_var)
+        for i in range(len(self.problem.state)):
+            self.make_costate_rate(self.problem.state[i].state_var)
     
         # Compute unconstrained control partial
-        for i in range(len(problem.control)):
-            nec_cond.make_ctrl_partial(problem.control[i].var)
+        for i in range(len(self.problem.control)):
+            self.make_ctrl_partial(self.problem.control[i].var)
     
         # Compute unconstrained control law (need to add singular arc and bang/bang smoothing, numerical solutions)
-        for i in range(len(problem.control)):
-            nec_cond.make_ctrl(problem.control[i].var, i)
+        for i in range(len(self.problem.control)):
+            self.make_ctrl(self.problem.control[i].var, i)
     
-        return nec_cond
+        self.control_options = []
+    
+        for i in range(len(self.problem.control)):
+            for j in range(len(self.ctrl_free)):  
+                self.control_options.append([{'name':self.problem.control[i].var,'expr':self.ctrl_free[j]}])
+
+        # Create problem dictionary
+        # ONLY WORKS FOR ONE CONTROL
+        # NEED TO ADD BOUNDARY CONDITIONS
+        self.problem_data = {
+        'aux_list': [
+                {
+                'type' : 'const',
+                'vars': [self.problem.constant[i].var for i in range(len(self.problem.constant))]
+                },
+                {
+                'type' : 'constraint',
+                'vars': []
+                }
+         ],
+         'state_list': 
+             [self.problem.state[i].state_var for i in range(len(self.problem.state))] + 
+             [self.costate[i] for i in range(len(self.costate))] + 
+             ['tf']
+         ,
+         'deriv_list':
+             ['tf*(' + self.problem.state[i].process_eqn + ')' for i in range(len(self.problem.state))] + 
+             ['tf*(' + self.costate_rate[i] + ')' for i in range(len(self.costate_rate))] + 
+             ['tf*0']
+         ,
+         'num_states': 2*len(self.problem.state) + 1,
+         'left_bc_list':[
+             "_ya[0] - _x0['x']", # x(0
+             "_ya[1] - _x0['y']", # y(0)
+             "_ya[2] - _x0['v']"         
+         ],
+         'right_bc_list':[
+             "_yb[0] - _xf['x']", # x(tf)
+             "_yb[1] - _xf['y']", # y(tf)
+             "_yb[5] + 0.0",   # lamV(tf)
+             "_H     - 0",     # H(tf)
+         ],
+         'control_options': self.control_options,
+         'control_list':[self.problem.control[i].var for i in range(len(self.problem.control))],
+         'ham_expr':self.ham
+        }
+    #    problem.constraint[i].expr for i in range(len(problem.constraint))
+
+        # Create problem functions by importing from templates
+        self.compiled = imp.new_module('brachisto_prob')
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix) for func in self.compile_list]  
+
+        # Make this generic for BCs, constants and constraints
+        self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func,
+                        initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
+                        terminal_bc = {'x':0.1, 'y':-0.1}, 
+                        const = {'g':9.81},
+                        constraint = {}
+                    )
+        return self.bvp
     
 class BoundaryConditions(object):
     """Defines boundary condtiions."""

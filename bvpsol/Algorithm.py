@@ -5,5 +5,5 @@ class Algorithm(object):
 
     # Define common interface for algorithm classes
     @abc.abstractmethod
-    def solve(self,bvp,solinit):
+    def solve(self,bvp):
         """Method to solve the bvp with given arguments"""

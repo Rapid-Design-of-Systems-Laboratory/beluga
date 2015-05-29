@@ -1,11 +1,11 @@
 import sys, os, imp
+import numpy as np
 sys.path.append(os.getcwd()+'/../')
 
 from problem import *
 from continuation import *
 
 import bvpsol.algorithms
-
 
 from Beluga import Beluga
 """Brachistochrone example."""
@@ -42,18 +42,25 @@ problem.quantity = [Value('tanAng','tan(theta)')]
 
 problem.bvp_solver = bvpsol.algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
-problem.steps = []
+# Can be array or function handle
+# TODO: implement an "initial guess" class subclassing Solution
+problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 
-# Figure out nicer way of representing this
+problem.steps = ContinuationSet()
+
+# Figure out nicer way of representing this. Done?
 ind = 0
-problem.steps.append(ContinuationStep())
-problem.steps[-1].num_cases = 2
-problem.steps[-1].terminal('x',20.0)
-problem.steps[-1].terminal('y',-20.0)
+problem.steps.add_step(ContinuationStep().num_cases(2)
+                .terminal('x', 20.0)
+                .terminal('y',-20.0))
 
-problem.steps.append(ContinuationStep())
-problem.steps[-1].num_cases = 2
-problem.steps[-1].terminal('x',40.0)
-problem.steps[-1].terminal('y',-40.0)
+problem.steps.add_step().num_cases(2) \
+                .terminal('x', 20.0)  \
+                .terminal('y',-20.0)
+
+problem.steps.add_step() \
+                .num_cases(2) \
+                .terminal('x', 40.0) \
+                .terminal('y',-40.0)
 
 Beluga.run(problem)

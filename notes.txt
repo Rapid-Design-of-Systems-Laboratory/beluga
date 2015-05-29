@@ -1,0 +1,23 @@
+- made "Beluga" class
+    - class method run() that takes a problem object, instantiates a Beluga object and calls solve()
+    - run() is just there to make things easier for user. 
+    - moved run_optim into the Beluga.solve method
+    - created run_continuation_set() method
+        - clarify how initial guess is treated
+        
+- renamed bvpsol.Problem to bvpsol.BVP to avoid any naming clash
+    - Made initial guess a part of the BVP object (is this okay?)
+
+- moved compute_necessary_conditions into a get_bvp method in   NecessaryConditions which also creates a BVP object to return to Beluga
+
+- modified ContinuationStep class to allow chaining
+    - created num_cases() into a method that either sets or gets num_cases
+    
+- create ContinuationSet class subclassing list
+    - add_step() function allows adding steps using chaining
+    
+- change inputFile.py into a script
+    - added continuation steps list (need to rethink representation of steps)
+    - added bvp solver as input option
+    - added initial guess option
+    - added example to show three ways to implement chaining
