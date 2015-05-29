@@ -31,5 +31,4 @@ def inputs():
     # Define quantity
     problem.quantity = [Value('tanAng','tan(theta)')]
     
-    
     return problem
