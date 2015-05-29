@@ -8,11 +8,7 @@ class BVP(object):
         self.bc_func = bc_func
         self.guess = guess
         self.aux_vars = {"initial": initial_bc, "terminal": terminal_bc, "const": const, "constraint":constraint, "states":states}
-        # self.aux_var_names = {"states":states, "initial": states,"terminal": states, "const": const_names, "constraint":constraint_names}
 
-    def set_guess(self,guess):
-        self.guess = guess
-        
     # Update BVP using continuation variable list
     def update(self, continuation_vars):
         for var_type in continuation_vars.keys():
