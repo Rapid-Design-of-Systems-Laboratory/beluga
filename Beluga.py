@@ -59,12 +59,11 @@ class Beluga(object):
         #       String: Load file?
         bvp = nec_cond.get_bvp()
         solinit = self.problem.guess
-        bvp.set_guess(solinit)
         
         tic()
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
-        self.out = self.run_continuation_set(self.problem.steps, bvp)
+        self.out = self.run_continuation_set(self.problem.steps, bvp, solinit)
         total_time = toc();
         
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -78,7 +77,7 @@ class Beluga(object):
         plt.show(block=False)
         
     # TODO: Refactor how code deals with initial guess
-    def run_continuation_set(self,steps,bvp):
+    def run_continuation_set(self,steps,bvp,guess):
         # Loop through all the continuation steps
         solution_set = []
         for step_idx,step in enumerate(steps):
@@ -89,7 +88,7 @@ class Beluga(object):
             solution_set.append(ContinuationSolution())
             if step_idx == 0:
                 step.set_bvp(bvp)
-                sol_last = bvp.guess
+                sol_last = guess
             else:
                 # Use the bvp & solution from last continuation set
                 sol_last = solution_set[step_idx-1][-1]
@@ -98,9 +97,8 @@ class Beluga(object):
             while not step.complete():
                 print('Starting iteration '+str(step.ctr+1)+'/'+str(step.num_cases()))
                 tic()
-                bvp.set_guess(sol_last)
                 bvp = step.next()
-                sol = self.problem.bvp_solver.solve(bvp)
+                sol = self.problem.bvp_solver.solve(bvp, sol_last)
     
                 # Update solution for next iteration
                 sol_last = sol

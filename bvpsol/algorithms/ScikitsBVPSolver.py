@@ -14,9 +14,9 @@ class ScikitsBVPSolver(Algorithm):
         right_bc = res[self.num_left_boundary_conditions:]
         return (left_bc, right_bc) 
         
-    def solve(self,bvp):
+    def solve(self,bvp,guess):
         
-        solinit = bvp.guess
+        solinit = guess
         num_ODE = len(bvp.aux_vars['initial'])
 
         deriv_func = lambda x,y,p=None: bvp.deriv_func(x,y,p,bvp.aux_vars)

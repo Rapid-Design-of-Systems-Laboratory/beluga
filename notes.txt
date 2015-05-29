@@ -1,4 +1,4 @@
-##### 29 May 2015 - 3:05 pm Update #####
+##### 29 May 2015 - 3:15 pm Update #####
 
 - made "Beluga" class
     - class method run() that takes a problem object, instantiates a Beluga object and calls solve()
@@ -8,7 +8,6 @@
         - clarify how initial guess is treated
         
 - renamed bvpsol.Problem to bvpsol.BVP to avoid any naming clash
-    - Made initial guess a part of the BVP object (is this okay?)
 
 - moved compute_necessary_conditions into a get_bvp method in   NecessaryConditions which also creates a BVP object to return to Beluga
 
