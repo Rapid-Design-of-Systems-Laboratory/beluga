@@ -29,7 +29,7 @@ def guess(X):
 
 solinit = bvpsol.bvpinit(np.linspace(0,math.pi,2), guess)
 
-bvp = bvpsol.Problem(function,boundary_conditions,
+bvp = bvpsol.BVP(function,boundary_conditions,
                                 states = ['y1','y2'],
                                 initial_bc = {'y1':1.0, 'y2':0.0},
                                 terminal_bc = {'y2':0.0}, 

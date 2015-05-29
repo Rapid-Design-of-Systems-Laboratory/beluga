@@ -101,7 +101,7 @@ class Beluga(object):
 
 
         solinit = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
-        bvp = bvpsol.Problem(problem_mod.deriv_func,problem_mod.bc_func,
+        bvp = bvpsol.BVP(problem_mod.deriv_func,problem_mod.bc_func,
                                         states = ['x','y','v','lamX','lamY','lamV','tf'],
                                         initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
                                         terminal_bc = {'x':0.1, 'y':-0.1}, 
@@ -116,20 +116,20 @@ class Beluga(object):
         self.out = []   # Array to store all solutions
         total_time = 0.0;
         for step_idx,step in enumerate(self.problem.steps):
-        
-            step.set_bvp(bvp)
+            # Assign BVP from last continuation set
             step.reset();
 
             print('\nRunning continuation step '+str(step_idx+1)+' : ')
             
             self.out.append([])
             if step_idx == 0:
+                step.set_bvp(bvp)
                 sol_last = solinit
             else:
-                # Use the last solution from last continuation set 
-                # as the starting point
+                # Use the bvp & solution from last continuation set
                 sol_last = self.out[step_idx-1][-1]
-
+                step.set_bvp(self.problem.steps[step_idx-1].bvp)
+                
             while not step.complete():
                 print('Starting iteration '+str(step.ctr+1)+'/'+str(step.num_cases))
                 tic()

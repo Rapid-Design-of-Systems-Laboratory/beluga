@@ -1,0 +1,8 @@
+- moved compute_necessary_conditions into a static method in NecessaryConditions
+- made "Beluga" class
+    - class method run() that takes a problem object, instantiates a Beluga object and calls solve()
+    - moved run_optim into the Beluga.solve method
+- change inputFile.py into a script
+- added continuation steps list (need to rethink representation of steps)
+- added bvp solver as input option
+- renamed bvpsol.Problem to bvpsol.BVP to avoid any naming clash

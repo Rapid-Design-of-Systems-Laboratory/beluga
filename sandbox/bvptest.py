@@ -56,7 +56,7 @@ shoot_csd = SingleShooting(derivative_method='csd',tolerance=1e-10)
 
 # Use guess function to generate initial guess structure
 solinit = bvpsol.bvpinit(np.linspace(0,math.pi,10), guess)
-prob2 = bvpsol.Problem(function,boundary_conditions,
+prob2 = bvpsol.BVP(function,boundary_conditions,
                                 states = ['y1','y2','lambda'],
                                 initial_bc = {'y1':1.0, 'y2':0.0,'lambda':0.0},
                                 terminal_bc = {'y1':0.0},

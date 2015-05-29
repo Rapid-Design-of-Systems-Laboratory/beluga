@@ -79,7 +79,7 @@ solver = SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10
 ################################################################
 from continuation import *
 def run_continuation():
-    bvp = bvpsol.Problem(problem_mod.deriv_func,problem_mod.bc_func,
+    bvp = bvpsol.BVP(problem_mod.deriv_func,problem_mod.bc_func,
                                     initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
                                     terminal_bc = {'x':0.1, 'y':-0.1}, 
                                     const = {'g':-9.81},

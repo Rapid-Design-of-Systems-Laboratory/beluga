@@ -1,5 +1,5 @@
 
-class Problem(object):
+class BVP(object):
     """
     Defines a boundary value problem
     """

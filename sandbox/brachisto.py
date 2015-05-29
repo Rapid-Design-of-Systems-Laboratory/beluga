@@ -131,7 +131,7 @@ def brachisto_bc(ya,yb,p,aux):
 ################################################################
 
 solinit = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
-bvp = bvpsol.Problem(brachisto_ode,brachisto_bc,
+bvp = bvpsol.BVP(brachisto_ode,brachisto_bc,
                                 states = ['x','y','v','lamX','lamY','lamV','tf'],
                                 # const_names = ['g'],
                                 # constraint_names = [],
