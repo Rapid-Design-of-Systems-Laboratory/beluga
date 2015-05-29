@@ -3,8 +3,10 @@ from sympy import *
 from sympy.parsing.sympy_parser import parse_expr
 
 from utils import keyboard
+
 import bvpsol.BVP
-import pystache, imp
+import pystache, imp, re
+from optim.problem import *
 
 class NecessaryConditions(object):
     """Defines necessary conditions of optimality."""
@@ -98,6 +100,24 @@ class NecessaryConditions(object):
             print(code)
         return exec(code,self.compiled.__dict__)
         
+    
+    def sanitize_constraint(self,constraint):
+        if constraint.type == 'initial':
+            pattern = r'([\w\d\_]+)_0'
+            prefix = '_x0'
+        elif constraint.type == 'terminal':
+            pattern = r'([\w\d\_]+)_f'
+            prefix = '_xf'
+        else:
+            raise ValueError('Invalid constraint type')
+        
+        m = re.findall(pattern,constraint.expr)
+        invalid = [x for x in m if x[0] not in self.problem.state]
+        if not all(x is None for x in invalid):
+            raise ValueError('Invalid expression in boundary constraint')
+
+        constraint.expr = re.sub(pattern,prefix+r"['\1']",constraint.expr)
+        return constraint
         
     def get_bvp(self):
         """Perform variational calculus calculations on optimal control problem
@@ -112,10 +132,10 @@ class NecessaryConditions(object):
     
         # Build augmented cost strings
         aug_cost_init = self.problem.cost['init'].expr
-        self.make_aug_cost(aug_cost_init,self.problem.constraint,'init')
+        self.make_aug_cost(aug_cost_init,self.problem.constraints,'init')
     
         aug_cost_term = self.problem.cost['term'].expr
-        self.make_aug_cost(aug_cost_term,self.problem.constraint,'term')
+        self.make_aug_cost(aug_cost_term,self.problem.constraints,'term')
     
         # Compute costate conditions
         self.make_costate_bc(self.problem.state,'init')
@@ -146,6 +166,12 @@ class NecessaryConditions(object):
         # Create problem dictionary
         # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
+        
+        initial_bc = self.problem.constraints.get('initial')
+        terminal_bc = self.problem.constraints.get('initial')
+        
+        bc1 = [self.sanitize_constraint(x) for x in initial_bc]
+        
         self.problem_data = {
         'aux_list': [
                 {
@@ -168,22 +194,29 @@ class NecessaryConditions(object):
              ['tf*0']
          ,
          'num_states': 2*len(self.problem.state) + 1,
+
+
+         # Compute these automatically?
+         # 'left_bc_list':[self.sanitize_constraint(x).expr for x in initial_bc]+self.bc.init,
+         # 'right_bc_list':[self.sanitize_constraint(x).expr for x in terminal_bc]+self.bc.term,
+         
          'left_bc_list':[
-             "_ya[0] - _x0['x']", # x(0
-             "_ya[1] - _x0['y']", # y(0)
-             "_ya[2] - _x0['v']"         
+             "x - _x0['x']", # x(0
+             "y - _x0['y']", # y(0)
+             "v - _x0['v']"
          ],
          'right_bc_list':[
-             "_yb[0] - _xf['x']", # x(tf)
-             "_yb[1] - _xf['y']", # y(tf)
-             "_yb[5] + 0.0",   # lamV(tf)
+             "x - _xf['x']", # x(tf)
+             "y - _xf['y']", # y(tf)
+             "lagrange_v + 0.0",   # lamV(tf)
              "_H     - 0",     # H(tf)
          ],
          'control_options': self.control_options,
          'control_list':[self.problem.control[i].var for i in range(len(self.problem.control))],
          'ham_expr':self.ham
         }
-    #    problem.constraint[i].expr for i in range(len(problem.constraint))
+
+    #    problem.constraints[i].expr for i in range(len(problem.constraints))
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('brachisto_prob')

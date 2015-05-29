@@ -1,4 +1,4 @@
-from problem import Expression, Execute
+from optim.problem import Expression, Execute, ConstraintSet
 
 # from os import getcwd
 
@@ -15,7 +15,7 @@ class Problem(object):
                      'path': Expression('0','nd')}
         self.constant = []
         self.quantity = []
-        self.constraint = []
+        self.constraints = ConstraintSet()
         self.scale = []
         self.continuation = []
         self.execute = Execute();

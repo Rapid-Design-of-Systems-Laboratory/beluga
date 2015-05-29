@@ -1,3 +1,15 @@
+##### 29 May 2015 - 4:15 pm Update #####
+
+- added ConstraintSet container class
+    - method chaining allows
+
+- renamed problem.constraint to problem.constraints
+- add equivalence override to State class
+- first attempt at automating BC creation
+
+- TODO: Create a "chainable list" class for general use?
+    - Can be used for constraints, continuation set etc.
+
 ##### 29 May 2015 - 3:15 pm Update #####
 
 - made "Beluga" class
@@ -16,7 +28,8 @@
     
 - create ContinuationSet class subclassing list
     - add_step() function allows adding steps using chaining
-    
+
+- removed FunctionTemplate.py and added compile() to NecessaryConditions
 - change inputFile.py into a script
     - added continuation steps list (need to rethink representation of steps)
     - added bvp solver as input option

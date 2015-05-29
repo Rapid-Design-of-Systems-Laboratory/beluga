@@ -3,7 +3,7 @@ class Constraint(object):
     """Defines constraint information."""
     # NEED TO ADD PATH CONSTRAINT
     
-    def __init__(self, type = '', expr = '', unit = ''):
+    def __init__(self, type = '', expr = '', unit = '', preprocess=True):
         """
         Input: type (string)
                expr (string)
