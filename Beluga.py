@@ -80,12 +80,12 @@ class Beluga(object):
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp):
         # Loop through all the continuation steps
+        solution_set = []
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
             step.reset();
+            print('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
-            print('\nRunning continuation step '+str(step_idx+1)+' : ')
-            solution_set = []
             solution_set.append(ContinuationSolution())
             if step_idx == 0:
                 step.set_bvp(bvp)
@@ -111,5 +111,5 @@ class Beluga(object):
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))    
                 plt.plot(sol.y[0,:], sol.y[1,:],'-')
 
-            print('Done.\n')
+            print('Done.')
         

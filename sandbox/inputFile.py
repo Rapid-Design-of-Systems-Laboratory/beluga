@@ -49,17 +49,17 @@ problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 problem.steps = ContinuationSet()
 
 # Figure out nicer way of representing this. Done?
-ind = 0
-problem.steps.add_step(ContinuationStep().num_cases(2)
+problem.steps.add_step(ContinuationStep()
+                .num_cases(2)
                 .terminal('x', 20.0)
                 .terminal('y',-20.0))
 
 problem.steps.add_step().num_cases(2) \
-                .terminal('x', 20.0)  \
-                .terminal('y',-20.0)
+                .terminal('x', 30.0)  \
+                .terminal('y',-30.0)
 
 problem.steps.add_step() \
-                .num_cases(2) \
+                .num_cases(3) \
                 .terminal('x', 40.0) \
                 .terminal('y',-40.0)
 
