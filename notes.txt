@@ -21,3 +21,10 @@
     - added bvp solver as input option
     - added initial guess option
     - added example to show three ways to implement chaining
+
+- added automation to __init__ files
+
+TODO:
+* create BelugaConfig class to describe solver configuration
+  such as output directory, restart options etc.
+
