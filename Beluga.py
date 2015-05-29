@@ -15,12 +15,23 @@ class Beluga(object):
 
     @classmethod
     def run(cls,problem):
+        """Takes a problem statement, instantiates a solver object and begins 
+        the solution process
+           
+        Returns: 
+            Beluga object
+        """
         inst = cls(problem) # Create instance of Beluga class
         inst.solve()
         return inst
         
     def solve(self):
-        nec_cond = NecessaryConditions.compute(self.problem)
+        """Starts the solution process
+           
+        Returns: 
+            Beluga object
+        """
+        nec_cond = NecessaryConditions(self.problem)
 
         # Determine order that controls should be computed
 
@@ -41,116 +52,64 @@ class Beluga(object):
 
     #    keyboard()
 
-        # Create problem dictionary
-        # ONLY WORKS FOR ONE CONTROL
-        # NEED TO ADD BOUNDARY CONDITIONS
-
-        control_options = []
+        # TODO: Implement other types of initial guess depending on data type
+        #       Array: Automatic?
+        #       Guess object: Directly use
+        #       Function handle: Call function
+        #       String: Load file?
+        bvp = nec_cond.get_bvp()
+        solinit = self.problem.guess
+        bvp.set_guess(solinit)
         
-        for i in range(len(self.problem.control)):
-            for j in range(len(nec_cond.ctrl_free)):  
-                control_options.append([{'name':self.problem.control[i].var,'expr':nec_cond.ctrl_free[j]}])
-
-        problem_data = {
-        'aux_list': [
-                {
-                'type' : 'const',
-                'vars': [self.problem.constant[i].var for i in range(len(self.problem.constant))]
-                },
-                {
-                'type' : 'constraint',
-                'vars': []
-                }
-         ],
-         'state_list': 
-             [self.problem.state[i].state_var for i in range(len(self.problem.state))] + 
-             [nec_cond.costate[i] for i in range(len(nec_cond.costate))] + 
-             ['tf']
-         ,
-         'deriv_list':
-             ['tf*(' + self.problem.state[i].process_eqn + ')' for i in range(len(self.problem.state))] + 
-             ['tf*(' + nec_cond.costate_rate[i] + ')' for i in range(len(nec_cond.costate_rate))] + 
-             ['tf*0']
-         ,
-         'num_states': 2*len(self.problem.state) + 1,
-         'left_bc_list':[
-             "_ya[0] - _x0['x']", # x(0
-             "_ya[1] - _x0['y']", # y(0)
-             "_ya[2] - _x0['v']"         
-         ],
-         'right_bc_list':[
-             "_yb[0] - _xf['x']", # x(tf)
-             "_yb[1] - _xf['y']", # y(tf)
-             "_yb[5] + 0.0",   # lamV(tf)
-             "_H     - 0",     # H(tf)
-         ],
-         'control_options': control_options
-             ,
-         'control_list':[self.problem.control[i].var for i in range(len(self.problem.control))],
-         'ham_expr':nec_cond.ham
-        }
-    #    problem.constraint[i].expr for i in range(len(problem.constraint))
-
-
-        # Create problem functions by importing from templates
-        problem_mod = imp.new_module('brachisto_prob')
-        bvpsol.FunctionTemplate.compile('../bvpsol/templates/deriv_func.tmpl.py',problem_data,problem_mod)
-        bvpsol.FunctionTemplate.compile('../bvpsol/templates/bc_func.tmpl.py',problem_data,problem_mod)
-        bvpsol.FunctionTemplate.compile('../bvpsol/templates/compute_control.tmpl.py',problem_data,problem_mod)    
-
-
-
-        solinit = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
-        bvp = bvpsol.BVP(problem_mod.deriv_func,problem_mod.bc_func,
-                                        states = ['x','y','v','lamX','lamY','lamV','tf'],
-                                        initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
-                                        terminal_bc = {'x':0.1, 'y':-0.1}, 
-                                        const = {'g':9.81},
-                                        constraint = {}
-                                        )
-
-        # TODO: Start from specific step with restart capability later
-        # Loop through all the continuation steps
-
+        tic()
+        # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
-        self.out = []   # Array to store all solutions
-        total_time = 0.0;
-        for step_idx,step in enumerate(self.problem.steps):
-            # Assign BVP from last continuation set
-            step.reset();
-
-            print('\nRunning continuation step '+str(step_idx+1)+' : ')
-            
-            self.out.append([])
-            if step_idx == 0:
-                step.set_bvp(bvp)
-                sol_last = solinit
-            else:
-                # Use the bvp & solution from last continuation set
-                sol_last = self.out[step_idx-1][-1]
-                step.set_bvp(self.problem.steps[step_idx-1].bvp)
-                
-            while not step.complete():
-                print('Starting iteration '+str(step.ctr+1)+'/'+str(step.num_cases))
-                tic()
-                bvp = step.next()
-                sol = self.problem.bvp_solver.solve(bvp,sol_last)
-    
-                # Update solution for next iteration
-                sol_last = sol
-                self.out[step_idx].append(sol)
-                
-                elapsed_time = toc()
-                total_time  += elapsed_time
-                print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases, elapsed_time))    
-                plt.plot(sol.y[0,:], sol.y[1,:],'-')
-
-            print('Done.\n')
-
+        self.out = self.run_continuation_set(self.problem.steps, bvp)
+        total_time = toc();
+        
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
+
         ################################################################
+        # Save the whole "self" object at this point?
 
         plt.title('Solution for Brachistochrone problem')
         plt.xlabel('x')
         plt.ylabel('y')
         plt.show(block=False)
+        
+    # TODO: Refactor how code deals with initial guess
+    def run_continuation_set(self,steps,bvp):
+        # Loop through all the continuation steps
+        for step_idx,step in enumerate(steps):
+            # Assign BVP from last continuation set
+            step.reset();
+
+            print('\nRunning continuation step '+str(step_idx+1)+' : ')
+            solution_set = []
+            solution_set.append(ContinuationSolution())
+            if step_idx == 0:
+                step.set_bvp(bvp)
+                sol_last = bvp.guess
+            else:
+                # Use the bvp & solution from last continuation set
+                sol_last = solution_set[step_idx-1][-1]
+                step.set_bvp(steps[step_idx-1].bvp)
+                
+            while not step.complete():
+                print('Starting iteration '+str(step.ctr+1)+'/'+str(step.num_cases()))
+                tic()
+                bvp.set_guess(sol_last)
+                bvp = step.next()
+                sol = self.problem.bvp_solver.solve(bvp)
+    
+                # Update solution for next iteration
+                sol_last = sol
+                solution_set[step_idx].append(sol)
+                
+                elapsed_time = toc()
+                # total_time  += elapsed_time
+                print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))    
+                plt.plot(sol.y[0,:], sol.y[1,:],'-')
+
+            print('Done.\n')
+        

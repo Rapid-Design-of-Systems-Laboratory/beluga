@@ -144,7 +144,7 @@ class SingleShooting(Algorithm):
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
     
     # TODO(Thomas): Use a BVP class of some kind to standardize interface
-    def solve(self,bvp,solinit):        
+    def solve(self,bvp):        
         """Solve a two-point boundary value problem 
             using the single shooting method
 
@@ -157,6 +157,7 @@ class SingleShooting(Algorithm):
         Raises:
         """
         
+        solinit = bvp.guess
         x  = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]

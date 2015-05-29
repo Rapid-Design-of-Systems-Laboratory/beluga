@@ -1,0 +1,2 @@
+class ContinuationSolution(list):
+    pass
