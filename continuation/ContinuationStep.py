@@ -64,7 +64,8 @@ class ContinuationStep(object):
         return self
 
     def iterate(self):
-        '''Generator class to create BVPS for the continuation step iterations'''
+        """Generator class to create BVPs for the continuation step iterations"""
+        
         if self.bvp is None:
             raise ValueError('No boundary value problem associated with this object')
 

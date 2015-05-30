@@ -1,5 +1,5 @@
 class DynamicSystem(object):
-    '''Represents a class of dynamic systems with its own states, dynamic equations, constants and constraints'''
+    """Represents a class of dynamic systems with its own states, dynamic equations, constants and constraints"""
     #
     __ctr = 0
     
