@@ -111,7 +111,7 @@ class SingleShooting(Algorithm):
             J = M+np.dot(N,phi)
         return J
     
-    def __stmode_fd(self, odefn, x, y, parameters, aux, nOdes = 0, StepSize=1e-6):
+    def __stmode_fd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-6):
         "Finite difference version of state transition matrix"
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes])  # Just states
@@ -128,7 +128,7 @@ class SingleShooting(Algorithm):
         phiDot = np.real(np.dot(F,phi))
         return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
 
-    def __stmode_csd(self, odefn, x, y, parameters, aux, nOdes = 0, StepSize=1e-50):
+    def __stmode_csd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
         "Complex step version of State Transition Matrix"
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes],dtype=complex)  # Just states
@@ -143,6 +143,13 @@ class SingleShooting(Algorithm):
         phiDot = np.real(np.dot(F,phi))
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
     
+    @staticmethod
+    def ode_wrap(func,*args, **argd):
+       def func_wrapper(x,y0):
+           return func(x,y0,*args,**argd)
+       return func_wrapper
+       
+       
     # TODO(Thomas): Use a BVP class of some kind to standardize interface
     def solve(self,bvp,guess):        
         """Solve a two-point boundary value problem 
@@ -187,13 +194,18 @@ class SingleShooting(Algorithm):
         alpha = 1
         beta = 1
         r0 = None
+        
+        
         while True:
             if iter>self.max_iterations:
                 print("Maximum iterations exceeded!")
                 break
             y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
+
             # Propagate STM and original system together
-            t,yy = ode45(lambda x,y: self.stm_ode_func(deriv_func, x, y, paramGuess, aux, nOdes = y0g.shape[0]), [t0, tf], y0)
+            stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+            t,yy = ode45(stm_ode45, [t0, tf], y0)
+            
             # Obtain just last timestep for use with correction
             yf = yy[-1] 
         
@@ -243,7 +255,7 @@ class SingleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45(lambda x,y0: deriv_func(x, y0, paramGuess, aux), [x[0],x[-1]], y0g)
+            x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
             sol = Solution(x1,y1.T,paramGuess)
         else:
             # Fix this to be something more elegant
