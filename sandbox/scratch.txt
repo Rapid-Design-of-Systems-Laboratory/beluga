@@ -1,0 +1,15 @@
+DynamicSystem class
+    States
+    Constants
+    Constraints
+
+problem.system('uniq_prefix')                  # 10 vehicles
+                .independant('t','s')
+                .state('x','m') \
+                .state('y','m') \
+                .state('v','m') \
+                .constant('g','m/s^2',9.81)\
+
+problem.add_system('uniq_prefix',count=10).constraints([1,2,3]).initial('blah','blah') \
+                                         .terminal('blah','bleh')
+problem.system('uniq_prefix').constraints

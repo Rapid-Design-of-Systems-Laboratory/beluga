@@ -1,3 +1,6 @@
+##### 29 May 2015 - 10:00 pm Update #####
+- changed ContinuationStep to use generator method instead of explicit next()/complete() methods
+
 ##### 29 May 2015 - 4:15 pm Update #####
 
 - added ConstraintSet container class
@@ -5,6 +8,8 @@
 
 - renamed problem.constraint to problem.constraints
 - add equivalence override to State class
+- moved problem module into optim
+- moved Problem class out of problem module
 - first attempt at automating BC creation
 
 - TODO: Create a "chainable list" class for general use?

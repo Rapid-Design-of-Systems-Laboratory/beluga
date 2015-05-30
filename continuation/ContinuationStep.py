@@ -62,13 +62,15 @@ class ContinuationStep(object):
     def constraint(self, name,target):
         self.set('constraint',name,target)
         return self
-    
-    def next(self):
+
+    def iterate(self):
+        '''Generator class to create BVPS for the continuation step iterations'''
         if self.bvp is None:
             raise ValueError('No boundary value problem associated with this object')
 
         if self.ctr >= self._num_cases:
-            raise StopIteration('No more iterations left')
+            return
+            # raise StopIteration('No more iterations left')
             
         # Update auxiliary variables using previously calculated step sizes    
         for var_type in self.vars.keys():
@@ -76,10 +78,7 @@ class ContinuationStep(object):
                 self.bvp.aux_vars[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
 
         self.ctr += 1
-        return self.bvp
+        yield self.bvp
 
-    def complete(self):
-        return self.ctr >= self._num_cases
-        
     def update_var(self):
         pass

@@ -1,10 +1,9 @@
 from optim.problem import Expression, Execute, ConstraintSet
-
+from continuation import ContinuationSet
 # from os import getcwd
 
 class Problem(object):
     """Defines problem settings."""
-    
     def __init__(self):
         """Initialize all relevant problem settings."""
         self.indep_var = []
@@ -15,10 +14,11 @@ class Problem(object):
                      'path': Expression('0','nd')}
         self.constant = []
         self.quantity = []
-        self.constraints = ConstraintSet()
         self.scale = []
         self.continuation = []
         self.execute = Execute();
+        self.constraints = ConstraintSet()
+        self.steps = ContinuationSet()
         
         
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
