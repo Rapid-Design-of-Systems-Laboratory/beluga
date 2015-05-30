@@ -94,10 +94,10 @@ class Beluga(object):
                 sol_last = solution_set[step_idx-1][-1]
                 step.set_bvp(steps[step_idx-1].bvp)
                 
-            while not step.complete():
+            for bvp in step.iterate():
                 print('Starting iteration '+str(step.ctr+1)+'/'+str(step.num_cases()))
                 tic()
-                bvp = step.next()
+                # bvp = step.next()
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
     
                 # Update solution for next iteration
@@ -110,4 +110,5 @@ class Beluga(object):
                 plt.plot(sol.y[0,:], sol.y[1,:],'-')
 
             print('Done.')
+        return solution_set
         

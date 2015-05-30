@@ -7,8 +7,8 @@ from optim.problem import *
 from continuation import *
 
 import bvpsol.algorithms
-
 from Beluga import Beluga
+
 """Brachistochrone example."""
 
 # Rename this and/or move to optim package?
@@ -29,11 +29,11 @@ problem.control = [Variable('theta','rad')]
 problem.cost['path'] = Expression('1','s')
 
 # Define constraints
-problem.constraints.add_initial('x-x_0','m')  \
-                   .add_initial('y-y_0','m')  \
-                   .add_initial('v-v_0','m/s')\
-                   .add_terminal('x-x_f','m')\
-                   .add_terminal('y-y_f','m')
+problem.constraints.initial('x-x_0','m')  \
+                   .initial('y-y_0','m')  \
+                   .initial('v-v_0','m/s')\
+                   .terminal('x-x_f','m') \
+                   .terminal('y-y_f','m')
 
 # Define constants
 problem.constant = [Value('g','9.81')]
@@ -48,17 +48,16 @@ problem.bvp_solver = bvpsol.algorithms.SingleShooting(derivative_method='fd',tol
 # TODO: implement an "initial guess" class subclassing Solution
 problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 
-problem.steps = ContinuationSet()
-
 # Figure out nicer way of representing this. Done?
+problem.steps = ContinuationSet()   # Add a reset function?
 problem.steps.add_step(ContinuationStep()
                 .num_cases(2)
                 .terminal('x', 20.0)
                 .terminal('y',-20.0))
 
-problem.steps.add_step().num_cases(2) \
-                .terminal('x', 30.0)  \
-                .terminal('y',-30.0)
+problem.steps.add_step().num_cases(2)\
+                .terminal('x', 30.0) \
+                .terminal('y',-30.0) 
 
 problem.steps.add_step() \
                 .num_cases(3) \

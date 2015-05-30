@@ -113,6 +113,7 @@ class NecessaryConditions(object):
         
         m = re.findall(pattern,constraint.expr)
         invalid = [x for x in m if x[0] not in self.problem.state]
+
         if not all(x is None for x in invalid):
             raise ValueError('Invalid expression in boundary constraint')
 
@@ -168,7 +169,7 @@ class NecessaryConditions(object):
         # NEED TO ADD BOUNDARY CONDITIONS
         
         initial_bc = self.problem.constraints.get('initial')
-        terminal_bc = self.problem.constraints.get('initial')
+        terminal_bc = self.problem.constraints.get('terminal')
         
         bc1 = [self.sanitize_constraint(x) for x in initial_bc]
         

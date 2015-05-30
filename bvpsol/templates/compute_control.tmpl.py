@@ -1,10 +1,14 @@
 # Example input    
 # ctrl = {'control_options':[
-#     [{'name':'theta','expr':'atan(y/x)'},{'name':'sigma','expr':'acos(a/b)'}],
+#     [{'name':'theta','expr':'atan(y/x)'},
+#      {'name':'sigma','expr':'acos(a/b)'}],
+#
 #     [{'name':'theta','expr':'-atan(y/x)'},{'name':'sigma','expr':'-acos(a/b)'}],
 #     ],
 #     'control_list':['theta','sigma']
 # }
+
+
 import numpy as np
 from math import *
 def compute_hamiltonian(_t,_X,_p,_aux,_u):
