@@ -95,8 +95,8 @@ class Beluga(object):
                 sol_last = solution_set[step_idx-1][-1]
                 step.set_bvp(steps[step_idx-1].bvp)
                 
-            for bvp in step.iterate():
-                print('Starting iteration '+str(step.ctr+1)+'/'+str(step.num_cases()))
+            for bvp in step:
+                print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
                 # bvp = step.next()
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)

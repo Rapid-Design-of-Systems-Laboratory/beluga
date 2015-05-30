@@ -63,15 +63,21 @@ class ContinuationStep(object):
         self.set('constraint',name,target)
         return self
 
-    def iterate(self):
+    def __iter__(self):
+        """Define class as being iterable"""
+        return self
+
+    def __next__(self):
+        return self.next()
+        
+    def next(self):
         """Generator class to create BVPs for the continuation step iterations"""
         
         if self.bvp is None:
             raise ValueError('No boundary value problem associated with this object')
 
         if self.ctr >= self._num_cases:
-            return
-            # raise StopIteration('No more iterations left')
+            raise StopIteration
             
         # Update auxiliary variables using previously calculated step sizes    
         for var_type in self.vars.keys():
@@ -79,7 +85,7 @@ class ContinuationStep(object):
                 self.bvp.aux_vars[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
 
         self.ctr += 1
-        yield self.bvp
+        return self.bvp
 
     def update_var(self):
         pass
