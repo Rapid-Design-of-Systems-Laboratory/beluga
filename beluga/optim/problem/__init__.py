@@ -4,6 +4,7 @@ from .Execute import Execute
 from .Expression import Expression
 from .State import State
 from .Variable import Variable
+from .Constant import Constant
 from .Value import Value
 
 # __all__ = ['Constraint','Execute','Expression','Problem','State','Variable',

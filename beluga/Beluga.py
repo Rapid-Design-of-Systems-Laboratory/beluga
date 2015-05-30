@@ -1,35 +1,42 @@
-from utils import *
 from math import *
-from optim import *
-import bvpsol
+from beluga.utils import *
+from beluga.optim import *
+from beluga import *
 
 import matplotlib.pyplot as plt
 import numpy as np
-import imp
+import sys,os,imp
 
-from continuation import *
+from beluga import BelugaConfig
+from beluga.continuation import *
 class Beluga(object):
     version = '0.1'
-    
+
+    config = BelugaConfig().config # class variable globally accessible
     def __init__(self,problem):
         self.problem = problem
 
     @classmethod
     def run(cls,problem):
-        """Takes a problem statement, instantiates a solver object and begins 
+        """Takes a problem statement, instantiates a solver object and begins
         the solution process
-           
-        Returns: 
+
+        Returns:
             Beluga object
         """
-        inst = cls(problem) # Create instance of Beluga class
-        inst.solve()
-        return inst
-        
+        sys.path.append(cls.config['root'])
+        if isinstance(problem,Problem):
+            inst = cls(problem) # Create instance of Beluga class
+            inst.solve()
+            return inst
+        else:
+            #TODO:Add functionality for when problem is specified by filename
+            pass
+
     def solve(self):
         """Starts the solution process
-           
-        Returns: 
+
+        Returns:
             Beluga object
         """
         nec_cond = NecessaryConditions(self.problem)
@@ -40,16 +47,16 @@ class Beluga(object):
     # 	controlsInExpression = zeros(1,oc.num.controls);
     # 	for ctrExpression = 1 : 1 : oc.num.controls
     # 	for ctrControl = 1 : 1 : oc.num.controls
-    # 	
+    #
     # 		if ~isempty(strfind(char(oc.control.unconstrained.expression{ctrExpression}(1)),char(oc.control.var(ctrControl))))
     # 			controlsInExpression(ctrExpression) = controlsInExpression(ctrExpression) + 1;
     # 		end
-    # 	
+    #
     # 	end
     # 	end
-    # 
+    #
     # 	% Sort controls starting with those with fewest appearances in control equations
-    # 	[~,oc.control.unconstrained.writeOrder] = sort(controlsInExpression);    
+    # 	[~,oc.control.unconstrained.writeOrder] = sort(controlsInExpression);
 
     #    keyboard()
 
@@ -60,13 +67,13 @@ class Beluga(object):
         #       String: Load file?
         bvp = nec_cond.get_bvp()
         solinit = self.problem.guess
-        
+
         tic()
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
         self.out = self.run_continuation_set(self.problem.steps, bvp, solinit)
         total_time = toc();
-        
+
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         ################################################################
@@ -76,7 +83,7 @@ class Beluga(object):
         plt.xlabel('x')
         plt.ylabel('y')
         plt.show(block=False)
-        
+
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
         # Loop through all the continuation steps
@@ -94,22 +101,21 @@ class Beluga(object):
                 # Use the bvp & solution from last continuation set
                 sol_last = solution_set[step_idx-1][-1]
                 step.set_bvp(steps[step_idx-1].bvp)
-                
+
             for bvp in step:
                 print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
                 # bvp = step.next()
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
-    
+
                 # Update solution for next iteration
                 sol_last = sol
                 solution_set[step_idx].append(sol)
-                
+
                 elapsed_time = toc()
                 # total_time  += elapsed_time
-                print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))    
+                print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 plt.plot(sol.y[0,:], sol.y[1,:],'-')
 
             print('Done.')
         return solution_set
-        

@@ -1,5 +1,5 @@
-from optim.problem import Expression, Execute, ConstraintSet
-from continuation import ContinuationSet
+from beluga.optim.problem import Expression, Execute, ConstraintSet
+from beluga.continuation import ContinuationSet
 # from os import getcwd
 
 class Problem(object):
@@ -9,7 +9,7 @@ class Problem(object):
         self.indep_var = []
         self.state = []
         self.control = []
-        self.cost = {'init': Expression('0','nd'), 
+        self.cost = {'init': Expression('0','nd'),
                      'term': Expression('0','nd'),
                      'path': Expression('0','nd')}
         self.constant = []
@@ -19,8 +19,7 @@ class Problem(object):
         self.execute = Execute();
         self.constraints = ConstraintSet()
         self.steps = ContinuationSet()
-        
-        
+
+
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
-        

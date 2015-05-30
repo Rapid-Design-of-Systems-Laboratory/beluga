@@ -1,6 +1,7 @@
-#from .BoundaryConditions import BoundaryConditions
-#from .Hamiltonian import Hamiltonian
+# Must be defined first!
+from .BelugaConfig import BelugaConfig
 from .Beluga import Beluga
+
 
 # __all__ = ['BoundaryConditions','Hamiltonian','NecessaryConditions']
 # __all__ = ['Beluga']
