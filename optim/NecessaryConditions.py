@@ -97,6 +97,9 @@ class NecessaryConditions(object):
             code = self.renderer.render(tmpl,self.problem_data)
             if verbose:
                 print(code)
+            
+            # For security
+            self.compiled.__dict__.update({'__builtin__':{}})
             return exec(code,self.compiled.__dict__)
         
     
