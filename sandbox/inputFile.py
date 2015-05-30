@@ -35,7 +35,7 @@ problem.constraints.initial('x-x_0','m')  \
                    .terminal('x-x_f','m') \
                    .terminal('y-y_f','m')
 
-# Define constants
+# Define constants (change to have units as well)
 problem.constant = [Value('g','9.81')]
 
 # Define quantity (not implemented at present)

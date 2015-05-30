@@ -9,6 +9,7 @@ import imp
 
 from continuation import *
 class Beluga(object):
+    version = '0.1'
     
     def __init__(self,problem):
         self.problem = problem

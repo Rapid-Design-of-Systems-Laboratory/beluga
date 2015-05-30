@@ -84,21 +84,20 @@ class NecessaryConditions(object):
         Raises:
             ValueError: If 'problem_data' or 'compiled' is not defined
         """
-        f = open(filename)
-        tmpl = f.read()
-        f.close()
+        with open(filename) as f:
+            tmpl = f.read()
         
-        if self.problem_data is None:
-            raise ValueError('Problem data not defined. Unable to compile function.')
+            if self.problem_data is None:
+                raise ValueError('Problem data not defined. Unable to compile function.')
         
-        if self.compiled is None:
-            raise ValueError('Problem module not defined. Unable to compile function.')
+            if self.compiled is None:
+                raise ValueError('Problem module not defined. Unable to compile function.')
             
-        # Render the template using the data 
-        code = self.renderer.render(tmpl,self.problem_data)
-        if verbose:
-            print(code)
-        return exec(code,self.compiled.__dict__)
+            # Render the template using the data 
+            code = self.renderer.render(tmpl,self.problem_data)
+            if verbose:
+                print(code)
+            return exec(code,self.compiled.__dict__)
         
     
     def sanitize_constraint(self,constraint):
