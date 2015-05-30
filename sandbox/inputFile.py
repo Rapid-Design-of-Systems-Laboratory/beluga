@@ -1,18 +1,20 @@
+# import sys,os
+# print(sys.version)
+# print(os.getcwd())
+# exit()
 import sys, os, imp
 import numpy as np
-sys.path.append(os.getcwd()+'/../')
 
-import optim.Problem as Problem
-from optim.problem import *
-from continuation import *
-
-import bvpsol.algorithms
-from Beluga import Beluga
+import beluga.bvpsol as bvpsol
+import beluga.Beluga as Beluga
+import beluga.optim.Problem
+from beluga.optim.problem import *
+from beluga.continuation import *
 
 """Brachistochrone example."""
 
 # Rename this and/or move to optim package?
-problem = Problem()
+problem = beluga.optim.Problem()
 
 # Define independent variables
 problem.indep_var = [Variable('t', 's')]
@@ -36,7 +38,7 @@ problem.constraints.initial('x-x_0','m')  \
                    .terminal('y-y_f','m')
 
 # Define constants (change to have units as well)
-problem.constant = [Value('g','9.81')]
+problem.constant = [Constant('g','9.81','m/s^2')]
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?

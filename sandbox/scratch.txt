@@ -3,13 +3,18 @@ DynamicSystem class
     Constants
     Constraints
 
-problem.system('uniq_prefix')                  # 10 vehicles
+# define class
+problem.system('uniq_prefix', count=10) #
                 .independant('t','s')
                 .state('x','m') \
                 .state('y','m') \
                 .state('v','m') \
-                .constant('g','m/s^2',9.81)\
+                .control('theta','rad') \
+                .constant('g','m/s^2',9.81) \
 
-problem.add_system('uniq_prefix',count=10).constraints([1,2,3]).initial('blah','blah') \
-                                         .terminal('blah','bleh')
-problem.system('uniq_prefix').constraints
+# retain old system to setup problem as well?
+
+# problem.add_system('uniq_prefix',count=10) # alternate way to add system after creation
+
+problem.constraints('uniq_prefix',i) \
+                .initial(). blaa for i in [1,2,3]

@@ -1,3 +1,7 @@
+##### 30 May 2015 - 5:00 pm Update #####
+- Restructured folders again to make Beluga and BelugaConfig classes work properly
+- there may still be bugs left over
+
 ##### 29 May 2015 - 10:00 pm Update #####
 - changed ContinuationStep to use generator method instead of explicit next()/complete() methods
 
@@ -19,18 +23,18 @@
 
 - made "Beluga" class
     - class method run() that takes a problem object, instantiates a Beluga object and calls solve()
-    - run() is just there to make things easier for user. 
+    - run() is just there to make things easier for user.
     - moved run_optim into the Beluga.solve method
     - created run_continuation_set() method
         - clarify how initial guess is treated
-        
+
 - renamed bvpsol.Problem to bvpsol.BVP to avoid any naming clash
 
 - moved compute_necessary_conditions into a get_bvp method in   NecessaryConditions which also creates a BVP object to return to Beluga
 
 - modified ContinuationStep class to allow chaining
     - created num_cases() into a method that either sets or gets num_cases
-    
+
 - create ContinuationSet class subclassing list
     - add_step() function allows adding steps using chaining
 
@@ -46,4 +50,3 @@
 TODO:
 * create BelugaConfig class to describe solver configuration
   such as output directory, restart options etc.
-
