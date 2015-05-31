@@ -19,7 +19,9 @@ class Problem(object):
         self.execute = Execute();
         self.constraints = ConstraintSet()
         self.steps = ContinuationSet()
-
+        self.system = [] # List of dynamic system
 
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
+    def system(self,name='default', count=1):
+        self.system.append([])

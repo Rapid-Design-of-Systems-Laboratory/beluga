@@ -2,7 +2,6 @@
 from .BelugaConfig import BelugaConfig
 from .Beluga import Beluga
 
-
 # __all__ = ['BoundaryConditions','Hamiltonian','NecessaryConditions']
 # __all__ = ['Beluga']
 import os

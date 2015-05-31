@@ -1,12 +1,8 @@
-# import sys,os
-# print(sys.version)
-# print(os.getcwd())
-# exit()
-import sys, os, imp
 import numpy as np
 
-import beluga.bvpsol as bvpsol
 import beluga.Beluga as Beluga
+import beluga.bvpsol as bvpsol
+import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
@@ -44,7 +40,7 @@ problem.constant = [Constant('g','9.81','m/s^2')]
 # Is this actually an Expression rather than a Value?
 problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = bvpsol.algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
 # Can be array or function handle
 # TODO: implement an "initial guess" class subclassing Solution

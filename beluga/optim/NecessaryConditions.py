@@ -3,13 +3,12 @@ from sympy import *
 from sympy.parsing.sympy_parser import parse_expr
 import pystache, imp, re
 
-import beluga.bvpsol as bvpsol
+from beluga import bvpsol
 import beluga.bvpsol.BVP
 
 # import beluga.Beluga as Beluga
 from beluga.utils import keyboard
 from beluga.optim.problem import *
-import beluga.Beluga as Beluga
 
 class NecessaryConditions(object):
     """Defines necessary conditions of optimality."""
@@ -28,6 +27,7 @@ class NecessaryConditions(object):
         self.bc = BoundaryConditions()
         self.problem = problem
 
+        from .. import Beluga
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config['root']+'/beluga/bvpsol/templates/'
         self.template_suffix = '.tmpl.py'
