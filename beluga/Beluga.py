@@ -1,7 +1,6 @@
 from math import *
 from beluga.utils import *
 from beluga.optim import *
-from beluga import *
 
 import matplotlib.pyplot as plt
 import numpy as np
