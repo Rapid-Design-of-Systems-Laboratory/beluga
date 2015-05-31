@@ -1,4 +1,4 @@
-from .ContinuationSet import ContinuationSet
+from .ContinuationList import ContinuationList
 from .ContinuationStep import ContinuationStep
 from .ContinuationVariable import ContinuationVariable
 from .ContinuationSolution import ContinuationSolution

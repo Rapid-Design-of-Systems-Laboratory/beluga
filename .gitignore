@@ -1,6 +1,7 @@
 *.pyc
 __pycache__
 *.html
+*.ini
 
 # OS generated files #
 ######################

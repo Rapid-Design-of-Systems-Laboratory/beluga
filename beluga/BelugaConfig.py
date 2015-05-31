@@ -2,6 +2,7 @@ from configparser import SafeConfigParser
 import os.path
 import sys
 
+# TODO: Fix config file being created in every folder!!!
 class BelugaConfig:
     """Defines configuration options for Beluga and allows loading/saving configuration files"""
     section_name = 'beluga'

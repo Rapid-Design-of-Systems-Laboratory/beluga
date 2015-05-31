@@ -13,28 +13,28 @@ from beluga.continuation import *
 problem = beluga.optim.Problem()
 
 # Define independent variables
-problem.indep_var = [Variable('t', 's')]
+problem.independent('t', 's')
 
 # Define equations of motion
-problem.state = [State('t','x','v*cos(theta)','m'),
-                 State('t','y','-v*sin(theta)','m'),
-                 State('t','v','g*sin(theta)','m/s')]
+problem.state('x','v*cos(theta)','m')   \
+       .state('y','-v*sin(theta)','m')  \
+       .state('v','g*sin(theta)','m/s')
 
 # Define controls
-problem.control = [Variable('theta','rad')]
+problem.control('theta','rad')
 
 # Define costs
 problem.cost['path'] = Expression('1','s')
 
 # Define constraints
-problem.constraints.initial('x-x_0','m')  \
-                   .initial('y-y_0','m')  \
-                   .initial('v-v_0','m/s')\
-                   .terminal('x-x_f','m') \
-                   .terminal('y-y_f','m')
+problem.constraints().initial('x-x_0','m')    \
+                     .initial('y-y_0','m')    \
+                     .initial('v-v_0','m/s')  \
+                     .terminal('x-x_f','m')   \
+                     .terminal('y-y_f','m')
 
 # Define constants (change to have units as well)
-problem.constant = [Constant('g','9.81','m/s^2')]
+problem.constant('g','9.81','m/s^2')
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
@@ -47,7 +47,7 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 
 # Figure out nicer way of representing this. Done?
-problem.steps = ContinuationSet()   # Add a reset function?
+problem.steps = ContinuationList()   # Add a reset function?
 
 problem.steps.add_step(ContinuationStep()
                 .num_cases(2)
@@ -65,3 +65,4 @@ problem.steps.add_step()
 )
 
 Beluga.run(problem)
+#
