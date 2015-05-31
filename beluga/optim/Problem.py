@@ -1,27 +1,72 @@
-from beluga.optim.problem import Expression, Execute, ConstraintSet
-from beluga.continuation import ContinuationSet
+from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList
+from beluga.continuation import ContinuationList
 # from os import getcwd
 
 class Problem(object):
     """Defines problem settings."""
     def __init__(self):
         """Initialize all relevant problem settings."""
-        self.indep_var = []
-        self.state = []
-        self.control = []
+        # self.indep_var = []
+        # self.states = []
+        # self.controls = []
         self.cost = {'init': Expression('0','nd'),
                      'term': Expression('0','nd'),
                      'path': Expression('0','nd')}
-        self.constant = []
+        # self.constant = []
         self.quantity = []
         self.scale = []
         self.continuation = []
         self.execute = Execute();
-        self.constraints = ConstraintSet()
-        self.steps = ContinuationSet()
-        self.system = [] # List of dynamic system
+        self._constraints = ConstraintList()
+        self.steps = ContinuationList()
+        self.systems = {} # List of dynamic system
+
+        self.system()   # Create default dynamic system
 
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
     def system(self,name='default', count=1):
-        self.system.append([])
+        """Create new DynamicSystem objcts with given name"""
+        # Replaces existing systems with same name
+        self.systems[name] = DynamicSystemList(
+                    [DynamicSystem(name) for i in range(count)]
+        )
+        return self.systems[name]
+
+    # The folowing are alias functions to access a single system
+    # Possible way to generate these automatically?
+    def constraints(self,name='default',index=0):
+        return self.systems[name][index].constraints
+
+    def states(self,name='default',index=0):
+        return self.systems[name][index].states
+
+    def controls(self,name='default',index=0):
+        return self.systems[name][index].controls
+
+    def constants(self,name='default',index=0):
+        return self.systems[name][index].constants
+
+    def independent(self,var,unit,name='default',index=0):
+        """Sets independent variable for given system"""
+        return self.systems[name][index].independent(var,unit)
+
+    def state(self,var,eqn,unit,name='default',index=0):
+        """Adds a state to given system"""
+        return self.systems[name][index].state(var,eqn,unit)
+
+    def constant(self,var,val,unit,name='default',index=0):
+        """Adds a constant to given system"""
+        return self.systems[name][index].constant(var,val,unit)
+
+    def control(self,var,unit,name='default',index=0):
+        """Adds a control variable to given system"""
+        return self.systems[name][index].control(var,unit)
+
+    def independent(self,var,unit,name='default',select=None):
+        """Sets independent variable for specified systems"""
+        if select is None:
+            [s.independent(var,unit) for s in self.systems[name]]
+        else:
+            [self.systems[name][i].independent(var,unit) for i in select]
+        return self

@@ -1,6 +1,25 @@
+##### 31 May 2015 - 3:35 am Update #####
+- Added DynamicSystemList and DynamicSystem classes
+- Renamed *Set classes to *List for the sake of semantics
+- Fixed possible circular import problem
+- Functionality retained when user does not specify multiple systems
+  - Multiple systems functionality has not been tested properly
+  - TODO: Implement addition of constraints to multiple systems
+  
+- TODO: Use unit tests and some testing framework to do proper testing
+  - Make testing a part of the workflow
+  - Use py.test package?
+
+- Added config.ini to gitignore
+- TODO: Find way to refactor code to avoid repetition (e.g. function definitions)
+- TODO**: Refactor code in NecessaryConditions to use list comprehension
+- Added "Constant" class
+
 ##### 30 May 2015 - 5:00 pm Update #####
 - Restructured folders again to make Beluga and BelugaConfig classes work properly
 - there may still be bugs left over
+- Bug: Creates config.ini in "current" folder
+
 
 ##### 29 May 2015 - 10:00 pm Update #####
 - changed ContinuationStep to use generator method instead of explicit next()/complete() methods

@@ -1,11 +1,15 @@
 from .Constraint import Constraint
-from .ConstraintSet import ConstraintSet
+from .ConstraintList import ConstraintList
 from .Execute import Execute
 from .Expression import Expression
 from .State import State
 from .Variable import Variable
 from .Constant import Constant
 from .Value import Value
+
+# Load these last as these use the above classes
+from .DynamicSystem import DynamicSystem
+from .DynamicSystemList import DynamicSystemList
 
 # __all__ = ['Constraint','Execute','Expression','Problem','State','Variable',
 #            'Value']

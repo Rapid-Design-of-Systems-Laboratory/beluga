@@ -1,6 +1,6 @@
 from beluga.optim.problem import Constraint
 
-class ConstraintSet(list):
+class ConstraintList(list):
     def get(self,constraint_type):
         return [x for x in self if x.type == constraint_type]
 

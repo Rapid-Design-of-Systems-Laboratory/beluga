@@ -27,7 +27,7 @@ class NecessaryConditions(object):
         self.bc = BoundaryConditions()
         self.problem = problem
 
-        from .. import Beluga
+        from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config['root']+'/beluga/bvpsol/templates/'
         self.template_suffix = '.tmpl.py'
@@ -52,6 +52,8 @@ class NecessaryConditions(object):
 
     def make_aug_cost(self,aug_cost, constraint,location):
         ind = 0
+
+        #TODO: Refactor code to use 'join' and list comprehension
         for i in range(len(constraint)):
             if constraint[i].type is location:
                 ind += 1
@@ -71,9 +73,9 @@ class NecessaryConditions(object):
 
     def make_ham(self, problem):
         self.ham = problem.cost['path'].expr
-        for i in range(len(problem.state)):
+        for i in range(len(problem.states())):
             self.ham += ' + ' + self.costate[i] + '*' + \
-                problem.state[i].process_eqn
+                problem.states()[i].process_eqn
 
     # Compiles a function template file into a function object
     # using the given data
@@ -117,7 +119,7 @@ class NecessaryConditions(object):
             raise ValueError('Invalid constraint type')
 
         m = re.findall(pattern,constraint.expr)
-        invalid = [x for x in m if x[0] not in self.problem.state]
+        invalid = [x for x in m if x[0] not in self.problem.states()]
 
         if not all(x is None for x in invalid):
             raise ValueError('Invalid expression in boundary constraint')
@@ -133,56 +135,56 @@ class NecessaryConditions(object):
         """
 
         ## Create costate list
-        for i in range(len(self.problem.state)):
-            self.costate.append(self.problem.state[i].make_costate())
+        for i in range(len(self.problem.states())):
+            self.costate.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
         aug_cost_init = self.problem.cost['init'].expr
-        self.make_aug_cost(aug_cost_init,self.problem.constraints,'init')
+        self.make_aug_cost(aug_cost_init,self.problem.constraints(),'init')
 
         aug_cost_term = self.problem.cost['term'].expr
-        self.make_aug_cost(aug_cost_term,self.problem.constraints,'term')
+        self.make_aug_cost(aug_cost_term,self.problem.constraints(),'term')
 
         # Compute costate conditions
-        self.make_costate_bc(self.problem.state,'init')
-        self.make_costate_bc(self.problem.state,'term')
+        self.make_costate_bc(self.problem.states(),'init')
+        self.make_costate_bc(self.problem.states(),'term')
 
         ## Unconstrained arc calculations
         # Construct Hamiltonian
         self.make_ham(self.problem)
 
         # Compute costate process equations
-        for i in range(len(self.problem.state)):
-            self.make_costate_rate(self.problem.state[i].state_var)
+        for i in range(len(self.problem.states())):
+            self.make_costate_rate(self.problem.states()[i].state_var)
 
         # Compute unconstrained control partial
-        for i in range(len(self.problem.control)):
-            self.make_ctrl_partial(self.problem.control[i].var)
+        for i in range(len(self.problem.controls())):
+            self.make_ctrl_partial(self.problem.controls()[i].var)
 
         # Compute unconstrained control law (need to add singular arc and bang/bang smoothing, numerical solutions)
-        for i in range(len(self.problem.control)):
-            self.make_ctrl(self.problem.control[i].var, i)
+        for i in range(len(self.problem.controls())):
+            self.make_ctrl(self.problem.controls()[i].var, i)
 
         self.control_options = []
 
-        for i in range(len(self.problem.control)):
+        for i in range(len(self.problem.controls())):
             for j in range(len(self.ctrl_free)):
-                self.control_options.append([{'name':self.problem.control[i].var,'expr':self.ctrl_free[j]}])
+                self.control_options.append([{'name':self.problem.controls()[i].var,'expr':self.ctrl_free[j]}])
 
         # Create problem dictionary
         # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
 
-        initial_bc = self.problem.constraints.get('initial')
-        terminal_bc = self.problem.constraints.get('terminal')
+        # initial_bc = self.problem.constraints().get('initial')
+        # terminal_bc = self.problem.constraints().get('terminal')
 
-        bc1 = [self.sanitize_constraint(x) for x in initial_bc]
+        # bc1 = [self.sanitize_constraint(x) for x in initial_bc]
 
         self.problem_data = {
         'aux_list': [
                 {
                 'type' : 'const',
-                'vars': [self.problem.constant[i].var for i in range(len(self.problem.constant))]
+                'vars': [self.problem.constants()[i].var for i in range(len(self.problem.constants()))]
                 },
                 {
                 'type' : 'constraint',
@@ -190,16 +192,16 @@ class NecessaryConditions(object):
                 }
          ],
          'state_list':
-             [self.problem.state[i].state_var for i in range(len(self.problem.state))] +
+             [self.problem.states()[i].state_var for i in range(len(self.problem.states()))] +
              [self.costate[i] for i in range(len(self.costate))] +
              ['tf']
          ,
          'deriv_list':
-             ['tf*(' + self.problem.state[i].process_eqn + ')' for i in range(len(self.problem.state))] +
+             ['tf*(' + self.problem.states()[i].process_eqn + ')' for i in range(len(self.problem.states()))] +
              ['tf*(' + self.costate_rate[i] + ')' for i in range(len(self.costate_rate))] +
              ['tf*0']
          ,
-         'num_states': 2*len(self.problem.state) + 1,
+         'num_states': 2*len(self.problem.states()) + 1,
 
 
          # Compute these automatically?
@@ -218,7 +220,7 @@ class NecessaryConditions(object):
              "_H     - 0",     # H(tf)
          ],
          'control_options': self.control_options,
-         'control_list':[self.problem.control[i].var for i in range(len(self.problem.control))],
+         'control_list':[self.problem.controls()[i].var for i in range(len(self.problem.controls()))],
          'ham_expr':self.ham
         }
 
