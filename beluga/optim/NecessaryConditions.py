@@ -22,11 +22,13 @@ class NecessaryConditions(object):
         self.costates = []
         self.states = []
         self.costate_rate = []
+        self.parameters = []
         self.ham = '0'
         self.ham_ctrl_partial = []
         self.ctrl_free = []
         self.bc = BoundaryConditions()
         self.problem = problem
+
 
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
@@ -59,26 +61,43 @@ class NecessaryConditions(object):
                                     for (ctrl,expr) in option.items()]
 
 
-    def make_aug_cost(self,aug_cost, constraint,location):
-        ind = 0
+    def make_aug_cost(self, aug_cost, constraint, location):
+        # ind = 0
 
-        #TODO: Refactor code to use 'join' and list comprehension
-        for i in range(len(constraint)):
-            if constraint[i].type is location:
-                ind += 1
-                aug_cost += ' + ' + constraint[i].make_aug_cost(ind)
-        self.aug_cost[location] = aug_cost
+        # Refactor code to use 'join' and list comprehension
+        # for i in range(len(constraint)):
+        #     if constraint[i].type is location:
+        #         ind += 1
+        #         aug_cost += ' + ' + constraint[i].make_aug_cost(ind)
 
-    def make_costate_bc(self, state, location):
-        if location is 'init':
+        # Do in two steps so that indices are "right"
+        filtered_list = [c for c in constraint if c.type==location]
+        self.parameters += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
+        self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
+                                for (ind,c) in enumerate(filtered_list,1))
+
+    def make_costate_bc(self, states, location):
+        if location is 'initial':
             sign = '-'
-        elif location is 'term':
+        elif location is 'terminal':
             sign = ''
 
-        for i in range(len(state)):
-            self.bc.init.append(
-                diff(parse_expr(sign + '(' + self.aug_cost[location] + ')'),
-                state[i].sym))
+        cost_expr = (sign + '(' + self.aug_cost[location] + ')')
+
+        #TODO: Fix hardcoded if conditions
+        if location == 'initial':
+            # Using list comprehension instead of loops
+            self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(parse_expr(cost_expr),state.sym))
+                                    for state in states]
+        else:
+            # Using list comprehension instead of loops
+            self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(parse_expr(cost_expr),state.sym))
+                                    for state in states]
+
+        # for i in range(len(state)):
+        #     self.bc.initial.append(
+        #         diff(parse_expr(sign + '(' + self.aug_cost[location] + ')'),
+        #         state[i].sym))
 
     def make_ham(self, problem):
         self.ham = problem.cost['path'].expr
@@ -162,19 +181,30 @@ class NecessaryConditions(object):
             self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
-        aug_cost_init = self.problem.cost['init'].expr
-        self.make_aug_cost(aug_cost_init,self.problem.constraints(),'init')
+        aug_cost_init = self.problem.cost['initial'].expr
+        self.make_aug_cost(aug_cost_init,self.problem.constraints(),'initial')
 
-        aug_cost_term = self.problem.cost['term'].expr
-        self.make_aug_cost(aug_cost_term,self.problem.constraints(),'term')
+        aug_cost_term = self.problem.cost['terminal'].expr
+        self.make_aug_cost(aug_cost_term,self.problem.constraints(),'terminal')
+
+        # Add state boundary conditions
+        self.bc.initial = [self.sanitize_constraint(x).expr
+                            for x in self.problem.constraints().get('initial')]
+        self.bc.terminal = [self.sanitize_constraint(x).expr
+                    for x in self.problem.constraints().get('terminal')]
 
         # Compute costate conditions
-        self.make_costate_bc(self.problem.states(),'init')
-        self.make_costate_bc(self.problem.states(),'term')
+        self.make_costate_bc(self.problem.states(),'initial')
+        self.make_costate_bc(self.problem.states(),'terminal')
 
         ## Unconstrained arc calculations
         # Construct Hamiltonian
         self.make_ham(self.problem)
+
+
+        # TODO: Make this more generalized
+        # Add free final time boundary condition
+        self.bc.terminal.append('_H - 0')
 
         # Compute costate process equations
         self.make_costate_rate(self.problem.states())
@@ -203,8 +233,6 @@ class NecessaryConditions(object):
         # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
 
-        initial_bc = self.problem.constraints().get('initial')
-        terminal_bc = self.problem.constraints().get('terminal')
 
         # bc1 = [self.sanitize_constraint(x) for x in initial_bc]
 
@@ -217,14 +245,16 @@ class NecessaryConditions(object):
                 {
                 'type' : 'constraint',
                 'vars': []
-                }
+                },
          ],
+         # TODO: Generalize 'tf' to independent variable for current arc
          'state_list':
-             [self.problem.states()[i].state_var for i in range(len(self.problem.states()))] +
+             [str(state) for state in self.problem.states()] +
             #  [self.costates[i] for i in range(len(self.costate))] +
-             [costate for costate in self.costates] +
+             [str(costate) for costate in self.costates] +
              ['tf']
          ,
+         'parameter_list': [param for param in self.parameters],
          'deriv_list':
              ['tf*(' + self.problem.states()[i].process_eqn + ')' for i in range(len(self.problem.states()))] +
              ['tf*(' + self.costate_rate[i] + ')' for i in range(len(self.costate_rate))] +
@@ -237,17 +267,19 @@ class NecessaryConditions(object):
         #  'left_bc_list':[self.sanitize_constraint(x).expr for x in initial_bc]+self.bc.init,
         #  'right_bc_list':[self.sanitize_constraint(x).expr for x in terminal_bc]+self.bc.term,
         #  'left_bc_list':initial_bc,
-         'left_bc_list':[
-             "x - _x0['x']", # x(0
-             "y - _x0['y']", # y(0)
-             "v - _x0['v']"
-         ],
-         'right_bc_list':[
-             "x - _xf['x']", # x(tf)
-             "y - _xf['y']", # y(tf)
-             "lagrange_v + 0.0",   # lamV(tf)
-             "_H     - 0",     # H(tf)
-         ],
+        'left_bc_list': self.bc.initial,
+        'right_bc_list': self.bc.terminal,
+        #  'left_bc_list':[
+        #      "x - _x0['x']", # x(0
+        #      "y - _x0['y']", # y(0)
+        #      "v - _x0['v']"
+        #  ],
+        #  'right_bc_list':[
+        #      "x - _xf['x']", # x(tf)
+        #      "y - _xf['y']", # y(tf)
+        #      "lagrange_v + 0.0",   # lamV(tf)
+        #      "_H     - 0",     # H(tf)
+        #  ],
          'control_options': self.control_options,
          'control_list':[self.problem.controls()[i].var for i in range(len(self.problem.controls()))],
          'ham_expr':self.ham
@@ -257,7 +289,8 @@ class NecessaryConditions(object):
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('brachisto_prob')
-        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True) for func in self.compile_list]
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
+                                        for func in self.compile_list]
 
         # Make this generic for BCs, constants and constraints
         self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func,
@@ -272,5 +305,5 @@ class BoundaryConditions(object):
     """Defines boundary condtiions."""
 
     def __init__(self):
-        self.init = []
-        self.term = []
+        self.initial = []
+        self.terminal = []

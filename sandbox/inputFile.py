@@ -46,6 +46,7 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 # Can be array or function handle
 # TODO: implement an "initial guess" class subclassing Solution
 problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
+problem.guess.parameters = np.array([0.1,0.1,0.1,0.1,0.1])
 
 # Figure out nicer way of representing this. Done?
 problem.steps = ContinuationList()   # Add a reset function?
