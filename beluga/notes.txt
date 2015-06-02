@@ -3,6 +3,10 @@
 - Multiple controls *probably* works, yet to test
 - Added lagrange multipliers as parameters
 - Automated generation of boundary conditions structure
+- Automatic generation of "aux_vars" in the BVP object
+- Automated initial guess generation
+  - tested with brachistochrone
+  - TODO: load from file, function handle, static guess
 
 ##### 31 May 2015 #####
 - Added process_systems method to NecessaryConditions
