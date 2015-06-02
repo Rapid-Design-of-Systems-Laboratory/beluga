@@ -16,12 +16,18 @@ problem = beluga.optim.Problem()
 problem.independent('t', 's')
 
 # Define equations of motion
-problem.state('x','v*cos(theta)','m')   \
-       .state('y','-v*sin(theta)','m')  \
+rho = 'rho0*exp(-h/H)'
+
+problem.state('h','v*cos(theta)','m')   \
+       .state('theta','-v*sin(theta)','rad')  \
+       .state('phi','-v*sin(theta)','rad')  \
        .state('v','g*sin(theta)','m/s')
+       .state('gam','g*sin(theta)','rad')
+       .state('psi','g*sin(theta)','rad')
 
 # Define controls
-problem.control('theta','rad')
+problem.control('alfa','rad')
+       .control('bank','rad')
 
 # Define costs
 problem.cost['path'] = Expression('1','s')

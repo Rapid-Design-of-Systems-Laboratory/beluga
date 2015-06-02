@@ -47,10 +47,8 @@ class Problem(object):
     def constants(self,name='default',index=0):
         return self.systems[name][index].constants
 
-    def independent(self,var,unit,name='default',index=0):
-        """Sets independent variable for given system"""
-        return self.systems[name][index].independent(var,unit)
 
+    # Setter functions that allow chaining
     def state(self,var,eqn,unit,name='default',index=0):
         """Adds a state to given system"""
         return self.systems[name][index].state(var,eqn,unit)
@@ -63,10 +61,11 @@ class Problem(object):
         """Adds a control variable to given system"""
         return self.systems[name][index].control(var,unit)
 
+    # Allows setting independent variables for select systems
     def independent(self,var,unit,name='default',select=None):
         """Sets independent variable for specified systems"""
         if select is None:
             [s.independent(var,unit) for s in self.systems[name]]
         else:
-            [self.systems[name][i].independent(var,unit) for i in select]
+            [self.systems[name][i].independent('name_'+var,unit) for i in select]
         return self
