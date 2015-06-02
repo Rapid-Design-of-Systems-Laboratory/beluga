@@ -1,8 +1,8 @@
 class DynamicSystemList(list):
     """Describes a list of dynamic systems"""
     def constraints(self,select=0):
-        """Sets constraints for given system in the list"""
-        return self
+        """Returns ConstraintList object for given system in the list"""
+        return self[i].constraints()
 
     def state(self,var,eqn,unit):
         """Adds a state to all systems in the list"""

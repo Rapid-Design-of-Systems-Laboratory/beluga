@@ -19,7 +19,8 @@ class NecessaryConditions(object):
     def __init__(self, problem):
         """Initializes all of the relevant necessary conditions."""
         self.aug_cost = {}
-        self.costate = []
+        self.costates = []
+        self.states = []
         self.costate_rate = []
         self.ham = '0'
         self.ham_ctrl_partial = []
@@ -31,24 +32,32 @@ class NecessaryConditions(object):
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config['root']+'/beluga/bvpsol/templates/'
         self.template_suffix = '.tmpl.py'
+        self.states   = self.process_systems()
 
-    def make_costate_rate(self, state):
-        self.costate_rate.append(str(diff(parse_expr(
-        '-1*(' + self.ham + ')'),symbols(state))))
+    def make_costate_rate(self, states):
+        self.costate_rate = [str(diff(parse_expr(
+        '-1*(' + self.ham + ')'),state)) for state in states]
+        # self.costate_rate.append(str(diff(parse_expr(
+        # '-1*(' + self.ham + ')'),state)))
 
-    def make_ctrl_partial(self, ctrl):
-        self.ham_ctrl_partial.append(str(diff(parse_expr(self.ham),
-            symbols(ctrl))))
+    def make_ctrl_partial(self, controls):
+        self.ham_ctrl_partial = [diff(parse_expr(self.ham),ctrl) for ctrl in controls]
+        # self.ham_ctrl_partial.append(str(diff(parse_expr(self.ham),
+        #     symbols(ctrl))))
 
-    def make_ctrl(self, ctrl, i = 0):
-        # Need to do all at once. Only works for one control.
-        ctrl_free_sym = [[] for m in range(1)]
-        ctrl_free_sym.append(solve(parse_expr(self.ham_ctrl_partial[i]),
-            symbols(ctrl)))
-        # Convert symbolic solutions to strings
-        for j in range(len(ctrl_free_sym)):
-            for k in range(len(ctrl_free_sym[j])):
-                self.ctrl_free.append(str(ctrl_free_sym[j][k]))
+    def make_ctrl(self, controls):
+        # Solve all controls simultaneously
+        ctrl_free_sym = solve(self.ham_ctrl_partial,controls,dict=True)
+
+
+        # solve() returns answer in the form
+        # [ {ctrl1: expr11, ctrl2:expr22},
+        #   {ctrl1: expr21, ctrl2:expr22}]
+        # Convert this to format required by template
+        self.control_options = [{'name':str(ctrl), 'expr':str(expr)}
+                                    for option in ctrl_free_sym
+                                    for (ctrl,expr) in option.items()]
+
 
     def make_aug_cost(self,aug_cost, constraint,location):
         ind = 0
@@ -69,12 +78,12 @@ class NecessaryConditions(object):
         for i in range(len(state)):
             self.bc.init.append(
                 diff(parse_expr(sign + '(' + self.aug_cost[location] + ')'),
-                symbols(state[i].state_var)))
+                state[i].sym))
 
     def make_ham(self, problem):
         self.ham = problem.cost['path'].expr
         for i in range(len(problem.states())):
-            self.ham += ' + ' + self.costate[i] + '*' + \
+            self.ham += ' + ' + self.costates[i] + '*' + \
                 problem.states()[i].process_eqn
 
     # Compiles a function template file into a function object
@@ -127,6 +136,17 @@ class NecessaryConditions(object):
         constraint.expr = re.sub(pattern,prefix+r"['\1']",constraint.expr)
         return constraint
 
+    def process_systems(self):
+        """Traverses dynamic systems list and extracts information"""
+        for (system_type,system_list) in self.problem.systems.items():
+            for idx,system_inst in enumerate(system_list):
+                # new_states = [state.add_prefix(system_type+'_'+str(idx)+'_')
+                #                 for state in system_inst.states]
+                new_states = [state
+                                for state in system_inst.states]
+        # print(new_states)
+
+
     def get_bvp(self):
         """Perform variational calculus calculations on optimal control problem
            and returns an object describing the boundary value problem to be solved
@@ -134,9 +154,12 @@ class NecessaryConditions(object):
         Returns: bvpsol.BVP object
         """
 
+        # Should this be moved into __init__ ?
+        self.process_systems()
+
         ## Create costate list
         for i in range(len(self.problem.states())):
-            self.costate.append(self.problem.states()[i].make_costate())
+            self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
         aug_cost_init = self.problem.cost['init'].expr
@@ -154,29 +177,34 @@ class NecessaryConditions(object):
         self.make_ham(self.problem)
 
         # Compute costate process equations
-        for i in range(len(self.problem.states())):
-            self.make_costate_rate(self.problem.states()[i].state_var)
+        self.make_costate_rate(self.problem.states())
+
+        # for i in range(len(self.problem.states())):
+        #     self.make_costate_rate(self.problem.states()[i].state_var)
 
         # Compute unconstrained control partial
-        for i in range(len(self.problem.controls())):
-            self.make_ctrl_partial(self.problem.controls()[i].var)
+        # for i in range(len(self.problem.controls())):
+            # self.make_ctrl_partial(self.problem.controls()[i].var)
 
+        # TODO(thomas): Combine into a single control computation method?
+        self.make_ctrl_partial(self.problem.controls())
+        self.make_ctrl(self.problem.controls())
         # Compute unconstrained control law (need to add singular arc and bang/bang smoothing, numerical solutions)
-        for i in range(len(self.problem.controls())):
-            self.make_ctrl(self.problem.controls()[i].var, i)
+        # for i in range(len(self.problem.controls())):
+        #     self.make_ctrl(self.problem.controls()[i].var, i)
 
-        self.control_options = []
-
-        for i in range(len(self.problem.controls())):
-            for j in range(len(self.ctrl_free)):
-                self.control_options.append([{'name':self.problem.controls()[i].var,'expr':self.ctrl_free[j]}])
+        # self.control_options = []
+        #
+        # for i in range(len(self.problem.controls())):
+        #     for j in range(len(self.ctrl_free)):
+        #         self.control_options.append([{'name':self.problem.controls()[i].var,'expr':self.ctrl_free[j]}])
 
         # Create problem dictionary
         # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
 
-        # initial_bc = self.problem.constraints().get('initial')
-        # terminal_bc = self.problem.constraints().get('terminal')
+        initial_bc = self.problem.constraints().get('initial')
+        terminal_bc = self.problem.constraints().get('terminal')
 
         # bc1 = [self.sanitize_constraint(x) for x in initial_bc]
 
@@ -193,7 +221,8 @@ class NecessaryConditions(object):
          ],
          'state_list':
              [self.problem.states()[i].state_var for i in range(len(self.problem.states()))] +
-             [self.costate[i] for i in range(len(self.costate))] +
+            #  [self.costates[i] for i in range(len(self.costate))] +
+             [costate for costate in self.costates] +
              ['tf']
          ,
          'deriv_list':
@@ -205,9 +234,9 @@ class NecessaryConditions(object):
 
 
          # Compute these automatically?
-         # 'left_bc_list':[self.sanitize_constraint(x).expr for x in initial_bc]+self.bc.init,
-         # 'right_bc_list':[self.sanitize_constraint(x).expr for x in terminal_bc]+self.bc.term,
-
+        #  'left_bc_list':[self.sanitize_constraint(x).expr for x in initial_bc]+self.bc.init,
+        #  'right_bc_list':[self.sanitize_constraint(x).expr for x in terminal_bc]+self.bc.term,
+        #  'left_bc_list':initial_bc,
          'left_bc_list':[
              "x - _x0['x']", # x(0
              "y - _x0['y']", # y(0)
@@ -228,7 +257,7 @@ class NecessaryConditions(object):
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('brachisto_prob')
-        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix) for func in self.compile_list]
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True) for func in self.compile_list]
 
         # Make this generic for BCs, constants and constraints
         self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func,

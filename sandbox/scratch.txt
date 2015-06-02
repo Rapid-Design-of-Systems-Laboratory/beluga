@@ -11,6 +11,7 @@ problem.system(name='uniq_prefix', count=10) # Default count is one
               .state('v','m') \
               .control('theta','rad') \
               .constant('g','m/s^2',9.81) \
+              # Have option for separate constants for individual vehicles?
 
 # retain old input method to setup problem as well?
 # alternate way to add system after creation?
@@ -19,5 +20,6 @@ problem.system(name='uniq_prefix', count=10) # Default count is one
 #
 # problem.add_system('uniq_prefix',count=10)
 
-problem.constraints('uniq_prefix',i) \
-                .initial(). blaa for i in [1,2,3]
+problem.constraints(system='uniq_prefix',number=i) \
+                constrants('uniq_prefix',i).initial('x-x_a1',system='foo',number=1)
+                for i in [1,2,3]
