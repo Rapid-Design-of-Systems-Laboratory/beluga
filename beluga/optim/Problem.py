@@ -1,4 +1,4 @@
-from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList
+from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess
 from beluga.continuation import ContinuationList
 # from os import getcwd
 
@@ -9,6 +9,7 @@ class Problem(object):
         # self.indep_var = []
         # self.states = []
         # self.controls = []
+        self.parameters = []
         self.cost = {'initial': Expression('0','nd'),
                      'terminal': Expression('0','nd'),
                      'path': Expression('0','nd')}
@@ -19,12 +20,16 @@ class Problem(object):
         self.execute = Execute();
         self._constraints = ConstraintList()
         self.steps = ContinuationList()
+        self.guess = Guess()
+
         self.systems = {} # List of dynamic system
 
         self.system()   # Create default dynamic system
 
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
+
+
     def system(self,name='default', count=1):
         """Create new DynamicSystem objcts with given name"""
         # Replaces existing systems with same name
