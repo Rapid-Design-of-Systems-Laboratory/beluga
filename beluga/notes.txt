@@ -1,6 +1,8 @@
 ##### 02 Jun 2015 #####
 - Added some code for simultaneous control calculations
 - Multiple controls *probably* works, yet to test
+- Added lagrange multipliers as parameters
+- Automated generation of boundary conditions structure
 
 ##### 31 May 2015 #####
 - Added process_systems method to NecessaryConditions

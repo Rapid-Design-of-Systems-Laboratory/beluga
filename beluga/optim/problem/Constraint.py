@@ -18,7 +18,10 @@ class Constraint(Expr):
         "Returns constraint expression when object is converted to a string"
         return self.expr
 
+    def make_multiplier(self, ind = 1):
+        return 'lagrange_' + self.type + '_' + str(ind)
+
     def make_aug_cost(self, ind = 1):
         """Return augmented cost expression."""
-        return 'lagrange_' + self.type + '_' + str(ind) + '*(' + \
+        return self.make_multiplier(ind) +'*(' + \
             self.expr + ')'

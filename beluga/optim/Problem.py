@@ -9,8 +9,8 @@ class Problem(object):
         # self.indep_var = []
         # self.states = []
         # self.controls = []
-        self.cost = {'init': Expression('0','nd'),
-                     'term': Expression('0','nd'),
+        self.cost = {'initial': Expression('0','nd'),
+                     'terminal': Expression('0','nd'),
                      'path': Expression('0','nd')}
         # self.constant = []
         self.quantity = []

@@ -10,8 +10,12 @@ class DynamicSystem(object):
         self.controls = []
         self.name = name
         self.constants = []
+        # self.parameters = []
         self.independent_var = None
 
+    # def parameter(self,var,val=None):
+    #     self.parameters.append(Constant(var,val))
+    #     return self
     def independent(self,var,unit):
         self.independent_var = Variable(var,unit)
         return self
