@@ -1,6 +1,7 @@
 #from .BoundaryConditions import BoundaryConditions
 #from .Hamiltonian import Hamiltonian
 from .Problem import Problem
+from .Guess import Guess
 from .NecessaryConditions import NecessaryConditions
 
 # __all__ = ['BoundaryConditions','Hamiltonian','NecessaryConditions']
