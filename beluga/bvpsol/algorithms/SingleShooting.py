@@ -256,7 +256,7 @@ class SingleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
+            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux)
             sol = Solution(x1,y1.T,paramGuess)
         else:
             # Fix this to be something more elegant

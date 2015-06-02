@@ -66,5 +66,6 @@ problem.steps.add_step()
                 .terminal('y',-40.0)
 )
 
+# guess = Guess.auto(problem,[0,0,1])
 Beluga.run(problem)
 #
