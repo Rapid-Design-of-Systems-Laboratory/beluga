@@ -3,11 +3,11 @@ class BVP(object):
     """
     Defines a boundary value problem
     """
-    def __init__(self, deriv_func, bc_func, guess=None, states = [], const_names = [], constraint_names = [], initial_bc = [], terminal_bc = [], const = [], constraint = []):
+    def __init__(self, deriv_func, bc_func, guess=None, initial_bc = None, terminal_bc = None, const = [], constraint = [], parameters = []):
         self.deriv_func  = deriv_func
         self.bc_func = bc_func
         self.guess = guess
-        self.aux_vars = {"initial": initial_bc, "terminal": terminal_bc, "const": const, "constraint":constraint, "states":states}
+        self.aux_vars = {"initial": initial_bc, "terminal": terminal_bc, "const": const, "constraint":constraint, "parameters":parameters}
 
     # Update BVP using continuation variable list
     def update(self, continuation_vars):

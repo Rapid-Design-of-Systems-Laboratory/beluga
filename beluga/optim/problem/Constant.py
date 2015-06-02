@@ -16,5 +16,5 @@ class Constant(Variable):
         """
         self.var = var
         self.unit = unit
-        self.val = val
+        self.val = float(val)
         super().__init__(var,unit)

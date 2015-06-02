@@ -65,7 +65,17 @@ class Beluga(object):
         #       Function handle: Call function
         #       String: Load file?
         bvp = nec_cond.get_bvp()
-        solinit = self.problem.guess
+        # solinit = self.problem.guess
+        solinit = self.problem.guess.generate(bvp)
+
+        # includes costates
+        state_names = nec_cond.problem_data['state_list']
+        initial_states = solinit.y[:,0] # First column
+        terminal_states = solinit.y[:,-1] # Last column
+        initial_bc = dict(zip(state_names,initial_states))
+        terminal_bc = dict(zip(state_names,terminal_states))
+        bvp.aux_vars['initial'] = initial_bc
+        bvp.aux_vars['terminal'] = terminal_bc
 
         tic()
         # TODO: Start from specific step for restart capability

@@ -22,7 +22,7 @@ class NecessaryConditions(object):
         self.costates = []
         self.states = []
         self.costate_rate = []
-        self.parameters = []
+        # self.problem.parameters = []
         self.ham = '0'
         self.ham_ctrl_partial = []
         self.ctrl_free = []
@@ -72,7 +72,7 @@ class NecessaryConditions(object):
 
         # Do in two steps so that indices are "right"
         filtered_list = [c for c in constraint if c.type==location]
-        self.parameters += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
+        self.problem.parameters += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
         self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
                                 for (ind,c) in enumerate(filtered_list,1))
 
@@ -128,6 +128,7 @@ class NecessaryConditions(object):
 
             # Render the template using the data
             code = self.renderer.render(tmpl,self.problem_data)
+            # if verbose and 'deriv_func' in filename:
             if verbose:
                 print(code)
 
@@ -254,7 +255,7 @@ class NecessaryConditions(object):
              [str(costate) for costate in self.costates] +
              ['tf']
          ,
-         'parameter_list': [param for param in self.parameters],
+         'parameter_list': [param for param in self.problem.parameters],
          'deriv_list':
              ['tf*(' + self.problem.states()[i].process_eqn + ')' for i in range(len(self.problem.states()))] +
              ['tf*(' + self.costate_rate[i] + ')' for i in range(len(self.costate_rate))] +
@@ -281,7 +282,7 @@ class NecessaryConditions(object):
         #      "_H     - 0",     # H(tf)
         #  ],
          'control_options': self.control_options,
-         'control_list':[self.problem.controls()[i].var for i in range(len(self.problem.controls()))],
+         'control_list':[str(u) for u in self.problem.controls()],
          'ham_expr':self.ham
         }
 
@@ -292,13 +293,11 @@ class NecessaryConditions(object):
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
                                         for func in self.compile_list]
 
-        # Make this generic for BCs, constants and constraints
-        self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func,
-                        initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
-                        terminal_bc = {'x':0.1, 'y':-0.1},
-                        const = {'g':9.81},
-                        constraint = {}
-                    )
+        self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func)
+        self.bvp.aux_vars['const'] = dict((const.var,const.val) for const in self.problem.constants())
+        self.bvp.aux_vars['parameters'] = self.problem_data['parameter_list']
+        # TODO: ^^ Do same for constraint values
+
         return self.bvp
 
 class BoundaryConditions(object):
