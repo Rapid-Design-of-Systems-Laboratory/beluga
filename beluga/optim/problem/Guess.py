@@ -8,10 +8,13 @@ class Guess(object):
     def __init__(self, **kwargs):
         self.setup_funcs = {'auto':self.setup_auto,
                         'file':self.setup_file,
-                        'static':self.setup_static}
+                        'static':self.setup_static,
+                        # 'custom':self.setup_custom
+                        }
         self.generate_funcs = {'auto':self.auto,
                         'file':self.file,
-                        'static':self.static}
+                        'static':self.static
+                        }
         self.setup(**kwargs)
 
     def setup(self,mode='auto',**kwargs):
@@ -94,4 +97,4 @@ class Guess(object):
 
         [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.aux_vars)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
-        return Solution(t,x.T,param_guess)
+        return Solution(t,x.T,param_guess,bvp.aux_vars)

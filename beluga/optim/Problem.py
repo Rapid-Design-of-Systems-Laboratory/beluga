@@ -52,6 +52,9 @@ class Problem(object):
     def constants(self,name='default',index=0):
         return self.systems[name][index].constants
 
+    def indep_var(self,name='default',index=0):
+        return self.systems[name][index].independent_var
+
 
     # Setter functions that allow chaining
     def state(self,var,eqn,unit,name='default',index=0):

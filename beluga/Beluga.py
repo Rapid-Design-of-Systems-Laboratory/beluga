@@ -65,8 +65,22 @@ class Beluga(object):
         #       Function handle: Call function
         #       String: Load file?
         bvp = nec_cond.get_bvp()
+
         # solinit = self.problem.guess
         solinit = self.problem.guess.generate(bvp)
+
+        import sys
+        from beluga.optim import Scaling
+        s = Scaling()
+        s.unit('m','h').unit('s','h/v')
+        s.unit('kg','mass')
+        s.unit('rad',1)
+
+        s.initialize(nec_cond)
+        s.compute_scaling(solinit)
+        print("foo")
+        sys.exit(0)
+
 
         # includes costates
         state_names = nec_cond.problem_data['state_list']
@@ -88,10 +102,10 @@ class Beluga(object):
         ################################################################
         # Save the whole "self" object at this point?
 
-        plt.title('Solution for Brachistochrone problem')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.show(block=False)
+        # plt.title('Solution for Brachistochrone problem')
+        # plt.xlabel('x')
+        # plt.ylabel('y')
+        # plt.show(block=False)
 
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
@@ -124,7 +138,7 @@ class Beluga(object):
                 elapsed_time = toc()
                 # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
-                plt.plot(sol.y[0,:], sol.y[1,:],'-')
+                # plt.plot(sol.y[0,:], sol.y[1,:],'-')
 
             print('Done.')
         return solution_set

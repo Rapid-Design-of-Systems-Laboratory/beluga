@@ -242,6 +242,7 @@ class SingleShooting(Algorithm):
             r0 = r1
 
             dy0 = alpha*beta*np.linalg.solve(J,-res)
+
             # Apply corrections to states and parameters (if any)
             if nParams > 0:
                 dp = dy0[nOdes:]

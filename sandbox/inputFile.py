@@ -16,9 +16,9 @@ problem = beluga.optim.Problem()
 problem.independent('t', 's')
 
 # Define equations of motion
-problem.state('x','v*cos(theta)','m')   \
-       .state('y','-v*sin(theta)','m')  \
-       .state('v','g*sin(theta)','m/s')
+problem.state('x', 'v*cos(theta)','m')   \
+       .state('y','-v*sin(theta)','m')   \
+       .state('v', 'g*sin(theta)','m/s')
 
 # Define controls
 problem.control('theta','rad')
@@ -39,6 +39,7 @@ problem.constant('g','9.81','m/s^2')
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
+# TODO: Implement this
 problem.quantity = [Value('tanAng','tan(theta)')]
 
 problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
@@ -56,9 +57,9 @@ problem.guess.setup('auto',
 problem.steps = ContinuationList()   # Add a reset function?
 
 problem.steps.add_step(ContinuationStep()
-                .num_cases(10)
-                .terminal('x', 20.0)
-                .terminal('y',-20.0))
+                .num_cases(5)
+                .terminal('x', 1.0)
+                .terminal('y',-1.0))
 (
 problem.steps.add_step().num_cases(2)
                  .terminal('x', 30.0)
