@@ -97,4 +97,4 @@ class Guess(object):
 
         [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.aux_vars)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
-        return Solution(t,x.T,param_guess,bvp.aux_vars)
+        return Solution(t,x.T,param_guess)
