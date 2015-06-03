@@ -69,7 +69,7 @@ class Beluga(object):
 
         ################################################################
         # Save the whole "self" object at this point?
-
+        #
         # plt.title('Solution for Brachistochrone problem')
         # plt.xlabel('x')
         # plt.ylabel('y')
@@ -83,12 +83,13 @@ class Beluga(object):
 
         # Initialize scaling
         import sys
-        from beluga.optim import Scaling
-        s = Scaling()
-        s.unit('m','h')
-        s.unit('s','h/v')
-        s.unit('kg','mass')
-        s.unit('rad',1)
+        # from beluga.optim import Scaling
+        # s = Scaling()
+        # s.unit('m',80000)
+        # s.unit('s',80000/6000)
+        # s.unit('kg','mass')
+        # s.unit('rad',1)
+        s = self.problem.scale
         s.initialize(self.nec_cond)
 
         for step_idx,step in enumerate(steps):
@@ -109,13 +110,18 @@ class Beluga(object):
                 print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
+                import copy
                 s.compute_scaling(bvp,sol_last)
+
                 s.scale(bvp,sol_last)
 
-                # bvp = step.next()
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
 
+                # bvp_copy = copy.deepcopy(bvp)
+                # sol_copy = copy.deepcopy(sol)
                 s.unscale(bvp,sol)
+                # keyboard()
+
                 # Update solution for next iteration
                 sol_last = sol
                 solution_set[step_idx].append(sol)

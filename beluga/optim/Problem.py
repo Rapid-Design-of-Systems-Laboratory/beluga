@@ -1,6 +1,7 @@
 from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess
 from beluga.continuation import ContinuationList
 # from os import getcwd
+from .Scaling import Scaling
 
 class Problem(object):
     """Defines problem settings."""
@@ -15,7 +16,7 @@ class Problem(object):
                      'path': Expression('0','nd')}
         # self.constant = []
         self.quantity = []
-        self.scale = []
+        self.scale = Scaling()
         self.continuation = []
         self.execute = Execute();
         self._constraints = ConstraintList()

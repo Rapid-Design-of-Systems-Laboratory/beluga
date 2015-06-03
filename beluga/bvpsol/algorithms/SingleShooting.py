@@ -209,7 +209,6 @@ class SingleShooting(Algorithm):
 
             # Obtain just last timestep for use with correction
             yf = yy[-1]
-
             # Extract states and STM from ode45 output
             yb = yf[:nOdes]  # States
             phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
@@ -242,7 +241,11 @@ class SingleShooting(Algorithm):
             r0 = r1
 
             dy0 = alpha*beta*np.linalg.solve(J,-res)
-
+            # dy0 = np.linalg.solve(J,-res)
+            # if abs(r1 - 0.110277711594) < 1e-4:
+            #     from beluga.utils import keyboard
+            #     keyboard()
+            
             # Apply corrections to states and parameters (if any)
             if nParams > 0:
                 dp = dy0[nOdes:]

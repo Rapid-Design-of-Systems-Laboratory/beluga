@@ -1,6 +1,6 @@
 
 from sympy import *
-from sympy.parsing.sympy_parser import parse_expr
+# from sympy.parsing.sympy_parser import parse_expr
 import pystache, imp
 import re as _re
 
@@ -8,7 +8,7 @@ from beluga import bvpsol
 import beluga.bvpsol.BVP
 
 # import beluga.Beluga as Beluga
-from beluga.utils import keyboard
+from beluga.utils import sympify2, keyboard
 from beluga.optim.problem import *
 
 class NecessaryConditions(object):
@@ -22,7 +22,7 @@ class NecessaryConditions(object):
         self.aug_cost = {}
         self.costates = []
         self.states = []
-        self.costate_rate = []
+        self.costate_rates = []
         # self.problem.parameters = []
         self.ham = '0'
         self.ham_ctrl_partial = []
@@ -38,15 +38,15 @@ class NecessaryConditions(object):
         self.states   = self.process_systems()
 
     def make_costate_rate(self, states):
-        self.costate_rate = [str(diff(parse_expr(
+        self.costate_rates = [str(diff(sympify2(
         '-1*(' + self.ham + ')'),state)) for state in states]
 
-        # self.costate_rate.append(str(diff(parse_expr(
+        # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
 
     def make_ctrl_partial(self, controls):
-        self.ham_ctrl_partial = [diff(parse_expr(self.ham),ctrl) for ctrl in controls]
-        # self.ham_ctrl_partial.append(str(diff(parse_expr(self.ham),
+        self.ham_ctrl_partial = [diff(sympify2(self.ham),ctrl) for ctrl in controls]
+        # self.ham_ctrl_partial.append(str(diff(sympify2(self.ham),
         #     symbols(ctrl))))
 
     def make_ctrl(self, controls):
@@ -89,23 +89,23 @@ class NecessaryConditions(object):
         #TODO: Fix hardcoded if conditions
         if location == 'initial':
             # Using list comprehension instead of loops
-            self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(parse_expr(cost_expr),state.sym))
+            self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(parse_expr(cost_expr),state.sym))
+            self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
                                     for state in states]
 
         # for i in range(len(state)):
         #     self.bc.initial.append(
-        #         diff(parse_expr(sign + '(' + self.aug_cost[location] + ')'),
+        #         diff(sympify2(sign + '(' + self.aug_cost[location] + ')'),
         #         state[i].sym))
 
     def make_ham(self, problem):
-        self.ham = problem.cost['path'].expr
+        self.ham = str(sympify2(problem.cost['path'].expr))
         for i in range(len(problem.states())):
             self.ham += ' + ' + self.costates[i] + '* (' + \
-                problem.states()[i].process_eqn+')'
+                str(sympify2(problem.states()[i].process_eqn))+')'
 
     # Compiles a function template file into a function object
     # using the given data
@@ -244,7 +244,7 @@ class NecessaryConditions(object):
         'aux_list': [
                 {
                 'type' : 'const',
-                'vars': [self.problem.constants()[i].var for i in range(len(self.problem.constants()))]
+                'vars': [const.var for const in self.problem.constants()]
                 },
                 {
                 'type' : 'constraint',
@@ -260,8 +260,8 @@ class NecessaryConditions(object):
          ,
          'parameter_list': [param for param in self.problem.parameters],
          'deriv_list':
-             ['tf*(' + self.problem.states()[i].process_eqn + ')' for i in range(len(self.problem.states()))] +
-             ['tf*(' + self.costate_rate[i] + ')' for i in range(len(self.costate_rate))] +
+             ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in self.problem.states()] +
+             ['tf*(' + costate_rate + ')' for costate_rate in self.costate_rates] +
              ['tf*0']
          ,
          'num_states': 2*len(self.problem.states()) + 1,
@@ -293,7 +293,7 @@ class NecessaryConditions(object):
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('brachisto_prob')
-        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
 
         self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func)

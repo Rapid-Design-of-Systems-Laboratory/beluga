@@ -97,12 +97,15 @@ class Scaling(dict):
 
                 # Setup environment to evaluate expression
                 # Add list of states, costates and time and their peak values
-                variables  = [(state,max(sol.y[idx,:]))
+
+                variables  = [(state,max(abs(sol.y[idx,:])))
                                 for idx,state in enumerate(self.problem_data['state_list'])]
 
                 # Add auxiliary variables and their values (hopefully they dont clash)
                 variables += [(var,bvp.aux_vars[aux['type']][var]) for aux in self.problem_data['aux_list'] for var in aux['vars']]
                 var_dict = dict(variables)
+
+                from beluga.utils import keyboard
 
                 # Evaluate expression to get scaling factor
                 self.scale_factors[unit] = float(sympify2(scale_expr).subs(var_dict,dtype=float).evalf())
@@ -144,7 +147,7 @@ class Scaling(dict):
         for idx, param in enumerate(self.problem_data['parameter_list']):
             sol.parameters[idx] /= self.scale_vals['parameters'][param]
 
-    def unscale(self,bvp,guess):
+    def unscale(self,bvp,sol):
         """Unscales a solution object"""
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
