@@ -8,6 +8,9 @@ import sys,os,imp
 
 from beluga import BelugaConfig
 from beluga.continuation import *
+
+import dill
+
 class Beluga(object):
     version = '0.1'
 
@@ -75,13 +78,10 @@ class Beluga(object):
 
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
 
-        ################################################################
-        # Save the whole "self" object at this point?
-
-        plt.title('Solution for Brachistochrone problem')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.show(block=False)
+        # Save data
+        output = open('data.dill', 'wb')
+        dill.dump(self, output) # Dill Beluga object only
+        output.close()
 
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
