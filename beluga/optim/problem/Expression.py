@@ -1,7 +1,7 @@
-
-class Expression(object):
+from sympy import Expr
+class Expression(Expr):
     """Defines expression information."""
-    
+
     def __init__(self, expr = '', unit = ''):
         """
         Input: expr (string)
@@ -9,6 +9,7 @@ class Expression(object):
         """
         self.expr = expr
         self.unit = unit
-        
-        
+        # Not yet calling superclass yet
+
+
     # add expression operations for optimal control calculations

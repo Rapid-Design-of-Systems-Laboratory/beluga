@@ -1,4 +1,4 @@
-
+from sympy import Symbol
 class Variable(object):
     """Defines variable information."""
 
@@ -9,3 +9,11 @@ class Variable(object):
         """
         self.var = var
         self.unit = unit
+        self.sym = Symbol(var)
+        # super().__init__(self)
+
+    def __repr__(self):
+        return self.var
+
+    def __str__(self):
+        return self.var

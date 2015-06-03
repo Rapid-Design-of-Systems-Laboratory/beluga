@@ -1,6 +1,11 @@
-
+from sympy import Symbol
 class State(object):
     """Defines state information."""
+
+    # # Required so that subclassing works
+    # # Symbol class only has a __new__ method and not __init__
+    # def __new__(cls, var = '', eqn='', unit = ''):
+    #     return Symbol.__new__(cls,var)
 
     def __init__(self, var = 'x', process_eqn = '-x', unit = 'nd', indep_var = 't'):
         """
@@ -13,6 +18,7 @@ class State(object):
         self.state_var = var
         self.unit = unit
         self.process_eqn = process_eqn
+        self.sym = Symbol(var)
 
     # Allows comparison with strings
     # Probably needs to be made more robust
@@ -21,6 +27,15 @@ class State(object):
 
     def __ne__(self,other):
         return not self.__eq__(other)
+
+    def __str__(self):
+        """Returns a string representation of the state variable"""
+        return self.state_var
+
+    def add_prefix(self,prefix):
+        """Adds a prefix to the name of the state variable"""
+        self.state_var = prefix+self.state_var
+        return self
 
     def make_costate(self):
         """Creates costate variable."""
