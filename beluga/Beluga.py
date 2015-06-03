@@ -38,52 +38,20 @@ class Beluga(object):
         Returns:
             Beluga object
         """
-        nec_cond = NecessaryConditions(self.problem)
-
-        # Determine order that controls should be computed
-
-    # 	% Determine control write order to function. Select expression with fewest control variables first.
-    # 	controlsInExpression = zeros(1,oc.num.controls);
-    # 	for ctrExpression = 1 : 1 : oc.num.controls
-    # 	for ctrControl = 1 : 1 : oc.num.controls
-    #
-    # 		if ~isempty(strfind(char(oc.control.unconstrained.expression{ctrExpression}(1)),char(oc.control.var(ctrControl))))
-    # 			controlsInExpression(ctrExpression) = controlsInExpression(ctrExpression) + 1;
-    # 		end
-    #
-    # 	end
-    # 	end
-    #
-    # 	% Sort controls starting with those with fewest appearances in control equations
-    # 	[~,oc.control.unconstrained.writeOrder] = sort(controlsInExpression);
-
-    #    keyboard()
+        self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
         #       Array: Automatic?
         #       Guess object: Directly use
         #       Function handle: Call function
         #       String: Load file?
-        bvp = nec_cond.get_bvp()
+        bvp = self.nec_cond.get_bvp()
 
         # solinit = self.problem.guess
         solinit = self.problem.guess.generate(bvp)
 
-        import sys
-        from beluga.optim import Scaling
-        s = Scaling()
-        s.unit('m','h').unit('s','h/v')
-        s.unit('kg','mass')
-        s.unit('rad',1)
-
-        s.initialize(nec_cond)
-        s.compute_scaling(solinit)
-        print("foo")
-        sys.exit(0)
-
-
         # includes costates
-        state_names = nec_cond.problem_data['state_list']
+        state_names = self.nec_cond.problem_data['state_list']
         initial_states = solinit.y[:,0] # First column
         terminal_states = solinit.y[:,-1] # Last column
         initial_bc = dict(zip(state_names,initial_states))
@@ -111,6 +79,18 @@ class Beluga(object):
     def run_continuation_set(self,steps,bvp,guess):
         # Loop through all the continuation steps
         solution_set = []
+
+
+        # Initialize scaling
+        import sys
+        from beluga.optim import Scaling
+        s = Scaling()
+        s.unit('m','h')
+        s.unit('s','h/v')
+        s.unit('kg','mass')
+        s.unit('rad',1)
+        s.initialize(self.nec_cond)
+
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
             step.reset();
@@ -128,9 +108,14 @@ class Beluga(object):
             for bvp in step:
                 print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
+
+                s.compute_scaling(bvp,sol_last)
+                s.scale(bvp,sol_last)
+
                 # bvp = step.next()
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
 
+                s.unscale(bvp,sol)
                 # Update solution for next iteration
                 sol_last = sol
                 solution_set[step_idx].append(sol)
