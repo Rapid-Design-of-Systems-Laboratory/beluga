@@ -45,7 +45,7 @@ def processOdeArgs(**kwargs):
 
     return defaults
 
-def ode45(vfun, vslot, vinit, **kwargs):
+def ode45(vfun, vslot, vinit, *args, **kwargs):
     # test input types etc
 
     # process keyword arguments
@@ -174,11 +174,11 @@ def ode45(vfun, vslot, vinit, **kwargs):
         vthetime = vtimestamp
         vtheinput = vu
 
-        vk[0] = vfun(vthetime, vtheinput)
+        vk[0] = vfun(vthetime, vtheinput, *args)
         for j in range(1, 6):
             vthetime = vtimestamp + vc[j - 1] * vstepsize
             vtheinput = vu + vstepsize * dot(va[j][:j], vk[:j])
-            vk[j] = vfun(vthetime, vtheinput).T
+            vk[j] = vfun(vthetime, vtheinput, *args).T
 
         # Compute the 4th and the 5th order estimation
         y4 = vu + vstepsize * dot(vb4, vk)

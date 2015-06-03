@@ -1,4 +1,4 @@
-from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList
+from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess
 from beluga.continuation import ContinuationList
 # from os import getcwd
 
@@ -9,8 +9,9 @@ class Problem(object):
         # self.indep_var = []
         # self.states = []
         # self.controls = []
-        self.cost = {'init': Expression('0','nd'),
-                     'term': Expression('0','nd'),
+        self.parameters = []
+        self.cost = {'initial': Expression('0','nd'),
+                     'terminal': Expression('0','nd'),
                      'path': Expression('0','nd')}
         # self.constant = []
         self.quantity = []
@@ -19,12 +20,16 @@ class Problem(object):
         self.execute = Execute();
         self._constraints = ConstraintList()
         self.steps = ContinuationList()
+        self.guess = Guess()
+
         self.systems = {} # List of dynamic system
 
         self.system()   # Create default dynamic system
 
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
+
+
     def system(self,name='default', count=1):
         """Create new DynamicSystem objcts with given name"""
         # Replaces existing systems with same name
@@ -47,10 +52,8 @@ class Problem(object):
     def constants(self,name='default',index=0):
         return self.systems[name][index].constants
 
-    def independent(self,var,unit,name='default',index=0):
-        """Sets independent variable for given system"""
-        return self.systems[name][index].independent(var,unit)
 
+    # Setter functions that allow chaining
     def state(self,var,eqn,unit,name='default',index=0):
         """Adds a state to given system"""
         return self.systems[name][index].state(var,eqn,unit)
@@ -63,10 +66,11 @@ class Problem(object):
         """Adds a control variable to given system"""
         return self.systems[name][index].control(var,unit)
 
+    # Allows setting independent variables for select systems
     def independent(self,var,unit,name='default',select=None):
         """Sets independent variable for specified systems"""
         if select is None:
             [s.independent(var,unit) for s in self.systems[name]]
         else:
-            [self.systems[name][i].independent(var,unit) for i in select]
+            [self.systems[name][i].independent('name_'+var,unit) for i in select]
         return self

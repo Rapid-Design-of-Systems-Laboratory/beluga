@@ -16,12 +16,18 @@ problem = beluga.optim.Problem()
 problem.independent('t', 's')
 
 # Define equations of motion
-problem.state('x','v*cos(theta)','m')   \
-       .state('y','-v*sin(theta)','m')  \
+rho = 'rho0*exp(-h/H)'
+
+problem.state('h','v*cos(theta)','m')   \
+       .state('theta','-v*sin(theta)','rad')  \
+       .state('phi','-v*sin(theta)','rad')  \
        .state('v','g*sin(theta)','m/s')
+       .state('gam','g*sin(theta)','rad')
+       .state('psi','g*sin(theta)','rad')
 
 # Define controls
-problem.control('theta','rad')
+problem.control('alfa','rad')
+       .control('bank','rad')
 
 # Define costs
 problem.cost['path'] = Expression('1','s')
@@ -41,22 +47,17 @@ problem.constant('g','9.81','m/s^2')
 # Is this actually an Expression rather than a Value?
 problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
 # Can be array or function handle
 # TODO: implement an "initial guess" class subclassing Solution
-# problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
-# problem.guess.parameters = np.array([0.1,0.1,0.1,0.1,0.1])
-problem.guess.setup('auto',
-                start=[0,0,1],  # Starting values for states in order
-                direction='forward',
-                costate_guess = -0.1)
+problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 
 # Figure out nicer way of representing this. Done?
 problem.steps = ContinuationList()   # Add a reset function?
 
 problem.steps.add_step(ContinuationStep()
-                .num_cases(10)
+                .num_cases(2)
                 .terminal('x', 20.0)
                 .terminal('y',-20.0))
 (
@@ -71,3 +72,4 @@ problem.steps.add_step()
 )
 
 Beluga.run(problem)
+#

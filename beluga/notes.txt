@@ -1,11 +1,27 @@
-##### 31 May 2015 - 3:35 am Update #####
+##### 02 Jun 2015 #####
+- Added some code for simultaneous control calculations
+- Multiple controls *probably* works, yet to test
+- Added lagrange multipliers as parameters
+- Automated generation of boundary conditions structure
+- Automatic generation of "aux_vars" in the BVP object
+- Automated initial guess generation
+  - tested with brachistochrone
+  - TODO: load from file, function handle, static guess
+
+##### 31 May 2015 #####
+- Added process_systems method to NecessaryConditions
+  - work in progress
+
+- TODO: Allow automatic definition of separate independent variables
+        for all the systems of a specific type
+
 - Added DynamicSystemList and DynamicSystem classes
 - Renamed *Set classes to *List for the sake of semantics
 - Fixed possible circular import problem
 - Functionality retained when user does not specify multiple systems
   - Multiple systems functionality has not been tested properly
   - TODO: Implement addition of constraints to multiple systems
-  
+
 - TODO: Use unit tests and some testing framework to do proper testing
   - Make testing a part of the workflow
   - Use py.test package?
@@ -24,8 +40,6 @@
 ##### 29 May 2015 - 10:00 pm Update #####
 - changed ContinuationStep to use generator method instead of explicit next()/complete() methods
 
-##### 29 May 2015 - 4:15 pm Update #####
-
 - added ConstraintSet container class
     - method chaining allows
 
@@ -37,8 +51,6 @@
 
 - TODO: Create a "chainable list" class for general use?
     - Can be used for constraints, continuation set etc.
-
-##### 29 May 2015 - 3:15 pm Update #####
 
 - made "Beluga" class
     - class method run() that takes a problem object, instantiates a Beluga object and calls solve()
