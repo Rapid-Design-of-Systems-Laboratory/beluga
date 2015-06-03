@@ -42,6 +42,11 @@ problem.constant('g','9.81','m/s^2')
 # TODO: Implement this
 problem.quantity = [Value('tanAng','tan(theta)')]
 
+problem.scale.unit('m','x')     \
+               .unit('s','x/v')\
+               .unit('kg',1)   \
+               .unit('rad',1)
+
 problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
 
 # Can be array or function handle
@@ -57,18 +62,18 @@ problem.guess.setup('auto',
 problem.steps = ContinuationList()   # Add a reset function?
 
 problem.steps.add_step(ContinuationStep()
-                .num_cases(5)
-                .terminal('x', 1.0)
-                .terminal('y',-1.0))
+                .num_cases(10)
+                .terminal('x', 10.0)
+                .terminal('y',-10.0))
 (
 problem.steps.add_step().num_cases(2)
                  .terminal('x', 30.0)
                  .terminal('y',-30.0),
 
 problem.steps.add_step()
-                .num_cases(3)
-                .terminal('x', 40.0)
-                .terminal('y',-40.0)
+                .num_cases(10)
+                .terminal('x', 1000.0)
+                .terminal('y',-1000.0)
 )
 
 Beluga.run(problem)

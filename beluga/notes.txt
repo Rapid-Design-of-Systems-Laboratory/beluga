@@ -1,3 +1,9 @@
+##### 03 Jun 2015 #####
+- Added scaling
+- Added sympify2
+  - carets work as expected
+  - 're' works now
+
 ##### 02 Jun 2015 #####
 - Added some code for simultaneous control calculations
 - Multiple controls *probably* works, yet to test
