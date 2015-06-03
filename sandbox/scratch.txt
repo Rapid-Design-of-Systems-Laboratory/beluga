@@ -4,7 +4,7 @@ DynamicSystem class
     Constraints
 
 # define class
-problem.system(name='uniq_prefix', count=10) # Default count is one
+problem.system(name='sys1', count=10) # Default count is one
               .independant('t','s')
               .state('x','m') \
               .state('y','m') \
@@ -21,5 +21,6 @@ problem.system(name='uniq_prefix', count=10) # Default count is one
 # problem.add_system('uniq_prefix',count=10)
 
 problem.constraints(system='uniq_prefix',number=i) \
-                constrants('uniq_prefix',i).initial('x-x_a1',system='foo',number=1)
+                constraints('uniq_prefix',i)
+                .initial('x_a + x_b + x_c',{a:'sys1'+i,b:'sys2'+i+1,c:'sys'+i+2})
                 for i in [1,2,3]

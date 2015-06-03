@@ -1,7 +1,8 @@
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr
-import pystache, imp, re
+import pystache, imp
+import re as _re
 
 from beluga import bvpsol
 import beluga.bvpsol.BVP
@@ -39,6 +40,7 @@ class NecessaryConditions(object):
     def make_costate_rate(self, states):
         self.costate_rate = [str(diff(parse_expr(
         '-1*(' + self.ham + ')'),state)) for state in states]
+
         # self.costate_rate.append(str(diff(parse_expr(
         # '-1*(' + self.ham + ')'),state)))
 
@@ -102,8 +104,8 @@ class NecessaryConditions(object):
     def make_ham(self, problem):
         self.ham = problem.cost['path'].expr
         for i in range(len(problem.states())):
-            self.ham += ' + ' + self.costates[i] + '*' + \
-                problem.states()[i].process_eqn
+            self.ham += ' + ' + self.costates[i] + '* (' + \
+                problem.states()[i].process_eqn+')'
 
     # Compiles a function template file into a function object
     # using the given data
@@ -128,7 +130,7 @@ class NecessaryConditions(object):
 
             # Render the template using the data
             code = self.renderer.render(tmpl,self.problem_data)
-            # if verbose and 'deriv_func' in filename:
+            # if verbose and 'compute_control' in filename:
             if verbose:
                 print(code)
 
@@ -147,13 +149,13 @@ class NecessaryConditions(object):
         else:
             raise ValueError('Invalid constraint type')
 
-        m = re.findall(pattern,constraint.expr)
-        invalid = [x for x in m if x[0] not in self.problem.states()]
+        m = _re.findall(pattern,constraint.expr)
+        invalid = [x for x in m if x not in self.problem.states()]
 
         if not all(x is None for x in invalid):
-            raise ValueError('Invalid expression in boundary constraint')
+            raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
 
-        constraint.expr = re.sub(pattern,prefix+r"['\1']",constraint.expr)
+        constraint.expr = _re.sub(pattern,prefix+r"['\1']",constraint.expr)
         return constraint
 
     def process_systems(self):
@@ -178,8 +180,10 @@ class NecessaryConditions(object):
         self.process_systems()
 
         ## Create costate list
-        for i in range(len(self.problem.states())):
-            self.costates.append(self.problem.states()[i].make_costate())
+
+        self.costates = [state.make_costate() for state in self.problem.states()]
+        # for i in range(len(self.problem.states())):
+        #     self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
         aug_cost_init = self.problem.cost['initial'].expr
@@ -233,7 +237,6 @@ class NecessaryConditions(object):
         # Create problem dictionary
         # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
-
 
         # bc1 = [self.sanitize_constraint(x) for x in initial_bc]
 
