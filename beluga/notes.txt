@@ -3,6 +3,7 @@
 - Added sympify2
   - carets work as expected
   - 're' works now
+- Planar hypersonic problem now functional 
 
 ##### 02 Jun 2015 #####
 - Added some code for simultaneous control calculations

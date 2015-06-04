@@ -15,8 +15,14 @@ problem = beluga.optim.Problem()
 # Define independent variables
 problem.independent('t', 's')
 
-# Define equations of motion
 rho = 'rho0*exp(-h/H)'
+Cl  = '(1.5658*alfa + -0.0000)'
+# Allow use of caret instead of **
+Cd  = '(1.6537*alfa^2 + 0.0612)'
+D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
+L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
+r   = '(re+h)'
+# Define equations of motion
 
 problem.state('h','v*cos(theta)','m')   \
        .state('theta','-v*sin(theta)','rad')  \
@@ -40,12 +46,23 @@ problem.constraints('default',0) \
                     .terminal('x-x_f','m')   \
                     .terminal('y-y_f','m')
 
-# Define constants (change to have units as well)
-problem.constant('g','9.81','m/s^2')
+# Define constants
+problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
+problem.constant('rho0',1.2,'kg/m^3') # Sea-level atmospheric density, kg/m^3
+problem.constant('H',7500,'m') # Scale height for atmosphere of Earth, m
+problem.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
+problem.constant('re',6378000,'m') # Radius of planet, m
+problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
+problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
+
+problem.scale.unit('m','h')     \
+               .unit('s','h/v')\
+               .unit('kg','mass')   \
+               .unit('rad',1)
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
-problem.quantity = [Value('tanAng','tan(theta)')]
+# problem.quantity = [Value('tanAng','tan(theta)')]
 
 problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
@@ -53,23 +70,12 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 # TODO: implement an "initial guess" class subclassing Solution
 problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 
-# Figure out nicer way of representing this. Done?
-problem.steps = ContinuationList()   # Add a reset function?
+problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 
-problem.steps.add_step(ContinuationStep()
-                .num_cases(2)
-                .terminal('x', 20.0)
-                .terminal('y',-20.0))
-(
-problem.steps.add_step().num_cases(2)
-                 .terminal('x', 30.0)
-                 .terminal('y',-30.0),
+problem.steps.add_step().num_cases(5) \
+                        .terminal('h', 0))  # bvp4c takes 10 steps
 
-problem.steps.add_step()
-                .num_cases(3)
-                .terminal('x', 40.0)
-                .terminal('y',-40.0)
-)
-
+problem.steps.add_step().num_cases(50)  \
+                        .terminal('theta', 20*pi/180)
 Beluga.run(problem)
 #

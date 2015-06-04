@@ -88,7 +88,7 @@ class Guess(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.zeros(len(bvp.aux_vars['parameters']))
+            param_guess = 0.1*np.ones(len(bvp.aux_vars['parameters']))
         elif len(param_guess) < len(bvp.aux_vars['parameters']):
             param_guess += np.zeros(len(bvp.aux_vars['parameters'])-len(param_guess))
         elif len(param_guess) > len(bvp.aux_vars['parameters']):

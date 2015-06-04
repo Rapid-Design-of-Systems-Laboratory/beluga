@@ -26,7 +26,7 @@ r   = '(re+h)'
 
 # Define equations of motion
 problem.state('h','v*sin(gam)','m')   \
-       .state('theta','v*sin(gam)/'+r,'rad')  \
+       .state('theta','v*cos(gam)/'+r,'rad')  \
        .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'**2','m/s') \
        .state('gam',L+'/(mass*v) + (v/'+r+' - mu/(v*'+r+'^2))*cos(gam)','rad')
 
@@ -34,7 +34,7 @@ problem.state('h','v*sin(gam)','m')   \
 problem.control('alfa','rad')
 
 # Define costs
-problem.cost['terminal'] = Expression('-v**2','m^2/s^2')
+problem.cost['terminal'] = Expression('-v^2','m^2/s^2')
 
 # Define constraints
 problem.constraints().initial('h-h_0','m') \
@@ -43,7 +43,7 @@ problem.constraints().initial('h-h_0','m') \
                     .terminal('h-h_f','m')  \
                     .terminal('theta-theta_f','rad')
 
-# Define constants (change to have units as well)
+# Define constants
 problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
 problem.constant('rho0',1.2,'kg/m^3') # Sea-level atmospheric density, kg/m^3
 problem.constant('H',7500,'m') # Scale height for atmosphere of Earth, m
@@ -61,20 +61,18 @@ problem.scale.unit('m','h')     \
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
-problem.guess.setup('auto',start=[1000,0,1000,-90*pi/180],time_integrate=1.0)
+problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 # Figure out nicer way of representing this. Done?
 problem.steps = ContinuationList()   # Add a reset function?
 
-problem.steps.add_step(ContinuationStep()
-                .num_cases(10000)
-                .initial('h', 1000.0)
-                .terminal('h', 0.0))
-# (
-# problem.steps.add_step().num_cases(2)
-#                  .terminal('x', 30.0)
-#                  .terminal('y',-30.0),
+problem.steps.add_step().num_cases(5) \
+                        .terminal('h', 0))  # bvp4c takes 10 steps
+
+problem.steps.add_step().num_cases(50)  \
+                        .terminal('theta', 20*pi/180)
+                # bvp4c takes 30 steps
 #
 # problem.steps.add_step()
 #                 .num_cases(3)

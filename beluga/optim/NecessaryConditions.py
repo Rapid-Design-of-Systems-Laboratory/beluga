@@ -53,7 +53,6 @@ class NecessaryConditions(object):
         # Solve all controls simultaneously
         ctrl_free_sym = solve(self.ham_ctrl_partial,controls,dict=True)
 
-
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
         #   {ctrl1: expr21, ctrl2:expr22}]
@@ -293,7 +292,7 @@ class NecessaryConditions(object):
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('brachisto_prob')
-        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
                                         for func in self.compile_list]
 
         self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func)
