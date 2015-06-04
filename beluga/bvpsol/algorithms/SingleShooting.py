@@ -205,7 +205,7 @@ class SingleShooting(Algorithm):
 
             # Propagate STM and original system together
             stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-            t,yy = ode45(stm_ode45, [t0, tf], y0)
+            t,yy = ode45(stm_ode45, [t0, tf], y0, abstol=1e-6, reltol=1e-6)
 
             # Obtain just last timestep for use with correction
             yf = yy[-1]
@@ -245,7 +245,7 @@ class SingleShooting(Algorithm):
             # if abs(r1 - 0.110277711594) < 1e-4:
             #     from beluga.utils import keyboard
             #     keyboard()
-            
+
             # Apply corrections to states and parameters (if any)
             if nParams > 0:
                 dp = dy0[nOdes:]
@@ -260,7 +260,7 @@ class SingleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux)
+            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-6, reltol=1e-6)
             sol = Solution(x1,y1.T,paramGuess)
         else:
             # Fix this to be something more elegant

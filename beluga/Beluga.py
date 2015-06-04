@@ -71,9 +71,9 @@ class Beluga(object):
         # Save the whole "self" object at this point?
         #
         # plt.title('Solution for Brachistochrone problem')
-        # plt.xlabel('x')
-        # plt.ylabel('y')
-        # plt.show(block=False)
+        plt.xlabel('v')
+        plt.ylabel('h')
+        plt.show(block=False)
 
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
@@ -120,7 +120,6 @@ class Beluga(object):
                 # bvp_copy = copy.deepcopy(bvp)
                 # sol_copy = copy.deepcopy(sol)
                 s.unscale(bvp,sol)
-                # keyboard()
 
                 # Update solution for next iteration
                 sol_last = sol
@@ -130,6 +129,7 @@ class Beluga(object):
                 # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
+                plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
 
             print('Done.')
         return solution_set
