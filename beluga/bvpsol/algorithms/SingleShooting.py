@@ -196,7 +196,8 @@ class SingleShooting(Algorithm):
         beta = 1
         r0 = None
 
-
+        tspan = [t0,tf]
+        # tspan = np.linspace(0,1,100)
         while True:
             if iter>self.max_iterations:
                 print("Maximum iterations exceeded!")
@@ -205,7 +206,9 @@ class SingleShooting(Algorithm):
 
             # Propagate STM and original system together
             stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-            t,yy = ode45(stm_ode45, [t0, tf], y0, abstol=1e-6, reltol=1e-6)
+
+
+            t,yy = ode45(stm_ode45, tspan, y0)
 
             # Obtain just last timestep for use with correction
             yf = yy[-1]

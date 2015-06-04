@@ -59,8 +59,6 @@ problem.guess.setup('auto',
                 costate_guess = -0.1)
 
 # Figure out nicer way of representing this. Done?
-problem.steps = ContinuationList()   # Add a reset function?
-
 problem.steps.add_step(ContinuationStep()
                 .num_cases(10)
                 .terminal('x', 10.0)

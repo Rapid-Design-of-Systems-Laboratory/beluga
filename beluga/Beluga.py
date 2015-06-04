@@ -73,7 +73,7 @@ class Beluga(object):
         # plt.title('Solution for Brachistochrone problem')
         plt.xlabel('v')
         plt.ylabel('h')
-        plt.show(block=False)
+        # plt.show(block=False)
 
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
@@ -129,7 +129,7 @@ class Beluga(object):
                 # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
-                plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
+                plt.plot(sol.y[3,:]/1000, sol.y[0,:]/1000,'-')
 
             print('Done.')
         return solution_set

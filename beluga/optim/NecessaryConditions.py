@@ -51,16 +51,14 @@ class NecessaryConditions(object):
 
     def make_ctrl(self, controls):
         # Solve all controls simultaneously
-        ctrl_free_sym = solve(self.ham_ctrl_partial,controls,dict=True)
-
+        ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
         #   {ctrl1: expr21, ctrl2:expr22}]
         # Convert this to format required by template
-        self.control_options = [{'name':str(ctrl), 'expr':str(expr)}
-                                    for option in ctrl_free_sym
+        self.control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
                                     for (ctrl,expr) in option.items()]
-
+                                for option in ctrl_sol]
 
     def make_aug_cost(self, aug_cost, constraint, location):
         # ind = 0

@@ -3,7 +3,9 @@
 - Added sympify2
   - carets work as expected
   - 're' works now
-- Planar hypersonic problem now functional 
+- Planar hypersonic problem now functional
+- Fixed bug in generation of control ontrol_options
+- 3DOF problem now functional
 
 ##### 02 Jun 2015 #####
 - Added some code for simultaneous control calculations
