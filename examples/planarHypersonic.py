@@ -65,10 +65,9 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 
 problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 # Figure out nicer way of representing this. Done?
-problem.steps = ContinuationList()   # Add a reset function?
 
 problem.steps.add_step().num_cases(5) \
-                        .terminal('h', 0))  # bvp4c takes 10 steps
+                        .terminal('h', 0)  # bvp4c takes 10 steps
 
 problem.steps.add_step().num_cases(50)  \
                         .terminal('theta', 20*pi/180)

@@ -252,7 +252,11 @@ def ode45(vfun, vslot, vinit, *args, **kwargs):
 
         else:  # if (vstepsizefixed)
             if vcntloop <= vtimelength:
-                vstepsize = vslot[vcntloop] - vslot[vcntloop - 1]
+                # Quick fix
+                if vcntloop == vtimelength:
+                    vstepsize = vslot[vcntloop-1] - vslot[vcntloop - 2]
+                else:
+                    vstepsize = vslot[vcntloop] - vslot[vcntloop - 1]
             else:  # Get out of the main integration loop
                 break
 

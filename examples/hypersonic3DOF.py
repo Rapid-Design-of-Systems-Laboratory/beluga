@@ -6,6 +6,7 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
+from math import *
 
 """Brachistochrone example."""
 
@@ -17,34 +18,34 @@ problem.independent('t', 's')
 
 rho = 'rho0*exp(-h/H)'
 Cl  = '(1.5658*alfa + -0.0000)'
-# Allow use of caret instead of **
 Cd  = '(1.6537*alfa^2 + 0.0612)'
 D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
 L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
 r   = '(re+h)'
-# Define equations of motion
 
-problem.state('h','v*cos(theta)','m')   \
-       .state('theta','-v*sin(theta)','rad')  \
-       .state('phi','-v*sin(theta)','rad')  \
-       .state('v','g*sin(theta)','m/s')
-       .state('gam','g*sin(theta)','rad')
-       .state('psi','g*sin(theta)','rad')
+# Define equations of motion
+problem.state('h','v*sin(gam)','m')                                     \
+       .state('theta','v*cos(gam)*cos(psi)/('+r+'*cos(phi))','rad')    \
+       .state('phi','v*cos(gam)*sin(psi)/'+r,'rad')                    \
+       .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'^2','m/s')            \
+       .state('gam',L+'*cos(bank)/(mass*v) - mu/(v*'+r+'^2)*cos(gam) + v/'+r+'*cos(gam)','rad')                                         \
+       .state('psi',L+'*sin(bank)/(mass*cos(gam)*v) - v/'+r+'*cos(gam)*cos(psi)*tan(phi)','rad')
 
 # Define controls
-problem.control('alfa','rad')
-       .control('bank','rad')
+problem.control('bank','rad') \
+       .control('alfa','rad')
 
 # Define costs
-problem.cost['path'] = Expression('1','s')
+problem.cost['terminal'] = Expression('-v^2','m^2/s^2')
 
 # Define constraints
-problem.constraints('default',0) \
-                    .initial('x-x_0','m')    \
-                    .initial('y-y_0','m')    \
-                    .initial('v-v_0','m/s')  \
-                    .terminal('x-x_f','m')   \
-                    .terminal('y-y_f','m')
+problem.constraints().initial('h-h_0','m')              \
+                    .initial('theta-theta_0','rad')     \
+                    .initial('phi-phi_0','rad')         \
+                    .initial('v-v_0','m/s')             \
+                    .terminal('h-h_f','m')              \
+                    .terminal('theta-theta_f','rad')    \
+                    .terminal('phi-phi_f','rad')
 
 # Define constants
 problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
@@ -66,16 +67,20 @@ problem.scale.unit('m','h')     \
 
 problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
-# Can be array or function handle
-# TODO: implement an "initial guess" class subclassing Solution
-problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
+problem.guess.setup('auto',start=[10000,0,0,5000,(-90+10)*pi/180,0])
 
-problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
+problem.steps.add_step().num_cases(6)           \
+                        .terminal('h',0)
 
-problem.steps.add_step().num_cases(5) \
-                        .terminal('h', 0))  # bvp4c takes 10 steps
+problem.steps.add_step().num_cases(11)          \
+                        .initial('h',80000)
 
-problem.steps.add_step().num_cases(50)  \
-                        .terminal('theta', 20*pi/180)
-Beluga.run(problem)
+problem.steps.add_step().num_cases(21)          \
+                        .initial('theta',5*pi/180)
+
+# problem.steps.add_step().num_cases(10)              \
+#                         .terminal('theta',5*pi/180) \
+#                         .terminal('phi',5*pi/180)
+
+belu = Beluga.run(problem)
 #
