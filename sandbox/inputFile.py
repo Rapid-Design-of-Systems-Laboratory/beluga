@@ -17,9 +17,8 @@ problem.independent('t', 's')
 
 # Define equations of motion
 problem.state('x', 'v*cos(theta)','m')   \
-       .state('y','-v*sin(theta)','m')   \
+       .state('y', '-v*sin(theta)','m')   \
        .state('v', 'g*sin(theta)','m/s')
-
 # Define controls
 problem.control('theta','rad')
 
@@ -56,7 +55,8 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 problem.guess.setup('auto',
                 start=[0,0,1],  # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1)
+                # costate_guess = -0.1
+                )
 
 # Figure out nicer way of representing this. Done?
 problem.steps.add_step(ContinuationStep()
@@ -64,14 +64,14 @@ problem.steps.add_step(ContinuationStep()
                 .terminal('x', 10.0)
                 .terminal('y',-10.0))
 (
-problem.steps.add_step().num_cases(2)
-                 .terminal('x', 30.0)
-                 .terminal('y',-30.0),
+# problem.steps.add_step().num_cases(2)
+#                  .terminal('x', 30.0)
+#                  .terminal('y',-30.0),
 
-problem.steps.add_step()
-                .num_cases(10)
-                .terminal('x', 1000.0)
-                .terminal('y',-1000.0)
+# problem.steps.add_step()
+#                 .num_cases(10)
+#                 .terminal('x', 1000.0)
+#                 .terminal('y',-1000.0)
 )
 
 Beluga.run(problem)

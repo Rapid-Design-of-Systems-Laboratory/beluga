@@ -4,6 +4,7 @@ from .Timer import Timer
 from .tictoc import tic, toc
 from .fix_carets import fix_carets
 from .sympify2 import sympify2
+from .ode45_old import ode45_old
 
 __all__ = ['tic','toc']
 

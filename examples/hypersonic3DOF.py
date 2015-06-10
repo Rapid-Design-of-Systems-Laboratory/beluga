@@ -8,7 +8,16 @@ from beluga.optim.problem import *
 from beluga.continuation import *
 from math import *
 
-"""Brachistochrone example."""
+"""Hypersonic 3DOF dynamics example."""
+
+# Figure out way to implement caching automatically
+# @functools.lru_cache(maxsize=None)
+def CLfunction(alfa):
+    return 1.5658*alfa
+
+# @functools.lru_cache(maxsize=None)
+def CDfunction(alfa):
+    return 1.6537*alfa**2 + 0.0612
 
 # Rename this and/or move to optim package?
 problem = beluga.optim.Problem()
@@ -17,8 +26,10 @@ problem = beluga.optim.Problem()
 problem.independent('t', 's')
 
 rho = 'rho0*exp(-h/H)'
-Cl  = '(1.5658*alfa + -0.0000)'
-Cd  = '(1.6537*alfa^2 + 0.0612)'
+# Cl  = '(1.5658*alfa + -0.0000)'
+# Cd  = '(1.6537*alfa^2 + 0.0612)'
+Cl = 'CLfunction(alfa)'
+Cd = 'CDfunction(alfa)'
 D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
 L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
 r   = '(re+h)'
@@ -65,17 +76,17 @@ problem.scale.unit('m','h')     \
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
 
-problem.guess.setup('auto',start=[10000,0,0,5000,(-90+10)*pi/180,0])
+problem.guess.setup('auto',start=[80000,0,0,5000,(-90+10)*pi/180,0])
 
-problem.steps.add_step().num_cases(6)           \
+problem.steps.add_step().num_cases(11)           \
                         .terminal('h',0)
+#
+# problem.steps.add_step().num_cases(11)          \
+#                         .initial('h',80000)
 
 problem.steps.add_step().num_cases(11)          \
-                        .initial('h',80000)
-
-problem.steps.add_step().num_cases(21)          \
                         .initial('theta',5*pi/180)
 
 # problem.steps.add_step().num_cases(10)              \

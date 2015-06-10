@@ -1,3 +1,4 @@
+# from autodiff import Function, Gradient
 import numpy as np
 
 from .. import Solution
@@ -19,6 +20,11 @@ class SingleShooting(Algorithm):
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
+    def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
+        bc = Function(bc_func)
+        M_func = Gradient(bc_func)
+
+
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
@@ -31,6 +37,7 @@ class SingleShooting(Algorithm):
         if parameters is not None:
             nBCs += parameters.size
         M = np.zeros((nBCs, nOdes))
+        N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h*1.j
             # if parameters is not None:
@@ -40,9 +47,7 @@ class SingleShooting(Algorithm):
 
             M[:,i] = np.imag(f)/h
             ya[i] = ya[i] - h*1.j
-
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
+        # for i in range(nOdes):
             yb[i] = yb[i] + h*1.j
             # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
@@ -80,6 +85,7 @@ class SingleShooting(Algorithm):
         fx = bc_func(ya,yb,p,aux)
 
         M = np.zeros((nBCs, nOdes))
+        N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h
             # if parameters is not None:
@@ -89,9 +95,7 @@ class SingleShooting(Algorithm):
 
             M[:,i] = (f-fx)/h
             ya[i] = ya[i] - h
-
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
+        # for i in range(nOdes):
             yb[i] = yb[i] + h
             # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
@@ -142,7 +146,28 @@ class SingleShooting(Algorithm):
 
         # Phidot = F*Phi (matrix product)
         phiDot = np.real(np.dot(F,phi))
+        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+
+    # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
+    #     "Automatic differentiation version of State Transition Matrix"
+    #     phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+    #     # Y = np.array(y[0:nOdes],dtype=complex)  # Just states
+    #     # F = np.zeros((nOdes,nOdes))
+    #     # # Compute Jacobian matrix using complex step derivative
+    #     # for i in range(nOdes):
+    #     #     Y[i] = Y[i] + StepSize*1.j
+    #     #     F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
+    #     #     Y[i] = Y[i] - StepSize*1.j
+    #     f = Function(odefn)
+    #     g = Gradient(odefn)
+    #
+    #     # Phidot = F*Phi (matrix product)
+    #     # phiDot = np.real(np.dot(F,phi))
+    #     phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
+    #     # return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+    #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
     @staticmethod
     def ode_wrap(func,*args, **argd):
