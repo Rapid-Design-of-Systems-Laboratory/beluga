@@ -4,7 +4,7 @@ from beluga.optim import *
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sys,os,imp
+import sys,os,imp,inspect
 
 from beluga import BelugaConfig
 from beluga.continuation import *
@@ -15,8 +15,9 @@ class Beluga(object):
     version = '0.1'
 
     config = BelugaConfig().config # class variable globally accessible
-    def __init__(self,problem):
+    def __init__(self,problem,input_module=None):
         self.problem = problem
+        self.input_module = input_module
 
     @classmethod
     def run(cls,problem):
@@ -26,9 +27,14 @@ class Beluga(object):
         Returns:
             Beluga object
         """
+
+        # Get reference to the input file module
+        frm = inspect.stack()[1]
+        input_module = (inspect.getmodule(frm[0]))
+
         sys.path.append(cls.config['root'])
         if isinstance(problem,Problem):
-            inst = cls(problem) # Create instance of Beluga class
+            inst = cls(problem, input_module) # Create instance of Beluga class
             inst.solve()
             return inst
         else:
@@ -41,38 +47,21 @@ class Beluga(object):
         Returns:
             Beluga object
         """
-        nec_cond = NecessaryConditions(self.problem)
 
-        # Determine order that controls should be computed
-
-    # 	% Determine control write order to function. Select expression with fewest control variables first.
-    # 	controlsInExpression = zeros(1,oc.num.controls);
-    # 	for ctrExpression = 1 : 1 : oc.num.controls
-    # 	for ctrControl = 1 : 1 : oc.num.controls
-    #
-    # 		if ~isempty(strfind(char(oc.control.unconstrained.expression{ctrExpression}(1)),char(oc.control.var(ctrControl))))
-    # 			controlsInExpression(ctrExpression) = controlsInExpression(ctrExpression) + 1;
-    # 		end
-    #
-    # 	end
-    # 	end
-    #
-    # 	% Sort controls starting with those with fewest appearances in control equations
-    # 	[~,oc.control.unconstrained.writeOrder] = sort(controlsInExpression);
-
-    #    keyboard()
+        self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
         #       Array: Automatic?
         #       Guess object: Directly use
         #       Function handle: Call function
         #       String: Load file?
-        bvp = nec_cond.get_bvp()
+        bvp = self.nec_cond.get_bvp()
+
         # solinit = self.problem.guess
         solinit = self.problem.guess.generate(bvp)
 
         # includes costates
-        state_names = nec_cond.problem_data['state_list']
+        state_names = self.nec_cond.problem_data['state_list']
         initial_states = solinit.y[:,0] # First column
         terminal_states = solinit.y[:,-1] # Last column
         initial_bc = dict(zip(state_names,initial_states))
@@ -93,10 +82,28 @@ class Beluga(object):
         dill.dump(self, output) # Dill Beluga object only
         output.close()
 
+        # plt.title('Solution for Brachistochrone problem')
+        plt.xlabel('v')
+        plt.ylabel('h')
+        plt.show(block=False)
+
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
         # Loop through all the continuation steps
         solution_set = []
+
+
+        # Initialize scaling
+        import sys
+        # from beluga.optim import Scaling
+        # s = Scaling()
+        # s.unit('m',80000)
+        # s.unit('s',80000/6000)
+        # s.unit('kg','mass')
+        # s.unit('rad',1)
+        s = self.problem.scale
+        s.initialize(self.nec_cond)
+
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
             step.reset();
@@ -114,8 +121,17 @@ class Beluga(object):
             for bvp in step:
                 print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
-                # bvp = step.next()
+
+                import copy
+                s.compute_scaling(bvp,sol_last)
+
+                s.scale(bvp,sol_last)
+
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
+
+                # bvp_copy = copy.deepcopy(bvp)
+                # sol_copy = copy.deepcopy(sol)
+                s.unscale(bvp,sol)
 
                 # Update solution for next iteration
                 sol_last = sol
@@ -124,7 +140,8 @@ class Beluga(object):
                 elapsed_time = toc()
                 # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
-                plt.plot(sol.y[0,:], sol.y[1,:],'-')
+                # plt.plot(sol.y[0,:], sol.y[1,:],'-')
+                plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
 
             print('Done.')
         return solution_set

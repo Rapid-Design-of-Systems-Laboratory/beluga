@@ -31,7 +31,9 @@ class State(object):
     def __str__(self):
         """Returns a string representation of the state variable"""
         return self.state_var
-
+    def __repr__(self):
+        return self.state_var
+        
     def add_prefix(self,prefix):
         """Adds a prefix to the name of the state variable"""
         self.state_var = prefix+self.state_var

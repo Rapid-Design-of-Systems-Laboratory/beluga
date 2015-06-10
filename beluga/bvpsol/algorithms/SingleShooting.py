@@ -1,3 +1,4 @@
+# from autodiff import Function, Gradient
 import numpy as np
 
 from .. import Solution
@@ -19,6 +20,11 @@ class SingleShooting(Algorithm):
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
+    def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
+        bc = Function(bc_func)
+        M_func = Gradient(bc_func)
+
+
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
@@ -31,6 +37,7 @@ class SingleShooting(Algorithm):
         if parameters is not None:
             nBCs += parameters.size
         M = np.zeros((nBCs, nOdes))
+        N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h*1.j
             # if parameters is not None:
@@ -40,9 +47,7 @@ class SingleShooting(Algorithm):
 
             M[:,i] = np.imag(f)/h
             ya[i] = ya[i] - h*1.j
-
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
+        # for i in range(nOdes):
             yb[i] = yb[i] + h*1.j
             # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
@@ -80,6 +85,7 @@ class SingleShooting(Algorithm):
         fx = bc_func(ya,yb,p,aux)
 
         M = np.zeros((nBCs, nOdes))
+        N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h
             # if parameters is not None:
@@ -89,9 +95,7 @@ class SingleShooting(Algorithm):
 
             M[:,i] = (f-fx)/h
             ya[i] = ya[i] - h
-
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
+        # for i in range(nOdes):
             yb[i] = yb[i] + h
             # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
@@ -142,7 +146,28 @@ class SingleShooting(Algorithm):
 
         # Phidot = F*Phi (matrix product)
         phiDot = np.real(np.dot(F,phi))
+        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+
+    # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
+    #     "Automatic differentiation version of State Transition Matrix"
+    #     phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+    #     # Y = np.array(y[0:nOdes],dtype=complex)  # Just states
+    #     # F = np.zeros((nOdes,nOdes))
+    #     # # Compute Jacobian matrix using complex step derivative
+    #     # for i in range(nOdes):
+    #     #     Y[i] = Y[i] + StepSize*1.j
+    #     #     F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
+    #     #     Y[i] = Y[i] - StepSize*1.j
+    #     f = Function(odefn)
+    #     g = Gradient(odefn)
+    #
+    #     # Phidot = F*Phi (matrix product)
+    #     # phiDot = np.real(np.dot(F,phi))
+    #     phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
+    #     # return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+    #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
     @staticmethod
     def ode_wrap(func,*args, **argd):
@@ -196,7 +221,8 @@ class SingleShooting(Algorithm):
         beta = 1
         r0 = None
 
-
+        tspan = [t0,tf]
+        # tspan = np.linspace(0,1,100)
         while True:
             if iter>self.max_iterations:
                 print("Maximum iterations exceeded!")
@@ -205,11 +231,12 @@ class SingleShooting(Algorithm):
 
             # Propagate STM and original system together
             stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-            t,yy = ode45(stm_ode45, [t0, tf], y0)
+
+
+            t,yy = ode45(stm_ode45, tspan, y0)
 
             # Obtain just last timestep for use with correction
             yf = yy[-1]
-
             # Extract states and STM from ode45 output
             yb = yf[:nOdes]  # States
             phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
@@ -242,6 +269,11 @@ class SingleShooting(Algorithm):
             r0 = r1
 
             dy0 = alpha*beta*np.linalg.solve(J,-res)
+            # dy0 = np.linalg.solve(J,-res)
+            # if abs(r1 - 0.110277711594) < 1e-4:
+            #     from beluga.utils import keyboard
+            #     keyboard()
+
             # Apply corrections to states and parameters (if any)
             if nParams > 0:
                 dp = dy0[nOdes:]
@@ -256,7 +288,7 @@ class SingleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux)
+            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-6, reltol=1e-6)
             sol = Solution(x1,y1.T,paramGuess)
         else:
             # Fix this to be something more elegant

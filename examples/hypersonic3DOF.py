@@ -6,8 +6,18 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
+from math import *
 
-"""Brachistochrone example."""
+"""Hypersonic 3DOF dynamics example."""
+
+# Figure out way to implement caching automatically
+# @functools.lru_cache(maxsize=None)
+def CLfunction(alfa):
+    return 1.5658*alfa
+
+# @functools.lru_cache(maxsize=None)
+def CDfunction(alfa):
+    return 1.6537*alfa**2 + 0.0612
 
 # Rename this and/or move to optim package?
 problem = beluga.optim.Problem()
@@ -15,61 +25,73 @@ problem = beluga.optim.Problem()
 # Define independent variables
 problem.independent('t', 's')
 
-# Define equations of motion
 rho = 'rho0*exp(-h/H)'
+# Cl  = '(1.5658*alfa + -0.0000)'
+# Cd  = '(1.6537*alfa^2 + 0.0612)'
+Cl = 'CLfunction(alfa)'
+Cd = 'CDfunction(alfa)'
+D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
+L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
+r   = '(re+h)'
 
-problem.state('h','v*cos(theta)','m')   \
-       .state('theta','-v*sin(theta)','rad')  \
-       .state('phi','-v*sin(theta)','rad')  \
-       .state('v','g*sin(theta)','m/s')
-       .state('gam','g*sin(theta)','rad')
-       .state('psi','g*sin(theta)','rad')
+# Define equations of motion
+problem.state('h','v*sin(gam)','m')                                     \
+       .state('theta','v*cos(gam)*cos(psi)/('+r+'*cos(phi))','rad')    \
+       .state('phi','v*cos(gam)*sin(psi)/'+r,'rad')                    \
+       .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'^2','m/s')            \
+       .state('gam',L+'*cos(bank)/(mass*v) - mu/(v*'+r+'^2)*cos(gam) + v/'+r+'*cos(gam)','rad')                                         \
+       .state('psi',L+'*sin(bank)/(mass*cos(gam)*v) - v/'+r+'*cos(gam)*cos(psi)*tan(phi)','rad')
 
 # Define controls
-problem.control('alfa','rad')
-       .control('bank','rad')
+problem.control('bank','rad') \
+       .control('alfa','rad')
 
 # Define costs
-problem.cost['path'] = Expression('1','s')
+problem.cost['terminal'] = Expression('-v^2','m^2/s^2')
 
 # Define constraints
-problem.constraints('default',0) \
-                    .initial('x-x_0','m')    \
-                    .initial('y-y_0','m')    \
-                    .initial('v-v_0','m/s')  \
-                    .terminal('x-x_f','m')   \
-                    .terminal('y-y_f','m')
+problem.constraints().initial('h-h_0','m')              \
+                    .initial('theta-theta_0','rad')     \
+                    .initial('phi-phi_0','rad')         \
+                    .initial('v-v_0','m/s')             \
+                    .terminal('h-h_f','m')              \
+                    .terminal('theta-theta_f','rad')    \
+                    .terminal('phi-phi_f','rad')
 
-# Define constants (change to have units as well)
-problem.constant('g','9.81','m/s^2')
+# Define constants
+problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
+problem.constant('rho0',1.2,'kg/m^3') # Sea-level atmospheric density, kg/m^3
+problem.constant('H',7500,'m') # Scale height for atmosphere of Earth, m
+problem.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
+problem.constant('re',6378000,'m') # Radius of planet, m
+problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
+problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
+
+problem.scale.unit('m','h')     \
+               .unit('s','h/v')\
+               .unit('kg','mass')   \
+               .unit('rad',1)
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
-problem.quantity = [Value('tanAng','tan(theta)')]
+# problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
 
-# Can be array or function handle
-# TODO: implement an "initial guess" class subclassing Solution
-problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
+problem.guess.setup('auto',start=[80000,0,0,5000,(-90+10)*pi/180,0])
 
-# Figure out nicer way of representing this. Done?
-problem.steps = ContinuationList()   # Add a reset function?
+problem.steps.add_step().num_cases(11)           \
+                        .terminal('h',0)
+#
+# problem.steps.add_step().num_cases(11)          \
+#                         .initial('h',80000)
 
-problem.steps.add_step(ContinuationStep()
-                .num_cases(2)
-                .terminal('x', 20.0)
-                .terminal('y',-20.0))
-(
-problem.steps.add_step().num_cases(2)
-                 .terminal('x', 30.0)
-                 .terminal('y',-30.0),
+problem.steps.add_step().num_cases(11)          \
+                        .initial('theta',5*pi/180)
 
-problem.steps.add_step()
-                .num_cases(3)
-                .terminal('x', 40.0)
-                .terminal('y',-40.0)
-)
+# problem.steps.add_step().num_cases(10)              \
+#                         .terminal('theta',5*pi/180) \
+#                         .terminal('phi',5*pi/180)
 
-Beluga.run(problem)
+belu = Beluga.run(problem)
 #

@@ -8,10 +8,13 @@ class Guess(object):
     def __init__(self, **kwargs):
         self.setup_funcs = {'auto':self.setup_auto,
                         'file':self.setup_file,
-                        'static':self.setup_static}
+                        'static':self.setup_static,
+                        # 'custom':self.setup_custom
+                        }
         self.generate_funcs = {'auto':self.auto,
                         'file':self.file,
-                        'static':self.static}
+                        'static':self.static
+                        }
         self.setup(**kwargs)
 
     def setup(self,mode='auto',**kwargs):
@@ -85,7 +88,7 @@ class Guess(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.zeros(len(bvp.aux_vars['parameters']))
+            param_guess = 0.1*np.ones(len(bvp.aux_vars['parameters']))
         elif len(param_guess) < len(bvp.aux_vars['parameters']):
             param_guess += np.zeros(len(bvp.aux_vars['parameters'])-len(param_guess))
         elif len(param_guess) > len(bvp.aux_vars['parameters']):
