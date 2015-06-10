@@ -28,7 +28,7 @@ problem_data = {
      'left_bc_list':[
          "x - _x0['x']", # x(0)
          "y - _x0['y']", # y(0)
-         "v - _x0['v']"  # v(0)       
+         "v - _x0['v']"  # v(0)
      ],
      'right_bc_list':[
          "x - _xf['x']", # x(tf)
@@ -46,7 +46,7 @@ problem_data = {
      'ham_expr':'lamX*v*cos(thetta) + g*lamV*sin(thetta) + lamY*v*sin(thetta) + 1'
 }
 from bvpsol import FunctionTemplate
-problem_mod = imp.new_module('brachisto_prob')
+problem_mod = imp.new_module('brachisto_prob')  # Customize this
 
 FunctionTemplate.compile('../bvpsol/templates/deriv_func.tmpl.py',problem_data,problem_mod)
 FunctionTemplate.compile('../bvpsol/templates/bc_func.tmpl.py',problem_data,problem_mod)
@@ -81,11 +81,11 @@ from continuation import *
 def run_continuation():
     bvp = bvpsol.BVP(problem_mod.deriv_func,problem_mod.bc_func,
                                     initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
-                                    terminal_bc = {'x':0.1, 'y':-0.1}, 
+                                    terminal_bc = {'x':0.1, 'y':-0.1},
                                     const = {'g':-9.81},
                                     constraint = {}
                     )
-                                
+
     # step1 will actually be loaded from an array of continuation steps
     step1 = ContinuationStep()
     # 10 seconds for 100 in 5 steps

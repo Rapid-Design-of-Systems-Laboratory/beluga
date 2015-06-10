@@ -16,10 +16,9 @@ problem = beluga.optim.Problem()
 problem.independent('t', 's')
 
 # Define equations of motion
-problem.state('x','v*cos(theta)','m')   \
-       .state('y','-v*sin(theta)','m')  \
-       .state('v','g*sin(theta)','m/s')
-
+problem.state('x', 'v*cos(theta)','m')   \
+       .state('y', '-v*sin(theta)','m')   \
+       .state('v', 'g*sin(theta)','m/s')
 # Define controls
 problem.control('theta','rad')
 
@@ -39,7 +38,13 @@ problem.constant('g','9.81','m/s^2')
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
+# TODO: Implement this
 problem.quantity = [Value('tanAng','tan(theta)')]
+
+problem.scale.unit('m','x')     \
+               .unit('s','x/v')\
+               .unit('kg',1)   \
+               .unit('rad',1)
 
 problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
 
@@ -50,24 +55,23 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 problem.guess.setup('auto',
                 start=[0,0,1],  # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1)
+                # costate_guess = -0.1
+                )
 
 # Figure out nicer way of representing this. Done?
-problem.steps = ContinuationList()   # Add a reset function?
-
 problem.steps.add_step(ContinuationStep()
                 .num_cases(10)
-                .terminal('x', 20.0)
-                .terminal('y',-20.0))
+                .terminal('x', 10.0)
+                .terminal('y',-10.0))
 (
-problem.steps.add_step().num_cases(2)
-                 .terminal('x', 30.0)
-                 .terminal('y',-30.0),
+# problem.steps.add_step().num_cases(2)
+#                  .terminal('x', 30.0)
+#                  .terminal('y',-30.0),
 
-problem.steps.add_step()
-                .num_cases(3)
-                .terminal('x', 40.0)
-                .terminal('y',-40.0)
+# problem.steps.add_step()
+#                 .num_cases(10)
+#                 .terminal('x', 1000.0)
+#                 .terminal('y',-1000.0)
 )
 
 Beluga.run(problem)

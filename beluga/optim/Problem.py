@@ -1,26 +1,30 @@
 from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess
 from beluga.continuation import ContinuationList
 # from os import getcwd
-
+from .Scaling import Scaling
+import inspect
 class Problem(object):
     """Defines problem settings."""
     def __init__(self):
         """Initialize all relevant problem settings."""
-        # self.indep_var = []
-        # self.states = []
-        # self.controls = []
+
+        # Get module calling this function
+        frm = inspect.stack()[1]
+        self.input_module = (inspect.getmodule(frm[0]))
+
         self.parameters = []
         self.cost = {'initial': Expression('0','nd'),
                      'terminal': Expression('0','nd'),
                      'path': Expression('0','nd')}
         # self.constant = []
         self.quantity = []
-        self.scale = []
+        self.scale = Scaling()
         self.continuation = []
         self.execute = Execute();
         self._constraints = ConstraintList()
         self.steps = ContinuationList()
         self.guess = Guess()
+        self.functions = {}
 
         self.systems = {} # List of dynamic system
 
@@ -52,6 +56,14 @@ class Problem(object):
     def constants(self,name='default',index=0):
         return self.systems[name][index].constants
 
+    def indep_var(self,name='default',index=0):
+        return self.systems[name][index].independent_var
+
+
+    def function(self,name,handle):
+        # from functools import *
+        self.functions[name] = handle
+        return self
 
     # Setter functions that allow chaining
     def state(self,var,eqn,unit,name='default',index=0):

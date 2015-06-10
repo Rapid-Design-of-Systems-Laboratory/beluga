@@ -1,13 +1,15 @@
 
 from sympy import *
-from sympy.parsing.sympy_parser import parse_expr
-import pystache, imp, re
+from sympy.core.function import AppliedUndef
+# from sympy.parsing.sympy_parser import parse_expr
+import pystache, imp, inspect
+import re as _re
 
 from beluga import bvpsol
 import beluga.bvpsol.BVP
 
 # import beluga.Beluga as Beluga
-from beluga.utils import keyboard
+from beluga.utils import sympify2, keyboard
 from beluga.optim.problem import *
 
 class NecessaryConditions(object):
@@ -21,14 +23,13 @@ class NecessaryConditions(object):
         self.aug_cost = {}
         self.costates = []
         self.states = []
-        self.costate_rate = []
+        self.costate_rates = []
         # self.problem.parameters = []
         self.ham = '0'
         self.ham_ctrl_partial = []
         self.ctrl_free = []
         self.bc = BoundaryConditions()
         self.problem = problem
-
 
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
@@ -37,29 +38,45 @@ class NecessaryConditions(object):
         self.states   = self.process_systems()
 
     def make_costate_rate(self, states):
-        self.costate_rate = [str(diff(parse_expr(
-        '-1*(' + self.ham + ')'),state)) for state in states]
-        # self.costate_rate.append(str(diff(parse_expr(
+        # TODO: Automate partial derivatives of numerical functions
+        # for state in states:
+        #     rate = diff(sympify2('-1*(' + self.ham + ')'),state)
+        #     # numerical_diff = rate.atoms(Derivative)
+        #     self.costate_rates.append(str(rate))
+        self.costate_rates = [str(diff(sympify2('-1*(' + self.ham + ')'),state))
+                                    for state in states]
+        # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
 
     def make_ctrl_partial(self, controls):
-        self.ham_ctrl_partial = [diff(parse_expr(self.ham),ctrl) for ctrl in controls]
-        # self.ham_ctrl_partial.append(str(diff(parse_expr(self.ham),
+        self.ham_ctrl_partial = []
+        for ctrl in controls:
+            dHdu = diff(sympify2(self.ham),ctrl)
+            custom_diff = dHdu.atoms(Derivative)
+
+            repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
+                        for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
+
+            self.ham_ctrl_partial.append(dHdu.subs(repl))
+        # self.ham_ctrl_partial = [diff(sympify2(self.ham),ctrl) for ctrl in controls]
+        # self.ham_ctrl_partial.append(str(diff(sympify2(self.ham),
         #     symbols(ctrl))))
 
     def make_ctrl(self, controls):
         # Solve all controls simultaneously
-        ctrl_free_sym = solve(self.ham_ctrl_partial,controls,dict=True)
-
+        try:
+            ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
+        except:
+            print("No analytic control law found, switching to numerical method")
+            ctrl_sol = []
 
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
         #   {ctrl1: expr21, ctrl2:expr22}]
         # Convert this to format required by template
-        self.control_options = [{'name':str(ctrl), 'expr':str(expr)}
-                                    for option in ctrl_free_sym
+        self.control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
                                     for (ctrl,expr) in option.items()]
-
+                                for option in ctrl_sol]
 
     def make_aug_cost(self, aug_cost, constraint, location):
         # ind = 0
@@ -87,23 +104,23 @@ class NecessaryConditions(object):
         #TODO: Fix hardcoded if conditions
         if location == 'initial':
             # Using list comprehension instead of loops
-            self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(parse_expr(cost_expr),state.sym))
+            self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(parse_expr(cost_expr),state.sym))
+            self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
                                     for state in states]
 
         # for i in range(len(state)):
         #     self.bc.initial.append(
-        #         diff(parse_expr(sign + '(' + self.aug_cost[location] + ')'),
+        #         diff(sympify2(sign + '(' + self.aug_cost[location] + ')'),
         #         state[i].sym))
 
     def make_ham(self, problem):
-        self.ham = problem.cost['path'].expr
+        self.ham = str(sympify2(problem.cost['path'].expr))
         for i in range(len(problem.states())):
-            self.ham += ' + ' + self.costates[i] + '*' + \
-                problem.states()[i].process_eqn
+            self.ham += ' + ' + self.costates[i] + '* (' + \
+                str(sympify2(problem.states()[i].process_eqn))+')'
 
     # Compiles a function template file into a function object
     # using the given data
@@ -128,7 +145,7 @@ class NecessaryConditions(object):
 
             # Render the template using the data
             code = self.renderer.render(tmpl,self.problem_data)
-            # if verbose and 'deriv_func' in filename:
+            # if verbose and 'compute_control' in filename:
             if verbose:
                 print(code)
 
@@ -147,13 +164,13 @@ class NecessaryConditions(object):
         else:
             raise ValueError('Invalid constraint type')
 
-        m = re.findall(pattern,constraint.expr)
-        invalid = [x for x in m if x[0] not in self.problem.states()]
+        m = _re.findall(pattern,constraint.expr)
+        invalid = [x for x in m if x not in self.problem.states()]
 
         if not all(x is None for x in invalid):
-            raise ValueError('Invalid expression in boundary constraint')
+            raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
 
-        constraint.expr = re.sub(pattern,prefix+r"['\1']",constraint.expr)
+        constraint.expr = _re.sub(pattern,prefix+r"['\1']",constraint.expr)
         return constraint
 
     def process_systems(self):
@@ -174,12 +191,15 @@ class NecessaryConditions(object):
         Returns: bvpsol.BVP object
         """
 
+        print("Computing the necessary conditions of optimality")
         # Should this be moved into __init__ ?
         self.process_systems()
 
         ## Create costate list
-        for i in range(len(self.problem.states())):
-            self.costates.append(self.problem.states()[i].make_costate())
+
+        self.costates = [state.make_costate() for state in self.problem.states()]
+        # for i in range(len(self.problem.states())):
+        #     self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
         aug_cost_init = self.problem.cost['initial'].expr
@@ -202,6 +222,23 @@ class NecessaryConditions(object):
         # Construct Hamiltonian
         self.make_ham(self.problem)
 
+        # Get list of all custom functions in the problem
+        # TODO: Check in places other than the Hamiltonian?
+        # TODO: Move to separate method?
+        func_list = sympify2(self.ham).atoms(AppliedUndef)
+
+        # Load required functions from the input file
+        new_functions = {(str(f.func),getattr(self.problem.input_module,str(f.func)))
+                            for f in func_list
+                            if hasattr(self.problem.input_module,str(f.func)) and
+                                inspect.isfunction(getattr(self.problem.input_module,str(f.func)))}
+
+        self.problem.functions.update(new_functions)
+
+        undefined_func = [f.func for f in func_list if str(f.func) not in self.problem.functions]
+
+        if not all(x is None for x in undefined_func):
+            raise ValueError('Invalid function(s) specified: '+str(undefined_func))
 
         # TODO: Make this more generalized
         # Add free final time boundary condition
@@ -219,7 +256,9 @@ class NecessaryConditions(object):
 
         # TODO(thomas): Combine into a single control computation method?
         self.make_ctrl_partial(self.problem.controls())
+
         self.make_ctrl(self.problem.controls())
+
         # Compute unconstrained control law (need to add singular arc and bang/bang smoothing, numerical solutions)
         # for i in range(len(self.problem.controls())):
         #     self.make_ctrl(self.problem.controls()[i].var, i)
@@ -234,19 +273,22 @@ class NecessaryConditions(object):
         # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
 
-
         # bc1 = [self.sanitize_constraint(x) for x in initial_bc]
 
         self.problem_data = {
         'aux_list': [
                 {
                 'type' : 'const',
-                'vars': [self.problem.constants()[i].var for i in range(len(self.problem.constants()))]
+                'vars': [const.var for const in self.problem.constants()]
                 },
                 {
                 'type' : 'constraint',
                 'vars': []
                 },
+                {
+                'type' : 'function',
+                'vars' : [func_name for func_name in self.problem.functions]
+                }
          ],
          # TODO: Generalize 'tf' to independent variable for current arc
          'state_list':
@@ -257,12 +299,12 @@ class NecessaryConditions(object):
          ,
          'parameter_list': [param for param in self.problem.parameters],
          'deriv_list':
-             ['tf*(' + self.problem.states()[i].process_eqn + ')' for i in range(len(self.problem.states()))] +
-             ['tf*(' + self.costate_rate[i] + ')' for i in range(len(self.costate_rate))] +
+             ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in self.problem.states()] +
+             ['tf*(' + costate_rate + ')' for costate_rate in self.costate_rates] +
              ['tf*0']
          ,
          'num_states': 2*len(self.problem.states()) + 1,
-
+         'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial],
 
          # Compute these automatically?
         #  'left_bc_list':[self.sanitize_constraint(x).expr for x in initial_bc]+self.bc.init,
@@ -290,12 +332,15 @@ class NecessaryConditions(object):
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('brachisto_prob')
+
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
                                         for func in self.compile_list]
+
 
         self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func)
         self.bvp.aux_vars['const'] = dict((const.var,const.val) for const in self.problem.constants())
         self.bvp.aux_vars['parameters'] = self.problem_data['parameter_list']
+        self.bvp.aux_vars['function']  = self.problem.functions
         # TODO: ^^ Do same for constraint values
 
         return self.bvp

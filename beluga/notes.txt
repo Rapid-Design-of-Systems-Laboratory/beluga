@@ -1,3 +1,23 @@
+##### 10 Jun 2015 #####
+- Loads functions automatically from input file
+- TODO: Unscale variables being passed into function
+
+##### 09 Jun 2015 #####
+- Custom function functionality added
+  - automatically defines functions inside compute_control in local scope
+  - replaces function derivatives with complex step
+  - uses scipy fsolve to solve for control
+    - TODO: Cache initial guess/results?
+
+##### 03 Jun 2015 #####
+- Added scaling
+- Added sympify2
+  - carets work as expected
+  - 're' works now
+- Planar hypersonic problem now functional
+- Fixed bug in generation of control ontrol_options
+- 3DOF problem now functional
+
 ##### 02 Jun 2015 #####
 - Added some code for simultaneous control calculations
 - Multiple controls *probably* works, yet to test
