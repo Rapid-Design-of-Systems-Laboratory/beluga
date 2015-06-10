@@ -8,19 +8,9 @@
 #     'control_list':['theta','sigma']
 # }
 
-
-#
-# def CLfunction(alfa):
-#     return 1.5658*alfa
-#
-# def CDfunction(alfa):
-#     return 1.6537*alfa**2 + 0.0612
-
 import numpy as np
 import scipy.optimize
 from math import *
-# from joblib import Memory
-# memory = Memory(cachedir='~/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
 
 def compute_hamiltonian(_t,_X,_p,_aux,_u):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
