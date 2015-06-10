@@ -3,6 +3,7 @@ __pycache__
 *.html
 *.ini
 *.dat
+_cache
 
 # OS generated files #
 ######################
