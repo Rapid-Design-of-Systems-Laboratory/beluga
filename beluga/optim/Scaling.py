@@ -4,6 +4,8 @@ from sympy import *
 # from sympy.utilities.lambdify import lambdastr
 from beluga.utils import fix_carets, sympify2
 class Scaling(dict):
+    excluded_aux = ['function']
+
     def __init__(self):
         self.units = {}
         self.scale_func = {}
@@ -102,7 +104,10 @@ class Scaling(dict):
                                 for idx,state in enumerate(self.problem_data['state_list'])]
 
                 # Add auxiliary variables and their values (hopefully they dont clash)
-                variables += [(var,bvp.aux_vars[aux['type']][var]) for aux in self.problem_data['aux_list'] for var in aux['vars']]
+                variables += [(var,bvp.aux_vars[aux['type']][var])
+                                for aux in self.problem_data['aux_list']
+                                for var in aux['vars']
+                                if aux['type'] not in Scaling.excluded_aux]
                 var_dict = dict(variables)
 
                 from beluga.utils import keyboard
@@ -140,8 +145,9 @@ class Scaling(dict):
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):
-            for var in aux['vars']:
-                bvp.aux_vars[aux['type']][var] /= self.scale_vals[aux['type']][var]
+            if aux['type'] not in Scaling.excluded_aux:
+                for var in aux['vars']:
+                    bvp.aux_vars[aux['type']][var] /= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
@@ -159,8 +165,9 @@ class Scaling(dict):
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):
-            for var in aux['vars']:
-                bvp.aux_vars[aux['type']][var] *= self.scale_vals[aux['type']][var]
+            if aux['type'] not in Scaling.excluded_aux:
+                for var in aux['vars']:
+                    bvp.aux_vars[aux['type']][var] *= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):

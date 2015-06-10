@@ -4,7 +4,7 @@ from beluga.optim import *
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sys,os,imp
+import sys,os,imp,inspect
 
 from beluga import BelugaConfig
 from beluga.continuation import *
@@ -12,8 +12,9 @@ class Beluga(object):
     version = '0.1'
 
     config = BelugaConfig().config # class variable globally accessible
-    def __init__(self,problem):
+    def __init__(self,problem,input_module=None):
         self.problem = problem
+        self.input_module = input_module
 
     @classmethod
     def run(cls,problem):
@@ -23,9 +24,14 @@ class Beluga(object):
         Returns:
             Beluga object
         """
+
+        # Get reference to the input file module
+        frm = inspect.stack()[1]
+        input_module = (inspect.getmodule(frm[0]))
+
         sys.path.append(cls.config['root'])
         if isinstance(problem,Problem):
-            inst = cls(problem) # Create instance of Beluga class
+            inst = cls(problem, input_module) # Create instance of Beluga class
             inst.solve()
             return inst
         else:
@@ -38,6 +44,7 @@ class Beluga(object):
         Returns:
             Beluga object
         """
+
         self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
@@ -73,7 +80,7 @@ class Beluga(object):
         # plt.title('Solution for Brachistochrone problem')
         plt.xlabel('v')
         plt.ylabel('h')
-        # plt.show(block=False)
+        plt.show(block=False)
 
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp,guess):
@@ -129,7 +136,7 @@ class Beluga(object):
                 # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
-                plt.plot(sol.y[3,:]/1000, sol.y[0,:]/1000,'-')
+                plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
 
             print('Done.')
         return solution_set
