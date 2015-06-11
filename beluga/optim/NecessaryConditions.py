@@ -246,31 +246,13 @@ class NecessaryConditions(object):
 
         # Compute costate process equations
         self.make_costate_rate(self.problem.states())
-
-        # for i in range(len(self.problem.states())):
-        #     self.make_costate_rate(self.problem.states()[i].state_var)
-
-        # Compute unconstrained control partial
-        # for i in range(len(self.problem.controls())):
-            # self.make_ctrl_partial(self.problem.controls()[i].var)
-
-        # TODO(thomas): Combine into a single control computation method?
         self.make_ctrl_partial(self.problem.controls())
 
+        # Compute unconstrained control law
+        # (need to add singular arc and bang/bang smoothing, numerical solutions)
         self.make_ctrl(self.problem.controls())
 
-        # Compute unconstrained control law (need to add singular arc and bang/bang smoothing, numerical solutions)
-        # for i in range(len(self.problem.controls())):
-        #     self.make_ctrl(self.problem.controls()[i].var, i)
-
-        # self.control_options = []
-        #
-        # for i in range(len(self.problem.controls())):
-        #     for j in range(len(self.ctrl_free)):
-        #         self.control_options.append([{'name':self.problem.controls()[i].var,'expr':self.ctrl_free[j]}])
-
         # Create problem dictionary
-        # ONLY WORKS FOR ONE CONTROL
         # NEED TO ADD BOUNDARY CONDITIONS
 
         # bc1 = [self.sanitize_constraint(x) for x in initial_bc]
@@ -293,7 +275,6 @@ class NecessaryConditions(object):
          # TODO: Generalize 'tf' to independent variable for current arc
          'state_list':
              [str(state) for state in self.problem.states()] +
-            #  [self.costates[i] for i in range(len(self.costate))] +
              [str(costate) for costate in self.costates] +
              ['tf']
          ,
@@ -305,24 +286,8 @@ class NecessaryConditions(object):
          ,
          'num_states': 2*len(self.problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial],
-
-         # Compute these automatically?
-        #  'left_bc_list':[self.sanitize_constraint(x).expr for x in initial_bc]+self.bc.init,
-        #  'right_bc_list':[self.sanitize_constraint(x).expr for x in terminal_bc]+self.bc.term,
-        #  'left_bc_list':initial_bc,
         'left_bc_list': self.bc.initial,
         'right_bc_list': self.bc.terminal,
-        #  'left_bc_list':[
-        #      "x - _x0['x']", # x(0
-        #      "y - _x0['y']", # y(0)
-        #      "v - _x0['v']"
-        #  ],
-        #  'right_bc_list':[
-        #      "x - _xf['x']", # x(tf)
-        #      "y - _xf['y']", # y(tf)
-        #      "lagrange_v + 0.0",   # lamV(tf)
-        #      "_H     - 0",     # H(tf)
-        #  ],
          'control_options': self.control_options,
          'control_list':[str(u) for u in self.problem.controls()],
          'ham_expr':self.ham

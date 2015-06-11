@@ -12,6 +12,8 @@ import functools
 
 # Figure out way to implement caching automatically
 # @functools.lru_cache(maxsize=None)
+
+# @custom(unit='m/s')
 def CLfunction(alfa):
     return 1.5658*alfa
 
@@ -31,10 +33,10 @@ problem = beluga.optim.Problem()
 problem.independent('t', 's')
 
 rho = 'rho0*exp(-h/H)'
-# Cl  = '(1.5658*alfa + -0.0000)'
-# Cd  = '(1.6537*alfa^2 + 0.0612)'
-Cl = 'CLfunction(alfa)'
-Cd = 'CDfunction(alfa)'
+Cl  = '(1.5658*alfa + -0.0000)'
+Cd  = '(1.6537*alfa^2 + 0.0612)'
+# Cl = 'CLfunction(alfa)'
+# Cd = 'CDfunction(alfa)'
 
 D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
 L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
@@ -87,10 +89,9 @@ problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 
 problem.steps.add_step().num_cases(5) \
                         .terminal('h', 0)  # bvp4c takes 10 steps
-
-problem.steps.add_step().num_cases(21)  \
-                        .terminal('theta', 10*pi/180)
-                        # bvp4c takes 30 steps
+#
+# problem.steps.add_step().num_cases(21)  \
+#                         .terminal('theta', 10*pi/180)
 
 # problem.steps.add_step()
 #                 .num_cases(3)

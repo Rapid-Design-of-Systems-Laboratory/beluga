@@ -1,6 +1,7 @@
 ##### 10 Jun 2015 #####
 - Loads functions automatically from input file
 - TODO: Unscale variables being passed into function
+- TODO: Make a new diff() function
 
 ##### 09 Jun 2015 #####
 - Custom function functionality added
