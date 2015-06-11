@@ -4,7 +4,7 @@ from beluga.optim import *
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sys,os,imp,inspect
+import sys,os,imp,inspect,warnings
 
 from beluga import BelugaConfig
 from beluga.continuation import *
@@ -31,6 +31,10 @@ class Beluga(object):
         # Get reference to the input file module
         frm = inspect.stack()[1]
         input_module = (inspect.getmodule(frm[0]))
+
+        # Suppress warnings
+
+        warnings.filterwarnings("ignore")
 
         sys.path.append(cls.config['root'])
         if isinstance(problem,Problem):
@@ -92,7 +96,6 @@ class Beluga(object):
         # Loop through all the continuation steps
         solution_set = []
 
-
         # Initialize scaling
         import sys
         # from beluga.optim import Scaling
@@ -130,18 +133,19 @@ class Beluga(object):
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
 
                 # bvp_copy = copy.deepcopy(bvp)
-                # sol_copy = copy.deepcopy(sol)
-                s.unscale(bvp,sol)
+                sol_copy = copy.deepcopy(sol)
+                s.unscale(bvp,sol_copy)
 
                 # Update solution for next iteration
-                sol_last = sol
-                solution_set[step_idx].append(sol)
+                sol_last = sol_copy
+                solution_set[step_idx].append(sol_copy)
 
                 elapsed_time = toc()
                 # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
-                plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
+                # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
+            plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
             print('Done.')
         return solution_set

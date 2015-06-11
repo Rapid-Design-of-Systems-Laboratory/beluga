@@ -5,6 +5,9 @@ from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 
+from beluga.utils.joblib import Memory
+memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
+
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',verbose=False):
         self.tolerance = tolerance
@@ -19,6 +22,7 @@ class SingleShooting(Algorithm):
             self.bc_jac_func  = self.__bcjac_fd
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
+        self.solve = memory.cache(self.solve)
 
     def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
         bc = Function(bc_func)
@@ -175,8 +179,6 @@ class SingleShooting(Algorithm):
            return func(x,y0,*args,**argd)
        return func_wrapper
 
-
-    # TODO(Thomas): Use a BVP class of some kind to standardize interface
     def solve(self,bvp,guess):
         """Solve a two-point boundary value problem
             using the single shooting method
@@ -189,7 +191,6 @@ class SingleShooting(Algorithm):
             solution of TPBVP
         Raises:
         """
-
         solinit = guess
         x  = solinit.x
         # Get initial states from the guess structure
