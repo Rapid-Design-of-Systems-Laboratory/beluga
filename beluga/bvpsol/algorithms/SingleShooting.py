@@ -5,7 +5,7 @@ from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 
-from joblib import Memory
+from beluga.utils.joblib import Memory
 memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
 
 class SingleShooting(Algorithm):
