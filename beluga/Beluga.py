@@ -48,7 +48,6 @@ class Beluga(object):
         Returns:
             Beluga object
         """
-
         self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
@@ -82,7 +81,7 @@ class Beluga(object):
         # Save the whole "self" object at this point?
         #
         # plt.title('Solution for Brachistochrone problem')
-        plt.xlabel('v')
+        plt.xlabel('theta')
         plt.ylabel('h')
         plt.show(block=False)
 
@@ -141,6 +140,7 @@ class Beluga(object):
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
-            plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
+            # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
+            plt.plot(sol_copy.y[1,:]*180/pi, sol_copy.y[0,:]/1000,'-')
             print('Done.')
         return solution_set

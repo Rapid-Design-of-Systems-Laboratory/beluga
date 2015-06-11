@@ -11,6 +11,7 @@
 import numpy as np
 import scipy.optimize
 from math import *
+from beluga.utils import static_var
 
 def compute_hamiltonian(_t,_X,_p,_aux,_u):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
@@ -26,6 +27,7 @@ def compute_hamiltonian(_t,_X,_p,_aux,_u):
     [{{#control_list}}{{.}},{{/control_list}}] = _u
     return {{ham_expr}}
 
+@static_var('guess_u',[{{#control_list}}0,{{/control_list}}])
 def compute_control(_t,_X,_p,_aux):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
 
@@ -65,9 +67,10 @@ def compute_control(_t,_X,_p,_aux):
         I = 1j
         return [{{#dHdu}}{{.}},
                 {{/dHdu}}]
-    guess_u = [{{#control_list}}0,{{/control_list}}]
 
-    from beluga.utils import keyboard
-    _saved = scipy.optimize.fsolve(dHdu, guess_u)
+    # guess_u = [{{#control_list}}0,{{/control_list}}]
+
+    _saved = scipy.optimize.fsolve(dHdu, compute_control.guess_u)
 {{/control_options}}
+    compute_control.guess_u = _saved
     return _saved

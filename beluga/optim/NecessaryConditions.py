@@ -18,7 +18,7 @@ class NecessaryConditions(object):
     # pystache renderer without HTML escapes
     renderer = pystache.Renderer(escape=lambda u: u)
 
-    def __init__(self, problem):
+    def __init__(self, problem, cached=True):
         """Initializes all of the relevant necessary conditions."""
         self.aug_cost = {}
         self.costates = []
@@ -34,8 +34,12 @@ class NecessaryConditions(object):
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config['root']+'/beluga/bvpsol/templates/'
-        self.template_suffix = '.tmpl.py'
+        self.template_suffix = '.py.mu'
         self.states   = self.process_systems()
+        # self.cached = cached
+        # if cached:
+        #     memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
+        #     self.get_bvp = memory.cache(self.get_bvp)
 
     def make_costate_rate(self, states):
         # TODO: Automate partial derivatives of numerical functions
