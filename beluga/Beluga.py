@@ -10,11 +10,18 @@ from beluga import BelugaConfig
 from beluga.continuation import *
 class Beluga(object):
     version = '0.1'
+    _THE_MAGIC_WORD = object()
+    instance = None
 
     config = BelugaConfig().config # class variable globally accessible
-    def __init__(self,problem,input_module=None):
+    def __init__(self,problem,token,input_module=None):
         self.problem = problem
         self.input_module = input_module
+        if token is not self._THE_MAGIC_WORD:
+            raise ValueError("Don't construct directly, use create() or run()")
+
+
+    def getinstance():
 
     @classmethod
     def run(cls,problem):
@@ -35,7 +42,8 @@ class Beluga(object):
 
         sys.path.append(cls.config['root'])
         if isinstance(problem,Problem):
-            inst = cls(problem, input_module) # Create instance of Beluga class
+            # Create instance of Beluga class
+            inst = cls(problem, cls._THE_MAGIC_WORD,input_module = input_module)
             inst.solve()
             return inst
         else:

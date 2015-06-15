@@ -65,6 +65,8 @@ problem.constraints().initial('h-h_0','m') \
 problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
 problem.constant('rho0',1.2,'kg/m^3') # Sea-level atmospheric density, kg/m^3
 problem.constant('H',7500,'m') # Scale height for atmosphere of Earth, m
+
+
 problem.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
 problem.constant('re',6378000,'m') # Radius of planet, m
 problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
@@ -100,4 +102,7 @@ problem.steps.add_step().num_cases(21)  \
 # )
 
 Beluga.run(problem)
+
+beluga = Beluga.create(problem)
+beluga.add_callback('before_control',mycode)
 #
