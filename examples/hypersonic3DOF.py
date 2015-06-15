@@ -87,7 +87,7 @@ problem.steps.add_step().num_cases(11)           \
 #                         .initial('h',80000)
 
 problem.steps.add_step().num_cases(41)          \
-                        .initial('theta',5*pi/180)
+                        .terminal('theta',5*pi/180)
 
 # problem.steps.add_step().num_cases(10)              \
 #                         .terminal('theta',5*pi/180) \

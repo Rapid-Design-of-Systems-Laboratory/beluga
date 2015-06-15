@@ -286,12 +286,12 @@ class NecessaryConditions(object):
          'deriv_list':
              ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in self.problem.states()] +
              ['tf*(' + costate_rate + ')' for costate_rate in self.costate_rates] +
-             ['tf*0']
+             ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'num_states': 2*len(self.problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial],
-        'left_bc_list': self.bc.initial,
-        'right_bc_list': self.bc.terminal,
+         'left_bc_list': self.bc.initial,
+         'right_bc_list': self.bc.terminal,
          'control_options': self.control_options,
          'control_list':[str(u) for u in self.problem.controls()],
          'ham_expr':self.ham

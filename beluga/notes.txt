@@ -1,4 +1,9 @@
 ##### 10 Jun 2015 #####
+- Added joblib library to utils
+- Added initial guess caching to numerical root solving -- not sure if very effective
+  - TODO: Added some kind of reset functionality?
+  
+##### 10 Jun 2015 #####
 - Loads functions automatically from input file
 - TODO: Unscale variables being passed into function
 - TODO: Make a new diff() function
