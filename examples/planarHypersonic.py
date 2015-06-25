@@ -28,6 +28,7 @@ def CDfunction(alfa):
 
 # Rename this and/or move to optim package?
 problem = beluga.optim.Problem('planarHypersonic')
+# problem = beluga.optim.Problem()
 
 # Define independent variables
 problem.independent('t', 's')
@@ -92,8 +93,8 @@ problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 problem.steps.add_step().num_cases(5) \
                         .terminal('h', 0)  # bvp4c takes 10 steps
 #
-problem.steps.add_step().num_cases(21)  \
-                        .terminal('theta', 10*pi/180)
+# problem.steps.add_step().num_cases(21)  \
+#                         .terminal('theta', 10*pi/180)
 
 # problem.steps.add_step()
 #                 .num_cases(3)
@@ -102,7 +103,6 @@ problem.steps.add_step().num_cases(21)  \
 # )
 
 Beluga.run(problem)
-
 # beluga = Beluga.create(problem)
 # beluga.add_callback('before_control',mycode)
 #
