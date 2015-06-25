@@ -8,7 +8,9 @@ import sys,os,imp,inspect,warnings
 
 from beluga import BelugaConfig
 from beluga.continuation import *
+
 class Beluga(object):
+    __metaclass__ = SingletonMetaClass
     version = '0.1'
     _THE_MAGIC_WORD = object()
     instance = None
@@ -19,9 +21,6 @@ class Beluga(object):
         self.input_module = input_module
         if token is not self._THE_MAGIC_WORD:
             raise ValueError("Don't construct directly, use create() or run()")
-
-
-    def getinstance():
 
     @classmethod
     def run(cls,problem):
