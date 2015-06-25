@@ -3,10 +3,14 @@ from beluga.continuation import ContinuationList
 # from os import getcwd
 from .Scaling import Scaling
 import inspect
+import re
+
 class Problem(object):
     """Defines problem settings."""
-    def __init__(self):
+    def __init__(self, name):
         """Initialize all relevant problem settings."""
+
+        self.name = self._format_name(name)
 
         # Get module calling this function
         frm = inspect.stack()[1]
@@ -33,6 +37,19 @@ class Problem(object):
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
 
+
+    def _format_name(self, name):
+        """Validates that the name is in the right format
+            Only alphabets, numbers and underscores allowed
+            Should not start with a number or underscore
+        """
+
+        if re.match(r'[a-zA-Z]\w+',name):
+            return name
+        else:
+            raise ValueError("""Invalid problem name specified.
+            Only alphabets, numbers and underscores allowed
+            Should start with an alphabet""")
 
     def system(self,name='default', count=1):
         """Create new DynamicSystem objcts with given name"""

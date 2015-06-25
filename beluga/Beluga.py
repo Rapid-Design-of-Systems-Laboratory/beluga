@@ -44,6 +44,7 @@ class Beluga(object):
         sys.path.append(cls.config['root'])
         if isinstance(problem,Problem):
             # Create instance of Beluga class
+            print("fidid")
             inst = cls(problem, cls._THE_MAGIC_WORD,input_module = input_module)
             inst.solve()
             return inst

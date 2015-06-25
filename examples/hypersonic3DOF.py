@@ -20,7 +20,7 @@ def CDfunction(alfa):
     return 1.6537*alfa**2 + 0.0612
 
 # Rename this and/or move to optim package?
-problem = beluga.optim.Problem()
+problem = beluga.optim.Problem('hypersonci3DOF')
 
 # Define independent variables
 problem.independent('t', 's')

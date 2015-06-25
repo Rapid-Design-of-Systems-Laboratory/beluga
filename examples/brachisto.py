@@ -10,7 +10,7 @@ from beluga.continuation import *
 """Brachistochrone example."""
 
 # Rename this and/or move to optim package?
-problem = beluga.optim.Problem()
+problem = beluga.optim.Problem('brachisto')
 
 # Define independent variables
 problem.independent('t', 's')
