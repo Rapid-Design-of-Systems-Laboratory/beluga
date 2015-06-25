@@ -21,6 +21,7 @@ class Beluga(object):
     def __init__(self,problem,token,input_module=None):
         self.problem = problem
         self.input_module = input_module
+
         if token is not self._THE_MAGIC_WORD:
             raise ValueError("Don't construct directly, use create() or run()")
 
@@ -32,7 +33,6 @@ class Beluga(object):
         Returns:
             Beluga object
         """
-
         # Get reference to the input file module
         frm = inspect.stack()[1]
         input_module = (inspect.getmodule(frm[0]))
@@ -42,12 +42,13 @@ class Beluga(object):
         warnings.filterwarnings("ignore")
 
         sys.path.append(cls.config['root'])
+
         if isinstance(problem,Problem):
             # Create instance of Beluga class
-            print("fidid")
             inst = cls(problem, cls._THE_MAGIC_WORD,input_module = input_module)
             inst.solve()
-            return inst
+            return
+            # return inst
         else:
             #TODO:Add functionality for when problem is specified by filename
             pass
@@ -88,9 +89,9 @@ class Beluga(object):
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         # Save data
-        output = open('data.dill', 'wb')
-        dill.dump(self, output) # Dill Beluga object only
-        output.close()
+        # output = open('data.dill', 'wb')
+        # dill.dump(self, output) # Dill Beluga object only
+        # output.close()
 
         # plt.title('Solution for Brachistochrone problem')
         plt.xlabel('theta')

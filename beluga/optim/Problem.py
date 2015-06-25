@@ -7,7 +7,7 @@ import re
 
 class Problem(object):
     """Defines problem settings."""
-    def __init__(self, name):
+    def __init__(self,name):
         """Initialize all relevant problem settings."""
 
         self.name = self._format_name(name)
@@ -15,7 +15,7 @@ class Problem(object):
         # Get module calling this function
         frm = inspect.stack()[1]
         self.input_module = (inspect.getmodule(frm[0]))
-
+        
         self.parameters = []
         self.cost = {'initial': Expression('0','nd'),
                      'terminal': Expression('0','nd'),
