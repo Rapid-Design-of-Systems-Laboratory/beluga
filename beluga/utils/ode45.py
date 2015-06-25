@@ -8,6 +8,40 @@ def ode_wrap(func,*args):   # Required for odeint
         return func(y,t,*args)
     return func_wrapper
 
+def split_tspan(tspan):
+# def split_tspan(tspan, y0):
+    # Detect duplicates in time array to find arc junctions
+    [arc_end_idx] = np.where(np.diff(tspan) == 0)
+    # np.add() required because of how np.split works
+    arc_end_idx = np.add(arc_end_idx,1)
+
+    if len(arc_end_idx) > 0:
+        return np.split(tspan,arc_end_idx)
+    else:
+        return tspan
+
+    # if len(arc_end_idx) > 0:
+    #     return (np.split(tspan,arc_end_idx),
+    #             np.split(y0,arc_end_idx,axis=1))
+    # else:
+    #     return ([tspan],[y0])
+
+def ode45_multi(f,tspan,y0,*args,**kwargs):
+    from beluga.utils.joblib import Parallel, delayed
+    from beluga.utils import keyboard
+
+    if isinstance(tspan,np.ndarray):
+        tspan = [tspan]
+
+    if isinstance(y0,np.ndarray):
+        y0 = [y0]
+
+    # Propagate multiple arcs in parallel utilizing all cores available
+    t_and_y = Parallel(n_jobs=-1)(delayed(ode45_old)(f,t,y,*args,**kwargs)
+        for (t,y) in zip(tspan,y0))
+    # t1_y1 = [ode45_old(f,t,y,*args,**kwargs) for (t,y) in t_and_y]
+    return list(zip(*t_and_y))
+
 def ode45(f,tspan,y0,*args,**kwargs):
     """Implements interface similar to MATLAB's ode45 using scipy"""
 
