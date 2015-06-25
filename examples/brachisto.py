@@ -78,4 +78,3 @@ problem.steps.add_step(ContinuationStep()
 )
 
 Beluga.run(problem)
-#
