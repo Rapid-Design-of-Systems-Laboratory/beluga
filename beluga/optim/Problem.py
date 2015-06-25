@@ -15,7 +15,7 @@ class Problem(object):
         # Get module calling this function
         frm = inspect.stack()[1]
         self.input_module = (inspect.getmodule(frm[0]))
-        
+
         self.parameters = []
         self.cost = {'initial': Expression('0','nd'),
                      'terminal': Expression('0','nd'),
@@ -30,6 +30,8 @@ class Problem(object):
         self.guess = Guess()
         self.functions = {}
 
+        self.bvp_solver = None
+        
         self.systems = {} # List of dynamic system
 
         self.system()   # Create default dynamic system

@@ -1,6 +1,7 @@
-from math import *
+from cmath import *
 import beluga.bvpsol as bvpsol
 import beluga.bvpsol.algorithms as algorithms
+import beluga.optim.problem.Guess as Guess
 import numpy as np
 def compute_hamiltonian(t,X,p,aux,u):
     [x,y,v,lamX,lamY,lamV,tf] = X[:7]
@@ -88,28 +89,24 @@ def brachisto_bc(ya,yb,p,aux):
 
     ])
 def test_solve():
-    solinit = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
+    guess = Guess()
+    guess.setup('auto',
+                    start=[0,0,1],  # Starting values for states in order
+                    direction='forward',
+                    # costate_guess = -0.1
+                    )
+
+
     bvp = bvpsol.BVP(brachisto_ode,brachisto_bc,
                                     initial_bc  = {'x':0.0, 'y':0.0, 'v':1.0},
                                     terminal_bc = {'x':0.1, 'y':-0.1},
                                     const = {'g':-9.81},
                                     constraint = {}
                                     )
-    solver_csd = algorithms.SingleShooting(derivative_method='csd',cached=False)
+    solinit = guess.generate(bvp)
+    solver_csd = algorithms.SingleShooting(derivative_method='csd',cached=False,verbose=True)
     solver_fd  = algorithms.SingleShooting(derivative_method='fd',cached=False)
 
     solver_csd.solve(bvp,solinit)
     solver_fd.solve(bvp,solinit)
-    pass
-
-def test_bcjac_csd():
-    pass
-
-def test_bcjac_fd():
-    pass
-
-def test_stmode_csd():
-    pass
-
-def test_stmode_fd():
     pass

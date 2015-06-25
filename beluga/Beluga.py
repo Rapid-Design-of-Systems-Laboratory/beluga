@@ -8,6 +8,7 @@ import sys,os,imp,inspect,warnings
 
 from beluga import BelugaConfig
 from beluga.continuation import *
+from beluga.bvpsol import algorithms
 
 import dill
 
@@ -38,10 +39,21 @@ class Beluga(object):
         input_module = (inspect.getmodule(frm[0]))
 
         # Suppress warnings
-
         warnings.filterwarnings("ignore")
-
         sys.path.append(cls.config['root'])
+
+        # TODO: Get default solver options from configuration or a defaults file
+        if problem.bvp_solver is None:
+            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+
+        # Set the cache directory to be in the current folder
+        cache_dir = os.getcwd()+'/_cache'
+        try:
+            os.mkdir(cache_dir)
+        except:
+            pass
+        problem.bvp_solver.set_cache_dir(cache_dir)
+
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
