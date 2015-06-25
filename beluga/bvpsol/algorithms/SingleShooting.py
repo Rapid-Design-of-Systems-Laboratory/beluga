@@ -7,7 +7,6 @@ from ..Algorithm import Algorithm
 
 from beluga.utils.joblib import Memory
 
-
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',verbose=False,cached=True):
         self.tolerance = tolerance
