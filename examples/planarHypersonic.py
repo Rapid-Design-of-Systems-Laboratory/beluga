@@ -27,7 +27,7 @@ def CDfunction(alfa):
 """A simple planar hypersonic problem example."""
 
 # Rename this and/or move to optim package?
-problem = beluga.optim.Problem()
+problem = beluga.optim.Problem('planarHypersonic')
 
 # Define independent variables
 problem.independent('t', 's')
@@ -103,6 +103,6 @@ problem.steps.add_step().num_cases(21)  \
 
 Beluga.run(problem)
 
-beluga = Beluga.create(problem)
-beluga.add_callback('before_control',mycode)
+# beluga = Beluga.create(problem)
+# beluga.add_callback('before_control',mycode)
 #
