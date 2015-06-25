@@ -85,8 +85,6 @@ problem.scale.unit('m','h')     \
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]
 
-# problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
-
 problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 # Figure out nicer way of representing this. Done?
 
@@ -102,6 +100,7 @@ problem.steps.add_step().num_cases(21)  \
 #                 .terminal('y',-40.0)
 # )
 
+# Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
 Beluga.run(problem)
 # beluga = Beluga.create(problem)
 # beluga.add_callback('before_control',mycode)

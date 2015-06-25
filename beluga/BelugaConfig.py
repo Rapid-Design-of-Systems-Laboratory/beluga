@@ -14,6 +14,7 @@ class BelugaConfig:
         """Initializes a BelugaConfig object with existing an config file or defaults"""
         self.cfgdata = SafeConfigParser()
         self.config_file = os.path.expanduser(config_file)
+
         try:
             os.mkdir(os.path.expanduser('~/.beluga'))
         except:
@@ -47,9 +48,11 @@ class BelugaConfig:
         print('Welcome to the Beluga configuration tool\n')
         self.cfgdata[BelugaConfig.section_name] = {}
 
-        inst_path = input('Set Beluga installation path ['+os.getcwd()+']: ')
+        default_path = os.path.abspath(os.path.dirname(__file__)+'/../')
+
+        inst_path = input('Set Beluga installation path ['+default_path+']: ')
         if inst_path.strip() == '':
-            inst_path = os.getcwd()
+            inst_path = default_path
 
         if os.path.isdir(inst_path):
             self.cfgdata[BelugaConfig.section_name]['root'] = inst_path
