@@ -23,7 +23,7 @@ class SingleShooting(Algorithm):
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
         self.cached = cached
         if cached:
-            memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
+            memory = Memory(cachedir='/Users/mjgrant/Purdue/beluga/examples/_cache', mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
 
