@@ -23,6 +23,8 @@ class SingleShooting(Algorithm):
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
         self.cached = cached
         if cached:
+            from beluga.utils import keyboard
+            keyboard()
             memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
