@@ -103,6 +103,6 @@ problem.steps.add_step().num_cases(21)  \
 
 Beluga.run(problem)
 
-beluga = Beluga.create(problem)
-beluga.add_callback('before_control',mycode)
+# beluga = Beluga.create(problem)
+# beluga.add_callback('before_control',mycode)
 #
