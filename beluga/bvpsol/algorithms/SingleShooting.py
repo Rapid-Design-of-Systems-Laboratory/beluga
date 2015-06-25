@@ -6,10 +6,9 @@ from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 
 from beluga.utils.joblib import Memory
-memory = Memory(cachedir='/p/home/msparapa/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
 
 class SingleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',verbose=False):
+    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',verbose=False,cached=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
@@ -22,7 +21,11 @@ class SingleShooting(Algorithm):
             self.bc_jac_func  = self.__bcjac_fd
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
-        self.solve = memory.cache(self.solve)
+        self.cached = cached
+        if cached:
+            memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
+            self.solve = memory.cache(self.solve)
+
 
     def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
         bc = Function(bc_func)

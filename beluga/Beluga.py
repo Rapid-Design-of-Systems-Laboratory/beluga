@@ -12,12 +12,17 @@ from beluga.continuation import *
 import dill
 
 class Beluga(object):
+    __metaclass__ = SingletonMetaClass
     version = '0.1'
+    _THE_MAGIC_WORD = object()
+    instance = None
 
     config = BelugaConfig().config # class variable globally accessible
-    def __init__(self,problem,input_module=None):
+    def __init__(self,problem,token,input_module=None):
         self.problem = problem
         self.input_module = input_module
+        if token is not self._THE_MAGIC_WORD:
+            raise ValueError("Don't construct directly, use create() or run()")
 
     @classmethod
     def run(cls,problem):
@@ -38,7 +43,8 @@ class Beluga(object):
 
         sys.path.append(cls.config['root'])
         if isinstance(problem,Problem):
-            inst = cls(problem, input_module) # Create instance of Beluga class
+            # Create instance of Beluga class
+            inst = cls(problem, cls._THE_MAGIC_WORD,input_module = input_module)
             inst.solve()
             return inst
         else:
@@ -51,7 +57,6 @@ class Beluga(object):
         Returns:
             Beluga object
         """
-
         self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
@@ -87,7 +92,7 @@ class Beluga(object):
         output.close()
 
         # plt.title('Solution for Brachistochrone problem')
-        plt.xlabel('v')
+        plt.xlabel('theta')
         plt.ylabel('h')
         plt.show(block=False)
 
@@ -146,6 +151,7 @@ class Beluga(object):
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
-            plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
+            # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
+            plt.plot(sol_copy.y[1,:]*180/pi, sol_copy.y[0,:]/1000,'-')
             print('Done.')
         return solution_set

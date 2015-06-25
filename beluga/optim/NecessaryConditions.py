@@ -18,7 +18,7 @@ class NecessaryConditions(object):
     # pystache renderer without HTML escapes
     renderer = pystache.Renderer(escape=lambda u: u)
 
-    def __init__(self, problem):
+    def __init__(self, problem, cached=True):
         """Initializes all of the relevant necessary conditions."""
         self.aug_cost = {}
         self.costates = []
@@ -34,8 +34,12 @@ class NecessaryConditions(object):
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config['root']+'/beluga/bvpsol/templates/'
-        self.template_suffix = '.tmpl.py'
+        self.template_suffix = '.py.mu'
         self.states   = self.process_systems()
+        # self.cached = cached
+        # if cached:
+        #     memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
+        #     self.get_bvp = memory.cache(self.get_bvp)
 
     def make_costate_rate(self, states):
         # TODO: Automate partial derivatives of numerical functions
@@ -282,12 +286,12 @@ class NecessaryConditions(object):
          'deriv_list':
              ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in self.problem.states()] +
              ['tf*(' + costate_rate + ')' for costate_rate in self.costate_rates] +
-             ['tf*0']
+             ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'num_states': 2*len(self.problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial],
-        'left_bc_list': self.bc.initial,
-        'right_bc_list': self.bc.terminal,
+         'left_bc_list': self.bc.initial,
+         'right_bc_list': self.bc.terminal,
          'control_options': self.control_options,
          'control_list':[str(u) for u in self.problem.controls()],
          'ham_expr':self.ham

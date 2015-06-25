@@ -32,9 +32,12 @@ problem.constraints('default',0) \
                     .initial('v-v_0','m/s')  \
                     .terminal('x-x_f','m')   \
                     .terminal('y-y_f','m')
+problem.constraints().interior_point('(x-x1)^2+(y-y1)^2','m^2')
 
 # Define constants (change to have units as well)
 problem.constant('g','9.81','m/s^2')
+problem.constant('x1','7.5','m')
+problem.constant('y1','-15','m')
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
