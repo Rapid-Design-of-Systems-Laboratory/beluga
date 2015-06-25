@@ -1,5 +1,5 @@
 from configparser import SafeConfigParser
-import os.path
+import os.path, os
 import sys
 
 # TODO: Fix config file being created in every folder!!!
@@ -9,18 +9,23 @@ class BelugaConfig:
     option_names = [
         'root', # Installaton directory
     ]
-    def __init__(self, config_file = 'config.ini', run_tool = False):
+
+    def __init__(self, config_file = '~/.beluga/config.ini', run_tool = False):
         """Initializes a BelugaConfig object with existing an config file or defaults"""
         self.cfgdata = SafeConfigParser()
-        self.config_file = config_file
+        self.config_file = os.path.expanduser(config_file)
+        try:
+            os.mkdir(os.path.expanduser('~/.beluga'))
+        except:
+            pass
 
         if run_tool:
             self.config_tool()
         if config_file is not None:
-            if not os.path.isfile(config_file):
+            if not os.path.isfile(self.config_file):
                 self.config_tool() # Run configuration tool if file is missing
 
-            self.cfgdata.read(config_file)
+            self.cfgdata.read(self.config_file)
             if BelugaConfig.section_name not in self.cfgdata:
                 # If config file does not have the required information ask the user
                 self.cfgdata[BelugaConfig.section_name] = {}
@@ -52,7 +57,7 @@ class BelugaConfig:
             sys.stderr.write('Invalid path!')
             return
 
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, 'w+') as f:
             self.cfgdata.write(f)
         print('Configuration complete.')
 

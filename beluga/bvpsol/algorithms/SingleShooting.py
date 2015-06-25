@@ -26,10 +26,10 @@ class SingleShooting(Algorithm):
             memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
-
-    def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
-        bc = Function(bc_func)
-        M_func = Gradient(bc_func)
+    #
+    # def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
+    #     bc = Function(bc_func)
+    #     M_func = Gradient(bc_func)
 
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
