@@ -300,7 +300,8 @@ class NecessaryConditions(object):
     #    problem.constraints[i].expr for i in range(len(problem.constraints))
 
         # Create problem functions by importing from templates
-        self.compiled = imp.new_module(self.problem.name)
+        self.compiled = imp.new_module('_probobj_'+self.problem.name)
+        # self.compiled = imp.new_module("blaaaa")
 
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
                                         for func in self.compile_list]
