@@ -24,7 +24,7 @@ class Problem(object):
         self.quantity = []
         self.scale = Scaling()
         self.continuation = []
-        self.execute = Execute();
+        self.execute = Execute()
         self._constraints = ConstraintList()
         self.steps = ContinuationList()
         self.guess = Guess()

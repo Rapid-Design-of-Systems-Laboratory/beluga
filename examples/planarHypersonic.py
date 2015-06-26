@@ -11,13 +11,13 @@ from math import *
 import functools
 
 # Figure out way to implement caching automatically
-# @functools.lru_cache(maxsize=None)
+#@functools.lru_cache(maxsize=None)
 
 # @custom(unit='m/s')
 def CLfunction(alfa):
     return 1.5658*alfa
 
-# @functools.lru_cache(maxsize=None)
+#@functools.lru_cache(maxsize=None)
 def CDfunction(alfa):
     return 1.6537*alfa**2 + 0.0612
 #
@@ -63,9 +63,9 @@ problem.constraints().initial('h-h_0','m') \
                     .terminal('theta-theta_f','rad')
 
 # Define constants
-problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
-problem.constant('rho0',1.2,'kg/m^3') # Sea-level atmospheric density, kg/m^3
-problem.constant('H',7500,'m') # Scale height for atmosphere of Earth, m
+problem.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
+problem.constant('rho0', 1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
+problem.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
 
 
 problem.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
