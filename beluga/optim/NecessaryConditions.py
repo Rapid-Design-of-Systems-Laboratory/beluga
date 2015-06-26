@@ -5,8 +5,7 @@ from sympy.core.function import AppliedUndef
 import pystache, imp, inspect
 import re as _re
 
-from beluga import bvpsol
-import beluga.bvpsol.BVP
+import beluga.bvpsol.BVP as BVP
 
 # import beluga.Beluga as Beluga
 from beluga.utils import sympify2, keyboard
@@ -306,7 +305,7 @@ class NecessaryConditions(object):
                                         for func in self.compile_list]
 
 
-        self.bvp = bvpsol.BVP(self.compiled.deriv_func,self.compiled.bc_func)
+        self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func)
         self.bvp.aux_vars['const'] = dict((const.var,const.val) for const in self.problem.constants())
         self.bvp.aux_vars['parameters'] = self.problem_data['parameter_list']
         self.bvp.aux_vars['function']  = self.problem.functions
