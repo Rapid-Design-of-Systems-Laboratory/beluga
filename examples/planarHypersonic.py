@@ -78,9 +78,6 @@ problem.scale.unit('m','h')     \
                .unit('kg','mass')   \
                .unit('rad',1)
 
-# problem.function('CLfunction',CLfunction) \
-#        .function('CDfunction',CDfunction)
-
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]

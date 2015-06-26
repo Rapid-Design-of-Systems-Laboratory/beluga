@@ -96,7 +96,6 @@ class Scaling(dict):
                 self.scale_factors[unit] = scale_expr
             else:
                 # If it is an expression, evaluate it
-
                 # Setup environment to evaluate expression
                 # Add list of states, costates and time and their peak values
 

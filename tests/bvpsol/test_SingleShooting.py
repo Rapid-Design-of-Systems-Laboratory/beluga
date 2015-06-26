@@ -79,13 +79,13 @@ def brachisto_bc(ya,yb,p,aux):
     # x0 = aux['initial']
     # xf = aux['terminal']
     return np.array([
-        ya[0] - aux['initial']['x'], # x(0
-        ya[1] - aux['initial']['y'], # y(0)
-        ya[2] - aux['initial']['v'], # v(0)
+        ya[0] - aux['initial']['x'],  # x(0
+        ya[1] - aux['initial']['y'],  # y(0)
+        ya[2] - aux['initial']['v'],  # v(0)
         yb[0] - aux['terminal']['x'], # x(tf)
         yb[1] - aux['terminal']['y'], # y(tf)
-        yb[5] + 0.0,   # lamV(tf)
-        H     - 0,     # H(tf)
+        yb[5] + 0.0,                  # lamV(tf)
+        H     - 0,                    # H(tf)
 
     ])
 def test_solve():
