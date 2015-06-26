@@ -59,6 +59,7 @@ class Beluga(object):
         Returns:
             Beluga object
         """
+        # Initialize necessary conditions of optimality object
         self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
