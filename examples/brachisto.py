@@ -32,7 +32,7 @@ problem.constraints('default',0) \
                     .initial('v-v_0','m/s')  \
                     .terminal('x-x_f','m')   \
                     .terminal('y-y_f','m')
-problem.constraints().interior_point('(x-x1)^2+(y-y1)^2','m^2')
+# problem.constraints().interior_point('(x-x1)^2+(y-y1)^2','m^2')
 
 # Define constants (change to have units as well)
 problem.constant('g','9.81','m/s^2')
@@ -49,7 +49,7 @@ problem.scale.unit('m','x')     \
                .unit('kg',1)   \
                .unit('rad',1)
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
 
 # Can be array or function handle
 # TODO: implement an "initial guess" class subclassing Solution
@@ -64,8 +64,8 @@ problem.guess.setup('auto',
 # Figure out nicer way of representing this. Done?
 problem.steps.add_step(ContinuationStep()
                 .num_cases(10)
-                .terminal('x', 10.0)
-                .terminal('y',-10.0))
+                .terminal('x', 0.1)
+                .terminal('y',-0.1))
 (
 # problem.steps.add_step().num_cases(2)
 #                  .terminal('x', 30.0)

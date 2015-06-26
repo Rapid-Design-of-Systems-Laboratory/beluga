@@ -31,14 +31,13 @@ class Problem(object):
         self.functions = {}
 
         self.bvp_solver = None
-        
+
         self.systems = {} # List of dynamic system
 
         self.system()   # Create default dynamic system
 
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
-
 
     def _format_name(self, name):
         """Validates that the name is in the right format
