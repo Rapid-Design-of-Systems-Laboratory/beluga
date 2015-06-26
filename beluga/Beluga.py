@@ -38,6 +38,9 @@ class Beluga(object):
         frm = inspect.stack()[1]
         input_module = (inspect.getmodule(frm[0]))
 
+        # Get information about input file
+        info = inspect.getframeinfo(frm[0])
+
         # Suppress warnings
         warnings.filterwarnings("ignore")
         sys.path.append(cls.config['root'])
@@ -47,7 +50,8 @@ class Beluga(object):
             problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
         # Set the cache directory to be in the current folder
-        cache_dir = os.getcwd()+'/_cache'
+        # cache_dir = os.getcwd()+'/_cache'
+        cache_dir = os.path.dirname(info.filename)+'/_cache'
         try:
             os.mkdir(cache_dir)
         except:
