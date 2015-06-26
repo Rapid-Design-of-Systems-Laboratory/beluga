@@ -50,8 +50,8 @@ class Beluga(object):
             problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
         # Set the cache directory to be in the current folder
-        # cache_dir = os.getcwd()+'/_cache'
-        cache_dir = os.path.dirname(info.filename)+'/_cache'
+        cache_dir = os.getcwd()+'/_cache'
+        # cache_dir = os.path.dirname(info.filename)+'/_cache'
         try:
             os.mkdir(cache_dir)
         except:
