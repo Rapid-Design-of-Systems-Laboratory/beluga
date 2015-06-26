@@ -2,7 +2,7 @@ import numbers as num# Avoid clashing with Number in sympy
 
 from sympy import *
 # from sympy.utilities.lambdify import lambdastr
-from beluga.utils import fix_carets, sympify2
+from beluga.utils import fix_carets, sympify2, keyboard
 class Scaling(dict):
     excluded_aux = ['function']
 
@@ -45,9 +45,12 @@ class Scaling(dict):
         # TODO: Automate the following sections
 
         # Scaling functions for constants
-        self.scale_func['const'] = {}
-        for const in problem.constants():
-            self.scale_func['const'][str(const)] = lambdify(units_sym,sympify2(const.unit))
+        # self.scale_func['const'] = {}
+        # for const in problem.constants():
+        #     self.scale_func['const'][str(const)] = lambdify(units_sym,sympify2(const.unit))
+
+        self.scale_func['const'] = {str(const): self.create_scale_fn(units_sym,const.unit)
+                                    for const in problem.constants()}
 
         # Cost function used for scaling costates
         cost_used = [key for (key,val) in problem.cost.items() if val.expr is not '0']
@@ -69,7 +72,7 @@ class Scaling(dict):
         # TODO: Fix hardcoding
         # self.scale_func['independent_var'] = lambdify(units_sym,sympify2(problem.indep_var().unit))
         self.scale_func['states']['tf'] = lambdify(units_sym,sympify2(problem.indep_var().unit))
-
+        # self.scale_func['states']['tf'] = self.create_scale_fn(units_sym,problem.indep_var().unit)
 
         self.scale_func['initial'] = self.scale_func['states']
         self.scale_func['terminal'] = self.scale_func['states']
@@ -86,6 +89,9 @@ class Scaling(dict):
             self.scale_func['parameters'][mul_var] = lambdify(units_sym, sympify2(mul_unit))
             indices[c.type] += 1 # increment multiplier index
 
+    def create_scale_fn(self,units_sym,unit_expr):
+        return lambdify(units_sym,sympify2(unit_expr))
+        pass
     def compute_scaling(self,bvp,sol):
         from collections import OrderedDict
         # Units should be stored in order to be used as function arguments
@@ -108,8 +114,6 @@ class Scaling(dict):
                                 for var in aux['vars']
                                 if aux['type'] not in Scaling.excluded_aux]
                 var_dict = dict(variables)
-
-                from beluga.utils import keyboard
 
                 # Evaluate expression to get scaling factor
                 self.scale_factors[unit] = float(sympify2(scale_expr).subs(var_dict,dtype=float).evalf())
