@@ -75,6 +75,7 @@ class Beluga(object):
         Returns:
             Beluga object
         """
+        print("Computing the necessary conditions of optimality")
         self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
@@ -128,7 +129,7 @@ class Beluga(object):
         # s.unit('kg','mass')
         # s.unit('rad',1)
         s = self.problem.scale
-        s.initialize(self.nec_cond)
+        s.initialize(self.problem,self.nec_cond.problem_data)
 
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set

@@ -195,7 +195,6 @@ class NecessaryConditions(object):
         Returns: bvpsol.BVP object
         """
 
-        print("Computing the necessary conditions of optimality")
         # Should this be moved into __init__ ?
         self.process_systems()
 
