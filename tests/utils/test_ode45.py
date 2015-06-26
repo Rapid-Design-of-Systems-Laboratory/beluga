@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.testing as npt
 from math import *
 from beluga.utils import keyboard
 
@@ -135,7 +136,8 @@ def test_ode45_multi_1():
     [t1,x1] = ode45_multi(brachisto_ode,tspan,x0,[],aux)
     x1 = list(x1)
     x1_expected  = outputs[0]
-    assert all((a-b < 1e-5).all() for (a,b) in zip(x1,x1_expected))
+    # assert all((a-b < 1e-5).all() for (a,b) in zip(x1,x1_expected))
+    npt.assert_almost_equal(np.array(x1),np.array(x1_expected))
     # assert (x1 - x1_expected < 1e-5).all()
 
 def test_ode45_multi_2():
@@ -150,7 +152,8 @@ def test_ode45_multi_2():
     x1 = list(x1)   # Original output is a tuple for some reason
     x1_expected  = outputs[1]
 
-    assert all((a-b < 1e-5).all() for (a,b) in zip(x1,x1_expected))
-
+    # assert all((a-b < 1e-5).all() for (a,b) in zip(x1,x1_expected))
+    npt.assert_almost_equal(np.array(x1),np.array(x1_expected))
+    
 def test_split_tspan_1():
     assert True

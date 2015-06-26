@@ -8,6 +8,7 @@ class Scaling(dict):
 
     def __init__(self):
         self.units = {}
+        self.units_sym = []
         self.scale_func = {}
         self.problem_data = {}
 
@@ -21,7 +22,6 @@ class Scaling(dict):
 
     def initialize(self, problem, problem_data):
         """Initializes the scaling process"""
-        self.scale_val = {}
         self.problem_data = problem_data
 
         # Generate scaling functions for states, costates
@@ -34,7 +34,9 @@ class Scaling(dict):
         # TODO: Automate the following sections
 
         # Scaling functions for constants
-        self.scale_func['const'] = {str(const): self.create_scale_fn(const.unit)
+        # self.scale_func['const'] = {str(const): self.create_scale_fn(const.unit)
+        #                             for const in problem.constants()}
+        self.scale_func['const'] = {str(const): lambdify(self.units_sym,sympify2(const.unit))
                                     for const in problem.constants()}
 
         # Cost function used for scaling costates
@@ -100,12 +102,13 @@ class Scaling(dict):
         # Units should be stored in order to be used as function arguments
         self.scale_factors = OrderedDict()
         # Evaluate scaling factors for each base unit
-        self.scale_factors.update({unit: self.compute_base_scaling(bvp,sol,scale_expr)
-                             for unit,scale_expr in self.units.items()})
+        for (unit,scale_expr) in self.units.items():
+            self.scale_factors[unit] = self.compute_base_scaling(bvp,sol,scale_expr)
 
         # Ordered list of unit scaling factors for use as function parameters
-        scale_factor_list = [v for (k,v) in self.scale_factors.items()]
 
+        scale_factor_list = [v for (k,v) in self.scale_factors.items()]
+        
         # Find scaling factors for each entity in problem
         self.scale_vals = {}
         # Dictionary comprehension version -- remove for lack of readability
@@ -120,7 +123,7 @@ class Scaling(dict):
         for var_type,var_funcs in self.scale_func.items():
             # If there are no sub items, use the scale factor directly
             if callable(var_funcs):
-                self.scale_vals[var_type] = var_funcs(*self.scale_factors)
+                self.scale_vals[var_type] = var_funcs(*scale_factor_list)
             else:
                 # Else call scaling function for each sub item
                 self.scale_vals[var_type] = {}
