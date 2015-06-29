@@ -11,7 +11,12 @@ class ContinuationStep(object):
         self.ctr  = 0   # iteration counter
 
     def reset(self):
+        """Resets the internal step counter to zero"""
         self.ctr = 0
+
+    def clear(self):
+        """Clears all the previously set continuation variables"""
+        self.vars = {}
 
     def get_ctr(self):
         return self.ctr
