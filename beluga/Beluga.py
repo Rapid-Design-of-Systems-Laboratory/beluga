@@ -151,20 +151,18 @@ class Beluga(object):
                 import copy
                 s.compute_scaling(bvp,sol_last)
 
-                s.scale(bvp,sol_last)
+                s.scale(bvp.aux_vars,sol_last)
 
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
 
-                # bvp_copy = copy.deepcopy(bvp)
                 sol_copy = copy.deepcopy(sol)
-                s.unscale(bvp,sol_copy)
+                s.unscale(bvp.aux_vars,sol_copy)
 
                 # Update solution for next iteration
                 sol_last = sol_copy
                 solution_set[step_idx].append(sol_copy)
 
                 elapsed_time = toc()
-                # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')

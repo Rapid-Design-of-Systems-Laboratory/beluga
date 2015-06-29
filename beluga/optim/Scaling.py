@@ -108,11 +108,12 @@ class Scaling(dict):
         # Ordered list of unit scaling factors for use as function parameters
 
         scale_factor_list = [v for (k,v) in self.scale_factors.items()]
-        
+
         # Find scaling factors for each entity in problem
         self.scale_vals = {}
         # Dictionary comprehension version -- remove for lack of readability
-        # self.scale_vals = {var_type: var_funcs(*self.scale_factors)
+        # self.scale_vals = {var_type:
+        #                     var_funcs(*self.scale_factors)
         #                     if callable(var_funcs)
         #                     else {
         #                         var_name: var_func(*scale_factor_list)
@@ -131,7 +132,7 @@ class Scaling(dict):
                     self.scale_vals[var_type][var_name] = var_func(*scale_factor_list)
 
 
-    def scale(self,bvp,sol):
+    def scale(self,bvp_aux_vars,sol):
         """Scales a boundary value problem"""
 
         # Additional aux entries for initial and terminal BCs
@@ -146,13 +147,13 @@ class Scaling(dict):
         for aux in (self.problem_data['aux_list']+extras):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
-                    bvp.aux_vars[aux['type']][var] /= self.scale_vals[aux['type']][var]
+                    bvp_aux_vars[aux['type']][var] /= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
             sol.parameters[idx] /= self.scale_vals['parameters'][param]
 
-    def unscale(self,bvp,sol):
+    def unscale(self,bvp_aux_vars,sol):
         """Unscales a solution object"""
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
@@ -166,7 +167,7 @@ class Scaling(dict):
         for aux in (self.problem_data['aux_list']+extras):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
-                    bvp.aux_vars[aux['type']][var] *= self.scale_vals[aux['type']][var]
+                    bvp_aux_vars[aux['type']][var] *= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
