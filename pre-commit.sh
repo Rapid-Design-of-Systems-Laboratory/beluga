@@ -1,6 +1,6 @@
 # pre-commit.sh
 # Run the following command to install the git pre-commit hook
-#     ln -s pre-commit.sh .git/hooks/pre-commit
+#     ln -s ../../pre-commit.sh .git/hooks/pre-commit
 
 # Stash any uncommited changes
 git stash -q --keep-index
