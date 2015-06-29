@@ -26,7 +26,7 @@ def test_scale(problem_1, scaled_problem_1_bvp, scaled_problem_1_solinit):
 
     s.initialize(problem_1,nec_cond.problem_data)
     s.compute_scaling(bvp,solinit)
-    s.scale(bvp,solinit)
+    s.scale(bvp.aux_vars,solinit)
 
     # Compare to 5 decimal places
     npt.assert_almost_equal(np.array(solinit.y),np.array(scaled_problem_1_solinit.y),decimal=5)
