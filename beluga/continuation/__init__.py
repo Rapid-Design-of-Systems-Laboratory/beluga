@@ -1,7 +1,7 @@
 from .ContinuationList import ContinuationList
 from .ContinuationStep import ContinuationStep
 from .ContinuationVariable import ContinuationVariable
-from .ContinuationSolution import ContinuationSolution
+# from .ContinuationSolution import ContinuationSolution
 
 import os
 import glob
