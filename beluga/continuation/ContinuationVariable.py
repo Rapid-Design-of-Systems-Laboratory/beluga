@@ -6,6 +6,3 @@ class ContinuationVariable(object):
         self.value = np.nan
         self.index = np.nan # Index of state in BVP, obsolete
         self.steps = []
-        
-    def set_value(self, val):
-        self.value = val
