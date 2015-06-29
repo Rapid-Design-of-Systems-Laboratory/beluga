@@ -73,7 +73,7 @@ def test_continuation_mixed():
     npt.assert_equal(step_one.vars['const']['rho0'].steps, np.linspace(0,1.217,51))
     npt.assert_equal(step_one.vars['terminal']['h'].steps, np.linspace(80000,0,51))
 
-def test_continuation_step():
+def test_continuation():
     """Tests ContinuationStep functionality"""
     step_one = ContinuationStep(num_cases=100)
     step_one.terminal('x',10)
@@ -112,6 +112,12 @@ def test_continuation_step():
     step_one.reset()
     assert(step_one.ctr == 0)
 
-
     # Test that unspecified variable is not changed
     assert(bvp.aux_vars['terminal']['h'] == 0)
+
+    # Test ContinutionList class
+    steps = ContinuationList()
+    steps.add_step(step_one)
+    steps.add_step()
+
+    assert len(steps) == 2
