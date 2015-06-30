@@ -19,7 +19,7 @@ def test_solve():
 
     def bcfn(ya,yb,p,aux):
         # y(0) = 0
-        # y(3*pi/2) = 2
+        # y(pi/2) = 2
         return np.array([
                     ya[0] - 0,
                     yb[0] - 2,
