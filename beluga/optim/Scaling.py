@@ -1,7 +1,6 @@
 import numbers as num# Avoid clashing with Number in sympy
 
 from sympy import *
-# from sympy.utilities.lambdify import lambdastr
 from beluga.utils import fix_carets, sympify2, keyboard
 class Scaling(dict):
     excluded_aux = ['function']
@@ -106,7 +105,6 @@ class Scaling(dict):
             self.scale_factors[unit] = self.compute_base_scaling(bvp,sol,scale_expr)
 
         # Ordered list of unit scaling factors for use as function parameters
-
         scale_factor_list = [v for (k,v) in self.scale_factors.items()]
 
         # Find scaling factors for each entity in problem
