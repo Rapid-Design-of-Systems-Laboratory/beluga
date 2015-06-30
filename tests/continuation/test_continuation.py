@@ -98,7 +98,7 @@ def test_continuation():
 
     # Test num_cases function
     step_one.num_cases(21)
-    assert(step_one.num_cases() == 10)
+    assert(step_one.num_cases() == 21)
 
     step_one.initial('h',50000)
     step_one.set_bvp(dummy_bvp)
