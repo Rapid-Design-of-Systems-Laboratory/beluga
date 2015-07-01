@@ -1,4 +1,6 @@
 from sympy import Symbol
+from beluga.utils import sympify2
+
 class State(object):
     """Defines state information."""
 
@@ -41,4 +43,5 @@ class State(object):
 
     def make_costate(self):
         """Creates costate variable."""
+        #TODO: Make symbolic?
         return 'lagrange_' + self.state_var

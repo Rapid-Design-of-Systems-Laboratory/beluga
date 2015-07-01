@@ -12,8 +12,8 @@ def teardown_function(function):
 
 def test_scale(problem_1, scaled_problem_1_bvp, scaled_problem_1_solinit):
     s = problem_1.scale
-    nec_cond = NecessaryConditions(problem_1)
-    bvp = nec_cond.get_bvp()
+    nec_cond = NecessaryConditions()
+    bvp = nec_cond.get_bvp(problem_1)
 
     solinit = problem_1.guess.generate(bvp)
     state_names = nec_cond.problem_data['state_list']

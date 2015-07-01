@@ -13,27 +13,51 @@ from beluga.bvpsol import algorithms
 import dill
 
 class Beluga(object):
+    """!
+    \brief     Main class of mission design tool.
+    \details   This class contains all of the information associated with the
+                mission design problem.
+    \author    Michael Grant
+    \author    Thomas Antony
+    \version   0.1
+    \date      06/30/15
+    \pre       First create problem file.
+    \copyright Coming.
+    \bug       Probably exists.
+    """
     # __metaclass__ = SingletonMetaClass
     version = '0.1'
     _THE_MAGIC_WORD = object()
     instance = None
 
     config = BelugaConfig().config # class variable globally accessible
-    def __init__(self,problem,token=None,input_module=None):
+
+    def __init__(self,problem,token,input_module=None):
+        """!
+        \brief     Initializes class of mission design tool.
+        \details   Assigns problem data based on the input file.
+        \author    Thomas Antony
+        \version   0.1
+        \date      06/30/15
+        """
         self.problem = problem
         self.input_module = input_module
 
+        # # Ensure user does not create an object with the Beluga class
         # if token is not self._THE_MAGIC_WORD:
         #     raise ValueError("Don't construct directly, use create() or run()")
 
     @classmethod
     def run(cls,problem):
-        """Takes a problem statement, instantiates a solver object and begins
-        the solution process
-
-        Returns:
-            Beluga object
+        """!
+        \brief     Returns Beluga object.
+        \details   Takes a problem statement, instantiates a solver object and begins
+                    the solution process.
+        \author    Thomas Antony
+        \version   0.1
+        \date      06/30/15
         """
+
         # Get reference to the input file module
         frm = inspect.stack()[1]
         input_module = (inspect.getmodule(frm[0]))
@@ -44,11 +68,12 @@ class Beluga(object):
         # Suppress warnings
         warnings.filterwarnings("ignore")
 
+        # Include configuration file path
         sys.path.append(cls.config['root'])
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:
-            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
+            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
 
         # Set the cache directory to be in the current folder
         cache_dir = os.getcwd()+'/_cache'
@@ -58,6 +83,7 @@ class Beluga(object):
         except:
             pass
         problem.bvp_solver.set_cache_dir(cache_dir)
+
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
@@ -70,21 +96,26 @@ class Beluga(object):
             pass
 
     def solve(self):
-        """Starts the solution process
-
-        Returns:
-            Beluga object
+        """!
+        \brief     Returns Beluga object.
+        \details   Starts the solution process.
+        \author    Thomas Antony
+        \version   0.1
+        \date      06/30/15
         """
+
         # Initialize necessary conditions of optimality object
         print("Computing the necessary conditions of optimality")
-        self.nec_cond = NecessaryConditions(self.problem)
+        self.nec_cond = NecessaryConditions()
+
+        # Create corresponding boundary value problem
+        bvp = self.nec_cond.get_bvp(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
         #       Array: Automatic?
         #       Guess object: Directly use
         #       Function handle: Call function
         #       String: Load file?
-        bvp = self.nec_cond.get_bvp()
 
         # solinit = self.problem.guess
         solinit = self.problem.guess.generate(bvp)
@@ -102,7 +133,7 @@ class Beluga(object):
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
         self.out = self.run_continuation_set(self.problem.steps, bvp, solinit)
-        total_time = toc();
+        total_time = toc()
 
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
 
@@ -134,7 +165,7 @@ class Beluga(object):
 
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
-            step.reset();
+            step.reset()
             print('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
             solution_set.append(ContinuationSolution())
