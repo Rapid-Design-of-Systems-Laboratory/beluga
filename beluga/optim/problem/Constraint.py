@@ -1,4 +1,6 @@
 from sympy import Expr
+from beluga.utils import sympify2
+
 class Constraint(Expr):
     """Defines constraint information."""
     # NEED TO ADD PATH CONSTRAINT
@@ -23,5 +25,5 @@ class Constraint(Expr):
 
     def make_aug_cost(self, ind = 1):
         """Return augmented cost expression."""
-        return self.make_multiplier(ind) +'*(' + \
-            self.expr + ')'
+
+        return sympify2(self.make_multiplier(ind) + '*(' + self.expr + ')')

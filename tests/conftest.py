@@ -124,3 +124,58 @@ def scaled_problem_1_solinit():
                 6.25119240e-03,   6.25119240e-03,   6.25119240e-03,   6.25119240e-03]]
     sol_x = [ 0.0,    0.01,  0.11,  0.21,  0.31,  0.41,  0.51,  0.61,  0.71,  0.81,  0.91,  1.0  ]
     return bvpsol.Solution(sol_x, sol_y)
+
+@pytest.fixture(scope = 'session')
+def problem_brachistochrone():
+    """!
+    \brief     Classical Brachistochrone problem.
+    \author    Michael Grant
+    \version   0.1
+    \date      06/30/15
+    """
+
+    # Rename this and/or move to optim package?
+    problem = beluga.optim.Problem('brachistochrone')
+
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False, cached = False)
+
+    # Define independent variables
+    problem.independent('t', 's')
+
+    # Define equations of motion
+    problem.state('x','v*cos(theta)','m') \
+           .state('y','v*sin(theta)','m') \
+           .state('v','g*sin(theta)','m/s')
+
+    # Define controls
+    problem.control('theta','rad')
+
+    # Define costs
+    problem.cost['path'] = Expression('1','nd')
+
+    # Define constraints
+    problem.constraints().initial('x-x_0','m') \
+                        .initial('y-y_0','m') \
+                        .initial('v-v_0','m/s') \
+                        .terminal('x-x_f','m')  \
+                        .terminal('y-y_f','m')
+
+    # Define constants
+    problem.constant('g', 9.81, 'm/s^2') # local gravity acceleration
+
+    problem.scale.unit('m', 'x')     \
+                 .unit('s', 'x/v')   \
+                 .unit('nd', 1)      \
+                 .unit('rad', 1)
+
+    problem.guess.setup('auto', start=[0,0,1], costate_guess = -0.1)
+
+    problem.steps.add_step().num_cases(21) \
+                            .terminal('x', 5) \
+                            .terminal('y', 5)
+
+    # problem.steps.add_step().num_cases(10)  \
+    #                         .terminal('x', 5) \
+    #                         .terminal('y', 5)
+
+    return problem

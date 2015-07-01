@@ -30,6 +30,8 @@ def CDfunction(alfa):
 problem = beluga.optim.Problem('planarHypersonic')
 # problem = beluga.optim.Problem()
 
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False, cached = False)
+
 # Define independent variables
 problem.independent('t', 's')
 
