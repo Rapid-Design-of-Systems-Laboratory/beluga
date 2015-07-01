@@ -15,7 +15,7 @@ class Problem(object):
         # Get module calling this function
         frm = inspect.stack()[1]
         self.input_module = (inspect.getmodule(frm[0]))
-        
+
         self.parameters = []
         self.cost = {'initial': Expression('0','nd'),
                      'terminal': Expression('0','nd'),
@@ -30,13 +30,14 @@ class Problem(object):
         self.guess = Guess()
         self.functions = {}
 
+        self.bvp_solver = None
+
         self.systems = {} # List of dynamic system
 
         self.system()   # Create default dynamic system
 
         # self.get_initial_guess = getcwd() + '/get_initial_guess.py'
         # self.data_folder = getcwd() + '/data'
-
 
     def _format_name(self, name):
         """Validates that the name is in the right format
