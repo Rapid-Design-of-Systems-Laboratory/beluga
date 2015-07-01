@@ -1,4 +1,6 @@
 from .SingleShooting import SingleShooting
+from .MultipleShooting_Thomas import MultipleShooting_Thomas
+
 # from ScikitsBVPSolver import ScikitsBVPSolver
 # __all__ = ['SingleShooting']
 import os
