@@ -78,23 +78,18 @@ problem.scale.unit('m','h')     \
                .unit('kg','mass')   \
                .unit('rad',1)
 
-# problem.function('CLfunction',CLfunction) \
-#        .function('CDfunction',CDfunction)
-
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]
-
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
 
 problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
 # Figure out nicer way of representing this. Done?
 
 problem.steps.add_step().num_cases(5) \
                         .terminal('h', 0)  # bvp4c takes 10 steps
-#
-# problem.steps.add_step().num_cases(21)  \
-#                         .terminal('theta', 10*pi/180)
+
+problem.steps.add_step().num_cases(21)  \
+                        .terminal('theta', 10*pi/180)
 
 # problem.steps.add_step()
 #                 .num_cases(3)
@@ -102,6 +97,7 @@ problem.steps.add_step().num_cases(5) \
 #                 .terminal('y',-40.0)
 # )
 
+# Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
 Beluga.run(problem)
 # beluga = Beluga.create(problem)
 # beluga.add_callback('before_control',mycode)

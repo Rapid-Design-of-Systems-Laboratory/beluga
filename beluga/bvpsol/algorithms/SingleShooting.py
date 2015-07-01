@@ -8,7 +8,7 @@ from ..Algorithm import Algorithm
 from beluga.utils.joblib import Memory
 
 class SingleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',verbose=False,cached=True):
+    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
@@ -22,15 +22,14 @@ class SingleShooting(Algorithm):
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
         self.cached = cached
-        if cached:
-            memory = Memory(cachedir='/Users/mjgrant/Purdue/beluga/examples/_cache', mmap_mode='r', verbose=0)
+        if cached and cache_dir is not None:
+            self.set_cache_dir(cache_dir)
+
+    def set_cache_dir(self,cache_dir):
+        self.cache_dir = cache_dir
+        if self.cached and cache_dir is not None:
+            memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
-
-    #
-    # def __bcjac_ad(self, bc_func, ya, yb, phi, parameters, aux):
-    #     bc = Function(bc_func)
-    #     M_func = Gradient(bc_func)
-
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)

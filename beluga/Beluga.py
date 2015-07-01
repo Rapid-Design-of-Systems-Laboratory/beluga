@@ -8,6 +8,7 @@ import sys,os,imp,inspect,warnings
 
 from beluga import BelugaConfig
 from beluga.continuation import *
+from beluga.bvpsol import algorithms
 
 import dill
 
@@ -37,11 +38,27 @@ class Beluga(object):
         frm = inspect.stack()[1]
         input_module = (inspect.getmodule(frm[0]))
 
-        # Suppress warnings
+        # Get information about input file
+        info = inspect.getframeinfo(frm[0])
 
+        # Suppress warnings
         warnings.filterwarnings("ignore")
 
         sys.path.append(cls.config['root'])
+
+        # TODO: Get default solver options from configuration or a defaults file
+        if problem.bvp_solver is None:
+            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+
+        # Set the cache directory to be in the current folder
+        cache_dir = os.getcwd()+'/_cache'
+        # cache_dir = os.path.dirname(info.filename)+'/_cache'
+        try:
+            os.mkdir(cache_dir)
+        except:
+            pass
+        problem.bvp_solver.set_cache_dir(cache_dir)
+
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
@@ -60,6 +77,7 @@ class Beluga(object):
             Beluga object
         """
         # Initialize necessary conditions of optimality object
+        print("Computing the necessary conditions of optimality")
         self.nec_cond = NecessaryConditions(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
@@ -113,7 +131,7 @@ class Beluga(object):
         # s.unit('kg','mass')
         # s.unit('rad',1)
         s = self.problem.scale
-        s.initialize(self.nec_cond)
+        s.initialize(self.problem,self.nec_cond.problem_data)
 
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
