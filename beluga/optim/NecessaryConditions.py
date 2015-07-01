@@ -46,7 +46,7 @@ class NecessaryConditions(object):
         #     rate = diff(sympify2('-1*(' + self.ham + ')'),state)
         #     # numerical_diff = rate.atoms(Derivative)
         #     self.costate_rates.append(str(rate))
-        self.costate_rates = [str(diff(sympify2('-1*(' + self.ham + ')'),state))
+        self.costate_rates = [diff(-1*self.ham,state)
                                     for state in states]
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
@@ -54,7 +54,7 @@ class NecessaryConditions(object):
     def make_ctrl_partial(self, controls):
         self.ham_ctrl_partial = []
         for ctrl in controls:
-            dHdu = diff(sympify2(self.ham),ctrl)
+            dHdu = diff(self.ham,ctrl)
             custom_diff = dHdu.atoms(Derivative)
 
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
@@ -93,25 +93,34 @@ class NecessaryConditions(object):
         # Do in two steps so that indices are "right"
         filtered_list = [c for c in constraint if c.type==location]
         self.problem.parameters += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
-        self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
-                                for (ind,c) in enumerate(filtered_list,1))
+        # self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
+        #                         for (ind,c) in enumerate(filtered_list,1))
+        self.aug_cost[location] = aug_cost + sympify2(''.join(' + (%s)' % c.make_aug_cost(ind)
+                                for (ind,c) in enumerate(filtered_list,1)))
 
     def make_costate_bc(self, states, location):
         if location is 'initial':
-            sign = '-'
+            # sign = '-'
+            sign = -1
         elif location is 'terminal':
-            sign = ''
+            # sign = ''
+            sign = 1
 
-        cost_expr = (sign + '(' + self.aug_cost[location] + ')')
+        # cost_expr = (sign + '(' + self.aug_cost[location] + ')')
+        cost_expr = sign*self.aug_cost[location]
 
         #TODO: Fix hardcoded if conditions
         if location == 'initial':
             # Using list comprehension instead of loops
-            self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
+            # self.bc.initial += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
+            #                         for state in states]
+            self.bc.initial += [str(sympify2('lagrange_'+str(state)) - diff(cost_expr,state.sym))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
+            # self.bc.terminal += ['lagrange_'+str(state)+' - '+str(diff(sympify2(cost_expr),state.sym))
+            #                         for state in states]
+            self.bc.terminal += [str(sympify2('lagrange_'+str(state)) - diff(cost_expr,state.sym))
                                     for state in states]
 
         # for i in range(len(state)):
@@ -120,10 +129,10 @@ class NecessaryConditions(object):
         #         state[i].sym))
 
     def make_ham(self, problem):
-        self.ham = str(sympify2(problem.cost['path'].expr))
+        self.ham = sympify2(problem.cost['path'].expr)
         for i in range(len(problem.states())):
-            self.ham += ' + ' + self.costates[i] + '* (' + \
-                str(sympify2(problem.states()[i].process_eqn))+')'
+            self.ham += sympify2(' + ' + self.costates[i] + '* (' + \
+                problem.states()[i].process_eqn+')')
 
     # Compiles a function template file into a function object
     # using the given data
@@ -204,10 +213,10 @@ class NecessaryConditions(object):
         #     self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
-        aug_cost_init = self.problem.cost['initial'].expr
+        aug_cost_init = sympify2(self.problem.cost['initial'].expr)
         self.make_aug_cost(aug_cost_init,self.problem.constraints(),'initial')
 
-        aug_cost_term = self.problem.cost['terminal'].expr
+        aug_cost_term = sympify2(self.problem.cost['terminal'].expr)
         self.make_aug_cost(aug_cost_term,self.problem.constraints(),'terminal')
 
         # Add state boundary conditions
@@ -283,7 +292,7 @@ class NecessaryConditions(object):
          'parameter_list': [param for param in self.problem.parameters],
          'deriv_list':
              ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in self.problem.states()] +
-             ['tf*(' + costate_rate + ')' for costate_rate in self.costate_rates] +
+             ['tf*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'num_states': 2*len(self.problem.states()) + 1,
@@ -292,7 +301,7 @@ class NecessaryConditions(object):
          'right_bc_list': self.bc.terminal,
          'control_options': self.control_options,
          'control_list':[str(u) for u in self.problem.controls()],
-         'ham_expr':self.ham
+         'ham_expr':str(self.ham)
         }
 
     #    problem.constraints[i].expr for i in range(len(problem.constraints))
