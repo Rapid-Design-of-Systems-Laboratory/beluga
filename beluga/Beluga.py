@@ -13,18 +13,18 @@ from beluga.bvpsol import algorithms
 import dill
 
 class Beluga(object):
-    __metaclass__ = SingletonMetaClass
+    # __metaclass__ = SingletonMetaClass
     version = '0.1'
     _THE_MAGIC_WORD = object()
     instance = None
 
     config = BelugaConfig().config # class variable globally accessible
-    def __init__(self,problem,token,input_module=None):
+    def __init__(self,problem,token=None,input_module=None):
         self.problem = problem
         self.input_module = input_module
 
-        if token is not self._THE_MAGIC_WORD:
-            raise ValueError("Don't construct directly, use create() or run()")
+        # if token is not self._THE_MAGIC_WORD:
+        #     raise ValueError("Don't construct directly, use create() or run()")
 
     @classmethod
     def run(cls,problem):
@@ -48,7 +48,7 @@ class Beluga(object):
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:
-            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
 
         # Set the cache directory to be in the current folder
         cache_dir = os.getcwd()+'/_cache'
@@ -58,7 +58,6 @@ class Beluga(object):
         except:
             pass
         problem.bvp_solver.set_cache_dir(cache_dir)
-
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
@@ -154,20 +153,18 @@ class Beluga(object):
                 import copy
                 s.compute_scaling(bvp,sol_last)
 
-                s.scale(bvp,sol_last)
+                s.scale(bvp.aux_vars,sol_last)
 
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
 
-                # bvp_copy = copy.deepcopy(bvp)
                 sol_copy = copy.deepcopy(sol)
-                s.unscale(bvp,sol_copy)
+                s.unscale(bvp.aux_vars,sol_copy)
 
                 # Update solution for next iteration
                 sol_last = sol_copy
                 solution_set[step_idx].append(sol_copy)
 
                 elapsed_time = toc()
-                # total_time  += elapsed_time
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')

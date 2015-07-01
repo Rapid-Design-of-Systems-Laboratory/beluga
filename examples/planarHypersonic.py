@@ -73,8 +73,10 @@ problem.constant('re',6378000,'m') # Radius of planet, m
 problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
 problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-problem.scale.unit('m','h')     \
-               .unit('s','h/v')\
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
+
+problem.scale.unit('m','h')         \
+               .unit('s','h/v')     \
                .unit('kg','mass')   \
                .unit('rad',1)
 
@@ -90,7 +92,7 @@ problem.steps.add_step().num_cases(5) \
 
 problem.steps.add_step().num_cases(21)  \
                         .terminal('theta', 10*pi/180)
-
+#
 # problem.steps.add_step()
 #                 .num_cases(3)
 #                 .terminal('x', 40.0)

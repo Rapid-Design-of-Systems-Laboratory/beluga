@@ -4,6 +4,7 @@ import numpy as np
 from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
+from math import *
 
 from beluga.utils.joblib import Memory
 
@@ -124,6 +125,9 @@ class SingleShooting(Algorithm):
 
     def __stmode_fd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-6):
         "Finite difference version of state transition matrix"
+        N = y.shape[0]
+        nOdes = int(0.5*(sqrt(4*N+1)-1))
+
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes])  # Just states
         F = np.zeros((nOdes,nOdes))
@@ -139,8 +143,11 @@ class SingleShooting(Algorithm):
         phiDot = np.real(np.dot(F,phi))
         return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
+    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-50):
         "Complex step version of State Transition Matrix"
+        N = y.shape[0]
+        nOdes = int(0.5*(sqrt(4*N+1)-1))
+
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes],dtype=complex)  # Just states
         F = np.zeros((nOdes,nOdes))
@@ -175,11 +182,12 @@ class SingleShooting(Algorithm):
     #     # return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
     #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
-    @staticmethod
-    def ode_wrap(func,*args, **argd):
-       def func_wrapper(x,y0):
-           return func(x,y0,*args,**argd)
-       return func_wrapper
+
+    # @staticmethod
+    # def ode_wrap(func,*args, **argd):
+    #    def func_wrapper(x,y0):
+    #        return func(x,y0,*args,**argd)
+    #    return func_wrapper
 
     def solve(self,bvp,guess):
         """Solve a two-point boundary value problem
@@ -233,11 +241,10 @@ class SingleShooting(Algorithm):
             y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
             # Propagate STM and original system together
-            stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+            # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
 
-
-            t,yy = ode45(stm_ode45, tspan, y0)
-
+            # t,yy = ode45(stm_ode45, tspan, y0)
+            t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
             # Obtain just last timestep for use with correction
             yf = yy[-1]
             # Extract states and STM from ode45 output

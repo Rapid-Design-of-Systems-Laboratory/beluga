@@ -11,10 +11,15 @@ class ContinuationStep(object):
         self.ctr  = 0   # iteration counter
 
     def reset(self):
+        """Resets the internal step counter to zero"""
         self.ctr = 0
 
-    def get_ctr(self):
-        return self.ctr
+    def clear(self):
+        """Clears all the previously set continuation variables"""
+        self.vars = {}
+    #
+    # def get_ctr(self):
+    #     return self.ctr
 
     def set_bvp(self, bvp):
         self.bvp = bvp
@@ -59,9 +64,9 @@ class ContinuationStep(object):
         self.set('const',name,target)
         return self
 
-    def constraint(self, name,target):
-        self.set('constraint',name,target)
-        return self
+    # def constraint(self, name,target):
+    #     self.set('constraint',name,target)
+    #     return self
 
     def __iter__(self):
         """Define class as being iterable"""
@@ -86,6 +91,5 @@ class ContinuationStep(object):
 
         self.ctr += 1
         return self.bvp
-
-    def update_var(self):
-        pass
+    # def update_var(self):
+    #     pass

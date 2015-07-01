@@ -1,5 +1,5 @@
 from .ContinuationStep import ContinuationStep
-from .ContinuationSolution import ContinuationSolution
+# from .ContinuationSolution import ContinuationSolution
 
 class ContinuationList(list):
     def add_step(self, step=None):
