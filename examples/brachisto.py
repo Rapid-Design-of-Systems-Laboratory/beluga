@@ -36,8 +36,8 @@ problem.constraints('default',0) \
 
 # Define constants (change to have units as well)
 problem.constant('g','9.81','m/s^2')
-problem.constant('x1','7.5','m')
-problem.constant('y1','-15','m')
+# problem.constant('x1','7.5','m')
+# problem.constant('y1','-15','m')
 
 # Define quantity (not implemented at present)
 # Is this actually an Expression rather than a Value?
@@ -56,17 +56,18 @@ problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=
 # problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
 # problem.guess.parameters = np.array([0.1,0.1,0.1,0.1,0.1])
 problem.guess.setup('auto',
-                start=[0,0,1],  # Starting values for states in order
+                start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                # costate_guess = -0.1
+                costate_guess = -0.1
                 )
 
 # Figure out nicer way of representing this. Done?
 problem.steps.add_step(ContinuationStep()
-                .num_cases(10)
-                .terminal('x', 0.1)
-                .terminal('y',-0.1))
-(
+                .num_cases(11)
+                .terminal('x', 5)
+                .terminal('y',-5)
+                )
+# (
 # problem.steps.add_step().num_cases(2)
 #                  .terminal('x', 30.0)
 #                  .terminal('y',-30.0),
@@ -75,6 +76,6 @@ problem.steps.add_step(ContinuationStep()
 #                 .num_cases(10)
 #                 .terminal('x', 1000.0)
 #                 .terminal('y',-1000.0)
-)
+# )
 
 Beluga.run(problem)
