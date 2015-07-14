@@ -34,14 +34,14 @@ except ImportError:
 
 # Customizable pure Python pickler in Python 2
 # customizable C-optimized pickler under Python 3.3+
-from pickle import Pickler
-
-from pickle import HIGHEST_PROTOCOL
+from dill import Pickler
+from dill import HIGHEST_PROTOCOL
 from io import BytesIO
 
 from ._multiprocessing_helpers import mp, assert_spawning
 # We need the class definition to derive from it not the multiprocessing.Pool
 # factory function
+# TODO: multiprocessing.pool still uses the default pickler and not dill. Figure out how to override this
 from multiprocessing.pool import Pool
 
 try:

@@ -1,0 +1,371 @@
+# from autodiff import Function, Gradient
+import numpy as np
+
+from .. import Solution
+from ..Algorithm import Algorithm
+from math import *
+from beluga.utils import *
+from beluga.utils import keyboard
+from beluga.utils.joblib import Memory
+from beluga.utils import Propagator
+
+class MultipleShooting(Algorithm):
+    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+        self.tolerance = tolerance
+        self.max_iterations = max_iterations
+        self.verbose = verbose
+        self.derivative_method = derivative_method
+        if derivative_method == 'csd':
+            self.stm_ode_func = self.__stmode_csd
+            self.bc_jac_func  = self.__bcjac_csd
+        elif derivative_method == 'fd':
+            self.stm_ode_func = self.__stmode_fd
+            self.bc_jac_func  = self.__bcjac_fd
+        else:
+            raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
+        self.cached = cached
+        if cached and cache_dir is not None:
+            self.set_cache_dir(cache_dir)
+        self.number_arcs = number_arcs
+
+    def set_cache_dir(self,cache_dir):
+        self.cache_dir = cache_dir
+        if self.cached and cache_dir is not None:
+            memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
+            self.solve = memory.cache(self.solve)
+
+    # TODO: Implement complex step derivative in multiple shooting algorithm
+    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
+        ya = np.array(ya, dtype=complex)
+        yb = np.array(yb, dtype=complex)
+        # if parameters is not None:
+        p  = np.array(parameters, dtype=complex)
+        h = StepSize
+
+        nOdes = ya[0].shape[0]
+        nBCs = nOdes + nOdes*(self.number_arcs - 1)
+        if parameters is not None:
+            nBCs += parameters.size
+
+        fx = bc_func(ya,yb,parameters,aux)
+
+        M = [np.zeros((nBCs, nOdes)) for _ in range(self.number_arcs)]
+        N = [np.zeros((nBCs, nOdes)) for _ in range(self.number_arcs)]
+        J = [None for _ in range(self.number_arcs)]
+        for arc in range(self.number_arcs):
+            for i in range(nOdes):
+                ya[arc][i] += h*1j
+                f = bc_func(ya,yb,p,aux)
+                M[arc][:,i] = np.imag(f)/h
+                ya[arc][i] -= h*1j
+
+                yb[arc][i] += h*1j
+                f = bc_func(ya,yb,p,aux)
+                N[arc][:,i] = np.imag(f)/h
+                yb[arc][i] -= h*1j
+            J[arc] = M[arc]+np.dot(N[arc],phi[arc])
+
+        if parameters is not None:
+            P = np.zeros((nBCs, p.size))
+            for i in range(p.size):
+                p[i] = p[i] + h*1j
+                f = bc_func(ya,yb,p,aux)
+                P[:,i] = np.imag(f)/h
+                p[i] = p[i] - h*1j
+            J.append(P)
+
+        J = np.hstack(J)
+        return J
+        """ya = np.array(ya, dtype=complex)
+        yb = np.array(yb, dtype=complex)
+        # if parameters is not None:
+        p  = np.array(parameters, dtype=complex)
+        h = StepSize
+
+        nOdes = ya.shape[0]
+        nBCs = nOdes
+        if parameters is not None:
+            nBCs += parameters.size
+        M = np.zeros((nBCs, nOdes))
+        N = np.zeros((nBCs, nOdes))
+        for i in range(nOdes):
+            ya[i] = ya[i] + h*1.j
+            # if parameters is not None:
+            f = bc_func(ya,yb,p,aux)
+            # else:
+            #     f = bc_func(ya,yb)
+
+            M[:,i] = np.imag(f)/h
+            ya[i] = ya[i] - h*1.j
+        # for i in range(nOdes):
+            yb[i] = yb[i] + h*1.j
+            # if parameters is not None:
+            f = bc_func(ya,yb,p,aux)
+            # else:
+            #     f = bc_func(ya,yb)
+            N[:,i] = np.imag(f)/h
+            yb[i] = yb[i] - h*1.j
+
+        if parameters is not None:
+            P = np.zeros((nBCs, p.size))
+            for i in range(p.size):
+                p[i] = p[i] + h*1.j
+                f = bc_func(ya,yb,p,aux)
+                P[:,i] = np.imag(f)/h
+                p[i] = p[i] - h*1.j
+            J = np.hstack((M+np.dot(N,phi),P))
+        else:
+            J = M+np.dot(N,phi)
+        return J"""
+
+    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-7):
+        # if parameters is not None:
+        p  = np.array(parameters)
+        h = StepSize
+
+        nOdes = ya[0].shape[0]
+        nBCs = nOdes + nOdes*(self.number_arcs - 1)
+        if parameters is not None:
+            nBCs += parameters.size
+
+        fx = bc_func(ya,yb,parameters,aux)
+
+        M = [np.zeros((nBCs, nOdes)) for _ in range(self.number_arcs)]
+        N = [np.zeros((nBCs, nOdes)) for _ in range(self.number_arcs)]
+        J = [None for _ in range(self.number_arcs)]
+        for arc in range(self.number_arcs):
+            for i in range(nOdes):
+                ya[arc][i] += h
+                f = bc_func(ya,yb,p,aux)
+                M[arc][:,i] = (f-fx)/h
+                ya[arc][i] -= h
+
+                yb[arc][i] += h
+                f = bc_func(ya,yb,p,aux)
+                N[arc][:,i] = (f-fx)/h
+                yb[arc][i] -= h
+            J[arc] = M[arc]+np.dot(N[arc],phi[arc])
+
+        if parameters is not None:
+            P = np.zeros((nBCs, p.size))
+            for i in range(p.size):
+                p[i] = p[i] + h
+                f = bc_func(ya,yb,p,aux)
+                P[:,i] = (f-fx)/h
+                p[i] = p[i] - h
+            J.append(P)
+
+        J = np.hstack(J)
+        return J
+
+    def __stmode_fd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-6):
+        "Finite difference version of state transition matrix"
+        N = y.shape[0]
+        nOdes = int(0.5*(sqrt(4*N+1)-1))
+
+        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+        Y = np.array(y[0:nOdes])  # Just states
+        F = np.zeros((nOdes,nOdes))
+
+        # Compute Jacobian matrix, F using finite difference
+        fx = odefn(x,Y,parameters,aux)
+        for i in range(nOdes):
+            Y[i] = Y[i] + StepSize
+            F[:,i] = (odefn(x, Y, parameters,aux)-fx)/StepSize
+            Y[i] = Y[i] - StepSize
+
+        # Phidot = F*Phi (matrix product)
+        phiDot = np.real(np.dot(F,phi))
+        return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+
+    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-50):
+        "Complex step version of State Transition Matrix"
+        N = y.shape[0]
+        nOdes = int(0.5*(sqrt(4*N+1)-1))
+
+        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+        Y = np.array(y[0:nOdes],dtype=complex)  # Just states
+        F = np.zeros((nOdes,nOdes))
+        # Compute Jacobian matrix using complex step derivative
+        for i in range(nOdes):
+            Y[i] = Y[i] + StepSize*1.j
+            F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
+            Y[i] = Y[i] - StepSize*1.j
+
+        # Phidot = F*Phi (matrix product)
+        phiDot = np.real(np.dot(F,phi))
+        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
+        return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+
+    # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
+    #     "Automatic differentiation version of State Transition Matrix"
+    #     phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+    #     # Y = np.array(y[0:nOdes],dtype=complex)  # Just states
+    #     # F = np.zeros((nOdes,nOdes))
+    #     # # Compute Jacobian matrix using complex step derivative
+    #     # for i in range(nOdes):
+    #     #     Y[i] = Y[i] + StepSize*1.j
+    #     #     F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
+    #     #     Y[i] = Y[i] - StepSize*1.j
+    #     f = Function(odefn)
+    #     g = Gradient(odefn)
+    #
+    #     # Phidot = F*Phi (matrix product)
+    #     # phiDot = np.real(np.dot(F,phi))
+    #     phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
+    #     # return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+    #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+
+
+    # @staticmethod
+    # def ode_wrap(func,*args, **argd):
+    #    def func_wrapper(x,y0):
+    #        return func(x,y0,*args,**argd)
+    #    return func_wrapper
+
+    def get_bc(self,ya,yb,p,aux):
+        f1 = self.bc_func(ya[0],yb[-1],p,aux)
+        for i in range(self.number_arcs-1):
+            nextbc = yb[i]-ya[i+1]
+            f1 = np.concatenate((f1,nextbc))
+        return f1
+
+    def solve(self,bvp,guess):
+        """Solve a two-point boundary value problem
+            using the multiple shooting method
+
+        Args:
+            deriv_func: the ODE function
+            bc_func: the boundary conditions function
+            solinit: a "Solution" object containing the initial guess
+        Returns:
+            solution of TPBVP
+        Raises:
+        """
+        if self.number_arcs == 1:
+            # Single Shooting
+            from .SingleShooting import SingleShooting
+            Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
+            return Single.solve(bvp,guess)
+
+        solinit = guess
+        x  = solinit.x
+        narcs = self.number_arcs
+        # Get initial states from the guess structure
+        y0g = [solinit.y[:,np.floor(i/narcs*x.shape[0])] for i in range(narcs)]
+        paramGuess = solinit.parameters
+
+        ode45 = Propagator(solver='ode45',cpu_count=narcs)
+        ode45.startpool()
+
+        deriv_func = bvp.deriv_func
+        self.bc_func = bvp.bc_func
+        aux = bvp.aux_vars
+        # Only the start and end times are required for ode45
+        t0 = x[0]
+        tf = x[-1]
+        t = x
+
+        # Extract number of ODEs in the system to be solved
+        nOdes = solinit.y.shape[0]
+        if solinit.parameters is None:
+            nParams = 0
+        else:
+            nParams = solinit.parameters.size
+
+        # Initial state of STM is an identity matrix
+        stm0 = np.eye(nOdes).reshape(nOdes*nOdes)
+        iter = 1            # Initialize iteration counter
+        converged = False   # Convergence flag
+
+        # Ref: Solving Nonlinear Equations with Newton's Method By C. T. Kelley
+        # Global Convergence and Armijo's Rule, pg. 11
+        alpha = 1
+        beta = 1
+        r0 = None
+        phiset = [np.eye(nOdes) for i in range(narcs)]
+        tspanset = [np.empty(t.shape[0]) for i in range(narcs)]
+
+        tspan = [t0,tf]
+        while True:
+            if iter>self.max_iterations:
+                print("Maximum iterations exceeded!")
+                break
+
+            y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(narcs)]
+
+            for i in range(narcs):
+                left = np.floor(i/narcs*t.shape[0])
+                right = np.floor((i+1)/narcs*t.shape[0])
+                if i == narcs-1:
+                    right = t.shape[0] - 1
+                tspanset[i] = [t[left],t[right]]
+
+            # Propagate STM and original system together
+            tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux)
+
+            # Obtain just last timestep for use with correction
+            yf = [yySTM[i][-1] for i in range(narcs)]
+            # Extract states and STM from ode45 output
+            yb = [yf[i][:nOdes] for i in range(narcs)]  # States
+            phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(narcs)] # STM
+
+            # Evaluate the boundary conditions
+            res = self.get_bc(y0g, yb, paramGuess, aux)
+            # Solution converged if BCs are satisfied to tolerance
+            if max(abs(res)) < self.tolerance:
+                if self.verbose:
+                    print("Converged in "+str(iter)+" iterations.")
+                converged = True
+                break
+
+            # Compute Jacobian of boundary conditions using numerical derviatives
+            J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
+            # Compute correction vector
+
+            r1 = np.linalg.norm(res)
+            if self.verbose:
+                print(r1)
+            if r0 is not None:
+                beta = (r0-r1)/(alpha*r0)
+                if beta < 0:
+                    beta = 1
+            if r1>1:
+                alpha = 1/(2*r1)
+            else:
+                alpha = 1
+            r0 = r1
+
+            dy0 = alpha*beta*np.linalg.solve(J,-res)
+
+            #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
+
+            # dy0 = np.linalg.solve(J,-res)
+            # if abs(r1 - 0.110277711594) < 1e-4:
+            #     from beluga.utils import keyboard
+
+            # Apply corrections to states and parameters (if any)
+
+            if nParams > 0:
+                dp = dy0[(nOdes*narcs):]
+                dy0 = dy0[:(nOdes*narcs)]
+                paramGuess = paramGuess + dp
+                for i in range(narcs):
+                    y0g[i] = y0g[i] + dy0[(i*nOdes):((i+1)*nOdes)]
+            else:
+                y0g = y0g + dy0
+            iter = iter+1
+            # print iter
+
+        # If problem converged, propagate solution to get full trajectory
+        # Possibly reuse 'yy' from above?
+        if converged:
+            x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=1e-6, reltol=1e-6)
+            sol = Solution(x1,y1.T,paramGuess)
+        else:
+            # Fix this to be something more elegant
+            sol = Solution(np.nan, np.nan, np.nan)
+
+        ode45.closepool()
+        return sol
