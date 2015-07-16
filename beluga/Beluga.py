@@ -21,7 +21,7 @@ class Beluga(object):
     config = BelugaConfig().config # class variable globally accessible
     def __init__(self,problem,token=None,input_module=None):
         self.problem = problem
-        self.input_module = input_module
+        # self.input_module = input_module
 
         # if token is not self._THE_MAGIC_WORD:
         #     raise ValueError("Don't construct directly, use create() or run()")
@@ -60,7 +60,7 @@ class Beluga(object):
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
-            inst = cls(problem, cls._THE_MAGIC_WORD,input_module = input_module)
+            inst = cls(problem, cls._THE_MAGIC_WORD)
             inst.solve()
             return
             # return inst
@@ -105,9 +105,10 @@ class Beluga(object):
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         # Save data
-        # output = open('data.dill', 'wb')
-        # dill.dump(self, output) # Dill Beluga object only
-        # output.close()
+        output = open('data.dill', 'wb')
+        # dill.settings['recurse'] = True
+        dill.dump(self.out, output) # Dill Beluga object only
+        output.close()
 
         # plt.title('Solution for Brachistochrone problem')
         plt.xlabel('theta')
