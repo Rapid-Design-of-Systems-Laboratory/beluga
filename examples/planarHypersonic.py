@@ -1,16 +1,15 @@
-if __name__ == '__main__':
-    import numpy as np
+import beluga.Beluga as Beluga
+import numpy as np
+import beluga.bvpsol as bvpsol
+import beluga.bvpsol.algorithms as algorithms
+import beluga.optim.Problem
+from beluga.optim.problem import *
+from beluga.continuation import *
+from math import *
 
-    import beluga.Beluga as Beluga
-    import beluga.bvpsol as bvpsol
-    import beluga.bvpsol.algorithms as algorithms
-    import beluga.optim.Problem
-    from beluga.optim.problem import *
-    from beluga.continuation import *
-    from math import *
+import functools
 
-    import functools
-
+def get_problem():
     # Figure out way to implement caching automatically
     #@functools.lru_cache(maxsize=None)
 
@@ -93,17 +92,14 @@ if __name__ == '__main__':
     problem.steps.add_step().num_cases(5) \
                             .terminal('h', 0)  # bvp4c takes 10 steps
 
+
+    #
     # problem.steps.add_step().num_cases(21)  \
     #                         .terminal('theta', 10*pi/180)
     #
-    # problem.steps.add_step()
-    #                 .num_cases(3)
-    #                 .terminal('x', 40.0)
-    #                 .terminal('y',-40.0)
-    # )
+    return problem
 
+if __name__ == '__main__':
+    problem = get_problem()
     # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
     Beluga.run(problem)
-    # beluga = Beluga.create(problem)
-    # beluga.add_callback('before_control',mycode)
-    #
