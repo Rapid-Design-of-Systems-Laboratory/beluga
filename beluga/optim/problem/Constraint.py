@@ -1,5 +1,7 @@
-from sympy import Expr
-class Constraint(Expr):
+# from sympy import Expr
+from beluga.utils import sympify2
+
+class Constraint(object):
     """Defines constraint information."""
     # NEED TO ADD PATH CONSTRAINT
 
