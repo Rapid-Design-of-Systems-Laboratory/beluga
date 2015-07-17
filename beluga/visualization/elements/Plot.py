@@ -14,21 +14,27 @@ class Plot(object):
     def __init__(self, sol = 0, iteration = 0):
         self.sol_index = sol
         self.iter_index = iteration
+        self.x_data = self.y_data = None
+        self._title = self._xlabel = self._ylabel = None
 
     def xlabel(self, label):
-        self.xlabel_str = label
+        self._xlabel = label
         return self
 
     def ylabel(self, label):
-        self.ylabel_str = label
+        self._ylabel = label
         return self
 
     def x(self, expr):
-        self.x_expr_str = expr
+        self.x_expr = expr
         return self
 
     def y(self, expr):
-        self.y_expr_str = expr
+        self.y_expr = expr
+        return self
+
+    def title(self, title_txt):
+        self._title = title_txt
         return self
 
     def preprocess(self, solution, problem_data):
@@ -63,8 +69,8 @@ class Plot(object):
                 for var in aux['vars']]
 
         # Build environment to evaluate expressions
-        self.x_data = ne.evaluate(self.x_expr_str,var_dict)
-        self.y_data = ne.evaluate(self.y_expr_str,var_dict)
+        self.x_data = ne.evaluate(self.x_expr,var_dict)
+        self.y_data = ne.evaluate(self.y_expr,var_dict)
 
     def render(self, renderer):
         """

@@ -42,25 +42,39 @@ class MatPlotLibRenderer(Renderer):
         """
         show(self._get_figure(f))
 
-    def plot(self,f,x_data,y_data,x_label,y_label,title_txt=None):
+    def render_plot(self,f,p):
         """
         Adds a line plot using the given data to the specified figure
         """
         fh = self._get_figure(f);
-        plot(x_data,y_data,figure=fh)
-        xlabel(x_label,figure=fh)
-        ylabel(y_label,figure=fh)
-        title(title_txt,figure=fh)
+        plot(p.x_data,p.y_data,figure=fh)
+        xlabel(p._xlabel,figure=fh)
+        ylabel(p._ylabel,figure=fh)
+        title(p._title,figure=fh)
 
-    def subplot(self,f,index,x_data,y_data,x_label,y_label,title=None):
+    def render_subplot(self,f,index,plot):
         """
         Adds a subplot to the specified figure
         """
         pass
 
 if __name__ == '__main__':
+    from beluga.visualization.elements import Plot
+    import dill
+
     r = MatPlotLibRenderer()
-    f = r.create_figure();
-    print(f)
-    r.plot(f,range(10),range(10),'x','y','blahahaa')
-    r.show_figure(f)
+    fig = r.create_figure()
+
+    with open('/Users/tantony/dev/mjgrant-beluga/examples/data.dill','rb') as f:
+        out = dill.load(f)
+
+    p = Plot(0,-1)
+    p.x('v/1000')
+    p.y('h/1000')
+    p.xlabel('v (km/s)')
+    p.ylabel('h (km)')
+    p.title('Altitude vs. Velocity')
+    p.preprocess(out['solution'],out['problem_data'])
+
+    r.render_plot(fig,p)
+    r.show_figure(fig)
