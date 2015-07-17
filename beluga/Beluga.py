@@ -160,9 +160,9 @@ class Beluga(object):
 
                 sol_copy = copy.deepcopy(sol)
                 s.unscale(bvp.aux_vars,sol_copy)
-
+                sol_copy2 = copy.deepcopy(sol_copy)
                 # Update solution for next iteration
-                sol_last = sol_copy
+                sol_last = sol_copy2
                 solution_set[step_idx].append(sol_copy)
 
                 elapsed_time = toc()

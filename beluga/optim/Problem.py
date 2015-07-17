@@ -1,6 +1,5 @@
 from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess
 from beluga.continuation import ContinuationList
-from beluga.plotting import PlotList
 # from os import getcwd
 from .Scaling import Scaling
 import inspect
@@ -30,8 +29,7 @@ class Problem(object):
         self.steps = ContinuationList()
         self.guess = Guess()
         self.functions = {}
-        self.plots = PlotList()
-        
+
         self.bvp_solver = None
 
         self.systems = {} # List of dynamic system

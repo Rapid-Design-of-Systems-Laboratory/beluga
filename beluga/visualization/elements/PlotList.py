@@ -1,4 +1,4 @@
-from beluga.plotting import Plot
+from beluga.visualization.elements import Plot
 class PlotList(list):
     """
     A collection class for storing plot objects

@@ -1,3 +1,12 @@
+import dill
+import numpy as np
+import numexpr as ne
+import collections
+from sympy import *
+from sympy.utilities.lambdify import lambdify
+
+from beluga.utils import keyboard
+
 class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
@@ -22,17 +31,54 @@ class Plot(object):
         self.y_expr_str = expr
         return self
 
-    def render(self, problem_data, solutions):
+    def preprocess(self, solution, problem_data):
         """
-        Takes in problem and solution data and renders the plot using matplotlib
+        Evaluates the expressions using the supplied data
         """
-        sol = solutions[self.sol_index][self.iter_index]
-        variables  = [(state,max(abs(sol.y[idx,:])))
-                        for idx,state in enumerate(self.problem_data['state_list'])]
+        sol = solution[self.sol_index][self.iter_index]
 
+        self.x_data = np.empty_like(sol.x)
+        self.y_data = np.empty_like(sol.x)
+        self.x_data[:] = np.NaN
+        self.y_data[:] = np.NaN
+
+        # for timestep in range(len(sol.x)):
+        var_names = [state for state in problem_data['state_list']]
+        var_names += [var for aux in problem_data['aux_list'] for var in aux['vars']]
+        var_names = sorted(var_names)
+
+        variables  = [(state,np.array(sol.y[idx,:]))
+                        for idx,state in enumerate(problem_data['state_list'])]
         # Add auxiliary variables and their values (hopefully they dont clash)
-        variables += [(var,bvp.aux_vars[aux['type']][var])
-                        for aux in self.problem_data['aux_list']
-                        for var in aux['vars']
-                        if aux['type'] not in Scaling.excluded_aux]
+        variables += [(var,sol.aux[aux['type']][var])
+                        for aux in problem_data['aux_list']
+                        for var in aux['vars']]
+        var_dict = dict(variables)
+
+        var_values  = [np.array(sol.y[idx,:])
+                for idx,state in enumerate(problem_data['state_list'])]
+        var_values += [sol.aux[aux['type']][var]
+                for aux in problem_data['aux_list']
+                for var in aux['vars']]
+
+        # Build environment to evaluate expressions
+        self.x_data = ne.evaluate(self.x_expr_str,var_dict)
+        self.y_data = ne.evaluate(self.y_expr_str,var_dict)
+
+        print(self.x_data)
+        print(self.y_data)
+
+    def render(self, problem_data, solution):
+        """
+        Renders the plot using the given renderer
+        """
         pass
+
+if __name__ == '__main__':
+    f = open('/Users/tantony/dev/mjgrant-beluga/examples/data.dill','rb')
+    out = dill.load(f)
+    f.close()
+    p = Plot(0,4)
+    p.x('v/1000')
+    p.y('h/1000')
+    p.preprocess(out['solution'],out['problem_data'])
