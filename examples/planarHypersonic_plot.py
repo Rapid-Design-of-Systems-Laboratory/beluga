@@ -1,6 +1,6 @@
-from beluga.plotting import PlotList
+from beluga.visualizations import BelugaPlot
 
-plots = PlotList()
+plots = BelugaPlot()
 
 plots.add_plot().xlabel('v (km/s)')     \
                 .ylabel('h (km)')       \

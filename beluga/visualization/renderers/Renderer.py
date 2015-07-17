@@ -21,6 +21,6 @@ class Renderer(object):
         Adds a subplot to the specified figure
         """
 
-    # Configuration 
+    # Configuration
     # Movie making interface
-    # Saving a plot
+    # Method for saving plot to file (PDF/SVG/JPEG/PNG/HTML5)

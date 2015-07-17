@@ -99,7 +99,9 @@ class Beluga(object):
         tic()
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
-        self.out = self.run_continuation_set(self.problem.steps, bvp, solinit)
+        self.out = {};
+        self.out['problem_data'] = self.nec_cond.problem_data;
+        self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp, solinit)
         total_time = toc();
 
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
