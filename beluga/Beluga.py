@@ -41,7 +41,7 @@ class Beluga(object):
         \date      06/30/15
         """
         self.problem = problem
-        self.input_module = input_module
+        # self.input_module = input_module
 
         # # Ensure user does not create an object with the Beluga class
         # if token is not self._THE_MAGIC_WORD:
@@ -87,7 +87,7 @@ class Beluga(object):
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
-            inst = cls(problem, cls._THE_MAGIC_WORD,input_module = input_module)
+            inst = cls(problem, cls._THE_MAGIC_WORD)
             inst.solve()
             return
             # return inst
@@ -132,15 +132,18 @@ class Beluga(object):
         tic()
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
-        self.out = self.run_continuation_set(self.problem.steps, bvp, solinit)
-        total_time = toc()
+        self.out = {};
+        self.out['problem_data'] = self.nec_cond.problem_data;
+        self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp, solinit)
+        total_time = toc();
 
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         # Save data
-        # output = open('data.dill', 'wb')
-        # dill.dump(self, output) # Dill Beluga object only
-        # output.close()
+        output = open('data.dill', 'wb')
+        # dill.settings['recurse'] = True
+        dill.dump(self.out, output) # Dill Beluga object only
+        output.close()
 
         # plt.title('Solution for Brachistochrone problem')
         plt.xlabel('theta')
@@ -190,9 +193,9 @@ class Beluga(object):
 
                 sol_copy = copy.deepcopy(sol)
                 s.unscale(bvp.aux_vars,sol_copy)
-
+                sol_copy2 = copy.deepcopy(sol_copy)
                 # Update solution for next iteration
-                sol_last = sol_copy
+                sol_last = sol_copy2
                 solution_set[step_idx].append(sol_copy)
 
                 elapsed_time = toc()

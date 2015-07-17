@@ -1,16 +1,15 @@
-if __name__ == '__main__':
-    import numpy as np
+import beluga.Beluga as Beluga
+import numpy as np
+import beluga.bvpsol as bvpsol
+import beluga.bvpsol.algorithms as algorithms
+import beluga.optim.Problem
+from beluga.optim.problem import *
+from beluga.continuation import *
+from math import *
 
-    import beluga.Beluga as Beluga
-    import beluga.bvpsol as bvpsol
-    import beluga.bvpsol.algorithms as algorithms
-    import beluga.optim.Problem
-    from beluga.optim.problem import *
-    from beluga.continuation import *
-    from math import *
+import functools
 
-    import functools
-
+def get_problem():
     # Figure out way to implement caching automatically
     #@functools.lru_cache(maxsize=None)
 
@@ -75,8 +74,8 @@ if __name__ == '__main__':
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
-    #problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -95,15 +94,9 @@ if __name__ == '__main__':
 
     problem.steps.add_step().num_cases(20)  \
                             .terminal('theta', 10*pi/180)
-    #
-    # problem.steps.add_step()
-    #                 .num_cases(3)
-    #                 .terminal('x', 40.0)
-    #                 .terminal('y',-40.0)
-    # )
+    return problem
 
+if __name__ == '__main__':
+    problem = get_problem()
     # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
     Beluga.run(problem)
-    # beluga = Beluga.create(problem)
-    # beluga.add_callback('before_control',mycode)
-    #

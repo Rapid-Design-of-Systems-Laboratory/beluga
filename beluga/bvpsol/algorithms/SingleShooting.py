@@ -299,8 +299,9 @@ class SingleShooting(Algorithm):
         # Possibly reuse 'yy' from above?
         if converged:
             x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-6, reltol=1e-6)
-            sol = Solution(x1,y1.T,paramGuess)
+            sol = Solution(x1,y1.T,paramGuess,aux)
         else:
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
+        # sol.aux = aux
         return sol
