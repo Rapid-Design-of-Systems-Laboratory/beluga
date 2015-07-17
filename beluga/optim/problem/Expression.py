@@ -1,5 +1,5 @@
-from sympy import Expr
-class Expression(Expr):
+# from sympy import Expr
+class Expression(object):
     """Defines expression information."""
 
     def __init__(self, expr = '', unit = ''):
