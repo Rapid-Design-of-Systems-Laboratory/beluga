@@ -1,5 +1,5 @@
-from beluga.visualization.elements import PlotList
-from beluga.visualization.renderers import *
+from .elements import PlotList
+from .renderers import *
 
 class BelugaPlot:
     """

@@ -54,6 +54,7 @@ class Plot(object):
                         for aux in problem_data['aux_list']
                         for var in aux['vars']]
         var_dict = dict(variables)
+        # TODO: Add independent variable as a plottable element
 
         var_values  = [np.array(sol.y[idx,:])
                 for idx,state in enumerate(problem_data['state_list'])]
@@ -65,20 +66,8 @@ class Plot(object):
         self.x_data = ne.evaluate(self.x_expr_str,var_dict)
         self.y_data = ne.evaluate(self.y_expr_str,var_dict)
 
-        print(self.x_data)
-        print(self.y_data)
-
-    def render(self, problem_data, solution):
+    def render(self, renderer):
         """
         Renders the plot using the given renderer
         """
         pass
-
-if __name__ == '__main__':
-    f = open('/Users/tantony/dev/mjgrant-beluga/examples/data.dill','rb')
-    out = dill.load(f)
-    f.close()
-    p = Plot(0,4)
-    p.x('v/1000')
-    p.y('h/1000')
-    p.preprocess(out['solution'],out['problem_data'])
