@@ -92,11 +92,6 @@ def get_problem():
     problem.steps.add_step().num_cases(5) \
                             .terminal('h', 0)  # bvp4c takes 10 steps
 
-<<<<<<< Updated upstream
-    problem.steps.add_step().num_cases(20)  \
-                            .terminal('theta', 10*pi/180)
-    return problem
-=======
     # problem.steps.add_step().num_cases(21)  \
     #                         .terminal('theta', 10*pi/180)
     #
@@ -105,7 +100,7 @@ def get_problem():
     #                 .terminal('x', 40.0)
     #                 .terminal('y',-40.0)
     # )
->>>>>>> Stashed changes
+    return problem
 
 if __name__ == '__main__':
     problem = get_problem()
