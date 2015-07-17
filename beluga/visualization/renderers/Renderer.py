@@ -19,13 +19,13 @@ class Renderer(object):
         """
 
     @abc.abstractmethod
-    def plot(self,figure,x_data,y_data,x_label,y_label,title=None):
+    def render_plot(self,figure,plot):
         """
         Adds a line plot using the given data to the specified figure
         """
 
     @abc.abstractmethod
-    def subplot(self,figure,index,x_data,y_data,x_label,y_label,title=None):
+    def render_subplot(self,figure,plot):
         """
         Adds a subplot to the specified figure
         """
