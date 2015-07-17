@@ -1,12 +1,10 @@
-import dill
-import numpy as np
-import numpy.testing as npt
+import dill, os, numpy as np, numpy.testing as npt
 from math import *
 from beluga.utils import ode45, keyboard
 from beluga.visualization.elements import Plot
 
 def test_plot():
-    with open('planar.dill','rb') as f:
+    with open(os.path.join(os.path.dirname(__file__),'planar.dill'),'rb') as f:
         out = dill.load(f)
 
     sol = out['solution']
