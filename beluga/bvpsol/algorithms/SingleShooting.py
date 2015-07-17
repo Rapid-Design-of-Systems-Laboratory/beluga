@@ -303,4 +303,5 @@ class SingleShooting(Algorithm):
         else:
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
+        sol.aux = aux
         return sol
