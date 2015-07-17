@@ -42,38 +42,6 @@ class Plot(object):
         Evaluates the expressions using the supplied data
         """
         sol = solution[self.sol_index][self.iter_index]
-
-        self.x_data = np.empty_like(sol.x)
-        self.y_data = np.empty_like(sol.x)
-        self.x_data[:] = np.NaN
-        self.y_data[:] = np.NaN
-
-        # for timestep in range(len(sol.x)):
-        var_names = [state for state in problem_data['state_list']]
-        var_names += [var for aux in problem_data['aux_list'] for var in aux['vars']]
-        var_names = sorted(var_names)
-
-        variables  = [(state,np.array(sol.y[idx,:]))
-                        for idx,state in enumerate(problem_data['state_list'])]
-        # Add auxiliary variables and their values (hopefully they dont clash)
-        variables += [(var,sol.aux[aux['type']][var])
-                        for aux in problem_data['aux_list']
-                        for var in aux['vars']]
-        var_dict = dict(variables)
-        # TODO: Add independent variable as a plottable element
-
-        var_values  = [np.array(sol.y[idx,:])
-                for idx,state in enumerate(problem_data['state_list'])]
-        var_values += [sol.aux[aux['type']][var]
-                for aux in problem_data['aux_list']
-                for var in aux['vars']]
-
-        # Build environment to evaluate expressions
-        self.x_data = ne.evaluate(self.x_expr,var_dict)
-        self.y_data = ne.evaluate(self.y_expr,var_dict)
-
-    def render(self, renderer):
-        """
-        Renders the plot using the given renderer
-        """
-        pass
+        sol.prepare(problem_data)
+        self.x_data = sol.evaluate(self.x_expr)
+        self.y_data = sol.evaluate(self.y_expr)
