@@ -11,9 +11,9 @@ class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
     """
-    def __init__(self, sol = 0, iteration = 0):
+    def __init__(self, sol = 0, iter = 0):
         self.sol_index = sol
-        self.iter_index = iteration
+        self.iter_index = iter
         self.x_data = self.y_data = None
         self._title = self._xlabel = self._ylabel = None
 
@@ -23,6 +23,14 @@ class Plot(object):
 
     def ylabel(self, label):
         self._ylabel = label
+        return self
+
+    def solution(self, sol):
+        self.sol_index = sol
+        return self
+
+    def iteration(self, iter):
+        self.iter_index = iter
         return self
 
     def x(self, expr):
