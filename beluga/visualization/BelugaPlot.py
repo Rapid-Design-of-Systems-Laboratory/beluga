@@ -38,7 +38,7 @@ class BelugaPlot:
         self._plots.append(plot)
         return plot
 
-    def render(self):
+    def render(self,show=True):
         with open(self.filename,'rb') as f:
             out = dill.load(f)
 
@@ -46,8 +46,12 @@ class BelugaPlot:
             plot.preprocess(out['solution'],out['problem_data'])
             fig = self.renderer.create_figure()
             self.renderer.render_plot(fig,plot)
-            self.renderer.show_figure(fig)
             self._figures.append(fig)
+        if show:
+            self.show()
+
+    def show(self):
+        self.renderer.show_all()
 
     def plotconfig(varname,value=None):
         """

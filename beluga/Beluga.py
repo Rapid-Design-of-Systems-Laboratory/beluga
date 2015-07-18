@@ -191,8 +191,10 @@ class Beluga(object):
 
                 sol = self.problem.bvp_solver.solve(bvp, sol_last)
 
+                # TODO: Move aux variables completely into Solution object
                 sol_copy = copy.deepcopy(sol)
                 s.unscale(bvp.aux_vars,sol_copy)
+                sol_copy.aux = copy.deepcopy(bvp.aux_vars)
                 sol_copy2 = copy.deepcopy(sol_copy)
                 # Update solution for next iteration
                 sol_last = sol_copy2

@@ -9,13 +9,23 @@ class Renderer(object):
         """
         Creates a new figure and returns a handle
         """
+
+    @abc.abstractmethod
     def close_figure(self,figure):
         """
         Closes a specified figure
         """
+
+    @abc.abstractmethod
     def show_figure(self,figure):
         """
         Shows a specified figure
+        """
+
+    @abc.abstractmethod
+    def show_all(self):
+        """
+        Shows all rendered figures
         """
 
     @abc.abstractmethod

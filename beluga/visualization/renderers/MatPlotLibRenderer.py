@@ -42,6 +42,12 @@ class MatPlotLibRenderer(Renderer):
         """
         show(self._get_figure(f))
 
+    def show_all(self):
+        """
+        Show all rendered figures
+        """
+        show()
+
     def render_plot(self,f,p):
         """
         Adds a line plot using the given data to the specified figure

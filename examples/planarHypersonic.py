@@ -92,8 +92,8 @@ def get_problem():
     problem.steps.add_step().num_cases(5) \
                             .terminal('h', 0)  # bvp4c takes 10 steps
 
-    # problem.steps.add_step().num_cases(21)  \
-    #                         .terminal('theta', 10*pi/180)
+    problem.steps.add_step().num_cases(21)  \
+                            .terminal('theta', 10*pi/180)
     #
     # problem.steps.add_step()
     #                 .num_cases(3)

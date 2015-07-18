@@ -33,12 +33,16 @@ class Plot(object):
         self.iter_index = iter
         return self
 
-    def x(self, expr):
+    def x(self, expr, label = None):
         self.x_expr = expr
+        if label is not None:
+            self._xlabel = label
         return self
 
-    def y(self, expr):
+    def y(self, expr, label = None):
         self.y_expr = expr
+        if label is not None:
+            self._ylabel = label
         return self
 
     def title(self, title_txt):
@@ -51,5 +55,6 @@ class Plot(object):
         """
         sol = solution[self.sol_index][self.iter_index]
         sol.prepare(problem_data)
+        
         self.x_data = sol.evaluate(self.x_expr)
         self.y_data = sol.evaluate(self.y_expr)

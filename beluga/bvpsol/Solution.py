@@ -25,10 +25,12 @@ class Solution(object):
         #TODO: Make state_list a part of the Solution object
         variables  = [(state,np.array(self.y[idx,:]))
                         for idx,state in enumerate(problem_data['state_list'])]
-        # Add auxiliary variables and their values (hopefully they dont clash)
+
         variables += [(var,self.aux[aux['type']][var])
                         for aux in problem_data['aux_list']
                         for var in aux['vars']]
+        # TODO: Make this more generalized
+        variables += [('t',self.x*self.y[-1,1])]
         self.var_dict = dict(variables)
 
     def evaluate(self,expr):
