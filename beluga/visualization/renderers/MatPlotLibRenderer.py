@@ -48,9 +48,12 @@ class MatPlotLibRenderer(Renderer):
         """
         fh = self._get_figure(f);
         plot(p.x_data,p.y_data,figure=fh)
-        xlabel(p._xlabel,figure=fh)
-        ylabel(p._ylabel,figure=fh)
-        title(p._title,figure=fh)
+        if p._xlabel is not None:
+            xlabel(p._xlabel,figure=fh)
+        if p._ylabel is not None:
+            ylabel(p._ylabel,figure=fh)
+        if p._title is not None:
+            title(p._title,figure=fh)
 
     def render_subplot(self,f,index,plot):
         """

@@ -18,23 +18,16 @@ def test_plot():
     p.preprocess(out['solution'],out['problem_data'])
     npt.assert_equal(p.x_data,sol[0][0].y[2,:])
     npt.assert_equal(p.y_data,sol[0][0].y[0,:])
+    sol[0][4].prepare(out['problem_data'])
+    print(sol[0][4].evaluate('amax(h)'))
 
-    # Testing behavior with options
+    # Testing behavior with solution selector options
     p = Plot(0,4)
     p.x('theta')
     p.y('gam')
     p.preprocess(out['solution'],out['problem_data'])
     npt.assert_equal(p.x_data,sol[0][4].y[1,:])
     npt.assert_equal(p.y_data,sol[0][4].y[3,:])
-
-    # Testing expressions with constants
-    p = Plot()
-    p.x('theta*re/1000')
-    p.y('h/1000')
-    p.preprocess(out['solution'],out['problem_data'])
-
-    npt.assert_equal(p.x_data,sol[0][0].y[1,:]*sol[0][0].aux['const']['re']/1000)
-    npt.assert_equal(p.y_data,sol[0][0].y[0,:]/1000)
 
     # Testing expressions with variables and constants or with multiple variables
     p = Plot()
