@@ -88,13 +88,16 @@ class Guess(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = 0.1*np.ones(len(bvp.aux_vars['parameters']))
-        elif len(param_guess) < len(bvp.aux_vars['parameters']):
-            param_guess += np.zeros(len(bvp.aux_vars['parameters'])-len(param_guess))
-        elif len(param_guess) > len(bvp.aux_vars['parameters']):
+            param_guess = np.zeros(len(bvp.solution.aux['parameters']))
+        elif len(param_guess) < len(bvp.solution.aux['parameters']):
+            param_guess += np.zeros(len(bvp.solution.aux['parameters'])-len(param_guess))
+        elif len(param_guess) > len(bvp.solution.aux['parameters']):
             # TODO: Write a better error message
-            raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.aux_vars['parameters']))
+            raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.solution.aux['parameters']))
 
-        [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.aux_vars)
+        [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.solution.aux)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
-        return Solution(t,x.T,param_guess)
+        bvp.solution.x = t
+        bvp.solution.y = x.T
+        bvp.solution.parameters = param_guess
+        return bvp.solution

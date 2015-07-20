@@ -189,7 +189,7 @@ class SingleShooting(Algorithm):
     #        return func(x,y0,*args,**argd)
     #    return func_wrapper
 
-    def solve(self,bvp,guess):
+    def solve(self,bvp):
         """Solve a two-point boundary value problem
             using the single shooting method
 
@@ -201,7 +201,7 @@ class SingleShooting(Algorithm):
             solution of TPBVP
         Raises:
         """
-        solinit = guess
+        solinit = bvp.solution
         x  = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
@@ -209,7 +209,8 @@ class SingleShooting(Algorithm):
 
         deriv_func = bvp.deriv_func
         bc_func = bvp.bc_func
-        aux = bvp.aux_vars
+
+        aux = bvp.solution.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]
@@ -303,5 +304,6 @@ class SingleShooting(Algorithm):
         else:
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
-        # sol.aux = aux
+        bvp.solution = sol
+        sol.aux = aux
         return sol

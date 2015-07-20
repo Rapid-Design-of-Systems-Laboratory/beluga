@@ -75,7 +75,7 @@ class Scaling(dict):
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify2(unit_expr))
 
-    def compute_base_scaling(self,bvp,sol,scale_expr):
+    def compute_base_scaling(self,sol,scale_expr):
         if isinstance(scale_expr,num.Number):
             # If scaling factor is a number, use it
             return scale_expr
@@ -83,26 +83,36 @@ class Scaling(dict):
             # If it is an expression, evaluate it
             # Setup environment to evaluate expression
             # Add list of states, costates and time and their peak values
-            variables  = [(state,max(abs(sol.y[idx,:])))
+            # variables  = [(state,max(abs(sol.y[idx,:])))
+            #                 for idx,state in enumerate(self.problem_data['state_list'])]
+            #
+            # # Add auxiliary variables and their values (hopefully they dont clash)
+            # variables += [(var,bvp.aux_vars[aux['type']][var])
+            #                 for aux in self.problem_data['aux_list']
+            #                 for var in aux['vars']
+            #                 if aux['type'] not in Scaling.excluded_aux]
+
+            variables = [(aux_name,aux_val)
+                    for aux_type in sol.aux
+                    if isinstance(sol.aux[aux_type],dict)
+                    for (aux_name,aux_val) in sol.aux[aux_type].items()
+                    ]
+            # Have to do in this order to override state values with arrays
+            variables += [(state,max(abs(sol.y[idx,:])))
                             for idx,state in enumerate(self.problem_data['state_list'])]
 
-            # Add auxiliary variables and their values (hopefully they dont clash)
-            variables += [(var,bvp.aux_vars[aux['type']][var])
-                            for aux in self.problem_data['aux_list']
-                            for var in aux['vars']
-                            if aux['type'] not in Scaling.excluded_aux]
             var_dict = dict(variables)
 
             # Evaluate expression to get scaling factor
             return float(sympify2(scale_expr).subs(var_dict,dtype=float).evalf())
 
-    def compute_scaling(self,bvp,sol):
+    def compute_scaling(self,bvp):
         from collections import OrderedDict
         # Units should be stored in order to be used as function arguments
         self.scale_factors = OrderedDict()
         # Evaluate scaling factors for each base unit
         for (unit,scale_expr) in self.units.items():
-            self.scale_factors[unit] = self.compute_base_scaling(bvp,sol,scale_expr)
+            self.scale_factors[unit] = self.compute_base_scaling(bvp.solution,scale_expr)
 
         # Ordered list of unit scaling factors for use as function parameters
         scale_factor_list = [v for (k,v) in self.scale_factors.items()]
@@ -130,9 +140,10 @@ class Scaling(dict):
                     self.scale_vals[var_type][var_name] = var_func(*scale_factor_list)
 
 
-    def scale(self,bvp_aux_vars,sol):
+    def scale(self,bvp):
         """Scales a boundary value problem"""
 
+        sol = bvp.solution
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
                   {'type':'terminal','vars':self.problem_data['state_list']}]
@@ -145,14 +156,15 @@ class Scaling(dict):
         for aux in (self.problem_data['aux_list']+extras):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
-                    bvp_aux_vars[aux['type']][var] /= self.scale_vals[aux['type']][var]
+                    sol.aux[aux['type']][var] /= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
             sol.parameters[idx] /= self.scale_vals['parameters'][param]
 
-    def unscale(self,bvp_aux_vars,sol):
+    def unscale(self,bvp):
         """Unscales a solution object"""
+        sol = bvp.solution
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
                   {'type':'terminal','vars':self.problem_data['state_list']}]
@@ -165,7 +177,7 @@ class Scaling(dict):
         for aux in (self.problem_data['aux_list']+extras):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
-                    bvp_aux_vars[aux['type']][var] *= self.scale_vals[aux['type']][var]
+                    sol.aux[aux['type']][var] *= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):

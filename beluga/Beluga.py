@@ -117,7 +117,8 @@ class Beluga(object):
         #       Function handle: Call function
         #       String: Load file?
 
-        # solinit = self.problem.guess
+        # The initial guess is automatically stored in the bvp object
+        # solinit is just a reference to it
         solinit = self.problem.guess.generate(bvp)
 
         # includes costates
@@ -126,15 +127,15 @@ class Beluga(object):
         terminal_states = solinit.y[:,-1] # Last column
         initial_bc = dict(zip(state_names,initial_states))
         terminal_bc = dict(zip(state_names,terminal_states))
-        bvp.aux_vars['initial'] = initial_bc
-        bvp.aux_vars['terminal'] = terminal_bc
+        bvp.solution.aux['initial'] = initial_bc
+        bvp.solution.aux['terminal'] = terminal_bc
 
         tic()
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
         self.out = {};
         self.out['problem_data'] = self.nec_cond.problem_data;
-        self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp, solinit)
+        self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
         total_time = toc();
 
         print('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -151,18 +152,12 @@ class Beluga(object):
         plt.show(block=False)
 
     # TODO: Refactor how code deals with initial guess
-    def run_continuation_set(self,steps,bvp,guess):
+    def run_continuation_set(self,steps,bvp_start):
         # Loop through all the continuation steps
         solution_set = []
 
         # Initialize scaling
-        import sys
-        # from beluga.optim import Scaling
-        # s = Scaling()
-        # s.unit('m',80000)
-        # s.unit('s',80000/6000)
-        # s.unit('kg','mass')
-        # s.unit('rad',1)
+        import sys, copy
         s = self.problem.scale
         s.initialize(self.problem,self.nec_cond.problem_data)
 
@@ -173,32 +168,25 @@ class Beluga(object):
 
             solution_set.append(ContinuationSolution())
             if step_idx == 0:
-                step.set_bvp(bvp)
-                sol_last = guess
+                step.set_bvp(bvp_start)
             else:
                 # Use the bvp & solution from last continuation set
-                sol_last = solution_set[step_idx-1][-1]
                 step.set_bvp(steps[step_idx-1].bvp)
 
             for bvp in step:
                 print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
-                import copy
-                s.compute_scaling(bvp,sol_last)
+                s.compute_scaling(bvp)
+                s.scale(bvp)
 
-                s.scale(bvp.aux_vars,sol_last)
+                # sol is just a reference to bvp.solution
+                sol = self.problem.bvp_solver.solve(bvp)
 
-                sol = self.problem.bvp_solver.solve(bvp, sol_last)
+                s.unscale(bvp)
 
-                # TODO: Move aux variables completely into Solution object
-                sol_copy = copy.deepcopy(sol)
-                s.unscale(bvp.aux_vars,sol_copy)
-                sol_copy.aux = copy.deepcopy(bvp.aux_vars)
-                sol_copy2 = copy.deepcopy(sol_copy)
                 # Update solution for next iteration
-                sol_last = sol_copy2
-                solution_set[step_idx].append(sol_copy)
+                solution_set[step_idx].append(copy.deepcopy(bvp.solution))
 
                 elapsed_time = toc()
                 print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
@@ -206,6 +194,6 @@ class Beluga(object):
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
             # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
-            plt.plot(sol_copy.y[1,:]*180/pi, sol_copy.y[0,:]/1000,'-')
+            plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
             print('Done.')
         return solution_set

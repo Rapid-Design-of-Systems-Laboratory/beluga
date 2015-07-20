@@ -231,7 +231,7 @@ class MultipleShooting(Algorithm):
             f1 = np.concatenate((f1,nextbc))
         return f1
 
-    def solve(self,bvp,guess):
+    def solve(self,bvp):
         """Solve a two-point boundary value problem
             using the multiple shooting method
 
@@ -249,7 +249,7 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp,guess)
 
-        solinit = guess
+        solinit = bvp.solution
         x  = solinit.x
         narcs = self.number_arcs
         # Get initial states from the guess structure
@@ -261,7 +261,8 @@ class MultipleShooting(Algorithm):
 
         deriv_func = bvp.deriv_func
         self.bc_func = bvp.bc_func
-        aux = bvp.aux_vars
+
+        aux = bvp.solution.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]
@@ -367,5 +368,6 @@ class MultipleShooting(Algorithm):
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
 
+        bvp.solution = sol
         ode45.closepool()
         return sol
