@@ -21,7 +21,7 @@ class BelugaPlot:
         # TODO: Get default renderer information from global configuration
         # TODO: Pass in extra renderer options here?
         if renderer is None:
-            self.renderer = MatPlotLibRenderer()
+            self.renderer = MatPlotLib()
         else:
             self.renderer = renderer
 

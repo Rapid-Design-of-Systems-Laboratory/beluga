@@ -1,5 +1,5 @@
 from .Renderer import Renderer
-from .MatPlotLibRenderer import MatPlotLibRenderer
+from .MatPlotLib import MatPlotLib
 
 import os
 import glob
