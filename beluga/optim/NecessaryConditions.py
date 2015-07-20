@@ -355,9 +355,9 @@ class NecessaryConditions(object):
 
 
         self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func)
-        self.bvp.aux_vars['const'] = dict((const.var,const.val) for const in problem.constants())
-        self.bvp.aux_vars['parameters'] = self.problem_data['parameter_list']
-        self.bvp.aux_vars['function']  = problem.functions
+        self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
+        self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
+        self.bvp.solution.aux['function']  = problem.functions
         # TODO: ^^ Do same for constraint values
 
         return self.bvp

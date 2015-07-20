@@ -27,20 +27,21 @@ def test_solve():
 
     solver_fd  = algorithms.SingleShooting(derivative_method='fd',cached=False,tolerance=1e-6)
     solver_csd = algorithms.SingleShooting(derivative_method='csd',cached=False,tolerance=1e-6)
-
+    bvp = bvpsol.BVP(odefn,bcfn)
+    
     x = np.linspace(0,1,2)
     bad_y = np.array([[0,0],[0,2]])
 
     # Test that raises error
-    solinit = bvpsol.Solution(x,bad_y,[pi/2])
-    bvp = bvpsol.BVP(odefn,bcfn)
+
+    bvp.solution = bvpsol.Solution(x,bad_y,[pi/2])
     with pytest.raises(np.linalg.linalg.LinAlgError):
-        solver_fd.solve(bvp,solinit)
+        solver_fd.solve(bvp)
 
     y = np.array([[0,0.1],[0,2]])
-    solinit = bvpsol.Solution(x,y,[pi/2])
+    bvp.solution = bvpsol.Solution(x,y,[pi/2])
 
-    sol = solver_fd.solve(bvp,solinit)
+    sol = solver_fd.solve(bvp)
 
     # Computing analytic solutions
     A = 2
@@ -53,7 +54,7 @@ def test_solve():
     npt.assert_almost_equal(sol.y,y_expected,decimal=5)
 
     # Test for Complex Step solver
-    sol2 = solver_csd.solve(bvp,solinit)
+    sol2 = solver_csd.solve(bvp)
     npt.assert_almost_equal(sol2.y,y_expected,decimal=5)
 
 if __name__ == '__main__':

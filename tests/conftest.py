@@ -7,6 +7,7 @@ import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
 from math import *
+from mock import *
 
 import pytest
 
@@ -81,10 +82,17 @@ def problem_1():
     return problem
 
 @pytest.fixture(scope='session')
+
+def dummy_bvp_1():
+    dummy_bvp = Mock(bvpsol.BVP)
+    dummy_bvp.solution = Mock(bvpsol.Solution)
+    return dummy_bvp
+
+@pytest.fixture(scope='session')
 def scaled_problem_1_bvp():
     bvp = bvpsol.BVP(None,None)
 
-    bvp.aux_vars = {'const': {'H': 0.09375, 're': 79.725, 'mu': 90099.286107092, 'rho0': 38407326093859.13, 'Aref': 4.560367311877479e-11, 'mass': 21.266199024571318, 'rn': 3.175e-07},
+    bvp.solution.aux = {'const': {'H': 0.09375, 're': 79.725, 'mu': 90099.286107092, 'rho0': 38407326093859.13, 'Aref': 4.560367311877479e-11, 'mass': 21.266199024571318, 'rn': 3.175e-07},
             'initial': {'h': 1.0, 'theta': 0.0, 'tf': 0.00029394967999999999, 'v': 21.262142554467147, 'lagrange_gam': 1.808314824025931e-06, 'lagrange_theta': 1.808314824025931e-06, 'gam': -1.5707963267948966, 'lagrange_h': 0.14466518592207447, 'lagrange_v': 0.00042524285108934293}, 'parameters': ['lagrange_initial_1', 'lagrange_initial_2', 'lagrange_initial_3', 'lagrange_terminal_1', 'lagrange_terminal_2'],
             'function': {},
             'terminal': {'h': 0.99374940380311361, 'theta': 3.4084523282394519e-14, 'tf': 0.00029394967999999999, 'v': 21.266199024571318, 'lagrange_gam': 1.8083800321018192e-06, 'lagrange_theta': 1.808314824025931e-06, 'gam': -1.5707963259187729, 'lagrange_h': 0.14466519241178213, 'lagrange_v': 0.00046776747646368021}, 'constraint': []}

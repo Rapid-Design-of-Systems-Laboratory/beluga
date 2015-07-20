@@ -27,11 +27,11 @@ class ContinuationStep(object):
         for var_type in self.vars.keys():
             for var_name in self.vars[var_type].keys():
                 # Look for the variable name from continuation in the BVP
-                if var_name not in bvp.aux_vars[var_type].keys():
+                if var_name not in bvp.solution.aux[var_type].keys():
                     raise ValueError('Variable '+var_name+' not found in boundary value problem')
 
                 # Set current value of each continuation variable
-                self.vars[var_type][var_name].value = bvp.aux_vars[var_type][var_name]
+                self.vars[var_type][var_name].value = bvp.solution.aux[var_type][var_name]
                 # Calculate update steps for continuation process
                 self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
                                                                   self.vars[var_type][var_name].target,
@@ -87,7 +87,7 @@ class ContinuationStep(object):
         # Update auxiliary variables using previously calculated step sizes
         for var_type in self.vars:
             for var_name in self.vars[var_type]:
-                self.bvp.aux_vars[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
+                self.bvp.solution.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
 
         self.ctr += 1
         return self.bvp
