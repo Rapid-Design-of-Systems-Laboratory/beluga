@@ -5,6 +5,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
+#TODO: Write test where the number of arcs is more than number of elements in guess
 def test_solve():
     """Test solver using analytic solution of a BVP"""
     def odefn(t,X,p,aux):
@@ -30,14 +31,16 @@ def test_solve():
     # TODO: Implement complex step derivative in multiple shooting algorithm
     #solver_csd = algorithms.MultipleShooting(derivative_method='csd',cached=False,tolerance=1e-6,number_arcs=2)
 
-    x = np.linspace(0,1,2)
-    bad_y = np.array([[0,0],[0,2]])
+    # Multiple shooting solves it if ithad only two points
+    x = np.linspace(0,1,3)
+    bad_y = np.array([[0,1,0],[0,1,2]])
 
     # Test that raises error
     bvp = bvpsol.BVP(odefn,bcfn)
-    # bvp.solution = bvpsol.Solution(x,bad_y,[pi/2])
-    # with pytest.raises(np.linalg.linalg.LinAlgError):
-    #     solver_fd.solve(bvp)
+    bvp.solution = bvpsol.Solution(x,bad_y,[pi/2])
+    with pytest.raises(np.linalg.linalg.LinAlgError):
+        sol = solver_fd.solve(bvp)
+
 
     y = np.array([[0,0.1],[0,2]])
     bvp.solution = bvpsol.Solution(x,y,[pi/2])
