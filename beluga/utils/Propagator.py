@@ -1,7 +1,8 @@
 from .propagators import *
 from beluga.utils.joblib import Parallel, delayed
 from beluga.utils.joblib import pool
-import multiprocessing
+import os
+from beluga.utils import keyboard
 
 import numpy as np
 
@@ -18,7 +19,7 @@ class Propagator(object):
 
         self.cpu_count = cpu_count
         if self.cpu_count == -1:
-            self.cpu_count = multiprocessing.cpu_count()
+            self.cpu_count = os.cpu_count()
 
         # Same number of threads as processes until I can figure out how to get past the GIL lock
         self.threads = self.cpu_count
@@ -26,13 +27,17 @@ class Propagator(object):
     def startpool(self):
         if self.poolinitialized == 0:
             self.pool = pool.Pool(processes=self.cpu_count)
-            self.poolinitialized = 1
+            self.poolinitialized = True
 
     def closepool(self):
-        # stop something... maybe... check out object auto delete methods
-        self.poolinitialized = 0
+        self.poolinitialized = False
         self.pool.close()
         self.pool.terminate()
+
+    # TODO: Figure out how to add processes to an already started pool
+    def addprocess(self):
+        if self.poolinitialized:
+            return None
 
     def solve(self, f, tspan, y0, *args, **kwargs):
         # Solve can handle either tspan with list length 2, and numpy array y0 for a SINGLE arc
@@ -52,16 +57,18 @@ class Propagator(object):
                 sol = Parallel(n_jobs=self.threads,backend='threading')(delayed(self.solver)(f,tspan[0],y,*args,**kwargs) for y in y0)
             else:"""
             if self.poolinitialized:
+                #multisol = self.pool.map_async(self.solver,[(f,t,y, args,kwargs) for (t,y) in zip(tspan,y0)])
                 multisol = [self.pool.apply_async(self.solver,(f,t,y) + args,(kwargs)) for (t,y) in zip(tspan,y0)]
+                #keyboard()
                 t_and_y = [s.get() for s in multisol]
                 sol = list(zip(*t_and_y))
             else:
+                # If pool hasn't been initialized, use backend threading.
                 t_and_y = Parallel(n_jobs=self.threads,backend='threading')(delayed(ode45)(f,t,y,*args,**kwargs) for (t,y) in zip(tspan,y0))
-                t_and_y = [s.get() for s in multisol]
                 sol = list(zip(*t_and_y))
 
         return sol
 
-    # TODO: Figure out how to disable GIL and try using backend threading instead of a pool. This will reduce overhead.
+    # TODO: Figure out how to disable GIL and try using backend threading instead of a pool. This will reduce overhead. Apparently Cython can do this
     def __sendnogiljob(self, f, tspan, y0, *args, **kwagrs):
         return None
