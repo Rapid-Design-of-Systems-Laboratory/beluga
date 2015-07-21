@@ -7,7 +7,6 @@ import pytest
 
 def test_solve():
     """Test solver using analytic solution of a BVP"""
-    return
     def odefn(t,X,p,aux):
         y = X[0]
         ydot = X[1]
@@ -35,15 +34,15 @@ def test_solve():
     bad_y = np.array([[0,0],[0,2]])
 
     # Test that raises error
-    solinit = bvpsol.Solution(x,bad_y,[pi/2])
     bvp = bvpsol.BVP(odefn,bcfn)
-    with pytest.raises(np.linalg.linalg.LinAlgError):
-        solver_fd.solve(bvp,solinit)
+    # bvp.solution = bvpsol.Solution(x,bad_y,[pi/2])
+    # with pytest.raises(np.linalg.linalg.LinAlgError):
+    #     solver_fd.solve(bvp)
 
     y = np.array([[0,0.1],[0,2]])
-    solinit = bvpsol.Solution(x,y,[pi/2])
+    bvp.solution = bvpsol.Solution(x,y,[pi/2])
 
-    sol = solver_fd.solve(bvp,solinit)
+    sol = solver_fd.solve(bvp)
 
     # Computing analytic solutions
     A = 2
