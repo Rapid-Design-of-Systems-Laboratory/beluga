@@ -74,7 +74,7 @@ def get_problem():
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=4)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False, cached = False)
 
     problem.scale.unit('m','h')         \
@@ -92,7 +92,7 @@ def get_problem():
     problem.steps.add_step().num_cases(5) \
                             .terminal('h', 0)  # bvp4c takes 10 steps
 
-    problem.steps.add_step().num_cases(21)  \
+    problem.steps.add_step().num_cases(11)  \
                             .terminal('theta', 10*pi/180)
     #
     # problem.steps.add_step()

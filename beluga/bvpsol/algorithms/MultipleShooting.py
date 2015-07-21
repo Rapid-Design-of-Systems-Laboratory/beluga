@@ -256,7 +256,7 @@ class MultipleShooting(Algorithm):
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
-            x,ynew = ode45.solve(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, bvp.aux_vars)
+            x,ynew = ode45.solve(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux)
             guess.y = np.transpose(ynew)
             guess.x = x
 
