@@ -41,9 +41,7 @@ from io import BytesIO
 from ._multiprocessing_helpers import mp, assert_spawning
 # We need the class definition to derive from it not the multiprocessing.Pool
 # factory function
-# TODO: Fix pickling issue in the multiprocessing package
-#from beluga.utils.multiprocessing.pool import Pool
-from multiprocessing.pool import Pool
+from multiprocessing_on_dill.pool import Pool
 
 try:
     import numpy as np
