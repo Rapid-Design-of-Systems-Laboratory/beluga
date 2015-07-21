@@ -6,8 +6,8 @@ plots.add_plot().x('t','t (s)')                  \
                 .y('h/1000','h (km)')            \
                 .title('Altitude vs. Time')
 
-plots.add_plot().x('theta*re/1000','Downrange (km)')                  \
-                .y('h/1000','h (km)')            \
+plots.add_plot().x('theta*re/1000','Downrange (km)') \
+                .y('h/1000','h (km)')                \
                 .title('Altitude vs. Downrange')
 
 plots.add_plot().x('v/1000','v (km/s)')          \
