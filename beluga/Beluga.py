@@ -2,7 +2,7 @@ from math import *
 from beluga.utils import *
 from beluga.optim import *
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import sys,os,imp,inspect,warnings
 
@@ -193,7 +193,7 @@ class Beluga(object):
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
-            # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
+            plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
             # plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
             print('Done.')
         return solution_set
