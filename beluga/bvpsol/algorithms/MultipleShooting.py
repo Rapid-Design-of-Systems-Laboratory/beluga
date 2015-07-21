@@ -244,6 +244,7 @@ class MultipleShooting(Algorithm):
             solution of TPBVP
         Raises:
         """
+        guess = bvp.solution
         if self.number_arcs == 1:
             # Single Shooting
             from .SingleShooting import SingleShooting
@@ -259,7 +260,7 @@ class MultipleShooting(Algorithm):
             guess.y = np.transpose(ynew)
             guess.x = x
 
-        solinit = bvp.solution
+        solinit = guess
         x = solinit.x
         # Get initial states from the guess structure
         y0g = [solinit.y[:,np.floor(i/self.number_arcs*x.shape[0])] for i in range(self.number_arcs)]
@@ -378,5 +379,6 @@ class MultipleShooting(Algorithm):
             sol = Solution(np.nan, np.nan, np.nan)
 
         bvp.solution = sol
+        sol.aux = aux
         ode45.closepool()
         return sol
