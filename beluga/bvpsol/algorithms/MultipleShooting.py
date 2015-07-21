@@ -9,6 +9,7 @@ from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 
+# TODO: Fix pickling issue in multiprocessing package. This WILL NOT run with the default package.
 class MultipleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
@@ -249,19 +250,26 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp,guess)
 
-        solinit = guess
-        x  = solinit.x
-        narcs = self.number_arcs
-        # Get initial states from the guess structure
-        y0g = [solinit.y[:,np.floor(i/narcs*x.shape[0])] for i in range(narcs)]
-        paramGuess = solinit.parameters
-
-        ode45 = Propagator(solver='ode45',cpu_count=narcs)
+        ode45 = Propagator(solver='ode45',cpu_count=self.number_arcs)
         ode45.startpool()
+
+        # Decrease time step if the number of arcs is greater than the number of indices
+        if self.number_arcs >= len(guess.x):
+            x,ynew = ode45.solve(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, bvp.aux_vars)
+            guess.y = np.transpose(ynew)
+            guess.x = x
+
+        solinit = guess
+        x = solinit.x
+
+        # Get initial states from the guess structure
+        y0g = [solinit.y[:,np.floor(i/self.number_arcs*x.shape[0])] for i in range(self.number_arcs)]
+        paramGuess = solinit.parameters
 
         deriv_func = bvp.deriv_func
         self.bc_func = bvp.bc_func
         aux = bvp.aux_vars
+
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]
@@ -269,13 +277,15 @@ class MultipleShooting(Algorithm):
 
         # Extract number of ODEs in the system to be solved
         nOdes = solinit.y.shape[0]
+
+        # Initial state of STM is an identity matrix
+        stm0 = np.eye(nOdes).reshape(nOdes*nOdes)
+
         if solinit.parameters is None:
             nParams = 0
         else:
             nParams = solinit.parameters.size
 
-        # Initial state of STM is an identity matrix
-        stm0 = np.eye(nOdes).reshape(nOdes*nOdes)
         iter = 1            # Initialize iteration counter
         converged = False   # Convergence flag
 
@@ -284,32 +294,34 @@ class MultipleShooting(Algorithm):
         alpha = 1
         beta = 1
         r0 = None
-        phiset = [np.eye(nOdes) for i in range(narcs)]
-        tspanset = [np.empty(t.shape[0]) for i in range(narcs)]
+        phiset = [np.eye(nOdes) for i in range(self.number_arcs)]
+        tspanset = [np.empty(t.shape[0]) for i in range(self.number_arcs)]
 
         tspan = [t0,tf]
+
         while True:
             if iter>self.max_iterations:
                 print("Maximum iterations exceeded!")
                 break
 
-            y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(narcs)]
+            y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
 
-            for i in range(narcs):
-                left = np.floor(i/narcs*t.shape[0])
-                right = np.floor((i+1)/narcs*t.shape[0])
-                if i == narcs-1:
+            for i in range(self.number_arcs):
+                left = np.floor(i/self.number_arcs*t.shape[0])
+                right = np.floor((i+1)/self.number_arcs*t.shape[0])
+                if i == self.number_arcs-1:
                     right = t.shape[0] - 1
                 tspanset[i] = [t[left],t[right]]
+                #tspanset[i] = np.linspace(t[left],t[right],500)
 
             # Propagate STM and original system together
             tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux)
 
             # Obtain just last timestep for use with correction
-            yf = [yySTM[i][-1] for i in range(narcs)]
+            yf = [yySTM[i][-1] for i in range(self.number_arcs)]
             # Extract states and STM from ode45 output
-            yb = [yf[i][:nOdes] for i in range(narcs)]  # States
-            phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(narcs)] # STM
+            yb = [yf[i][:nOdes] for i in range(self.number_arcs)]  # States
+            phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(self.number_arcs)] # STM
 
             # Evaluate the boundary conditions
             res = self.get_bc(y0g, yb, paramGuess, aux)
@@ -348,10 +360,10 @@ class MultipleShooting(Algorithm):
             # Apply corrections to states and parameters (if any)
 
             if nParams > 0:
-                dp = dy0[(nOdes*narcs):]
-                dy0 = dy0[:(nOdes*narcs)]
+                dp = dy0[(nOdes*self.number_arcs):]
+                dy0 = dy0[:(nOdes*self.number_arcs)]
                 paramGuess = paramGuess + dp
-                for i in range(narcs):
+                for i in range(self.number_arcs):
                     y0g[i] = y0g[i] + dy0[(i*nOdes):((i+1)*nOdes)]
             else:
                 y0g = y0g + dy0
