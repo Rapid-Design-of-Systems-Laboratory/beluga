@@ -11,28 +11,25 @@ def test_plot():
 
     # Testing default behavior
     p = Plot()
-    p.x('v')
-    p.y('h')
+    p.line('v','h')
     p.xlabel('v (m/s)')
     p.ylabel('h (m)')
     p.preprocess(out['solution'],out['problem_data'])
-    npt.assert_equal(p.x_data,sol[0][0].y[2,:])
-    npt.assert_equal(p.y_data,sol[0][0].y[0,:])
+    npt.assert_equal(p.plot_data[0]['x_data'],sol[0][0].y[2,:])
+    npt.assert_equal(p.plot_data[0]['y_data'],sol[0][0].y[0,:])
     # sol[0][4].prepare(out['problem_data'])
     # print(sol[0][4].evaluate('amax(h)'))
 
     # Testing behavior with solution selector options
     p = Plot(0,4)
-    p.x('theta')
-    p.y('gam')
+    p.line('theta','gam')
     p.preprocess(out['solution'],out['problem_data'])
-    npt.assert_equal(p.x_data,sol[0][4].y[1,:])
-    npt.assert_equal(p.y_data,sol[0][4].y[3,:])
+    npt.assert_equal(p.plot_data[0]['x_data'],sol[0][4].y[1,:])
+    npt.assert_equal(p.plot_data[0]['y_data'],sol[0][4].y[3,:])
 
     # Testing expressions with variables and constants or with multiple variables
     p = Plot()
-    p.x('theta+v*gam')
-    p.y('rho0*exp(-h/H)')
+    p.line('theta+v*gam','rho0*exp(-h/H)')
     p.preprocess(out['solution'],out['problem_data'])
 
     const = sol[0][0].aux['const']
@@ -40,5 +37,5 @@ def test_plot():
     rho = const['rho0']*np.exp(-sol[0][0].y[0,:]/const['H'])
     xval = sol[0][0].y[1,:] + sol[0][0].y[2,:]*sol[0][0].y[3,:]
 
-    npt.assert_equal(p.x_data,xval)
-    npt.assert_equal(p.y_data,rho)
+    npt.assert_equal(p.plot_data[0]['x_data'],xval)
+    npt.assert_equal(p.plot_data[0]['y_data'],rho)
