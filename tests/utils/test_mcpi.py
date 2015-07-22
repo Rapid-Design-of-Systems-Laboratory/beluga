@@ -11,6 +11,6 @@ def test_mcpi():
 
     y0 = np.array([10,-50])
     tspan = np.array([0, 1.0])
-    [t1,x1] = mcpi(odefn,tspan,y0,5,[],{},tol=1e-5)
+    [t1,x1] = mcpi(odefn,tspan,y0,[],{}, N = 5, tol=1e-5)
     x1_expected = np.array([y*np.exp(k_*t1) for (y,k_) in zip(y0,k)]).T
     npt.assert_almost_equal(x1,x1_expected,decimal=5)
