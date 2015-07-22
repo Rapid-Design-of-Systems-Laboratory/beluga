@@ -249,9 +249,9 @@ class MultipleShooting(Algorithm):
             # Single Shooting
             from .SingleShooting import SingleShooting
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
-            return Single.solve(bvp,guess)
+            return Single.solve(bvp)
 
-        ode45 = Propagator(solver='ode45',cpu_count=self.number_arcs)
+        ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
         ode45.startpool()
 
         # Decrease time step if the number of arcs is greater than the number of indices
