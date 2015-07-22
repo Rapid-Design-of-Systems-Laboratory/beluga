@@ -43,7 +43,7 @@ def test_solve():
     bvp = bvpsol.BVP(odefn,bcfn)
     bvp.solution = bvpsol.Solution(x,bad_y,[pi/2])
     with pytest.raises(np.linalg.linalg.LinAlgError):
-        sol = solver_fd.solve(bvp)
+        sol = solver_fd1.solve(bvp)
 
 
     y = np.array([[0,0.1],[0,2]])
