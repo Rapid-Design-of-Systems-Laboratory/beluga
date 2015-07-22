@@ -11,10 +11,10 @@ class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
     """
-    def __init__(self, sol = 0, iter = 0):
+    def __init__(self, step = 0, sol = 0):
+        self.step_index = step
         self.sol_index = sol
-        self.iter_index = iter
-        self.x_data = self.y_data = None
+        self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
 
     def xlabel(self, label):
@@ -25,36 +25,38 @@ class Plot(object):
         self._ylabel = label
         return self
 
-    def solution(self, sol):
-        self.sol_index = sol
+    def step(self, _step):
+        self.step_index = _step
         return self
 
-    def iteration(self, iter):
-        self.iter_index = iter
-        return self
-
-    def x(self, expr, label = None):
-        self.x_expr = expr
-        if label is not None:
-            self._xlabel = label
-        return self
-
-    def y(self, expr, label = None):
-        self.y_expr = expr
-        if label is not None:
-            self._ylabel = label
+    def solution(self, _sol):
+        self.sol_index = _sol
         return self
 
     def title(self, title_txt):
+        """
+        Sets the title of the figure
+        """
         self._title = title_txt
+        return self
+
+    def line(self, x_expr, y_expr, legend=None, step = None, sol = None):
+        """
+        Adds a new line plot to the figure
+        """
+        self.plot_data.append({'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'sol':sol})
         return self
 
     def preprocess(self, solution, problem_data):
         """
         Evaluates the expressions using the supplied data
         """
-        sol = solution[self.sol_index][self.iter_index]
-        sol.prepare(problem_data)
-        
-        self.x_data = sol.evaluate(self.x_expr)
-        self.y_data = sol.evaluate(self.y_expr)
+        for line in self.plot_data:
+            step_idx = line['step'] or self.step_index
+            sol_idx = line['sol'] or self.sol_index
+
+            sol = solution[step_idx][sol_idx]
+            sol.prepare(problem_data)
+
+            line['x_data'] = sol.evaluate(line['x'])
+            line['y_data'] = sol.evaluate(line['y'])
