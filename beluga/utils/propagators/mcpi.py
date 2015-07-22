@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.matlib as matlib
 from math import *
-def mcpi(ode, tSpan, x0, N, *args, tol = 1e-4):
+def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4):
     """
     Propagates a system of ODEs using the Modified Chebyshev-Picard Iteration method
     """
