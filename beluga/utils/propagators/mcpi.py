@@ -2,8 +2,16 @@ import numpy as np
 import numpy.matlib as matlib
 from math import *
 def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4):
-    """
-    Propagates a system of ODEs using the Modified Chebyshev-Picard Iteration method
+    """!
+    \brief     ODE propagator that uses the Modified Chebyshev-Picard Iteration method
+    \details   Propagates a system of ODEs using MCPI. Code based on original work by
+               Xiaoli Bai and MATLAB code by Darin Koblick. The function was simplified
+               by removing several for loops and the function header matched to that of
+               MATLAB's ode45
+    \author    Thomas Antony
+    \version   0.1
+    \date      07/22/15
+    \copyright Coming.
     """
 
     x0 = np.array(x0)
@@ -44,7 +52,6 @@ def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4):
     Cx = T[0:N+1,0:N+1].T   # Cx = T(1:N+1,1:N+1)';
     Cx[:,0] /= 2
 
-    # tau = tau[np.newaxis,:]   # Convert to row vector
     err1 = err2 = np.inf
     ctr = 0
     max_iter = 100
