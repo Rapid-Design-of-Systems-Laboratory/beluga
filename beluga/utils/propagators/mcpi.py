@@ -21,7 +21,7 @@ def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4, return_Beta = False):
 
     # Convert to row vector if col vector given
     # If matrix in 'wrong' format, convert to right format
-    if x0.shape[1] == 1 or x0.shape[0] != len(tSpan):
+    if x0.shape[1] == 1: #or x0.shape[0] != len(tSpan):
         x0 = x0.T
 
     # If column vector is given, convert to matrix using repetition
@@ -30,6 +30,7 @@ def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4, return_Beta = False):
     else:
         x_guess = x0;
 
+    print(x_guess)
     tau = np.cos(np.linspace(N,0,N+1)*pi/N)
 
     omega1 = (tSpan[-1]+tSpan[0])/2
