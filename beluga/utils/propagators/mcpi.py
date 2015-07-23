@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.matlib as matlib
 from math import *
-def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4):
+def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4, return_Beta = False):
     """!
     \brief     ODE propagator that uses the Modified Chebyshev-Picard Iteration method
     \details   Propagates a system of ODEs using MCPI. Code based on original work by
@@ -20,7 +20,8 @@ def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4):
         x0 = np.array([x0])
 
     # Convert to row vector if col vector given
-    if x0.shape[1] == 1:
+    # If matrix in 'wrong' format, convert to right format
+    if x0.shape[1] == 1 or x0.shape[0] != len(tSpan):
         x0 = x0.T
 
     # If column vector is given, convert to matrix using repetition
@@ -72,8 +73,10 @@ def mcpi(ode, tSpan, x0, *args, N = 10, tol = 1e-4):
         err2 = err1;
         err1 = np.amax(abs(x_new - x_guess))
         x_guess = x_new
-
-    return (s_tau,x_new)
+    if not return_Beta:
+        return (s_tau,x_new)
+    else:
+        return (s_tau,x_new,Beta_k)
 
 def chebypoly(k, tau):
     # Computes T_k(x) for all points in tau for all k
