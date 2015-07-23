@@ -95,19 +95,12 @@ class SingleShooting(Algorithm):
         N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h
-            # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-
             M[:,i] = (f-fx)/h
             ya[i] = ya[i] - h
-        # for i in range(nOdes):
+
             yb[i] = yb[i] + h
-            # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
             N[:,i] = (f-fx)/h
             yb[i] = yb[i] - h
 
@@ -251,10 +244,11 @@ class SingleShooting(Algorithm):
             # Extract states and STM from ode45 output
             yb = yf[:nOdes]  # States
             phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
-            # print phi
-            # print ""
+
             # Evaluate the boundary conditions
             res = bc_func(y0g, yb, paramGuess, aux)
+
+            self.bc_jac_func = self.__bcjac_csd
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
@@ -265,7 +259,6 @@ class SingleShooting(Algorithm):
             # Compute Jacobian of boundary conditions using numerical derviatives
             J   = self.bc_jac_func(bc_func, y0g, yb, phi, paramGuess, aux)
             # Compute correction vector
-
             r1 = np.linalg.norm(res)
             if self.verbose:
                 print(r1)
@@ -279,11 +272,17 @@ class SingleShooting(Algorithm):
                 alpha = 1
             r0 = r1
 
-            dy0 = alpha*beta*np.linalg.solve(J,-res)
-            # dy0 = np.linalg.solve(J,-res)
-            # if abs(r1 - 0.110277711594) < 1e-4:
-            #     from beluga.utils import keyboard
-            #     keyboard()
+            try:
+                dy0 = alpha*beta*np.linalg.solve(J,-res)
+            except:
+                rank1 = np.linalg.matrix_rank(J)
+                rank2 = np.linalg.matrix_rank(np.c_[J,-res])
+                if rank1 == rank2:
+                    dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
+                else:
+                    # Re-raise exception if system is infeasible
+                    raise
+
 
             # Apply corrections to states and parameters (if any)
             if nParams > 0:

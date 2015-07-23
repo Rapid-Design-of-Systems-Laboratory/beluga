@@ -54,6 +54,7 @@ problem.constraints().initial('h-h_0','m')              \
                     .initial('theta-theta_0','rad')     \
                     .initial('phi-phi_0','rad')         \
                     .initial('v-v_0','m/s')             \
+                    .initial('psi-psi_0','rad')         \
                     .terminal('h-h_f','m')              \
                     .terminal('theta-theta_f','rad')    \
                     .terminal('phi-phi_f','rad')
@@ -76,18 +77,19 @@ problem.scale.unit('m','h')     \
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
 
-problem.guess.setup('auto',start=[80000,0,0,5000,(-90+10)*pi/180,0])
+problem.guess.setup('auto',start=[80000,0,0,5000,(-80)*pi/180,0],time_integrate=0.1)
 
-problem.steps.add_step().num_cases(11)           \
-                        .terminal('h',0)
+problem.steps.add_step().num_cases(5)               \
+                        .terminal('h',0)            \
+                        .terminal('theta',0.0022)
 #
 # problem.steps.add_step().num_cases(11)          \
 #                         .initial('h',80000)
 
-problem.steps.add_step().num_cases(41)          \
-                        .terminal('theta',5*pi/180)
+problem.steps.add_step().num_cases(21)          \
+                        .terminal('theta',3*pi/180)
 
 # problem.steps.add_step().num_cases(10)              \
 #                         .terminal('theta',5*pi/180) \
