@@ -62,16 +62,13 @@ class Guess(object):
         else:
             raise ValueError('Direction must be either forward or reverse.')
 
-        self.time_integrate = 0.1
 
-
-        time_integrate = abs(time_integrate)
+        self.time_integrate = abs(time_integrate)
         if time_integrate == 0:
             raise ValueError('Integration time must be non-zero')
 
         # TODO: Check size against number of states here
         self.start = start
-
         self.costate_guess = costate_guess
 
     def auto(self,bvp,param_guess = None):
@@ -81,8 +78,12 @@ class Guess(object):
         tspan = [0, 1]
 
         x0 = np.array(self.start)
+
         # Add costates
-        x0 = np.r_[x0,self.costate_guess*np.ones(len(self.start))]
+        if isinstance(self.costate_guess,float):
+            x0 = np.r_[x0,self.costate_guess*np.ones(len(self.start))]
+        else:
+            x0 = np.r_[x0,self.costate_guess]
         # Add time of integration to states
         x0 = np.append(x0,self.time_integrate)
 

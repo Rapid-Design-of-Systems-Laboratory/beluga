@@ -9,7 +9,6 @@ from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 
-# TODO: Fix pickling issue in multiprocessing package. This WILL NOT run with the default package.
 class MultipleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
@@ -35,7 +34,6 @@ class MultipleShooting(Algorithm):
             memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
-    # TODO: Implement complex step derivative in multiple shooting algorithm
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
@@ -77,47 +75,6 @@ class MultipleShooting(Algorithm):
 
         J = np.hstack(J)
         return J
-        """ya = np.array(ya, dtype=complex)
-        yb = np.array(yb, dtype=complex)
-        # if parameters is not None:
-        p  = np.array(parameters, dtype=complex)
-        h = StepSize
-
-        nOdes = ya.shape[0]
-        nBCs = nOdes
-        if parameters is not None:
-            nBCs += parameters.size
-        M = np.zeros((nBCs, nOdes))
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
-            ya[i] = ya[i] + h*1.j
-            # if parameters is not None:
-            f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-
-            M[:,i] = np.imag(f)/h
-            ya[i] = ya[i] - h*1.j
-        # for i in range(nOdes):
-            yb[i] = yb[i] + h*1.j
-            # if parameters is not None:
-            f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-            N[:,i] = np.imag(f)/h
-            yb[i] = yb[i] - h*1.j
-
-        if parameters is not None:
-            P = np.zeros((nBCs, p.size))
-            for i in range(p.size):
-                p[i] = p[i] + h*1.j
-                f = bc_func(ya,yb,p,aux)
-                P[:,i] = np.imag(f)/h
-                p[i] = p[i] - h*1.j
-            J = np.hstack((M+np.dot(N,phi),P))
-        else:
-            J = M+np.dot(N,phi)
-        return J"""
 
     def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-7):
         # if parameters is not None:
@@ -311,7 +268,7 @@ class MultipleShooting(Algorithm):
                 if i == self.number_arcs-1:
                     right = t.shape[0] - 1
                 tspanset[i] = [t[left],t[right]]
-                #tspanset[i] = np.linspace(t[left],t[right],500)
+                #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
             # Propagate STM and original system together
             tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux)

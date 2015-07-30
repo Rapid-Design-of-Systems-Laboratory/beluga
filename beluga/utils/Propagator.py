@@ -6,6 +6,12 @@ from beluga.utils import keyboard
 
 import numpy as np
 
+try:
+    import mpi4py
+    HPCSUPPORTED = 1
+except:
+    HPCSUPPORTED = 0
+
 # TODO: Create py test for propagator class
 class Propagator(object):
     def __init__(self, solver='ode45', process_count=-1):
@@ -30,6 +36,10 @@ class Propagator(object):
         if self.poolinitialized == 0:
             self.pool = pool.Pool(processes=self.process_count)
             self.poolinitialized = True
+
+        print('Number of processors OS: ' + str(os.cpu_count()))
+        print('HPCSUPPORTED: ' + str(HPCSUPPORTED))
+        raise('DONE')
 
     def closepool(self):
         self.poolinitialized = False
