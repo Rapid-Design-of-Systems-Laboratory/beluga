@@ -193,7 +193,7 @@ class Beluga(object):
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
-            plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
+            # plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
             # plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
-            print('Done.')
+            print(sol.y[:,0])
         return solution_set
