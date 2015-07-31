@@ -7,7 +7,7 @@ from beluga.utils import keyboard
 import numpy as np
 
 try:
-    import mpi4py as mpi
+    from mpi4py import MPI
     HPCSUPPORTED = 1
 except:
     HPCSUPPORTED = 0
@@ -34,6 +34,6 @@ class Worker(object):
 
     def startworker(self):
         print('HPC SUPPORTED: ' + str(HPCSUPPORTED))
-        commworld = mpi.COMM_WORLD
+        commworld = MPI.COMM_WORLD
         keyboard()
         return None
