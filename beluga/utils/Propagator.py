@@ -39,7 +39,7 @@ class Propagator(object):
 
         print('Number of processors OS: ' + str(os.cpu_count()))
         print('HPCSUPPORTED: ' + str(HPCSUPPORTED))
-        raise('DONE')
+        raise Exception('DONE')
 
     def closepool(self):
         self.poolinitialized = False
