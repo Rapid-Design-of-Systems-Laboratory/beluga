@@ -9,6 +9,7 @@ import sys,os,imp,inspect,warnings
 from beluga import BelugaConfig
 from beluga.continuation import *
 from beluga.bvpsol import algorithms
+from beluga.utils import Worker
 
 import dill
 
@@ -155,6 +156,9 @@ class Beluga(object):
     def run_continuation_set(self,steps,bvp_start):
         # Loop through all the continuation steps
         solution_set = []
+
+        worker = Worker()
+        worker.startworker()
 
         # Initialize scaling
         import sys, copy
