@@ -95,7 +95,7 @@ class Guess(object):
         elif len(param_guess) > len(bvp.solution.aux['parameters']):
             # TODO: Write a better error message
             raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.solution.aux['parameters']))
-
+        print(x0)
         [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.solution.aux)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         bvp.solution.x = t

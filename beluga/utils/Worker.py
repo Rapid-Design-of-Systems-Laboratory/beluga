@@ -33,7 +33,15 @@ class Worker(object):
         self.threads = self.process_count
 
     def startworker(self):
-        print('HPC SUPPORTED: ' + str(HPCSUPPORTED))
-        commworld = MPI.COMM_WORLD
-        keyboard()
+        if HPCSUPPORTED == 1:
+            print('HPC SUPPORTED: ' + str(HPCSUPPORTED))
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+            keyboard()
+        return None
+
+    def stopworker(self):
+        if HPCSUPPORTED == 1:
+            print('HPC SUPPORTED: ' + str(HPCSUPPORTED))
+
         return None

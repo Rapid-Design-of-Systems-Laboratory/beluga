@@ -1,0 +1,17 @@
+#!/bin/bash
+## Required PBS Directives --------------------------------------
+#PBS -q mjgrant-b
+#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l walltime=3:00:00
+#PBS -j oe
+#PBS -l application=Python
+#PBS -M msparapa@purdue.edu
+#PBS -m be
+
+cd $HOMEDIR
+
+cd anaconda3
+cd bin
+cd mjgrant-beluga
+cd examples
+ipython hypersonic3DOF.py
