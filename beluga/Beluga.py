@@ -160,6 +160,8 @@ class Beluga(object):
         worker = Worker()
         worker.startworker()
 
+        print(str(worker.rank))
+
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
