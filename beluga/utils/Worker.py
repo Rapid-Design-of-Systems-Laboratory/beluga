@@ -12,32 +12,19 @@ try:
 except:
     HPCSUPPORTED = 0
 
-# TODO: Create py test for propagator class
+# TODO: Create py test for worker class
 class Worker(object):
-    def __init__(self, solver='ode45', process_count=-1):
-        possibles = globals().copy()
-        possibles.update(locals())
-        method = possibles.get(solver)
-        if not method:
-             raise Exception("Method %s not implemented" % solver)
-        self.solver = method
-        self.poolinitialized = 0
-
-        self.process_count = process_count
-        if self.process_count == -1:
-            self.process_count = os.cpu_count()
-        elif self.process_count > os.cpu_count():
-            self.process_count = os.cpu_count()
+    def __init__(self):
+        self.process_count = os.cpu_count()
 
         # Same number of threads as processes until I can figure out how to get past the GIL lock
         self.threads = self.process_count
 
     def startworker(self):
         if HPCSUPPORTED == 1:
-            print('HPC SUPPORTED: ' + str(HPCSUPPORTED))
-            comm = MPI.COMM_WORLD
-            rank = comm.Get_rank()
-            keyboard()
+            self.comm = MPI.COMM_WORLD
+            self.rank = self.comm.Get_rank()
+            print('HPC SUPPORTED: ' + str(HPCSUPPORTED) + ' Rank: ' + str(self.rank))
         return None
 
     def stopworker(self):
