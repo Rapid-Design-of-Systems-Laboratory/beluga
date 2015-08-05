@@ -9,6 +9,12 @@ from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 
+try:
+    from mpi4py import MPI
+    HPCSUPPORTED = 1
+except:
+    HPCSUPPORTED = 0
+
 class MultipleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
@@ -208,8 +214,11 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp)
 
-        ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
-        ode45.startpool()
+        if HPCSUPPORTED:
+            ode45 = Worker(mode='MPI')
+        else:
+            ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
+            ode45.startpool()
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):

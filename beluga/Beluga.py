@@ -157,11 +157,6 @@ class Beluga(object):
         # Loop through all the continuation steps
         solution_set = []
 
-        worker = Worker()
-        worker.startworker()
-
-        print(str(worker.rank))
-
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
