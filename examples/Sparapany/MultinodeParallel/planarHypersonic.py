@@ -5,9 +5,16 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
+from beluga.utils import Worker
 from math import *
 
 import functools
+
+try:
+    from mpi4py import MPI
+    HPCSUPPORTED = 1
+except:
+    HPCSUPPORTED = 0
 
 def get_problem():
     # Figure out way to implement caching automatically
@@ -106,4 +113,11 @@ def get_problem():
 if __name__ == '__main__':
     problem = get_problem()
     # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
-    sol = Beluga.run(problem)
+    if HPCSUPPORTED == 1 and MPI.Get_rank() == 0:
+        # Start solution process on main node
+        sol = Beluga.run(problem)
+    elif HPCSUPPORTED == 1:
+        # Start worker process
+        Worker = Worker(mode = 'MPI')
+    else:
+        sol = Beluga.run(problem)
