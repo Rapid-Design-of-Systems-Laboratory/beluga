@@ -113,11 +113,12 @@ def get_problem():
 if __name__ == '__main__':
     problem = get_problem()
     # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
-    if HPCSUPPORTED == 1 and MPI.Get_rank() == 0:
+    if HPCSUPPORTED == 1 and MPI.COMM_WORLD.Get_rank() == 0:
         # Start solution process on main node
         sol = Beluga.run(problem)
     elif HPCSUPPORTED == 1:
-        # Start worker process
-        Worker = Worker(mode = 'MPI')
+        # Start worker process if not on main node
+        Worker = Worker(mode='MPI')
     else:
+        # Start solution process if running locally
         sol = Beluga.run(problem)
