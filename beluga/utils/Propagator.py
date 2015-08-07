@@ -18,6 +18,7 @@ class Propagator(object):
         self.poolinitialized = 0
 
         self.process_count = process_count
+        # Set process count to be the same number as available cores
         if self.process_count == -1:
             self.process_count = os.cpu_count()
         elif self.process_count > os.cpu_count():
@@ -26,20 +27,23 @@ class Propagator(object):
         # Same number of threads as processes until I can figure out how to get past the GIL lock
         self.threads = self.process_count
 
-    def startpool(self):
+    def startPool(self):
         if self.poolinitialized == 0:
             self.pool = pool.Pool(processes=self.process_count)
             self.poolinitialized = True
 
-    def closepool(self):
+    def closePool(self):
         self.poolinitialized = False
         self.pool.close()
         self.pool.terminate()
 
-    # TODO: Figure out how to add processes to an already started pool
-    def addprocess(self):
-        if self.poolinitialized:
-            return None
+    def setSolver(self,solver='ode45'):
+        possibles = globals().copy()
+        possibles.update(locals())
+        method = possibles.get(solver)
+        if not method:
+             raise Exception("Method %s not implemented" % solver)
+        self.solver = method
 
     def solve(self, f, tspan, y0, *args, **kwargs):
         # Solve can handle either tspan with list length 2, and numpy array y0 for a SINGLE arc
@@ -70,7 +74,3 @@ class Propagator(object):
                 sol = list(zip(*t_and_y))
 
         return sol
-
-    # TODO: Figure out how to disable GIL and try using backend threading instead of a pool. This will reduce overhead. Apparently Cython can do this
-    def __sendnogiljob(self, f, tspan, y0, *args, **kwagrs):
-        return None

@@ -5,7 +5,7 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
-from beluga.utils import Worker
+from beluga.utils.Worker import Worker
 from math import *
 
 import functools
@@ -117,7 +117,8 @@ if __name__ == '__main__':
         sol = Beluga.run(problem)
     elif HPCSUPPORTED == 1:
         # Start worker process if not on main node
-        Worker = Worker(mode='MPI')
+        worker = Worker(mode='MPI')
+        worker.startWorker()
     else:
         # Start solution process if running locally
         sol = Beluga.run(problem)
