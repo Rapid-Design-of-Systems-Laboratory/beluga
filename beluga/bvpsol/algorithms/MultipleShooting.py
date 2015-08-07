@@ -8,6 +8,7 @@ from beluga.utils import *
 from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
+from beluga.utils.Worker import Worker
 
 try:
     from mpi4py import MPI
@@ -215,10 +216,13 @@ class MultipleShooting(Algorithm):
             return Single.solve(bvp)
 
         if HPCSUPPORTED:
-            worker = Worker(mode='MPI')
-            worker.startworker()
-        ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
-        ode45.startpool()
+            worker = Worker(mode='HOST')
+            worker.wprint(worker.comm.size)
+            worker.startWorker()
+            worker.Propagator.setSolver(solver='ode45')
+        else:
+            ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
+            ode45.startPool()
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
@@ -346,5 +350,5 @@ class MultipleShooting(Algorithm):
 
         bvp.solution = sol
         sol.aux = aux
-        ode45.closepool()
+        ode45.closePool()
         return sol

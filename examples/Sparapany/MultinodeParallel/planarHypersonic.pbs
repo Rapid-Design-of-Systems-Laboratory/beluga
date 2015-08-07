@@ -6,10 +6,10 @@
 #PBS -q mjgrant-b
 #
 # Set number of nodes to use and cores per node
-#PBS -l nodes=2:ppn=16
+#PBS -l nodes=4:ppn=16
 #
 # Set walltime
-#PBS -l walltime=00:02:00
+#PBS -l walltime=00:05:00
 #
 # Put normal and error output into same file
 #PBS -j oe
@@ -51,10 +51,7 @@ echo ' '
 # Change active directory to the directory where PBS file is submitted from
 cd $PBS_O_WORKDIR
 
-# Output list of available nodes
-cat $PBS_NODEFILE > targetNames.dat
-
 echo -------------- BEGIN PROGRAM EXECUTION ---------------
 # Run the python script. Number of instances run should match
 # the number of available nodes.
-mpiexec -n 2 python planarHypersonic.py
+mpiexec -n 4 python planarHypersonic.py
