@@ -16,6 +16,8 @@ except:
     HPCSUPPORTED = 0
 
 # TODO: Create py test for worker class
+# TODO: Add multithreading
+# TODO: Add TCP support
 # TODO: Give worker class all functionality of the framework.
 class Worker(object):
     def __init__(self, mode='MPI', propagator=Propagator()):
@@ -24,13 +26,13 @@ class Worker(object):
         self.process_count = os.cpu_count()
         self.mode = mode
 
-        # Create propagator class. Propagator handles pooling
+        # Create propagator class. Propagator handles local pooling
         self.Propagator = propagator
         self.Propagator.startPool()
 
         # Get tags for commands between nodes.
-        self.commandtotag = self.getTags()
-        self.tagtocommand = self.getCommands()
+        self.tagtocommand = self.getTags()
+        self.commandtotag = self.getCommands()
 
         # Determine mode the worker process is started in.
             # HOST: This is the main process or head node. This is the same node that runs the main solution process.
@@ -38,6 +40,9 @@ class Worker(object):
             # TCP: Slave nodes. Behaves similarly to MPI process, but will listen on a TCP port instead of MPI.
         if self.mode == 'HOST':
             self.rank = 0
+            self.comm = MPI.COMM_WORLD
+            self.rank = self.comm.Get_rank()
+            self.send = self.sendMPI
         elif self.mode == 'MPI':
             self.comm = MPI.COMM_WORLD
             self.rank = self.comm.Get_rank()
@@ -50,8 +55,15 @@ class Worker(object):
         elif self.mode == 'DUAL':
             raise Exception('DUAL mode not yet implemented. Start worker process in MPI mode.')
 
+        # Start with no jobs in queue
+        self.tasklist = []
+
+        # Default to not running on init
+        self.started = 0
+
     def startWorker(self):
         self.wprint('Worker process started in ' + self.mode + ' mode. Rank: ' + str(self.rank))
+        self.started = 1
         if self.mode == 'HOST':
             for i in range(10):
                 self.comm.send(10,dest=1,tag=self.commandtotag['TEST'])
@@ -60,7 +72,7 @@ class Worker(object):
                 #self.comm.send(10,dest=1,tag=self.commandtotag['TEST'])
                 #self.wprint('Sent to all')
                 #time.sleep(1)
-            for i in range(self.comm.size):
+            for i in range(self.comm.size-1):
                 self.comm.send(0,dest=i+1,tag=self.commandtotag['STOPWORKER'])
         elif self.mode == 'MPI':
             self.listenMPI()
@@ -73,20 +85,33 @@ class Worker(object):
             data = self.comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
             return data
         elif self.mode == 'MPI':
-            self.started = 1
             while self.started:
+                # Receive some data from the head node
                 status = MPI.Status()  # get MPI status object. Does this need to be inside the loop?
                 data = self.comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-                self.parseInput(data,status.Get_source(),status.Get_tag(),status)
+
+                PID = os.fork()
+                self.wprint('Forked')
+                if PID == 0:
+                    self.wprint('Child PID: ' + str(PID))
+                    os._exit(0)
+                else:
+                    self.wprint('Parent PID: ' + str(os.getpid()) + ' Child PID: ' + str(PID))
+
+                respond,data = self.parseInput(data,status.Get_source(),status.Get_tag(),status)
+                if respond == 1:
+                    # Respond to the node with some information
+                    self.sendMPI(data,destination=status.Get_source(),tag=self.commandtotag['RESPONSE'])
 
     def listenTCP(self):
         # Probably listen on a TCP port or something.
         return None
 
-    def sendMPI(self,data,destination=0,tag=0,command='SOL'):
+    def sendMPI(self,data,destination=0,tag=0):
         if destination == 'BROADCAST':
             for i in range(self.comm.size):
                 self.comm.send(data,dest=i,tag=tag)
+                self.wprint('BROADCAST not yet implemented.')
         else:
             self.comm.send(data,dest=destination,tag=tag)
 
@@ -97,10 +122,18 @@ class Worker(object):
 
     def parseInput(self,data,source,tag,status):
         command = self.tagtocommand[tag]
+        responseRequired = 1
 
-        if command == 'SOL':
-            # Returned solution from another worker process
-            return data
+        if command == 'TEST':
+            self.wprint('Received...')
+            time.sleep(2)
+            self.wprint('Processed')
+        elif command == 'RESULT':
+            # Result from a computation
+            responseRequired = 0
+        elif command == 'RESPONSE':
+            # Result from a command
+            responseRequired = 0
         elif command == 'STARTWORKER':
             self.startWorker()
         elif command == 'STOPWORKER':
@@ -114,13 +147,9 @@ class Worker(object):
             self.bc_func = data
         elif command == 'PROPAGATE':
             t,y = self.Propagator.solve(data)
-            self.send((t,y),destination=source,tag='SOL')
+            self.send((t,y),destination=source,tag='RESULT')
 
-        if command == 'TEST':
-            self.wprint('Received...')
-            time.sleep(2)
-            self.wprint('Processed')
-
+        return responseRequired,data
 
     def solve(self, problem, *args, **kwargs):
         # Generic solve method.
@@ -133,7 +162,7 @@ class Worker(object):
 
     def getTags(self):
         # Known commands by the worker. Additional commands should be added to this list.
-        commands = ['TEST','SOL','STARTWORKER','STOPWORKER','PARSEFAILED','SETDERIVATIVE','SETBCFUNC','PROPAGATE']
+        commands = ['TEST','RESULT','RESPONSE','STARTWORKER','STOPWORKER','PARSEFAILED','SETDERIVATIVE','SETBCFUNC','PROPAGATE']
         return dict(enumerate(commands))
 
     def getCommands(self):
@@ -143,3 +172,12 @@ class Worker(object):
 
     def wprint(self,message):
         print('(Worker ' + str(self.rank) + ') ' + str(message))
+
+# TODO: Implement a queue system
+class WorkerTask(object):
+    def __init__(self,data,source=0,destination=1,tag=0,command='PROPAGATE'):
+        self.data = data
+        self.source = source
+        self.destination = destination
+        self.tag = tag
+        self.command = command
