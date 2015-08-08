@@ -216,13 +216,15 @@ class MultipleShooting(Algorithm):
             return Single.solve(bvp)
 
         if HPCSUPPORTED:
+            # Start Host MPI process
             worker = Worker(mode='HOST')
-            worker.wprint(worker.comm.size)
             worker.startWorker()
             worker.Propagator.setSolver(solver='ode45')
+            ode45 = worker.Propagator
         else:
+            # Start local pool
             ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
-            ode45.startPool()
+        ode45.startPool()
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
