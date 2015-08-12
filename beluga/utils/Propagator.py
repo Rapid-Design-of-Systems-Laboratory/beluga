@@ -7,7 +7,15 @@ from beluga.utils import keyboard
 import numpy as np
 
 # TODO: Create py test for propagator class
+# TODO: Find a better worker-propagator relationship.
 class Propagator(object):
+    """!
+    \brief     Main class of the propagator.
+    \details   This class handles all propagation of differential equations in serial or parallel on a single node.
+    \author    Mike Sparapany
+    \version   0.1
+    \date      08/08/15
+    """
     def __init__(self, solver='ode45', process_count=-1):
         possibles = globals().copy()
         possibles.update(locals())

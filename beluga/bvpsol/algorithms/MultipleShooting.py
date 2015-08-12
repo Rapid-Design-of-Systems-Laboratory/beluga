@@ -196,7 +196,7 @@ class MultipleShooting(Algorithm):
             f1 = np.concatenate((f1,nextbc))
         return f1
 
-    def solve(self,bvp):
+    def solve(self,bvp,worker=None):
         """Solve a two-point boundary value problem
             using the multiple shooting method
 
@@ -215,7 +215,7 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp)
 
-        if HPCSUPPORTED:
+        if HPCSUPPORTED and worker == None:
             # Start Host MPI process
             worker = Worker(mode='HOST')
             worker.startWorker()
