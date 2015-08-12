@@ -165,13 +165,10 @@ class Beluga(object):
 
         # Initialize main worker for multi processing
         # TODO: Implement the host worker in a nicer way
-        if HPCSUPPORTED:
-            # Start Host MPI process
-            worker = Worker(mode='HOST')
-            worker.startWorker()
-            worker.Propagator.setSolver(solver='ode45')
-        else:
-            worker = None
+        # Start Host MPI process
+        worker = Worker(mode='HOST')
+        worker.startWorker()
+        worker.Propagator.setSolver(solver='ode45')
 
         # Initialize scaling
         import sys, copy

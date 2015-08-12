@@ -53,19 +53,23 @@ class Worker(object):
             # TCP: Slave nodes. Behaves similarly to MPI process, but will listen on a TCP port instead of MPI.
         if self.mode == 'HOST':
             self.rank = 0
-            self.comm = MPI.COMM_WORLD
-            self.rank = self.comm.Get_rank()
-            self.send = self.sendMPI
             self.data = {}
+            if HPCSUPPORTED:
+                self.comm = MPI.COMM_WORLD
+                self.rank = self.comm.Get_rank()
+                self.send = self.sendMPI
+
         elif self.mode == 'MPI':
             self.comm = MPI.COMM_WORLD
             self.rank = self.comm.Get_rank()
             self.send = self.sendMPI
             if self.rank == 0:
                 self.mode = 'HOST'
+
         elif self.mode == 'TCP':
             self.send = self.sendTCP
             raise Exception('TCP mode not yet implemented. Start worker process in MPI mode.')
+
         elif self.mode == 'DUAL':
             raise Exception('DUAL mode not yet implemented. Start worker process in MPI mode.')
 
@@ -76,18 +80,21 @@ class Worker(object):
         self.started = 0
 
     def startWorker(self):
-        self.wprint('Worker process started in ' + self.mode + ' mode. Rank: ' + str(self.rank))
-        self.started = 1
-        if self.mode == 'HOST':
-            self.listenMPI() # This will need to change to reflect other modes, fine for just MPI stuff
-            PID = os.fork()
-            if PID == 0:
-                self.listenMPI()
+        if HPCSUPPORTED:
+            self.wprint('Worker process started in ' + self.mode + ' mode. Rank: ' + str(self.rank))
+            self.started = 1
+            if self.mode == 'HOST':
+                self.listenMPI() # This will need to change to reflect other modes, fine for just MPI stuff
+                PID = os.fork()
+                if PID == 0:
+                    self.listenMPI()
 
-        elif self.mode == 'MPI':
-            self.listenMPI()
+            elif self.mode == 'MPI':
+                self.listenMPI()
+            else:
+                return None
         else:
-            return None
+            self.wprint('Bypassing MPI support.')
 
     def sendJob(self,command,*args,**kwargs):
         ticket = 50

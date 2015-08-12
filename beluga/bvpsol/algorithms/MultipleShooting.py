@@ -209,22 +209,19 @@ class MultipleShooting(Algorithm):
         Raises:
         """
         guess = bvp.solution
+
         if self.number_arcs == 1:
             # Single Shooting
             from .SingleShooting import SingleShooting
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp)
 
-        if HPCSUPPORTED and worker == None:
-            # Start Host MPI process
-            worker = Worker(mode='HOST')
-            worker.startWorker()
-            worker.Propagator.setSolver(solver='ode45')
+        if worker is not None:
             ode45 = worker.Propagator
         else:
             # Start local pool
             ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
-        ode45.startPool()
+            ode45.startPool()
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
@@ -352,5 +349,5 @@ class MultipleShooting(Algorithm):
 
         bvp.solution = sol
         sol.aux = aux
-        ode45.closePool()
+        print(sol.y[:,0])
         return sol
