@@ -182,7 +182,7 @@ class SingleShooting(Algorithm):
     #        return func(x,y0,*args,**argd)
     #    return func_wrapper
 
-    def solve(self,bvp):
+    def solve(self,bvp,worker=None):
         """Solve a two-point boundary value problem
             using the single shooting method
 
