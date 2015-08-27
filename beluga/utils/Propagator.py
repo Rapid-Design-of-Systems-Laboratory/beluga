@@ -73,9 +73,9 @@ class Propagator(object):
             if self.poolinitialized:
                 #multisol = self.pool.map_async(self.solver,[(f,t,y, args,kwargs) for (t,y) in zip(tspan,y0)])
                 multisol = [self.pool.apply_async(self.solver,(f,t,y) + args,(kwargs)) for (t,y) in zip(tspan,y0)]
-                #keyboard()
                 t_and_y = [s.get() for s in multisol]
                 sol = list(zip(*t_and_y))
+
             else:
                 # If pool hasn't been initialized, use backend threading.
                 t_and_y = Parallel(n_jobs=self.threads,backend='threading')(delayed(ode45)(f,t,y,*args,**kwargs) for (t,y) in zip(tspan,y0))
