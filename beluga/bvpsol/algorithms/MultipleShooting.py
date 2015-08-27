@@ -209,7 +209,6 @@ class MultipleShooting(Algorithm):
         Raises:
         """
         guess = bvp.solution
-
         if self.number_arcs == 1:
             # Single Shooting
             from .SingleShooting import SingleShooting
@@ -299,7 +298,7 @@ class MultipleShooting(Algorithm):
                     print("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
-
+            print(paramGuess)
             # Compute Jacobian of boundary conditions using numerical derviatives
             J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
             # Compute correction vector
@@ -336,6 +335,7 @@ class MultipleShooting(Algorithm):
             else:
                 y0g = y0g + dy0
             iter = iter+1
+
             # print iter
 
         # If problem converged, propagate solution to get full trajectory
@@ -349,5 +349,7 @@ class MultipleShooting(Algorithm):
 
         bvp.solution = sol
         sol.aux = aux
-        print(sol.y[:,0])
+
+        if worker is None:
+            ode45.closePool()
         return sol

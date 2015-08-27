@@ -163,7 +163,6 @@ class Beluga(object):
         # Loop through all the continuation steps
         solution_set = []
 
-        # Initialize main worker for multi processing
         # TODO: Implement the host worker in a nicer way
         # Start Host MPI process
         worker = Worker(mode='HOST')
@@ -207,7 +206,7 @@ class Beluga(object):
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
-            # plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
-            # plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
+            plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
+            plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
             print(sol.y[:,0])
         return solution_set

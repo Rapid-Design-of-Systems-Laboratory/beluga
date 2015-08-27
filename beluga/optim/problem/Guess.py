@@ -1,6 +1,7 @@
 from beluga.utils import ode45
 from beluga.bvpsol import Solution
 import numpy as np
+from beluga.utils import keyboard
 
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
@@ -54,7 +55,8 @@ class Guess(object):
     def setup_auto(self,start=None,
                         direction='forward',
                         time_integrate=0.1,
-                        costate_guess =0.1):
+                        costate_guess =0.1,
+                        param_guess = None):
         """Setup automatic initial guess generation"""
 
         if direction in ['forward','reverse']:
@@ -70,6 +72,7 @@ class Guess(object):
         # TODO: Check size against number of states here
         self.start = start
         self.costate_guess = costate_guess
+        self.param_guess = param_guess
 
     def auto(self,bvp,param_guess = None):
         """Generates initial guess by forward/reverse integration"""
@@ -88,6 +91,8 @@ class Guess(object):
         x0 = np.append(x0,self.time_integrate)
 
         # Guess zeros for missing parameters
+        # TODO: Automatically generate parameter guess values
+
         if param_guess is None:
             param_guess = np.zeros(len(bvp.solution.aux['parameters']))
         elif len(param_guess) < len(bvp.solution.aux['parameters']):
@@ -95,7 +100,7 @@ class Guess(object):
         elif len(param_guess) > len(bvp.solution.aux['parameters']):
             # TODO: Write a better error message
             raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.solution.aux['parameters']))
-        print(x0)
+
         [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.solution.aux)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         bvp.solution.x = t

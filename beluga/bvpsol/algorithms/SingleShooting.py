@@ -293,7 +293,7 @@ class SingleShooting(Algorithm):
             else:
                 y0g = y0g + dy0
             iter = iter+1
-            # print iter
+            # print iters
 
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
@@ -305,4 +305,5 @@ class SingleShooting(Algorithm):
             sol = Solution(np.nan, np.nan, np.nan)
         bvp.solution = sol
         sol.aux = aux
+        print(sol.y[:,0])
         return sol
