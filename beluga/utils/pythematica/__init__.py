@@ -1,5 +1,5 @@
-from .py2matica import mathematica_run
-from .py2matica import mathematica_solve
+from .pythematica import mathematica_run
+from .pythematica import mathematica_solve
 __all__ = []
 import os
 import glob

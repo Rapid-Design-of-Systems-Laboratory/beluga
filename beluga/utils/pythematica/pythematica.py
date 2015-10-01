@@ -6,7 +6,7 @@ def mathematica_run(command):
     # Fix this path to use actual root path from config
     from beluga import Beluga
 
-    script = Beluga.config['root']+'/beluga/utils/py2matica/runMath.sh'
+    script = Beluga.config['root']+'/beluga/utils/pythematica/runMath.sh'
     p = subprocess.Popen([script,command], stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
     out, err = p.communicate()
@@ -25,11 +25,11 @@ def mathematica_solve(expr,vars):
     return out
 
 if __name__ == '__main__':
-    from beluga.utils import py2matica
+    from beluga.utils import pythematica
     from sympy import sympify
 
-    print(py2matica.mathematica_solve(sympify('a - 5'),sympify('a')))
+    print(pythematica.mathematica_solve(sympify('a - 5'),sympify('a')))
     expr = [sympify('a + b - 5'),sympify('a - b + 10')]
     v = [sympify('a'),sympify('b')]
-    print(py2matica.mathematica_solve(expr,v))
-    print(py2matica.mathematica_solve(sympify('x^2 - 2*x + 3'),sympify('x')))
+    print(pythematica.mathematica_solve(expr,v))
+    print(pythematica.mathematica_solve(sympify('x^2 - 2*x + 3'),sympify('x')))
