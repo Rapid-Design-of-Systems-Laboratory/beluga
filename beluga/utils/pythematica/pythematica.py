@@ -15,9 +15,10 @@ def mathematica_run(command):
 
 def mathematica_subs(expr):
     rules = (
-        (r'\[','('),   # Replace square brackets with parenthesis
-        (r'\]',')'),   # Replace square brackets with parenthesis
-        (r'Arc(\w+)','a\\1'),         # Replace inverse trig functions
+        (r'(\w+)\[',lambda m: m.group(0).lower()),  # Convert all function calls to lowercase
+        (r'\[','('),                  # Replace square brackets with parenthesis
+        (r'\]',')'),                  # Replace square brackets with parenthesis
+        (r'arc(\w+)','a\\1'),         # Replace inverse trig functions
     )
     for rule,replacement in rules:
         expr,n = re.subn(rule,replacement,expr)
