@@ -100,7 +100,7 @@ class NecessaryConditions(object):
             print("Attempting using SymPy ...")
             ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
             print(ctrl_sol)
-            raise ValueError()
+            # raise ValueError() # Force mathematica 
         except:
             print("No control law found")
             from beluga.utils.pythematica import mathematica_solve
