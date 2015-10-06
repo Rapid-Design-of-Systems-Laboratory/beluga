@@ -59,7 +59,7 @@ def ode45(vfun, vslot, vinit, *args, **kwargs):
         vstepsizefixed = True
     else:
         vstepsizefixed = False
-
+    """
     # reltol: relative tolerance
     if vodeoptions['reltol'] == None and not vstepsizefixed:
         vodeoptions['reltol'] = 1e-6
@@ -75,7 +75,7 @@ def ode45(vfun, vslot, vinit, *args, **kwargs):
     elif vodeoptions['abstol'] != None and vstepsizefixed:
         warning('OdePkg:InvalidArgument',
                 'Option "abstol" will be ignored if fixed time stamps are given')
-
+    """
     # normcontrol:
     if vodeoptions['normcontrol'] == 'on':
         vnormcontrol = True

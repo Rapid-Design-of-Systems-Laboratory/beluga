@@ -5,9 +5,17 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
+from beluga.utils.Worker import Worker
 from math import *
+import pybrain
 
 import functools
+
+try:
+    from mpi4py import MPI
+    HPCSUPPORTED = 1
+except:
+    HPCSUPPORTED = 0
 
 def get_problem():
     # Figure out way to implement caching automatically
@@ -74,8 +82,8 @@ def get_problem():
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
+    #problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -105,5 +113,13 @@ def get_problem():
 
 if __name__ == '__main__':
     problem = get_problem()
-    # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
-    sol = Beluga.run(problem)
+    if HPCSUPPORTED == 1 and MPI.COMM_WORLD.Get_rank() == 0:
+        # Start solution process on main node
+        sol = Beluga.run(problem)
+    elif HPCSUPPORTED == 1:
+        # Start worker process if not on main node
+        worker = Worker(mode='MPI')
+        worker.startWorker()
+    else:
+        # Start solution process if running locally
+        sol = Beluga.run(problem)
