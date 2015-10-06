@@ -107,12 +107,14 @@ def test_make_costate_bc():
     NecessaryConditions.make_costate_bc(mock_obj, states, location)
 
     # TODO: Change to symbolic
-    assert mock_obj.bc.initial == [str(sympify2('lagrange_x + 2*x')), str(sympify2('lagrange_y + 2*y'))]
-    assert mock_obj.bc.terminal == [str(sympify2('lagrange_x + sin(x)')), str(sympify2('lagrange_y - cos(y)'))]
+    # assert mock_obj.bc.initial == [str(sympify2('lagrange_x + 2*x')), str(sympify2('lagrange_y + 2*y'))]
+    # assert mock_obj.bc.terminal == [str(sympify2('lagrange_x + sin(x)')), str(sympify2('lagrange_y - cos(y)'))]
+    assert mock_obj.bc.initial == [str(sympify2('lamX + 2*x')), str(sympify2('lamY + 2*y'))]
+    assert mock_obj.bc.terminal == [str(sympify2('lamX + sin(x)')), str(sympify2('lamY - cos(y)'))]
 
 def test_make_ham():
     mock_obj = Mock(NecessaryConditions)
-    mock_obj.costates = [sympify2('lagrange_x'), sympify2('lagrange_y')]
+    mock_obj.costates = [sympify2('lamX'), sympify2('lamY')]
     mock_obj.ham = sympify2('0')
 
     problem = Problem('test_make_ham')
@@ -126,7 +128,7 @@ def test_make_ham():
 
     NecessaryConditions.make_ham(mock_obj,problem)
 
-    assert mock_obj.ham == sympify2('lagrange_x*(-cos(x)) + lagrange_y*(sin(y)^2) + u^2')
+    assert mock_obj.ham == sympify2('lamX*(-cos(x)) + lamY*(sin(y)^2) + u^2')
 
 def test_sanitize_constraint():
     mock_obj = Mock(NecessaryConditions)
@@ -186,4 +188,3 @@ def test_compile_function():
 
 def test_get_bvp():
     assert True
-
