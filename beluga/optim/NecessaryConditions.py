@@ -95,12 +95,21 @@ class NecessaryConditions(object):
         """
 
         # Solve all controls simultaneously
+        print("Finding optimal control law ...")
         try:
+            print("Attempting using SymPy ...")
+            print(self.ham_ctrl_partial)
             ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
+            # print(ctrl_sol)
+            raise ValueError() # Force mathematica
         except:
-            print("No analytic control law found, switching to numerical method")
-            ctrl_sol = []
-
+            print("No control law found")
+            from beluga.utils.pythematica import mathematica_solve
+            print("Attempting using Mathematica ...")
+            ctrl_sol = mathematica_solve(self.ham_ctrl_partial,controls)
+            if ctrl_sol == []:
+                print("No analytic control law found, switching to numerical method")
+        print("Done")
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
         #   {ctrl1: expr21, ctrl2:expr22}]
@@ -147,11 +156,12 @@ class NecessaryConditions(object):
         #TODO: Change to symbolic
         if location == 'initial':
             # Using list comprehension instead of loops
-            self.bc.initial += [str(sympify2('lagrange_' + str(state)) - diff(sympify2(cost_expr),state.sym))
+            # lagrange_ changed to l. Removed hardcoded prefix
+            self.bc.initial += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc.terminal += [str(sympify2('lagrange_' + str(state)) - diff(sympify2(cost_expr),state.sym))
+            self.bc.terminal += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
                                     for state in states]
 
         # for i in range(len(state)):
@@ -350,7 +360,7 @@ class NecessaryConditions(object):
         self.compiled = imp.new_module('_probobj_'+problem.name)
         # self.compiled = imp.new_module("blaaaa")
 
-        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
 
 

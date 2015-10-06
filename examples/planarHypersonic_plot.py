@@ -1,6 +1,6 @@
 from beluga.visualization import BelugaPlot
 
-plots = BelugaPlot('/Users/tantony/dev/mjgrant-beluga/examples/data.dill',default_step=1,default_sol=10)
+plots = BelugaPlot('/Users/tantony/dev/beluga/examples/data.dill',default_sol=1,default_iter=20)
 
 plots.add_plot().line('t','h/1000')                    \
                 .xlabel('t (s)').ylabel('h (km)')      \

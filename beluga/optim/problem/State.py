@@ -35,7 +35,7 @@ class State(object):
         return self.state_var
     def __repr__(self):
         return self.state_var
-        
+
     def add_prefix(self,prefix):
         """Adds a prefix to the name of the state variable"""
         self.state_var = prefix+self.state_var
@@ -44,4 +44,6 @@ class State(object):
     def make_costate(self):
         """Creates costate variable."""
         #TODO: Make symbolic?
-        return 'lagrange_' + self.state_var
+        # return 'lagrange_' + self.state_var
+        # THOMAS: Removed underscore for Mathematica compatibility for now
+        return 'lam' + self.state_var.upper()
