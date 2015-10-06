@@ -1,5 +1,5 @@
 from .pythematica import mathematica_run
-from .pythematica import mathematica_subs
+from .pythematica import mathematica_parse
 from .pythematica import mathematica_solve
 
 __all__ = []

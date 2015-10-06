@@ -98,13 +98,14 @@ class NecessaryConditions(object):
         print("Finding optimal control law ...")
         try:
             print("Attempting using SymPy ...")
+            print(self.ham_ctrl_partial)
             ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
-            print(ctrl_sol)
-            # raise ValueError() # Force mathematica 
+            # print(ctrl_sol)
+            raise ValueError() # Force mathematica
         except:
             print("No control law found")
             from beluga.utils.pythematica import mathematica_solve
-            print("Attempting using Mathematica")
+            print("Attempting using Mathematica ...")
             ctrl_sol = mathematica_solve(self.ham_ctrl_partial,controls)
             if ctrl_sol == []:
                 print("No analytic control law found, switching to numerical method")
@@ -359,7 +360,7 @@ class NecessaryConditions(object):
         self.compiled = imp.new_module('_probobj_'+problem.name)
         # self.compiled = imp.new_module("blaaaa")
 
-        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=False)
+        compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
 
 
