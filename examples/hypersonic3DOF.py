@@ -76,7 +76,7 @@ problem.scale.unit('m','h')     \
 # Is this actually an Expression rather than a Value?
 # problem.quantity = [Value('tanAng','tan(theta)')]
 
-problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True)
+problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
 
 problem.guess.setup('auto',start=[80000,0,0,5000,(-90+10)*pi/180,0])
 
