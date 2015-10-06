@@ -1,6 +1,7 @@
 from beluga.utils import ode45
 from beluga.bvpsol import Solution
 import numpy as np
+from beluga.utils import keyboard
 
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
@@ -54,7 +55,8 @@ class Guess(object):
     def setup_auto(self,start=None,
                         direction='forward',
                         time_integrate=0.1,
-                        costate_guess =0.1):
+                        costate_guess =0.1,
+                        param_guess = None):
         """Setup automatic initial guess generation"""
 
         if direction in ['forward','reverse']:
@@ -62,17 +64,15 @@ class Guess(object):
         else:
             raise ValueError('Direction must be either forward or reverse.')
 
-        self.time_integrate = 0.1
 
-
-        time_integrate = abs(time_integrate)
+        self.time_integrate = abs(time_integrate)
         if time_integrate == 0:
             raise ValueError('Integration time must be non-zero')
 
         # TODO: Check size against number of states here
         self.start = start
-
         self.costate_guess = costate_guess
+        self.param_guess = param_guess
 
     def auto(self,bvp,param_guess = None):
         """Generates initial guess by forward/reverse integration"""
@@ -81,12 +81,18 @@ class Guess(object):
         tspan = [0, 1]
 
         x0 = np.array(self.start)
+
         # Add costates
-        x0 = np.r_[x0,self.costate_guess*np.ones(len(self.start))]
+        if isinstance(self.costate_guess,float):
+            x0 = np.r_[x0,self.costate_guess*np.ones(len(self.start))]
+        else:
+            x0 = np.r_[x0,self.costate_guess]
         # Add time of integration to states
         x0 = np.append(x0,self.time_integrate)
 
         # Guess zeros for missing parameters
+        # TODO: Automatically generate parameter guess values
+
         if param_guess is None:
             param_guess = np.zeros(len(bvp.solution.aux['parameters']))
         elif len(param_guess) < len(bvp.solution.aux['parameters']):

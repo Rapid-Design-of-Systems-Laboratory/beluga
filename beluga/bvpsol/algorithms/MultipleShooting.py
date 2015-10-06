@@ -8,8 +8,14 @@ from beluga.utils import *
 from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
+from beluga.utils.Worker import Worker
 
-# TODO: Fix pickling issue in multiprocessing package. This WILL NOT run with the default package.
+try:
+    from mpi4py import MPI
+    HPCSUPPORTED = 1
+except:
+    HPCSUPPORTED = 0
+
 class MultipleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
@@ -35,7 +41,6 @@ class MultipleShooting(Algorithm):
             memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
-    # TODO: Implement complex step derivative in multiple shooting algorithm
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
@@ -77,47 +82,6 @@ class MultipleShooting(Algorithm):
 
         J = np.hstack(J)
         return J
-        """ya = np.array(ya, dtype=complex)
-        yb = np.array(yb, dtype=complex)
-        # if parameters is not None:
-        p  = np.array(parameters, dtype=complex)
-        h = StepSize
-
-        nOdes = ya.shape[0]
-        nBCs = nOdes
-        if parameters is not None:
-            nBCs += parameters.size
-        M = np.zeros((nBCs, nOdes))
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
-            ya[i] = ya[i] + h*1.j
-            # if parameters is not None:
-            f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-
-            M[:,i] = np.imag(f)/h
-            ya[i] = ya[i] - h*1.j
-        # for i in range(nOdes):
-            yb[i] = yb[i] + h*1.j
-            # if parameters is not None:
-            f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-            N[:,i] = np.imag(f)/h
-            yb[i] = yb[i] - h*1.j
-
-        if parameters is not None:
-            P = np.zeros((nBCs, p.size))
-            for i in range(p.size):
-                p[i] = p[i] + h*1.j
-                f = bc_func(ya,yb,p,aux)
-                P[:,i] = np.imag(f)/h
-                p[i] = p[i] - h*1.j
-            J = np.hstack((M+np.dot(N,phi),P))
-        else:
-            J = M+np.dot(N,phi)
-        return J"""
 
     def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-7):
         # if parameters is not None:
@@ -232,7 +196,7 @@ class MultipleShooting(Algorithm):
             f1 = np.concatenate((f1,nextbc))
         return f1
 
-    def solve(self,bvp):
+    def solve(self,bvp,worker=None):
         """Solve a two-point boundary value problem
             using the multiple shooting method
 
@@ -251,8 +215,12 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp)
 
-        ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
-        ode45.startpool()
+        if worker is not None:
+            ode45 = worker.Propagator
+        else:
+            # Start local pool
+            ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
+            ode45.startPool()
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
@@ -311,7 +279,7 @@ class MultipleShooting(Algorithm):
                 if i == self.number_arcs-1:
                     right = t.shape[0] - 1
                 tspanset[i] = [t[left],t[right]]
-                #tspanset[i] = np.linspace(t[left],t[right],500)
+                #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
             # Propagate STM and original system together
             tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux)
@@ -330,7 +298,7 @@ class MultipleShooting(Algorithm):
                     print("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
-
+            print(paramGuess)
             # Compute Jacobian of boundary conditions using numerical derviatives
             J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
             # Compute correction vector
@@ -367,6 +335,7 @@ class MultipleShooting(Algorithm):
             else:
                 y0g = y0g + dy0
             iter = iter+1
+
             # print iter
 
         # If problem converged, propagate solution to get full trajectory
@@ -380,5 +349,7 @@ class MultipleShooting(Algorithm):
 
         bvp.solution = sol
         sol.aux = aux
-        ode45.closepool()
+
+        if worker is None:
+            ode45.closePool()
         return sol
