@@ -154,6 +154,7 @@ class Beluga(object):
         output.close()
 
         # plt.title('Solution for Brachistochrone problem')
+        # plt.plot(self.out['solution'][-1][1,:]*180/pi,self.out['solution'][-1][0,:]/1000)
         plt.xlabel('theta')
         plt.ylabel('h')
         plt.show(block=False)

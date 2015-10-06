@@ -1,10 +1,14 @@
+##### 01 Oct 2015 #####
+- Added mathematica function
+- TODO: Caching for symbolic mathematica
+- TODO: Fallback to Mathematica and numerical
+
 ##### 24 Jun 2015 #####
 - TODO: Make BC and ODE into classes with __call__ methods
   - Add methods to compile, add 'state'/ode? add BC by index?
   - Repurpose DynamicSystem class for use as ODE, keep track of BC index by state?
   - Add function to DynamicSystem/ODE to constrain state by name
     - maybe use existing "constraint" function
-  - 
 
 ##### 10 Jun 2015 #####
 - Added joblib library to utils
