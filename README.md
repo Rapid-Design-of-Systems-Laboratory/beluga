@@ -2,8 +2,7 @@
 
 ## Cloning in Github Desktop
 
-If you already have Github installed on your computer, you need to go into preferences and add a new Enterprise account. If this is the first time you installed Github, it should ask you for the login information when you first start it. 
-Use the following information:
+If you already have Github installed on your computer, you need to go into preferences and add a new Enterprise account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Click "Add Github Enterprise" and use the following information:
 
     URL: https://github.rcac.purdue.edu/
     Username : Your purdue account username
@@ -19,8 +18,8 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
   <pre>
     conda update conda
     conda update --all
-    conda install accelerate iopro
-    pip install pystache dill multiprocessing_on_dill
+    conda install accelerate iopro pytest
+    pip install pystache dill multiprocessing_on_dill pytest-cov
   </pre>
 
   3. Open ~/.bash_profile in a text editor
@@ -29,8 +28,13 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
   </pre>
   The path in the above command should point to wherever you have installed beluga.
   
+  4. Get a text editor or development enviromnent of your choice. My favorite is [Atom](http://atom.io). Others recommend [PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/). 
+  
+  5. Start coding!
+  
 ### Windows
-    setx PYTHONPATH "E:\\Blah\\Foo\\mjgrant-beluga"
+I don't know lol! 
+
 ### Linux 
   
 ## Running a test problem
@@ -44,6 +48,6 @@ The program will prompt you to enter the root directory of the solver. Press ent
 
 ## Running unit tests
 
-Note: As of now, it is required that at least one test problem be run before the unit tests start working. This is something to be fixed.
+*Note: As of now, it is required that at least one test problem be run before the unit tests start working. This is something to be fixed.*
 
 Run the shell script "run_tests.sh" to run all the unit tests in the software package.
