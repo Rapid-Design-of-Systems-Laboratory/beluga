@@ -13,7 +13,7 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
 
 ## Setting up the Python development environment
 ### Mac OSX
-  1. Install [anaconda]((https://www.continuum.io/downloads "Download Anaconda") with Python 3.x
+  1. Install [anaconda](https://www.continuum.io/downloads/ "Download Anaconda") with Python 3.x
   2. Run the following commands in command line
   <pre>
     conda update conda
