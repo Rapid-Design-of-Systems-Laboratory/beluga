@@ -196,6 +196,10 @@ class Beluga(object):
 
                 # sol is just a reference to bvp.solution
                 sol = self.problem.bvp_solver.solve(bvp,worker=worker)
+                
+                sol.ctrl_expr = self.nec_cond.problem_data['control_options']
+                sol.ctrl_vars = self.nec_cond.problem_data['control_list']
+                sol.ctrl_func = bvp.control_func
 
                 s.unscale(bvp)
 
