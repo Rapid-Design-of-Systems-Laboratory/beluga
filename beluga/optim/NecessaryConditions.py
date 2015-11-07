@@ -369,8 +369,9 @@ class NecessaryConditions(object):
         self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
         self.bvp.solution.aux['function']  = problem.functions
 
-        # TODO: Fix hardcoding of function handle index (may be needed for multivehicle/phases)?
-        self.bvp.control_func = compile_result[2]
+        # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
+        self.bvp.control_func = self.compiled.compute_control
+
         # TODO: ^^ Do same for constraint values
 
         return self.bvp

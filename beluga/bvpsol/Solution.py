@@ -41,13 +41,14 @@ class Solution(object):
         variables += [(state,np.array(self.y[idx,:]))
                         for idx,state in enumerate(problem_data['state_list'])]
 
-        #TODO: Also evaluate control expressions at this step and add to dictionary
-        # Call self.ctrl_func to evaluate control
-        # compute_control(_t,_X,_p,_aux)
-        controls = np.vectorize(self.ctrl_func)
+
+        # controls = np.vectorize(self.ctrl_func)
+        variables += [(control,np.array(self.u[idx,:]))
+                        for idx,control in enumerate(problem_data['control_list'])]
 
         variables += [('t',self.x*self.y[-1,1])]
         self.var_dict = dict(variables)
+        print(self.var_dict['alfa'])
 
     def evaluate(self,expr):
         """
