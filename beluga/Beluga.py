@@ -196,10 +196,21 @@ class Beluga(object):
 
                 # sol is just a reference to bvp.solution
                 sol = self.problem.bvp_solver.solve(bvp,worker=worker)
-                
+
+                # Post-processing phase
+                # Compute control history
+                # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
+
+                # Required for plotting to work with control variables
                 sol.ctrl_expr = self.nec_cond.problem_data['control_options']
                 sol.ctrl_vars = self.nec_cond.problem_data['control_list']
-                sol.ctrl_func = bvp.control_func
+
+                #TODO: Make control computation more efficient
+                # for i in range(len(sol.x)):
+                #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
+                #     sol.u[:,i] = _u
+                f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
+                sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
                 s.unscale(bvp)
 
@@ -211,7 +222,7 @@ class Beluga(object):
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 
-            plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
-            plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
-            print(sol.y[:,0])
+            # plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
+            # plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
+            # print(sol.y[:,0])
         return solution_set
