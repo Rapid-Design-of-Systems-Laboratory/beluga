@@ -18,8 +18,6 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
   <pre>
     conda update conda
     conda update --all
-    conda env create -f beluga-dev.yml
-    source activate beluga-dev
     python setup.py develop
   </pre>
 
