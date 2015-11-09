@@ -11,7 +11,7 @@ setup(name="beluga",
       install_requires=[
         "dill",
         "numpy",
-        "sympy"
+        "sympy",
         "scipy",
         "pytest",
         "matplotlib",
