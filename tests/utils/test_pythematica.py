@@ -1,6 +1,8 @@
 from mock import *
 from beluga.utils import pythematica
 from beluga.utils import sympify2
+
+# Check for 'Mathematica cannot find a valid password.'
 def test_mathematica_run():
     """"Tests the function that runs mathematica commands"""
     test_cases = (
@@ -31,7 +33,7 @@ def test_mathematica_solve():
     # # Quadratic
     # sol3 = [{'x': sympify2('1 - sqrt(2)*I')}, {'x': sympify2('1 + sqrt(2)*I')}]
     # assert(fn(sympify2('x^2 - 2*x + 3'),sympify2('x')) == sol3)
-    
+
     # # Trigonometric function (from Brachistochrone problem)
     # expr = [sympify2('g*lamV*cos(theta) - lamX*v*sin(theta) - lamY*v*cos(theta)')]
     # soln = [{'theta': sympify2('-acos(-lamX*v/sqrt(g**2*lamV**2 - 2*g*lamV*lamY*v + v**2*(lamX**2 + lamY**2)))')},

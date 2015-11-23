@@ -37,7 +37,7 @@ class NecessaryConditions(object):
 
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
-        self.template_prefix = Beluga.config['root']+'/beluga/bvpsol/templates/'
+        self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
         self.template_suffix = '.py.mu'
         # self.cached = cached
         # if cached:

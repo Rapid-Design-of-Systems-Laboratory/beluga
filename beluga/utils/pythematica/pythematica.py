@@ -1,5 +1,5 @@
 ## NOTE: ONLY WORKS ON MAC
-import subprocess, re
+import subprocess, re, sys
 from sympy import mathematica_code as mcode
 from beluga.utils import sympify2
 # Credits: http://sapiensgarou.blogspot.com.br/2012/06/how-to-run-mathematica-functions-on.html
@@ -8,7 +8,7 @@ def mathematica_run(command):
     # Fix this path to use actual root path from config
     from beluga import Beluga
 
-    script = Beluga.config['root']+'/beluga/utils/pythematica/runMath.sh'
+    script = Beluga.config.getroot()+'/beluga/utils/pythematica/runMath.sh'
     p = subprocess.Popen([script,command], stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
     out, err = p.communicate()
@@ -45,6 +45,16 @@ def mathematica_solve(expr,vars):
         out = [dict([(var,mathematica_parse(expr)) for (var,expr) in sol.items()]) for sol in out]
         # print(out)
         return out
+
+# Finds the installed location of mathematica command-line tools
+def mathematica_root():
+    default_val = ''
+    # TODO: Figure out better way to find mathematica installation directory (maybe search?)
+    if sys.platform == 'win32':
+        default_val = 'C:\\Program Files\\Wolfram Research\\Mathematica\\10.3'
+    elif sys.platform == 'darwin':
+        default_val = '/Applications/Mathematica.app/Contents/MacOS/'
+    return default_val
 
 if __name__ == '__main__':
     from beluga.utils import pythematica
