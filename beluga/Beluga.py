@@ -37,7 +37,7 @@ class Beluga(object):
     _THE_MAGIC_WORD = object()
     instance = None
 
-    config = BelugaConfig().config # class variable globally accessible
+    config = BelugaConfig() # class variable globally accessible
 
     def __init__(self,problem,token,input_module=None):
         """!
@@ -76,7 +76,7 @@ class Beluga(object):
         warnings.filterwarnings("ignore")
 
         # Include configuration file path
-        sys.path.append(cls.config['root'])
+        sys.path.append(cls.config.getroot())
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:

@@ -1,6 +1,7 @@
 from .pythematica import mathematica_run
 from .pythematica import mathematica_parse
 from .pythematica import mathematica_solve
+from .pythematica import mathematica_root
 
 __all__ = []
 import os
