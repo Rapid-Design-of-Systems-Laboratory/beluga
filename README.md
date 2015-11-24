@@ -57,7 +57,7 @@ A logging system has been added to the solver. It is recommended that this is us
     logging.warning('Some warning message')
     logging.error('Some error message')
 
-This allows you suppress or display only certain kind of messages. You will no longer have to worry about stray print messages this way. This also allows the creation of a log-file. The logfile is created in the current directory by default and is named `beluga.log`. This can be changed using the configuration tool.
+This allows you suppress or display only certain kind of messages. You will no longer have to worry about stray print messages. This also allows the creation of a logfile. The logfile is created in the current directory by default and is named `beluga.log`. This can be changed using the configuration tool.
 
 Run the command `beluga -h` in order to see the command line arguments used to control this behavior. For example:
 
