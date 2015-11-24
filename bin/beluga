@@ -16,7 +16,7 @@ Options:
   -v, --version             show version
 
   Logging options
-  -l, --log <level>         specify minimum logging level [default: INFO]
+  -l, --log <level>         specify minimum logging level [default: ERROR]
   -l0,-l1,-l2,-l3,-l4       shortcuts for ALL, INFO, WARN, ERROR and CRITICAL
                             respectively
   -loff, --nolog            suppress logging, equivalent to --log=off
