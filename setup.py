@@ -7,7 +7,9 @@ setup(name="beluga",
       platforms=["any"],  # or more specific, e.g. "win32", "cygwin", "osx"
       license="",
       url="http://github.rcac.purdue.edu/RDSL/beluga",
-      packages=find_packages(),
+      py_modules=['beluga'],
+      packages=find_packages(exclude=['docs', 'tests*', 'sandbox', 'examples']),
+      scripts=['bin/beluga'],
       install_requires=[
         "dill",
         "numpy",
@@ -18,6 +20,7 @@ setup(name="beluga",
         "pytest-cov",
         "numexpr",
         "pystache",
+        "docopt",
         "multiprocessing_on_dill",
       ]
       )

@@ -8,8 +8,9 @@ class BelugaConfig(dict):
     from beluga.utils.pythematica import mathematica_root
 
     option_list = {
-        # 'root':['','Set Beluga installation path '], # Installation directory
-        # 'option_name': ['default_str' or default_func(), 'Input prompt string',validation_function or None]
+        # Format of list items are as follows
+        # 'option_name': ['default_str' or default_func(), 'Input prompt string', validation_function or None]
+        # TODO: add validation function for mathematica_root option
         'mathematica_root':[mathematica_root,'Set Mathematica installation path ',None]
         # 'default_solver':['SingleShooting','Select default BVP solver ']
     }
@@ -80,40 +81,11 @@ class BelugaConfig(dict):
 
             self.cfgdata[BelugaConfig.section_name][opt_name] = user_val
 
-        # default_path = os.path.abspath(os.path.dirname(__file__)+'/../')
-        #
-        # inst_path = input('Set Beluga installation path ['+default_path+']: ')
-        # if inst_path.strip() == '':
-        #     inst_path = default_path
-        #
-        # if os.path.isdir(inst_path):
-        #     self.cfgdata[BelugaConfig.section_name]['root'] = inst_path
-        # else:
-        #     sys.stderr.write('Invalid path!')
-        #     return
-
         # Save data into configuration file
         with open(self.config_file, 'w+') as f:
             self.cfgdata.write(f)
         print('Configuration complete.')
 
-
-
-
-# import argparse
-# from gooey import Gooey
-#
-# @Gooey(program_name='Beluga configuration tool')
-# def main():
-#     default_path = os.path.abspath(os.path.dirname(__file__))
-#     parser = argparse.ArgumentParser()
-#
-#     parser.add_argument('-r','--root',default=default_path, help='Select Beluga installation path', widget="DirChooser")
-#
-#     args = parser.parse_args()
-#     print(args)
-#     # BelugaConfig(run_tool = True, arguments = args)
-#
 if __name__ == '__main__':
     config = BelugaConfig()
 #     main()

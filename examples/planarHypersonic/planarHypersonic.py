@@ -1,4 +1,3 @@
-import beluga.Beluga as Beluga
 import numpy as np
 import beluga.bvpsol as bvpsol
 import beluga.bvpsol.algorithms as algorithms
@@ -104,6 +103,6 @@ def get_problem():
     return problem
 
 if __name__ == '__main__':
+    import beluga.Beluga as Beluga
     problem = get_problem()
-    # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
     sol = Beluga.run(problem)
