@@ -10,10 +10,12 @@ import numpy as np
 
 import time
 import socket
+import logging
+
 try:
     from mpi4py import MPI
     HPCSUPPORTED = 1
-except:
+except ImportError:
     HPCSUPPORTED = 0
 
 # Known commands for networking. To create a new command, add the name here and add it's function in the 'handleInput' method.
@@ -323,7 +325,8 @@ class Worker(object):
 
     def wprint(self,message):
         # Prints to the main window adding on which worker sent the message.
-        print('(Worker ' + str(self.rank) + ') ' + str(message))
+        # print('(Worker ' + str(self.rank) + ') ' + str(message))
+        logging.info('(Worker ' + str(self.rank) + ') ' + str(message))
 
     # TODO: Check for zombie threads. This should take care of it but they are zombies.
     def reaper(self, signum, frame):
