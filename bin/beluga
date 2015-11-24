@@ -3,23 +3,34 @@
 
 Usage:
   beluga --config
-  beluga SCENARIO [-v]
-                  [-h | --help]
+  beluga (-v | --version)
+  beluga (-h | --help)
+  beluga SCENARIO
                   [-o | --output <file>]
-                  [-l | --loglevel <level>]
+                  [-l | --log <level>]
+                  ([-q] | [-d | --display <level>])
 
 Options:
   --config                  starts the configuration tool
-  -h --help                 show this screen and exit
-  -v                        show verbose output
-  -l, --loglevel=LEVEL      specify logging output level [default: INFO]
-  -o, --output=OUT          specify the output data file [default: data.dill]
+  -h, --help                show this screen and exit
+  -v, --version             show version
+
+  Logging options
+  -q                        quiet mode (suppresses almost all console output)
+  -l, --log <level>         specify minimum logging level [default: INFO]
+  -l0,-l1,-l2,-l3,-l4       shortcuts for ALL, INFO, WARN, ERROR and CRITICAL
+                            respectively
+  -d, --display <level>     specify minimum verbose output level [default: INFO]
+  -d0,-d1,-d2,-d3,-d4       shortcuts for ALL, INFO, WARN, ERROR and CRITICAL
+                            respectively
+  -o, --output <file>       specify data file for solution [default: data.dill]
 
 Arguments:
   SCENARIO                  name of python module or path to python file
-                            containing the problem scenario
-  <file>                    path to the output file
-  <level>                   logging level [INFO, DEBUG, WARN, ERROR, ALL]
+                            containing the problem scenario [REQUIRED]
+
+  <file>                    path to the data file for solution
+  <level>                   logging level [ALL, INFO, WARN, ERROR, CRITICAL]
 
 Example:
   beluga brachistochrone
@@ -34,7 +45,7 @@ Help:
 """
 from docopt import docopt
 import beluga.Beluga as Beluga
-import os,sys
+import os, sys, logging
 import importlib # Only works with Python >= 3.4
 
 def load_scenario(scenario_name):
@@ -70,18 +81,47 @@ def load_scenario(scenario_name):
 def main(options):
     if options['--config']:
         import beluga.BelugaConfig as BelugaConfig
-        BelugaConfig().config_tool()
+        BelugaConfig(run_tool=True)
         return
 
     scenario = load_scenario(options['SCENARIO'].strip())
     if scenario is None:
         return
-    else:
-        print('Module loaded successfully. 😂')
-        problem = scenario.get_problem()
-        Beluga.run(problem)
 
-options = docopt(__doc__)
+    levels = {  'ALL': logging.DEBUG,
+                'DEBUG': logging.DEBUG,
+                '0': logging.DEBUG,
+                'INFO': logging.INFO,
+                '1': logging.INFO,
+                'WARNING': logging.WARN,
+                'WARN': logging.WARN,
+                '2': logging.WARN,
+                'ERROR': logging.ERROR,
+                '3': logging.ERROR,
+                'CRITICAL': logging.CRITICAL,
+                '4': logging.CRITICAL}
+    # print(options)
+
+    if options['--log'][0] not in levels:
+        print('Invalid value specified for logging level')
+        return
+
+    logging_lvl = levels[options['--log'][0]]
+    if options['-q']:
+        # Suppress all console output except critical errors
+        display_lvl = logging.CRITICAL
+    else:
+        if options['--display'][0] not in levels:
+            print('Invalid value specified for display level')
+            return
+        display_lvl = levels[options['--display'][0]]
+
+    print('Module loaded successfully. 😂')
+    problem = scenario.get_problem()
+    Beluga.run(problem, logging_level=logging_lvl, display_level=display_lvl)
+    # print(options)
+
+options = docopt(__doc__,version=0.1)
 main(options)
 # Use command line arguments to get input file
 # problem = get_problem()

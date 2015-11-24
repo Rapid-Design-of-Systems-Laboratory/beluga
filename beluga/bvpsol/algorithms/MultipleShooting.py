@@ -9,6 +9,7 @@ from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 from beluga.utils.Worker import Worker
+import logging
 
 try:
     from mpi4py import MPI
@@ -268,7 +269,7 @@ class MultipleShooting(Algorithm):
 
         while True:
             if iter>self.max_iterations:
-                print("Maximum iterations exceeded!")
+                logging.WARN("Maximum iterations exceeded!")
                 break
 
             y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
@@ -295,17 +296,17 @@ class MultipleShooting(Algorithm):
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
-                    print("Converged in "+str(iter)+" iterations.")
+                    logging.info("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
-            print(paramGuess)
+            logging.debug(paramGuess)
             # Compute Jacobian of boundary conditions using numerical derviatives
             J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
             # Compute correction vector
 
             r1 = np.linalg.norm(res)
             if self.verbose:
-                print(r1)
+                logging.debug('Residue: '+str(r1))
             if r0 is not None:
                 beta = (r0-r1)/(alpha*r0)
                 if beta < 0:
