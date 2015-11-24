@@ -33,10 +33,20 @@ Arguments:
   <level>                   logging level [ALL, INFO, WARN, ERROR, CRITICAL]
 
 Example:
-  beluga brachistochrone
-  beluga brachistochrone --output=brachisto_out.dill
+  Run problem using python module name :
+    beluga brachisto
 
-  beluga --config
+  Run using path to input file:
+    beluga /path/to/problem.py
+
+  Specify logging and display levels (0 -> all messages including debug messages)
+    beluga -d0 -l0 /path/to/brachisto.py
+
+  Specify output data file
+    beluga brachisto --output=brachisto_out.dill
+
+  Run configuration tool
+    beluga --config
 
 Help:
   For help using this tool, please open an issue on the Github repository:
