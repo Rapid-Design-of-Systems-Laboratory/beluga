@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+"""Beluga Optimal Control Solver.
+
+Usage:
+  beluga SCENARIO [-v]
+                  [-h | --help]
+                  [-o | --output <file>]
+                  [-l | --loglevel <level>]
+
+Options:
+  -h --help                 show this screen and exit
+  -v                        show verbose output
+  -l, --loglevel=LEVEL      specify logging output level [default: INFO]
+  -o, --output=OUT          specify the output data file [default: data.dill]
+
+Arguments:
+  SCENARIO                  name of python module or path to python file
+                            containing the problem scenario
+  <file>                    path to the output file
+  <level>                   logging level [INFO, DEBUG, WARN, ERROR, ALL]
+
+Example:
+  beluga brachistochrone
+  beluga brachistochrone --output=brachisto_out.dill
+
+Help:
+  For help using this tool, please open an issue on the Github repository:
+  https://github.rcac.purdue.edu/RDSL/beluga
+"""
+# """Beluga Optimal Control Solver.
+#
+# Usage:
+#    beluga [options] SCENARIO
+#
+#     -h --help                         Show this screen and exit.
+#     -v                                Verbose output
+#     --log=<level>                     Specify logging output level [default: INFO]
+#     -o=OUT --output=OUT               Specify the output datafile [default: data.dill]
+#
+# Arguments:
+#   SCENARIO       Name of python module containing problem scenario
+#
+# Examples:
+#   beluga brachistochrone
+#
+# """
+from docopt import docopt
+import beluga.Beluga as Beluga
+import os,sys
+import importlib # Only works with Python >= 3.4
+
+def load_scenario(scenario_name):
+    """Loads a scenario from python module name or file name/path"""
+    # TODO: Log error messages on failure
+
+    # Check if a python filename was given
+    if scenario_name.endswith('.py') and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
+        module_dir, module_file = os.path.split(scenario_name)
+        module_name, module_ext = os.path.splitext(module_file)
+        sys.path.append(module_dir)
+    else:
+        if scenario_name.isidentifier():
+            module_name = scenario_name
+
+        else:
+            print('Invalid scenario filename or module name')
+            return None
+    try:
+        scenario = importlib.import_module(module_name)
+         # Check if module has a get_problem() function
+        if hasattr(scenario,'get_problem') and callable(scenario.get_problem):
+            # Module loaded successfully
+            return scenario
+        else:
+            print('Unable to find get_problem() function in scenario module')
+            return None
+
+    except ImportError:
+        print('Scenario module not found')
+        return None
+
+def main(options):
+    scenario = load_scenario(options['SCENARIO'].strip())
+    if scenario is None:
+        return
+    else:
+        print('Module loaded successfully')
+    print(options)
+
+options = docopt(__doc__)
+main(options)
+# Use command line arguments to get input file
+# problem = get_problem()
+# sol = Beluga.run(problem)

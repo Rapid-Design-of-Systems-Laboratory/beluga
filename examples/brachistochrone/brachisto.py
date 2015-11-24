@@ -78,4 +78,5 @@ problem.steps.add_step(ContinuationStep()
 #                 .terminal('y',-1000.0)
 # )
 
-Beluga.run(problem)
+if __name__ == '__main__':
+    Beluga.run(problem)
