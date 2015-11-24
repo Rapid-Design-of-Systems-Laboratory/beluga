@@ -7,7 +7,7 @@ Usage:
   beluga (-h | --help)
   beluga SCENARIO
                   [-o | --output <file>]
-                  [-l | --log <level>]
+                  ([--nolog] | [-l | --log <level>])
                   ([-q] | [-d | --display <level>])
 
 Options:
@@ -16,13 +16,16 @@ Options:
   -v, --version             show version
 
   Logging options
-  -q                        quiet mode (suppresses almost all console output)
   -l, --log <level>         specify minimum logging level [default: INFO]
   -l0,-l1,-l2,-l3,-l4       shortcuts for ALL, INFO, WARN, ERROR and CRITICAL
                             respectively
+  -loff, --nolog            suppress logging, equivalent to --log=off
+
+  -q                        quiet mode, equivalent to --display=off
   -d, --display <level>     specify minimum verbose output level [default: INFO]
   -d0,-d1,-d2,-d3,-d4       shortcuts for ALL, INFO, WARN, ERROR and CRITICAL
                             respectively
+
   -o, --output <file>       specify data file for solution
                             (overrides option specified in input file)
 
@@ -31,7 +34,7 @@ Arguments:
                             containing the problem scenario [REQUIRED]
 
   <file>                    path to the data file for solution
-  <level>                   logging level [ALL, INFO, WARN, ERROR, CRITICAL]
+  <level>                   logging level [ALL, INFO, WARN, ERROR, CRITICAL, OFF]
 
 Example:
   Run problem using python module name :
@@ -110,22 +113,29 @@ def main(options):
                 'ERROR': logging.ERROR,
                 '3': logging.ERROR,
                 'CRITICAL': logging.CRITICAL,
-                '4': logging.CRITICAL}
+                '4': logging.CRITICAL,
+                'OFF': logging.CRITICAL + 1}
     # print(options)
 
-    if options['--log'][0] not in levels:
+    # Process logging options
+    if options['--nolog']:
+        # Suppress all logging
+        options['--log'][0] = 'off'
+
+    if options['--log'][0].upper() not in levels:
         print('Invalid value specified for logging level')
         return
+    logging_lvl = levels[options['--log'][0].upper()]
 
-    logging_lvl = levels[options['--log'][0]]
+    # Process console output options
     if options['-q']:
-        # Suppress all console output except critical errors
-        display_lvl = logging.CRITICAL
-    else:
-        if options['--display'][0] not in levels:
-            print('Invalid value specified for display level')
-            return
-        display_lvl = levels[options['--display'][0]]
+        # Suppress all console output
+        options['--display'][0] = 'off'
+
+    if options['--display'][0].upper() not in levels:
+        print('Invalid value specified for display level')
+        return
+    display_lvl = levels[options['--display'][0].upper()]
 
     if len(options['--output']) > 0:
         output = os.path.abspath(options['--output'][0].strip())
@@ -136,7 +146,7 @@ def main(options):
     else:
         output = None
 
-    print('Module loaded successfully. 😂')
+    # print('Module loaded successfully. 😂')
     problem = scenario.get_problem()
     Beluga.run(problem, logging_level=logging_lvl, display_level=display_lvl, output_file=output)
     # print(options)
