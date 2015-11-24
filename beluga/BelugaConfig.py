@@ -1,11 +1,11 @@
 from configparser import SafeConfigParser
 import os.path, os
 import sys
+from beluga.utils.pythematica import mathematica_root
 
 class BelugaConfig(dict):
     """Defines configuration options for Beluga and allows loading/saving configuration files"""
     section_name = 'beluga'
-    from beluga.utils.pythematica import mathematica_root
 
     option_list = {
         # Format of list items are as follows
@@ -16,6 +16,7 @@ class BelugaConfig(dict):
     }
 
     def getroot(self):
+        """Gets the base path where beluga is installed"""
         return os.path.abspath(os.path.dirname(__file__)+'/../')
 
     def __init__(self, config_file = '~/.beluga/config.ini', run_tool = False, arguments=None):

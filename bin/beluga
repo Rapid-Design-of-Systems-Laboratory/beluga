@@ -30,7 +30,7 @@ Example:
 Help:
   For help using this tool, please open an issue on the Github repository:
   https://github.rcac.purdue.edu/RDSL/beluga
-  
+
 """
 from docopt import docopt
 import beluga.Beluga as Beluga
@@ -77,8 +77,9 @@ def main(options):
     if scenario is None:
         return
     else:
-        print('Module loaded successfully')
-    print(options)
+        print('Module loaded successfully. 😂')
+        problem = scenario.get_problem()
+        Beluga.run(problem)
 
 options = docopt(__doc__)
 main(options)
