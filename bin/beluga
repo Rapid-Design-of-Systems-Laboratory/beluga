@@ -23,7 +23,8 @@ Options:
   -d, --display <level>     specify minimum verbose output level [default: INFO]
   -d0,-d1,-d2,-d3,-d4       shortcuts for ALL, INFO, WARN, ERROR and CRITICAL
                             respectively
-  -o, --output <file>       specify data file for solution [default: data.dill]
+  -o, --output <file>       specify data file for solution
+                            (overrides option specified in input file)
 
 Arguments:
   SCENARIO                  name of python module or path to python file
@@ -126,9 +127,18 @@ def main(options):
             return
         display_lvl = levels[options['--display'][0]]
 
+    if len(options['--output']) > 0:
+        output = os.path.abspath(options['--output'][0].strip())
+        # Check if the file locaton is writeable
+        if not os.access(os.path.dirname(output), os.W_OK):
+            print('Unable to access output file location or invalid filename 😭 😭')
+            return
+    else:
+        output = None
+
     print('Module loaded successfully. 😂')
     problem = scenario.get_problem()
-    Beluga.run(problem, logging_level=logging_lvl, display_level=display_lvl)
+    Beluga.run(problem, logging_level=logging_lvl, display_level=display_lvl, output_file=output)
     # print(options)
 
 options = docopt(__doc__,version=0.1)

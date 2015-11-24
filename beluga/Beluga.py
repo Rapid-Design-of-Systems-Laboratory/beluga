@@ -97,8 +97,7 @@ class Beluga(object):
 
         # Create logging handler for console output
         ch = logging.StreamHandler(sys.stdout)
-        # Set display logging level and formatting
-        print('display '+str(display_level))
+        # Set console logging level and formatter
         ch.setLevel(display_level)
         formatter = InfoFormatter('%(filename)s:%(lineno)d: %(message)s')
         ch.setFormatter(formatter)
@@ -107,7 +106,7 @@ class Beluga(object):
         logger.addHandler(ch)
 
     @classmethod
-    def run(cls, problem, logging_level=logging.INFO, display_level=logging.INFO):
+    def run(cls, problem, logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
         """!
         \brief     Returns Beluga object.
         \details   Takes a problem statement, instantiates a solver object and begins
@@ -145,6 +144,10 @@ class Beluga(object):
 
         # Initialize logging system
         cls.init_logging(logging_level,display_level)
+
+        # Set the output file name
+        if output_file is not None:
+            problem.output_file = output_file
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
@@ -203,7 +206,7 @@ class Beluga(object):
         logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         # Save data
-        output = open('data.dill', 'wb')
+        output = open(self.problem.output_file, 'wb')
         # dill.settings['recurse'] = True
         dill.dump(self.out, output) # Dill Beluga object only
         output.close()
