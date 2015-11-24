@@ -98,9 +98,9 @@ class NecessaryConditions(object):
         logging.info("Finding optimal control law ...")
         try:
             logging.info("Attempting using SymPy ...")
-            logging.debug('dHdu = '+str(self.ham_ctrl_partial))
+            logging.debug("dHdu = "+str(self.ham_ctrl_partial))
             ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
-            # logging.debug(ctrl_sol)
+            logging.debug(ctrl_sol)
             # raise ValueError() # Force mathematica
         except Exception as e:
             logging.debug(e)

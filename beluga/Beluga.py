@@ -55,7 +55,59 @@ class Beluga(object):
         #     raise ValueError("Don't construct directly, use create() or run()")
 
     @classmethod
-    def run(cls,problem, logging_level=logging.INFO, display_level=logging.INFO):
+    def init_logging(cls, logging_level, display_level):
+        """Initializes the logging system"""
+        # Define custom formatter class that formats messages based on level
+        # Ref: http://stackoverflow.com/a/8349076/538379
+        class InfoFormatter(logging.Formatter):
+            """Custom logging formatter to output info messages by themselves"""
+            info_fmt = '%(message)s'
+            def format(self, record):
+                # Save the original format configured by the user
+                # when the logger formatter was instantiated
+                format_orig = self._fmt
+
+                # Replace the original format with one customized by logging level
+                if record.levelno == logging.INFO:
+                    self._fmt = self.info_fmt
+                    # For Python>3.2
+                    self._style = logging.PercentStyle(self._fmt)
+
+                # Call the original formatter class to do the grunt work
+                result = logging.Formatter.format(self, record)
+
+                # Restore the original format configured by the user
+                self._fmt = format_orig
+                # For Python>3.2
+                self._style = logging.PercentStyle(self._fmt)
+
+                return result
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+
+        fh = logging.FileHandler(cls.config['logfile'])
+        fh.setLevel(logging_level)
+        # Set default format string based on logging level
+        # TODO: Change this to use logging configuration file?
+        if logging_level == logging.DEBUG:
+            formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(module)s#%(lineno)d-%(funcName)s(): %(message)s')
+        else:
+            formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(filename)s:%(lineno)d: %(message)s')
+
+        # Create logging handler for console output
+        ch = logging.StreamHandler(sys.stdout)
+        # Set display logging level and formatting
+        print('display '+str(display_level))
+        ch.setLevel(display_level)
+        formatter = InfoFormatter('%(filename)s:%(lineno)d: %(message)s')
+        ch.setFormatter(formatter)
+
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+
+    @classmethod
+    def run(cls, problem, logging_level=logging.INFO, display_level=logging.INFO):
         """!
         \brief     Returns Beluga object.
         \details   Takes a problem statement, instantiates a solver object and begins
@@ -91,32 +143,8 @@ class Beluga(object):
             pass
         problem.bvp_solver.set_cache_dir(cache_dir)
 
-        ########################################################################
         # Initialize logging system
-        ########################################################################
-        logger = logging.getLogger()
-        # Set default format string based on logging level
-        # TODO: Change this to use logging configuration file?
-        if logging_level == logging.DEBUG:
-            logging.basicConfig(filename=cls.config['logfile'],
-                format='%(asctime)s-%(levelname)-8s-%(module)s#%(lineno)d-%(funcName)s(): %(message)s',
-                level=logging_level
-            )
-        else:
-            logging.basicConfig(filename=cls.config['logfile'],
-                format='%(asctime)s-%(levelname)s-%(filename)s:%(lineno)d: %(message)s',
-                level=logging_level
-            )
-        logger.setLevel(logging_level)
-
-        # Create logging handler for console output
-        ch = logging.StreamHandler(sys.stdout)
-        # Set display logging level and formatting
-        ch.setLevel(display_level)
-        formatter = logging.Formatter('%(levelname)s-%(filename)s:%(lineno)d: %(message)s')
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-        ########################################################################
+        cls.init_logging(logging_level,display_level)
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
