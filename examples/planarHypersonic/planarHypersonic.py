@@ -1,4 +1,3 @@
-import beluga.Beluga as Beluga
 import numpy as np
 import beluga.bvpsol as bvpsol
 import beluga.bvpsol.algorithms as algorithms
@@ -90,10 +89,10 @@ def get_problem():
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
     # Figure out nicer way of representing this. Done?
 
-    problem.steps.add_step().num_cases(11) \
+    problem.steps.add_step().num_cases(5) \
                             .terminal('h', 0)#  \
                             #.terminal('theta', 10*pi/180)
-    problem.steps.add_step().num_cases(21)  \
+    problem.steps.add_step().num_cases(11)  \
                             .terminal('theta', 10*pi/180)
     #
     # problem.steps.add_step()
@@ -104,6 +103,6 @@ def get_problem():
     return problem
 
 if __name__ == '__main__':
+    import beluga.Beluga as Beluga
     problem = get_problem()
-    # Default solver is a forward-difference Single Shooting solver with 1e-4 tolerance
     sol = Beluga.run(problem)

@@ -5,8 +5,8 @@ from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
-
 from beluga.utils.joblib import Memory
+import logging
 
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
@@ -230,7 +230,7 @@ class SingleShooting(Algorithm):
         # tspan = np.linspace(0,1,100)
         while True:
             if iter>self.max_iterations:
-                print("Maximum iterations exceeded!")
+                logging.warn("Maximum iterations exceeded!")
                 break
             y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
@@ -252,7 +252,7 @@ class SingleShooting(Algorithm):
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
-                    print("Converged in "+str(iter)+" iterations.")
+                    logging.info("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
 
@@ -261,7 +261,7 @@ class SingleShooting(Algorithm):
             # Compute correction vector
             r1 = np.linalg.norm(res)
             if self.verbose:
-                print(r1)
+                logging.debug('Residue: '+str(r1))
             if r0 is not None:
                 beta = (r0-r1)/(alpha*r0)
                 if beta < 0:
@@ -278,11 +278,13 @@ class SingleShooting(Algorithm):
                 rank1 = np.linalg.matrix_rank(J)
                 rank2 = np.linalg.matrix_rank(np.c_[J,-res])
                 if rank1 == rank2:
-                    dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
+                    # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
+                    dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
+                    # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
                 else:
                     # Re-raise exception if system is infeasible
                     raise
-
+            # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
 
             # Apply corrections to states and parameters (if any)
             if nParams > 0:
@@ -298,12 +300,12 @@ class SingleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-6, reltol=1e-6)
+            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-5, reltol=1e-5)
             sol = Solution(x1,y1.T,paramGuess,aux)
         else:
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
         bvp.solution = sol
         sol.aux = aux
-        print(sol.y[:,0])
+        logging.debug(sol.y[:,0])
         return sol

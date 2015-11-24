@@ -17,7 +17,7 @@ try:
 except:
     HPCSUPPORTED = 0
 
-import dill
+import dill, logging
 
 class Beluga(object):
     """!
@@ -37,7 +37,7 @@ class Beluga(object):
     _THE_MAGIC_WORD = object()
     instance = None
 
-    config = BelugaConfig().config # class variable globally accessible
+    config = BelugaConfig() # class variable globally accessible
 
     def __init__(self,problem,token,input_module=None):
         """!
@@ -55,7 +55,58 @@ class Beluga(object):
         #     raise ValueError("Don't construct directly, use create() or run()")
 
     @classmethod
-    def run(cls,problem):
+    def init_logging(cls, logging_level, display_level):
+        """Initializes the logging system"""
+        # Define custom formatter class that formats messages based on level
+        # Ref: http://stackoverflow.com/a/8349076/538379
+        class InfoFormatter(logging.Formatter):
+            """Custom logging formatter to output info messages by themselves"""
+            info_fmt = '%(message)s'
+            def format(self, record):
+                # Save the original format configured by the user
+                # when the logger formatter was instantiated
+                format_orig = self._fmt
+
+                # Replace the original format with one customized by logging level
+                if record.levelno == logging.INFO:
+                    self._fmt = self.info_fmt
+                    # For Python>3.2
+                    self._style = logging.PercentStyle(self._fmt)
+
+                # Call the original formatter class to do the grunt work
+                result = logging.Formatter.format(self, record)
+
+                # Restore the original format configured by the user
+                self._fmt = format_orig
+                # For Python>3.2
+                self._style = logging.PercentStyle(self._fmt)
+
+                return result
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+
+        fh = logging.FileHandler(cls.config['logfile'])
+        fh.setLevel(logging_level)
+        # Set default format string based on logging level
+        # TODO: Change this to use logging configuration file?
+        if logging_level == logging.DEBUG:
+            formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(module)s#%(lineno)d-%(funcName)s(): %(message)s')
+        else:
+            formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(filename)s:%(lineno)d: %(message)s')
+
+        # Create logging handler for console output
+        ch = logging.StreamHandler(sys.stdout)
+        # Set console logging level and formatter
+        ch.setLevel(display_level)
+        formatter = InfoFormatter('%(filename)s:%(lineno)d: %(message)s')
+        ch.setFormatter(formatter)
+
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+
+    @classmethod
+    def run(cls, problem, logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
         """!
         \brief     Returns Beluga object.
         \details   Takes a problem statement, instantiates a solver object and begins
@@ -76,7 +127,7 @@ class Beluga(object):
         warnings.filterwarnings("ignore")
 
         # Include configuration file path
-        sys.path.append(cls.config['root'])
+        sys.path.append(cls.config.getroot())
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:
@@ -91,6 +142,12 @@ class Beluga(object):
             pass
         problem.bvp_solver.set_cache_dir(cache_dir)
 
+        # Initialize logging system
+        cls.init_logging(logging_level,display_level)
+
+        # Set the output file name
+        if output_file is not None:
+            problem.output_file = output_file
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
@@ -112,7 +169,8 @@ class Beluga(object):
         """
 
         # Initialize necessary conditions of optimality object
-        print("Computing the necessary conditions of optimality")
+        # print("Computing the necessary conditions of optimality")
+        logging.info("Computing the necessary conditions of optimality")
         self.nec_cond = NecessaryConditions()
 
         # Create corresponding boundary value problem
@@ -145,10 +203,10 @@ class Beluga(object):
         self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
         total_time = toc();
 
-        print('Continuation process completed in %0.4f seconds.\n' % total_time)
+        logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         # Save data
-        output = open('data.dill', 'wb')
+        output = open(self.problem.output_file, 'wb')
         # dill.settings['recurse'] = True
         dill.dump(self.out, output) # Dill Beluga object only
         output.close()
@@ -178,7 +236,7 @@ class Beluga(object):
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
             step.reset()
-            print('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+            logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
             solution_set.append(ContinuationSolution())
             if step_idx == 0:
@@ -188,7 +246,7 @@ class Beluga(object):
                 step.set_bvp(steps[step_idx-1].bvp)
 
             for bvp in step:
-                print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
                 s.compute_scaling(bvp)
@@ -218,7 +276,7 @@ class Beluga(object):
                 solution_set[step_idx].append(copy.deepcopy(bvp.solution))
 
                 elapsed_time = toc()
-                print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
+                logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 # plt.plot(sol.y[0,:], sol.y[1,:],'-')
                 # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
 

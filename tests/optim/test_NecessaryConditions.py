@@ -177,7 +177,7 @@ def test_init():
     assert mock_obj.bc.initial == []
     assert mock_obj.bc.terminal == []
     assert mock_obj.compile_list == ['deriv_func','bc_func','compute_control']
-    assert mock_obj.template_prefix == Beluga.config['root']+'/beluga/bvpsol/templates/'
+    assert mock_obj.template_prefix == Beluga.config.getroot()+'/beluga/bvpsol/templates/'
     assert mock_obj.template_suffix == '.py.mu'
         # self.cached = cached
 
