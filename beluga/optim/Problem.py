@@ -31,6 +31,7 @@ class Problem(object):
         self.functions = {}
 
         self.bvp_solver = None
+        self.output_file = 'data.dill'
 
         self.systems = {} # List of dynamic system
 
