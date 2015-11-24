@@ -13,7 +13,7 @@ from beluga.utils.Worker import Worker
 try:
     from mpi4py import MPI
     HPCSUPPORTED = 1
-except:
+except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
