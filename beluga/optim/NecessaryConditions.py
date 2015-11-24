@@ -2,7 +2,7 @@
 from sympy import *
 from sympy.core.function import AppliedUndef
 # from sympy.parsing.sympy_parser import parse_expr
-import pystache, imp, inspect
+import pystache, imp, inspect, logging
 import re as _re
 
 import beluga.bvpsol.BVP as BVP
@@ -95,21 +95,22 @@ class NecessaryConditions(object):
         """
 
         # Solve all controls simultaneously
-        print("Finding optimal control law ...")
+        logging.info("Finding optimal control law ...")
         try:
-            print("Attempting using SymPy ...")
-            print(self.ham_ctrl_partial)
+            logging.info("Attempting using SymPy ...")
+            logging.debug('dHdu = '+str(self.ham_ctrl_partial))
             ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
-            # print(ctrl_sol)
+            # logging.debug(ctrl_sol)
             # raise ValueError() # Force mathematica
-        except:
-            print("No control law found")
+        except Exception as e:
+            logging.debug(e)
+            logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
-            print("Attempting using Mathematica ...")
+            logging.info("Attempting using Mathematica ...")
             ctrl_sol = mathematica_solve(self.ham_ctrl_partial,controls)
             if ctrl_sol == []:
-                print("No analytic control law found, switching to numerical method")
-        print("Done")
+                logging.info("No analytic control law found, switching to numerical method")
+        logging.info("Done")
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
         #   {ctrl1: expr21, ctrl2:expr22}]
@@ -206,8 +207,8 @@ class NecessaryConditions(object):
             # Render the template using the data
             code = self.renderer.render(tmpl,self.problem_data)
             # if verbose and 'compute_control' in filename:
-            if verbose:
-                print(code)
+            # if verbose:
+            logging.debug(code)
 
             # For security
             self.compiled.__dict__.update({'__builtin__':{}})

@@ -5,8 +5,8 @@ from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
-
 from beluga.utils.joblib import Memory
+import logging
 
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
@@ -230,7 +230,7 @@ class SingleShooting(Algorithm):
         # tspan = np.linspace(0,1,100)
         while True:
             if iter>self.max_iterations:
-                print("Maximum iterations exceeded!")
+                logging.warn("Maximum iterations exceeded!")
                 break
             y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
@@ -252,7 +252,7 @@ class SingleShooting(Algorithm):
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
-                    print("Converged in "+str(iter)+" iterations.")
+                    logging.info("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
 
@@ -261,7 +261,7 @@ class SingleShooting(Algorithm):
             # Compute correction vector
             r1 = np.linalg.norm(res)
             if self.verbose:
-                print(r1)
+                logging.debug('Residue: '+str(r1))
             if r0 is not None:
                 beta = (r0-r1)/(alpha*r0)
                 if beta < 0:
@@ -307,5 +307,5 @@ class SingleShooting(Algorithm):
             sol = Solution(np.nan, np.nan, np.nan)
         bvp.solution = sol
         sol.aux = aux
-        print(sol.y[:,0])
+        logging.debug(sol.y[:,0])
         return sol
