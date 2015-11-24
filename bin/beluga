@@ -2,12 +2,14 @@
 """Beluga Optimal Control Solver.
 
 Usage:
+  beluga --config
   beluga SCENARIO [-v]
                   [-h | --help]
                   [-o | --output <file>]
                   [-l | --loglevel <level>]
 
 Options:
+  --config                  starts the configuration tool
   -h --help                 show this screen and exit
   -v                        show verbose output
   -l, --loglevel=LEVEL      specify logging output level [default: INFO]
@@ -23,27 +25,13 @@ Example:
   beluga brachistochrone
   beluga brachistochrone --output=brachisto_out.dill
 
+  beluga --config
+
 Help:
   For help using this tool, please open an issue on the Github repository:
   https://github.rcac.purdue.edu/RDSL/beluga
+  
 """
-# """Beluga Optimal Control Solver.
-#
-# Usage:
-#    beluga [options] SCENARIO
-#
-#     -h --help                         Show this screen and exit.
-#     -v                                Verbose output
-#     --log=<level>                     Specify logging output level [default: INFO]
-#     -o=OUT --output=OUT               Specify the output datafile [default: data.dill]
-#
-# Arguments:
-#   SCENARIO       Name of python module containing problem scenario
-#
-# Examples:
-#   beluga brachistochrone
-#
-# """
 from docopt import docopt
 import beluga.Beluga as Beluga
 import os,sys
@@ -80,6 +68,11 @@ def load_scenario(scenario_name):
         return None
 
 def main(options):
+    if options['--config']:
+        import beluga.BelugaConfig as BelugaConfig
+        BelugaConfig().config_tool()
+        return
+
     scenario = load_scenario(options['SCENARIO'].strip())
     if scenario is None:
         return
