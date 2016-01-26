@@ -1,0 +1,56 @@
+---
+name: brachisto
+# definitions:  # Used to define shortcut expressions
+#   rho: rho0*exp(-h/H)
+#   L:   0.5*rho*v^2*Cl*Aref
+independent: [t, s]
+states:
+  - [x, v*cos(theta), m]
+  - [y, -v*sin(theta), m]
+  - [v, g*sin(theta), m/s]
+controls:
+  theta: rad
+
+constants:
+  g: [9.81, m/s^2]
+
+scaling:
+  m:   x
+  s:   x/v
+  kg:  1
+  rad: 1
+
+solver:
+  class: SingleShooting   #  Should be a valid solver class
+  options:                # Assumes options are valid for given class
+    derivative_method:  fd
+    tolerance:          1e-4
+    max_iterations:     1000,
+    cached:             False
+
+constraints:
+  - [initial, x-x_0, m]
+  - [initial, y-y_0, m]
+  - [initial, v-v_0, m/s]
+  - [terminal, x-x_f, m]
+  - [terminal, y-y_f, m]
+
+# possibly use a different way to define different cost types
+path_cost: [1, s]
+
+guess:
+  type:          auto
+  start:         [0, 0, 1]
+  direction:     forward
+  costate_guess: -0.1
+
+# Need better way of representing continuation steps (manual vs auto)
+continuation:
+  - type: manual    # Specify class here?
+    num_cases: 11
+    action:
+      - [terminal, x, 5]
+      - type:     terminal    # Alternate format
+        variable: x
+        target:   5
+...
