@@ -51,6 +51,7 @@ def get_problem():
                    .unit('rad',1)
 
     problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
+    # problem.bvp_solver = algorithms.BroydenShooting(tolerance=1e-4, max_iterations=1000)
 
     # Can be array or function handle
     # TODO: implement an "initial guess" class subclassing Solution
