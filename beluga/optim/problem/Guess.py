@@ -41,8 +41,9 @@ class Guess(object):
     def setup_static(self, solinit=None):
         self.solinit = solinit
 
-    def static(self):
+    def static(self, bvp):
         """Directly specify initial guess structure"""
+        bvp.solution = self.solinit
         return self.solinit
 
     def setup_file(self, filename='', step=0, iteration=0):
@@ -53,21 +54,22 @@ class Guess(object):
             logging.error('Data file '+self.filename+' not found.')
             raise ValueError('Data file not found!')
 
-    def file(self):
+    def file(self, bvp):
         """Generates initial guess by loading an existing data file"""
         logging.info('Loading initial guess from '+self.filename)
         fp = open(self.filename,'rb')
         out = dill.load(fp)
-        if self.step >= out['solution'].length:
-            logging.error('Continuation step index exceeds bounds. Only '+str(out['solution'].length)+' continuation steps found.')
+        if self.step >= len(out['solution']):
+            logging.error('Continuation step index exceeds bounds. Only '+str(len(out['solution']))+' continuation steps found.')
             raise ValueError('Initial guess step index out of bounds')
 
-        if self.iteration >= out['solution'][self.step].length:
-            logging.error('Continuation iteration index exceeds bounds. Only '+str(out['solution'][self.step].length)+' iterations found.')
+        if self.iteration >= len(out['solution'][self.step]):
+            logging.error('Continuation iteration index exceeds bounds. Only '+str(len(out['solution'][self.step]))+' iterations found.')
             raise ValueError('Initial guess iteration index out of bounds')
 
         sol = out['solution'][self.step][self.iteration]
-        close(fp)
+        fp.close()
+        bvp.solution = sol
         logging.info('Initial guess loaded')
         return sol
 
