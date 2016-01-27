@@ -178,9 +178,9 @@ class SingleShooting(Algorithm):
 
     # @staticmethod
     # def ode_wrap(func,*args, **argd):
-    #     def func_wrapper(x,y0):
-    #         return func(x,y0,*args,**argd)
-    #     return func_wrapper
+    #    def func_wrapper(x,y0):
+    #        return func(x,y0,*args,**argd)
+    #    return func_wrapper
 
     def solve(self,bvp,worker=None):
         """Solve a two-point boundary value problem
@@ -203,7 +203,7 @@ class SingleShooting(Algorithm):
         deriv_func = bvp.deriv_func
         bc_func = bvp.bc_func
 
-        aux = bvp.solution.aux
+        aux = solinit.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]
@@ -236,6 +236,7 @@ class SingleShooting(Algorithm):
 
             # Propagate STM and original system together
             # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+
             # t,yy = ode45(stm_ode45, tspan, y0)
             t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
             # Obtain just last timestep for use with correction
@@ -247,7 +248,7 @@ class SingleShooting(Algorithm):
             # Evaluate the boundary conditions
             res = bc_func(y0g, yb, paramGuess, aux)
 
-            self.bc_jac_func = self.__bcjac_csd
+            # self.bc_jac_func = self.__bcjac_csd
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
