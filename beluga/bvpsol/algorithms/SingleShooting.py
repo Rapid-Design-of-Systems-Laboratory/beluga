@@ -176,11 +176,11 @@ class SingleShooting(Algorithm):
     #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
 
-    @staticmethod
-    def ode_wrap(func,*args, **argd):
-        def func_wrapper(x,y0):
-            return func(x,y0,*args,**argd)
-        return func_wrapper
+    # @staticmethod
+    # def ode_wrap(func,*args, **argd):
+    #     def func_wrapper(x,y0):
+    #         return func(x,y0,*args,**argd)
+    #     return func_wrapper
 
     def solve(self,bvp,worker=None):
         """Solve a two-point boundary value problem
@@ -235,10 +235,9 @@ class SingleShooting(Algorithm):
             y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
             # Propagate STM and original system together
-            stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-
-            t,yy = ode45(stm_ode45, tspan, y0)
-            #t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+            # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+            # t,yy = ode45(stm_ode45, tspan, y0)
+            t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
             # Obtain just last timestep for use with correction
             yf = yy[-1]
             # Extract states and STM from ode45 output
@@ -294,9 +293,9 @@ class SingleShooting(Algorithm):
                 y0g = y0g + dy0
             else:
                 y0g = y0g + dy0
-            break;
+
             iter = iter+1
-            # print iters
+            logging.debug('Iteration #'+str(iter))
 
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
@@ -308,5 +307,5 @@ class SingleShooting(Algorithm):
             sol = Solution(np.nan, np.nan, np.nan)
         bvp.solution = sol
         sol.aux = aux
-        logging.debug(sol.y[:,0])
+        # logging.debug(sol.y[:,0])
         return sol
