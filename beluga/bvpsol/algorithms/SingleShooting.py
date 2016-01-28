@@ -14,7 +14,7 @@ from klepto import inf_cache as memoized
 from klepto.keymaps import picklemap
 
 dumps = picklemap(typed=True, flat=False, serializer='dill')
-
+#TODO: Save time steps from ode45 and use for fixed step RK4
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
         self.tolerance = tolerance
@@ -58,22 +58,16 @@ class SingleShooting(Algorithm):
         N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h*1.j
-            # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-
             M[:,i] = np.imag(f)/h
             ya[i] = ya[i] - h*1.j
-        # for i in range(nOdes):
+
             yb[i] = yb[i] + h*1.j
-            # if parameters is not None:
+
             f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
             N[:,i] = np.imag(f)/h
             yb[i] = yb[i] - h*1.j
-
+            
         if parameters is not None:
             P = np.zeros((nBCs, p.size))
             for i in range(p.size):
