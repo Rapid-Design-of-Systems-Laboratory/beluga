@@ -92,7 +92,7 @@ def get_problem():
     problem.steps.add_step().num_cases(5) \
                             .terminal('h', 0)#  \
                             #.terminal('theta', 10*pi/180)
-    problem.steps.add_step().num_cases(21)  \
+    problem.steps.add_step().num_cases(31)  \
                             .terminal('theta', 10*pi/180)
     #
     # problem.steps.add_step()
