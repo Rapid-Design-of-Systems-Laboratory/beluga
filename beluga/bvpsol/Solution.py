@@ -50,7 +50,6 @@ class Solution(object):
 
         variables += [('t',self.x*self.y[-1,1])]
         self.var_dict = dict(variables)
-        print(self.var_dict['alfa'])
 
     def evaluate(self,expr):
         """

@@ -36,6 +36,13 @@ class MultipleShooting(Algorithm):
             self.set_cache_dir(cache_dir)
         self.number_arcs = number_arcs
 
+        # TODO: Implement the host worker in a nicer way
+        # Start Host MPI process
+        # self.worker = Worker(mode='HOST')
+        # self.worker.startWorker()
+        # self.worker.Propagator.setSolver(solver='ode45')
+        self.worker = None
+
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
         if self.cached and cache_dir is not None:
@@ -197,7 +204,7 @@ class MultipleShooting(Algorithm):
             f1 = np.concatenate((f1,nextbc))
         return f1
 
-    def solve(self,bvp,worker=None):
+    def solve(self,bvp):
         """Solve a two-point boundary value problem
             using the multiple shooting method
 
@@ -216,8 +223,8 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp)
 
-        if worker is not None:
-            ode45 = worker.Propagator
+        if self.worker is not None:
+            ode45 = self.worker.Propagator
         else:
             # Start local pool
             ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
@@ -351,6 +358,6 @@ class MultipleShooting(Algorithm):
         bvp.solution = sol
         sol.aux = aux
 
-        if worker is None:
+        if self.worker is None:
             ode45.closePool()
         return sol
