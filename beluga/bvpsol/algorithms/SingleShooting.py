@@ -5,8 +5,15 @@ from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
-from beluga.utils.joblib import Memory
+# from beluga.utils.joblib import Memory
+# from joblib import Memory
 import logging
+
+from klepto.archives import file_archive, dir_archive
+from klepto import inf_cache as memoized
+from klepto.keymaps import picklemap
+
+dumps = picklemap(typed=True, flat=False, serializer='dill')
 
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
@@ -28,9 +35,13 @@ class SingleShooting(Algorithm):
 
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
-        if self.cached and cache_dir is not None:
-            memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
-            self.solve = memory.cache(self.solve)
+        # if self.cached and cache_dir is not None:
+        #     # memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
+        #     #
+        #     # self.solve = memory.cache(self.solve)
+        #     dumps = picklemap(flat=False, serializer='dill')
+        #     # dircache = file_archive()
+        #     # self.solve = memoized(cache=dircache, keymap=dumps, ignore='self')(self.solve)
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
@@ -156,33 +167,8 @@ class SingleShooting(Algorithm):
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
         # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
-    # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
-    #     "Automatic differentiation version of State Transition Matrix"
-    #     phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-    #     # Y = np.array(y[0:nOdes],dtype=complex)  # Just states
-    #     # F = np.zeros((nOdes,nOdes))
-    #     # # Compute Jacobian matrix using complex step derivative
-    #     # for i in range(nOdes):
-    #     #     Y[i] = Y[i] + StepSize*1.j
-    #     #     F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
-    #     #     Y[i] = Y[i] - StepSize*1.j
-    #     f = Function(odefn)
-    #     g = Gradient(odefn)
-    #
-    #     # Phidot = F*Phi (matrix product)
-    #     # phiDot = np.real(np.dot(F,phi))
-    #     phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
-    #     # return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-    #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
-
-
-    # @staticmethod
-    # def ode_wrap(func,*args, **argd):
-    #    def func_wrapper(x,y0):
-    #        return func(x,y0,*args,**argd)
-    #    return func_wrapper
-
-    def solve(self,bvp,worker=None):
+    # @memoized(cache=file_archive(serialized=True, cached=False), ignore='self')
+    def solve(self,bvp):
         """Solve a two-point boundary value problem
             using the single shooting method
 
@@ -203,7 +189,7 @@ class SingleShooting(Algorithm):
         deriv_func = bvp.deriv_func
         bc_func = bvp.bc_func
 
-        aux = solinit.aux
+        aux = bvp.solution.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]

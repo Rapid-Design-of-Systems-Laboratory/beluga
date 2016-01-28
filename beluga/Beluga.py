@@ -9,13 +9,6 @@ import sys,os,imp,inspect,warnings
 from beluga import BelugaConfig
 from beluga.continuation import *
 from beluga.bvpsol import algorithms
-from beluga.utils.Worker import Worker
-
-try:
-    from mpi4py import MPI
-    HPCSUPPORTED = 1
-except:
-    HPCSUPPORTED = 0
 
 import dill, logging
 
@@ -222,12 +215,6 @@ class Beluga(object):
         # Loop through all the continuation steps
         solution_set = []
 
-        # TODO: Implement the host worker in a nicer way
-        # Start Host MPI process
-        worker = Worker(mode='HOST')
-        worker.startWorker()
-        worker.Propagator.setSolver(solver='ode45')
-
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
@@ -253,7 +240,7 @@ class Beluga(object):
                 s.scale(bvp)
 
                 # sol is just a reference to bvp.solution
-                sol = self.problem.bvp_solver.solve(bvp,worker=worker)
+                sol = self.problem.bvp_solver.solve(bvp)
 
                 # Post-processing phase
                 # Compute control history
