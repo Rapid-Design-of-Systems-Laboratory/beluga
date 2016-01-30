@@ -29,12 +29,12 @@ class NecessaryConditions(object):
         self.aug_cost = {}
         self.costates = []
         self.costate_rates = []
-        self.problem = ProblemParameters()
         self.ham = sympify2('0')
         self.ham_ctrl_partial = []
         self.ctrl_free = []
-        self.bc = BoundaryConditions()
-
+        self.parameter_list = []
+        self.bc_initial = []
+        self.bc_terminal = []
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
@@ -131,7 +131,7 @@ class NecessaryConditions(object):
         # Do in two steps so that indices are "right"
 
         filtered_list = [c for c in constraint if c.type==location]
-        self.problem.parameters += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
+        self.parameter_list += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
         # self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
         #                         for (ind,c) in enumerate(filtered_list,1))
 
@@ -158,15 +158,15 @@ class NecessaryConditions(object):
         if location == 'initial':
             # Using list comprehension instead of loops
             # lagrange_ changed to l. Removed hardcoded prefix
-            self.bc.initial += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
+            self.bc_initial += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc.terminal += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
+            self.bc_terminal += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
                                     for state in states]
 
         # for i in range(len(state)):
-        #     self.bc.initial.append(
+        #     self.bc_initial.append(
         #         diff(sympify2(sign + '(' + self.aug_cost[location] + ')'),
         #         state[i].sym))
 
@@ -271,9 +271,9 @@ class NecessaryConditions(object):
         self.make_aug_cost(aug_cost_term, problem.constraints(), 'terminal')
 
         # Add state boundary conditions
-        self.bc.initial = [self.sanitize_constraint(x,problem).expr
+        self.bc_initial = [self.sanitize_constraint(x,problem).expr
                             for x in problem.constraints().get('initial')]
-        self.bc.terminal = [self.sanitize_constraint(x,problem).expr
+        self.bc_terminal = [self.sanitize_constraint(x,problem).expr
                     for x in problem.constraints().get('terminal')]
 
         # Compute costate conditions
@@ -304,7 +304,7 @@ class NecessaryConditions(object):
 
         # TODO: Make this more generalized
         # Add free final time boundary condition
-        self.bc.terminal.append('_H - 0')
+        self.bc_terminal.append('_H - 0')
 
         # Compute costate process equations
         self.make_costate_rate(problem.states())
@@ -340,7 +340,7 @@ class NecessaryConditions(object):
              [str(costate) for costate in self.costates] +
              ['tf']
          ,
-         'parameter_list': [str(param) for param in self.problem.parameters],
+         'parameter_list': [str(param) for param in self.parameter_list],
          'deriv_list':
              ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
              ['tf*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
@@ -348,8 +348,8 @@ class NecessaryConditions(object):
          ,
          'num_states': 2*len(problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial],
-         'left_bc_list': self.bc.initial,
-         'right_bc_list': self.bc.terminal,
+         'left_bc_list': self.bc_initial,
+         'right_bc_list': self.bc_terminal,
          'control_options': self.control_options,
          'control_list':[str(u) for u in problem.controls()],
          'ham_expr':self.ham
@@ -376,16 +376,3 @@ class NecessaryConditions(object):
         # TODO: ^^ Do same for constraint values
 
         return self.bvp
-
-class BoundaryConditions(object):
-    """Defines boundary condtiions."""
-
-    def __init__(self):
-        self.initial = []
-        self.terminal = []
-
-class ProblemParameters(object):
-    """Defines parameters."""
-
-    def __init__(self):
-        self.parameters = []
