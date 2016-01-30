@@ -6,7 +6,7 @@ import pystache, imp, inspect, logging
 import re as _re
 
 import beluga.bvpsol.BVP as BVP
-
+from beluga.utils import keyboard
 # import beluga.Beluga as Beluga
 from beluga.utils import sympify2, keyboard
 from beluga.optim.problem import *
@@ -96,20 +96,34 @@ class NecessaryConditions(object):
 
         # Solve all controls simultaneously
         logging.info("Finding optimal control law ...")
+
+        # If equality constraints are present
+        # We need to solve for 'mu's as well
+        lhs = self.ham_ctrl_partial
+        vars = controls
+        if len(self.equality_constraints) > 0:
+            mu_vars = [sympify('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
+            # vars += mu_vars
+            mu_lhs = [sympify(c.expr) for c in self.equality_constraints]
+
         try:
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(self.ham_ctrl_partial))
-            ctrl_sol = solve(self.ham_ctrl_partial,controls,dict=True)
-            logging.debug(ctrl_sol)
+            keyboard()
+            var_sol = solve(lhs,vars,dict=True)
+            logging.debug(var_sol)
+
+            ctrl_sol = var_sol
             # raise ValueError() # Force mathematica
         except Exception as e:
             logging.debug(e)
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
             logging.info("Attempting using Mathematica ...")
-            ctrl_sol = mathematica_solve(self.ham_ctrl_partial,controls)
+            ctrl_sol = mathematica_solve(self.ham_ctrl_partial,vars)
             if ctrl_sol == []:
                 logging.info("No analytic control law found, switching to numerical method")
+
         logging.info("Done")
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
@@ -182,6 +196,9 @@ class NecessaryConditions(object):
         self.ham = sympify2(problem.cost['path'].expr)
         for i in range(len(problem.states())):
             self.ham += sympify2(self.costates[i]) * (sympify2(problem.states()[i].process_eqn))
+
+        for i in range(len(self.equality_constraints)):
+            self.ham += sympify2('mu'+str(i+1)) * (sympify2(self.equality_constraints[i].expr))
 
     # Compiles a function template file into a function object
     # using the given data
@@ -275,6 +292,8 @@ class NecessaryConditions(object):
                             for x in problem.constraints().get('initial')]
         self.bc_terminal = [self.sanitize_constraint(x,problem).expr
                     for x in problem.constraints().get('terminal')]
+
+        self.equality_constraints = problem.constraints().get('equality')
 
         # Compute costate conditions
         self.make_costate_bc(problem.states(),'initial')
