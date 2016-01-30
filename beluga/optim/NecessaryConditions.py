@@ -1,15 +1,14 @@
-
 from sympy import *
 from sympy.core.function import AppliedUndef
 # from sympy.parsing.sympy_parser import parse_expr
-import pystache, imp, inspect, logging
+import pystache, imp, inspect, logging, os
 import re as _re
 
 import beluga.bvpsol.BVP as BVP
 
-# import beluga.Beluga as Beluga
 from beluga.utils import sympify2, keyboard
 from beluga.optim.problem import *
+import dill
 
 class NecessaryConditions(object):
     """Defines necessary conditions of optimality."""
@@ -39,10 +38,53 @@ class NecessaryConditions(object):
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
         self.template_suffix = '.py.mu'
-        # self.cached = cached
-        # if cached:
-        #     memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
-        #     self.get_bvp = memory.cache(self.get_bvp)
+
+    def cache_bvp(self, problem, filename=None):
+        """
+        \brief Saves BVP object into file on disk
+        Arguments:
+            problem : Problem object
+            filename: Full path to cache file (optional)
+                      default value: <self.problem.name>_bvp.dat
+        \date  01/27/2016
+        """
+        if filename is None:
+            filename = problem.name+'_bvp.dat'
+
+        with open(filename,'wb') as f:
+            try:
+                logging.info('Caching BVP information to file')
+                bvp = dill.dump(self.bvp,f)
+                return True
+            except:
+                logging.warn('Failed to save BVP to '+filename)
+                return False
+
+    def load_bvp(self, problem, filename=None):
+        """
+        \brief  Loads pre-computed BVP object from cache file
+        \author Thomas Antony
+        Arguments:
+            problem : Problem object
+            filename: Full path to cache file (optional)
+                      default value: <self.problem.name>_bvp.dat
+        \date  01/27/2016
+        """
+        if filename is None:
+            filename = problem.name+'_bvp.dat'
+
+        if not os.path.exists(filename):
+            return None
+
+        with open(filename,'rb') as f:
+            try:
+                logging.info('Loading BVP information from cache')
+                bvp = dill.load(f)
+                return bvp
+            except Exception as e:
+                logging.warn('Failed to load BVP from '+filename)
+                logging.debug(e)
+                return None
 
     def make_costate_rate(self, states):
         """!
@@ -244,7 +286,6 @@ class NecessaryConditions(object):
     #                             for state in system_inst.states]
     #     # print(new_states)
 
-
     def get_bvp(self,problem):
         """Perform variational calculus calculations on optimal control problem
            and returns an object describing the boundary value problem to be solved
@@ -372,9 +413,8 @@ class NecessaryConditions(object):
 
         # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
         self.bvp.control_func = self.compiled.compute_control
-
+        self.bvp.problem_data = self.problem_data
         # TODO: ^^ Do same for constraint values
-
         return self.bvp
 
 class BoundaryConditions(object):
