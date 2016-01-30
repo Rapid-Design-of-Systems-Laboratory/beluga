@@ -6,6 +6,7 @@ if sys.argv[-1] == 'test':
     test_requirements = [
         'pytest',
         'pytest-cov',
+        'pytest-describe',
         'coverage',
 	'mock'
     ]
@@ -35,8 +36,11 @@ setup(name="beluga",
         "sympy",
         "scipy",
         "pytest",
-        "matplotlib",
         "pytest-cov",
+        "pytest-describe",
+        "coverage",
+    	"mock",
+        "matplotlib",
         "numexpr",
         "pystache",
         "docopt",
