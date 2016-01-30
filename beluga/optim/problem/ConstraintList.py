@@ -19,7 +19,11 @@ class ConstraintList(list):
     def equality(self, expr, unit):
         self.add(Constraint('equality',expr,unit))
         return self
-        
+
+    def path(self, expr, direction, limit, unit):
+        self.add(Constraint('path',expr, unit, direction, limit))
+        return self
+
     def add(self,constraint=None):
         if constraint is None:
             constraint = Constraint()

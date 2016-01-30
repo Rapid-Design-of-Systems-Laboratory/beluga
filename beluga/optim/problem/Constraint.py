@@ -5,7 +5,7 @@ class Constraint(object):
     """Defines constraint information."""
     # NEED TO ADD PATH CONSTRAINT
 
-    def __init__(self, type = '', expr = '', unit = '', preprocess=True):
+    def __init__(self, type = '', expr = '', unit = '', direction='', limit='',preprocess=True):
         """
         Input: type (string)
                expr (string)
@@ -14,6 +14,10 @@ class Constraint(object):
         self.type = type
         self.expr = expr
         self.unit = unit
+
+        # TODO: Make path constraint a sub-class
+        self.direction = direction
+        self.limit = limit
         # super().__init__()
 
     def __str__(self):

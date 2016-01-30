@@ -1,5 +1,4 @@
 from beluga.optim import NecessaryConditions
-from beluga.optim.NecessaryConditions import BoundaryConditions
 from beluga.utils import sympify2
 from mock import *
 from beluga.optim.problem import Constraint
@@ -8,13 +7,6 @@ from beluga.optim import Problem
 from beluga.optim.problem import Expression
 import pytest
 from beluga import Beluga
-
-# Copied from NecessaryConditions.py (smarter way to include?)
-class ProblemParameters(object):
-    """Defines parameters."""
-
-    def __init__(self):
-        self.parameters = []
 
 def test_make_costate_rate():
     mock_obj = Mock(NecessaryConditions)
@@ -53,8 +45,8 @@ def test_make_ctrl():
 
 def test_make_aug_cost():
     mock_obj = Mock(NecessaryConditions)
-    mock_obj.problem = ProblemParameters()
     mock_obj.aug_cost = {}
+    mock_obj.parameter_list = []
     aug_cost = sympify2('x^2 + u^2')
 
     # Test initial constraint
@@ -66,7 +58,7 @@ def test_make_aug_cost():
     location = 'initial'
     NecessaryConditions.make_aug_cost(mock_obj, aug_cost, constraint, location)
 
-    assert mock_obj.problem.parameters == ['lagrange_initial_1']
+    assert mock_obj.parameter_list == ['lagrange_initial_1']
     assert mock_obj.aug_cost['initial'] == sympify2('lagrange_initial_1*u*x + u**2 + x**2')
 
     # Test terminal constraint
@@ -78,12 +70,14 @@ def test_make_aug_cost():
     location = 'terminal'
     NecessaryConditions.make_aug_cost(mock_obj, aug_cost, constraint, location)
 
-    assert mock_obj.problem.parameters == ['lagrange_initial_1', 'lagrange_terminal_1']
+    assert mock_obj.parameter_list == ['lagrange_initial_1', 'lagrange_terminal_1']
     assert mock_obj.aug_cost['terminal'] == sympify2('lagrange_terminal_1*u*x + u**2 + x**2')
 
 def test_make_costate_bc():
     mock_obj = Mock(NecessaryConditions)
-    mock_obj.bc = BoundaryConditions()
+    mock_obj.bc_initial = []
+    mock_obj.bc_terminal = []
+    mock_obj.parameter_list = []
     mock_obj.aug_cost = {}
     mock_obj.aug_cost['initial'] = sympify2('x^2 + y^2')
     mock_obj.aug_cost['terminal'] = sympify2('cos(x) + sin(y)')
@@ -107,10 +101,10 @@ def test_make_costate_bc():
     NecessaryConditions.make_costate_bc(mock_obj, states, location)
 
     # TODO: Change to symbolic
-    # assert mock_obj.bc.initial == [str(sympify2('lagrange_x + 2*x')), str(sympify2('lagrange_y + 2*y'))]
-    # assert mock_obj.bc.terminal == [str(sympify2('lagrange_x + sin(x)')), str(sympify2('lagrange_y - cos(y)'))]
-    assert mock_obj.bc.initial == [str(sympify2('lamX + 2*x')), str(sympify2('lamY + 2*y'))]
-    assert mock_obj.bc.terminal == [str(sympify2('lamX + sin(x)')), str(sympify2('lamY - cos(y)'))]
+    # assert mock_obj.bc_initial == [str(sympify2('lagrange_x + 2*x')), str(sympify2('lagrange_y + 2*y'))]
+    # assert mock_obj.bc_terminal == [str(sympify2('lagrange_x + sin(x)')), str(sympify2('lagrange_y - cos(y)'))]
+    assert mock_obj.bc_initial == [str(sympify2('lamX + 2*x')), str(sympify2('lamY + 2*y'))]
+    assert mock_obj.bc_terminal == [str(sympify2('lamX + sin(x)')), str(sympify2('lamY - cos(y)'))]
 
 def test_make_ham():
     mock_obj = Mock(NecessaryConditions)
@@ -170,12 +164,12 @@ def test_init():
     assert mock_obj.aug_cost == {}
     assert mock_obj.costates == []
     assert mock_obj.costate_rates == []
-    assert mock_obj.problem.parameters == []
+    assert mock_obj.parameter_list == []
     assert mock_obj.ham == sympify2('0')
     assert mock_obj.ham_ctrl_partial == []
     assert mock_obj.ctrl_free == []
-    assert mock_obj.bc.initial == []
-    assert mock_obj.bc.terminal == []
+    assert mock_obj.bc_initial == []
+    assert mock_obj.bc_terminal == []
     assert mock_obj.compile_list == ['deriv_func','bc_func','compute_control']
     assert mock_obj.template_prefix == Beluga.config.getroot()+'/beluga/bvpsol/templates/'
     assert mock_obj.template_suffix == '.py.mu'
