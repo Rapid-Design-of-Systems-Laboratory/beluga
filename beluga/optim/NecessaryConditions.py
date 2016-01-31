@@ -1,6 +1,6 @@
 
 from sympy import *
-from sympy.core.function import AppliedUndef
+from sympy.core.function import AppliedUndef, Function
 # from sympy.parsing.sympy_parser import parse_expr
 import pystache, imp, inspect, logging
 import re as _re
@@ -203,7 +203,8 @@ class NecessaryConditions(object):
     # Compiles a function template file into a function object
     # using the given data
     def compile_function(self,filename,verbose=False):
-        """Compiles a function specified by filename and stores it in
+        """
+        Compiles a function specified by template in filename and stores it in
         self.compiled
 
         Returns:
@@ -231,8 +232,11 @@ class NecessaryConditions(object):
             self.compiled.__dict__.update({'__builtin__':{}})
             return exec(code,self.compiled.__dict__)
 
-
+    # TODO: Maybe change all constraint limits (initial, terminal etc.) to be 'constants' that can be changed by continuation?
     def sanitize_constraint(self,constraint,problem):
+        """
+        Checks the initial/terminal constraint expression for invalid symbols
+        """
         if constraint.type == 'initial':
             pattern = r'([\w\d\_]+)_0'
             prefix = '_x0'
@@ -295,11 +299,10 @@ class NecessaryConditions(object):
 
         self.equality_constraints = problem.constraints().get('equality')
 
+        # Process quantities
+        # TODO: Sanitize quantity expressions
         self.quantity_list = [{'name':qty.var, 'expr':qty.value} for qty in problem.quantity]
-
-        # Compute costate conditions
-        self.make_costate_bc(problem.states(),'initial')
-        self.make_costate_bc(problem.states(),'terminal')
+        self.quantity_sym = [Function(qty.var) for qty in problem.quantity]
 
         ## Unconstrained arc calculations
         # Construct Hamiltonian
@@ -322,6 +325,12 @@ class NecessaryConditions(object):
 
         if not all(x is None for x in undefined_func):
             raise ValueError('Invalid function(s) specified: '+str(undefined_func))
+
+
+
+        # Compute costate conditions
+        self.make_costate_bc(problem.states(),'initial')
+        self.make_costate_bc(problem.states(),'terminal')
 
         # TODO: Make this more generalized
         # Add free final time boundary condition
