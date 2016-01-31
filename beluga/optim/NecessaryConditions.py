@@ -109,7 +109,7 @@ class NecessaryConditions(object):
         try:
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(self.ham_ctrl_partial))
-            keyboard()
+            # keyboard()
             var_sol = solve(lhs,vars,dict=True)
             logging.debug(var_sol)
 
@@ -295,6 +295,8 @@ class NecessaryConditions(object):
 
         self.equality_constraints = problem.constraints().get('equality')
 
+        self.quantity_list = [{'name':qty.var, 'expr':qty.value} for qty in problem.quantity]
+
         # Compute costate conditions
         self.make_costate_bc(problem.states(),'initial')
         self.make_costate_bc(problem.states(),'terminal')
@@ -371,7 +373,9 @@ class NecessaryConditions(object):
          'right_bc_list': self.bc_terminal,
          'control_options': self.control_options,
          'control_list':[str(u) for u in problem.controls()],
-         'ham_expr':self.ham
+         'num_controls': len(problem.controls()),
+         'ham_expr':self.ham,
+         'quantity_list': self.quantity_list
         }
 
     #    problem.constraints[i].expr for i in range(len(problem.constraints))

@@ -40,6 +40,14 @@ def compute_control(_t,_X,_p,_aux):
 
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
+    # Define controls beforehand in case some quantity uses it
+    __nancontrols = np.empty({{num_controls}})
+    __nancontrols[:] = np.nan
+    [{{#control_list}}{{.}},{{/control_list}}] = __nancontrols
+{{#quantity_list}}
+    {{name}} = {{expr}}
+{{/quantity_list}}
+
     _saved = []
     _ham_saved = float('inf')
 # Evaluate all control options

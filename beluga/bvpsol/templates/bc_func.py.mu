@@ -19,6 +19,11 @@ def bc_func(_ya,_yb,_p,_aux):
     [{{#control_list}}{{.}},{{/control_list}}] = compute_control(0,_ya,_p,_aux)
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
+    # Declare all predefined expressions
+    {{#quantity_list}}
+    {{name}} = {{expr}}
+    {{/quantity_list}}
+
     _x0 = _aux['initial']
     _xf = _aux['terminal']
 
@@ -29,6 +34,10 @@ def bc_func(_ya,_yb,_p,_aux):
     # Right BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _yb[:{{num_states}}]
     [{{#control_list}}{{.}},{{/control_list}}] = compute_control(1,_yb,_p,_aux)
+    # Declare all predefined expressions
+{{#quantity_list}}
+    {{name}} = {{expr}}
+{{/quantity_list}}
     _H = compute_hamiltonian(1,_yb,_p,_aux,[{{#control_list}}{{.}},{{/control_list}}])
     res_right = np.array([{{#right_bc_list}}{{.}},
                 {{/right_bc_list}}])
