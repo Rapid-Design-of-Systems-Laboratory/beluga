@@ -25,6 +25,9 @@ def compute_hamiltonian(_t,_X,_p,_aux,_u):
 
 
     [{{#control_list}}{{.}},{{/control_list}}] = _u
+{{#quantity_list}}
+    {{name}} = {{expr}}
+{{/quantity_list}}
     return {{ham_expr}}
 
 @static_var('guess_u',[{{#control_list}}0,{{/control_list}}])
