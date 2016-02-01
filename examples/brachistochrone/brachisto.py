@@ -19,7 +19,7 @@ def get_problem():
     # Define equations of motion
     problem.state('x', 'v*cos(theta)','m')   \
            .state('y', '-v*sin(theta)','m')   \
-           .state('v', 'g*sin(theta)','m/s')
+           .state('v', 'gDown','m/s')
     # Define controls
     problem.control('theta','rad')
 
@@ -43,7 +43,7 @@ def get_problem():
     # Define quantity (not implemented at present)
     # Is this actually an Expression rather than a Value?
     # TODO: Implement this
-    problem.quantity = [Value('tanAng','tan(theta)')]
+    problem.quantity = [Value('gDown','g*sin(theta)')]
 
     problem.scale.unit('m','x')     \
                    .unit('s','x/v')\

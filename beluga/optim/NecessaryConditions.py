@@ -1,12 +1,11 @@
 
 from sympy import *
-from sympy.core.function import AppliedUndef
+from sympy.core.function import AppliedUndef, Function
 # from sympy.parsing.sympy_parser import parse_expr
 import pystache, imp, inspect, logging
 import re as _re
 
 import beluga.bvpsol.BVP as BVP
-from beluga.utils import keyboard
 # import beluga.Beluga as Beluga
 from beluga.utils import sympify2, keyboard
 from beluga.optim.problem import *
@@ -44,6 +43,18 @@ class NecessaryConditions(object):
         #     memory = Memory(cachedir='/Users/tantony/dev/mjgrant-beluga/examples/_cache', mmap_mode='r', verbose=0)
         #     self.get_bvp = memory.cache(self.get_bvp)
 
+    def derivative(self, expr, var):
+        """
+        Take derivative taking pre-defined quantities into consideration
+        """
+
+        dFdq = [diff(expr, qty_var) for qty_var in self.quantity_sym]
+        dqdx = [diff(qexpr, var) for qexpr in self.quantity_expr]
+
+        # Chain rule + total derivative
+        out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + diff(expr, var)
+        return out
+
     def make_costate_rate(self, states):
         """!
         \brief     Creates the symbolic differential equations for the costates.
@@ -58,7 +69,7 @@ class NecessaryConditions(object):
         #     rate = diff(sympify2('-1*(' + self.ham + ')'),state)
         #     # numerical_diff = rate.atoms(Derivative)
         #     self.costate_rates.append(str(rate))
-        self.costate_rates = [diff(-1*(self.ham),state) for state in states]
+        self.costate_rates = [self.derivative(-1*(self.ham),state) for state in states]
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
 
@@ -74,7 +85,7 @@ class NecessaryConditions(object):
         # TODO: Automate partial derivatives of numerical functions
         self.ham_ctrl_partial = []
         for ctrl in controls:
-            dHdu = diff(sympify2(self.ham),ctrl)
+            dHdu = self.derivative(sympify2(self.ham),ctrl)
             custom_diff = dHdu.atoms(Derivative)
 
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
@@ -109,7 +120,7 @@ class NecessaryConditions(object):
         try:
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(self.ham_ctrl_partial))
-            keyboard()
+            # keyboard()
             var_sol = solve(lhs,vars,dict=True)
             logging.debug(var_sol)
 
@@ -172,11 +183,11 @@ class NecessaryConditions(object):
         if location == 'initial':
             # Using list comprehension instead of loops
             # lagrange_ changed to l. Removed hardcoded prefix
-            self.bc_initial += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
+            self.bc_initial += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc_terminal += [str(sympify2(state.make_costate()) - diff(sympify2(cost_expr),state.sym))
+            self.bc_terminal += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym))
                                     for state in states]
 
         # for i in range(len(state)):
@@ -197,13 +208,15 @@ class NecessaryConditions(object):
         for i in range(len(problem.states())):
             self.ham += sympify2(self.costates[i]) * (sympify2(problem.states()[i].process_eqn))
 
+        # Adjoin equality constraints
         for i in range(len(self.equality_constraints)):
             self.ham += sympify2('mu'+str(i+1)) * (sympify2(self.equality_constraints[i].expr))
 
     # Compiles a function template file into a function object
     # using the given data
     def compile_function(self,filename,verbose=False):
-        """Compiles a function specified by filename and stores it in
+        """
+        Compiles a function specified by template in filename and stores it in
         self.compiled
 
         Returns:
@@ -231,8 +244,12 @@ class NecessaryConditions(object):
             self.compiled.__dict__.update({'__builtin__':{}})
             return exec(code,self.compiled.__dict__)
 
-
+    # TODO: Maybe change all constraint limits (initial, terminal etc.) to be 'constants' that can be changed by continuation?
     def sanitize_constraint(self,constraint,problem):
+        """
+        Checks the initial/terminal constraint expression for invalid symbols
+        Also updates the constraint expression to reflect what would be in code
+        """
         if constraint.type == 'initial':
             pattern = r'([\w\d\_]+)_0'
             prefix = '_x0'
@@ -247,6 +264,7 @@ class NecessaryConditions(object):
 
         if not all(x is None for x in invalid):
             raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
+
 
         constraint.expr = _re.sub(pattern,prefix+r"['\1']",constraint.expr)
         return constraint
@@ -295,13 +313,19 @@ class NecessaryConditions(object):
 
         self.equality_constraints = problem.constraints().get('equality')
 
-        # Compute costate conditions
-        self.make_costate_bc(problem.states(),'initial')
-        self.make_costate_bc(problem.states(),'terminal')
-
+        # Process quantities
+        # Remove recursive relations
+        # TODO: Sanitize quantity expressions
+        # Dictionary for use with mustache templating library
+        self.quantity_list = [{'name':qty.var, 'expr':qty.value} for qty in problem.quantity]
+        # self.quantity_list = [(sympify2(qty.var), sympify2(qty.value), sympify2(qty.value).atoms(Symbol)) for qty in problem.quantity]
+        self.quantity_sym = [sympify2(qty.var) for qty in problem.quantity]
+        self.quantity_expr = [sympify2(qty.value) for qty in problem.quantity]
+        self.quantity_atoms = [sympify2(qty.value).atoms(Symbol) for qty in problem.quantity]
         ## Unconstrained arc calculations
         # Construct Hamiltonian
         self.make_ham(problem)
+
 
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
@@ -320,6 +344,10 @@ class NecessaryConditions(object):
 
         if not all(x is None for x in undefined_func):
             raise ValueError('Invalid function(s) specified: '+str(undefined_func))
+
+        # Compute costate conditions
+        self.make_costate_bc(problem.states(),'initial')
+        self.make_costate_bc(problem.states(),'terminal')
 
         # TODO: Make this more generalized
         # Add free final time boundary condition
@@ -371,7 +399,9 @@ class NecessaryConditions(object):
          'right_bc_list': self.bc_terminal,
          'control_options': self.control_options,
          'control_list':[str(u) for u in problem.controls()],
-         'ham_expr':self.ham
+         'num_controls': len(problem.controls()),
+         'ham_expr':self.ham,
+         'quantity_list': self.quantity_list
         }
 
     #    problem.constraints[i].expr for i in range(len(problem.constraints))
