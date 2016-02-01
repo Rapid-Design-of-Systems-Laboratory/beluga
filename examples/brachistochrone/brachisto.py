@@ -19,7 +19,7 @@ def get_problem():
     # Define equations of motion
     problem.state('x', 'v*cos(theta)','m')   \
            .state('y', '-v*sin(theta)','m')   \
-           .state('v', 'g*sin(theta)','m/s')
+           .state('v', 'gDown','m/s')
     # Define controls
     problem.control('theta','rad')
 
