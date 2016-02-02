@@ -325,11 +325,11 @@ class NecessaryConditions(object):
         # Remove recursive relations
         # TODO: Sanitize quantity expressions
         # Dictionary for use with mustache templating library
-        self.quantity_list = [{'name':qty.var, 'expr':qty.value} for qty in problem.quantity]
+        self.quantity_list = [{'name':qty.var, 'expr':qty.value} for qty in problem.quantity()]
         # self.quantity_list = [(sympify2(qty.var), sympify2(qty.value), sympify2(qty.value).atoms(Symbol)) for qty in problem.quantity]
-        self.quantity_sym = [sympify2(qty.var) for qty in problem.quantity]
-        self.quantity_expr = [sympify2(qty.value) for qty in problem.quantity]
-        self.quantity_atoms = [sympify2(qty.value).atoms(Symbol) for qty in problem.quantity]
+        self.quantity_sym = [sympify2(qty.var) for qty in problem.quantity()]
+        self.quantity_expr = [sympify2(qty.value) for qty in problem.quantity()]
+        self.quantity_atoms = [sympify2(qty.value).atoms(Symbol) for qty in problem.quantity()]
         ## Unconstrained arc calculations
 
         # Construct Hamiltonian

@@ -55,11 +55,11 @@ def get_problem():
     problem.control('ue1','m/s')    # The extra control
     problem.constant('lim',0.25,'m')  # The constraint limit
 
-    problem.quantity = [Value('psi1','(2*lim/(1+exp((2/lim)*xi11)))'),
-                        Value('psi11','(-(4*exp((2*xi11)/lim))/(exp((2*xi11)/lim) + 1)**2)'),
-                        Value('psi12','((16*exp((4*xi11)/lim))/(lim*(exp((2*xi11)/lim) + 1)**3) - (8*exp((2*xi11)/lim))/(lim*(exp((2*xi11)/lim) + 1)**2))'),
-                        Value('psi13','((96*exp((4*xi11)/lim))/(lim**2*(exp((2*xi11)/lim) + 1)**3) - (16*exp((2*xi11)/lim))/(lim**2*(exp((2*xi11)/lim) + 1)**2) - (96*exp((6*xi11)/lim))/(lim**2*(exp((2*xi11)/lim) + 1)**4))')
-                       ]
+    problem.quantity ('psi1','(2*lim/(1+exp((2/lim)*xi11)))') \
+            .quantity('psi11','(-(4*exp((2*xi11)/lim))/(exp((2*xi11)/lim) + 1)**2)') \
+            .quantity('psi12','((16*exp((4*xi11)/lim))/(lim*(exp((2*xi11)/lim) + 1)**3) - (8*exp((2*xi11)/lim))/(lim*(exp((2*xi11)/lim) + 1)**2))') \
+            .quantity('psi13','((96*exp((4*xi11)/lim))/(lim**2*(exp((2*xi11)/lim) + 1)**3) - (16*exp((2*xi11)/lim))/(lim**2*(exp((2*xi11)/lim) + 1)**2) - (96*exp((6*xi11)/lim))/(lim**2*(exp((2*xi11)/lim) + 1)**4))')
+            
     problem.state('xi11','xi12','m')
     problem.state('xi12','ue1','m')
     problem.constraints('default',0).initial('xi11 - xi11_0','m') \
