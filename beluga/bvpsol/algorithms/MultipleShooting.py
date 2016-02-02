@@ -49,7 +49,7 @@ class MultipleShooting(Algorithm):
             memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
-    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
+    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-15):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
         # if parameters is not None:
@@ -91,7 +91,7 @@ class MultipleShooting(Algorithm):
         J = np.hstack(J)
         return J
 
-    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-7):
+    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-6):
         # if parameters is not None:
         p  = np.array(parameters)
         h = StepSize
@@ -151,7 +151,7 @@ class MultipleShooting(Algorithm):
         phiDot = np.real(np.dot(F,phi))
         return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-50):
+    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-15):
         "Complex step version of State Transition Matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))

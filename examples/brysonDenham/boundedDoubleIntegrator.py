@@ -39,7 +39,7 @@ def get_problem():
                    .unit('nd',1)
 
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-6, max_iterations=10000, verbose = True, cached=False, number_arcs=4)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10000, verbose = True, cached=False, number_arcs=2)
 
 
     # Smoothed path constraint
@@ -50,7 +50,7 @@ def get_problem():
     h1_2 = '(psi11*xi12)';              # xi11dot = xi12
     h1_3 = '(psi12*xi12^2 + psi11*ue1)';  # xi12dot = ue1
 
-    problem.constant('eps1',1e-4,'nd')   # The smoothing 'penalty' factor
+    problem.constant('eps1',1e-1,'nd')   # The smoothing 'penalty' factor
     problem.control('ue1','m/s')    # The extra control
     problem.constant('lim',0.25,'m')  # The constraint limit
 
@@ -68,7 +68,7 @@ def get_problem():
     problem.cost['path'] = Expression('u^2 + eps1*(ue1^2)','m^2/s')
 
     problem.guess.setup('auto',
-                    start=[0,1,-0.1,-0.1],          # Starting values for states in order
+                    start=[0,1,-.1,-.1],          # Starting values for states in order
                     direction='forward',
                     costate_guess = -0.1,
                     time_integrate = 1      ## REQUIRED BECAUSE OF FIXED FINAL TIME
@@ -76,21 +76,20 @@ def get_problem():
 
     # problem.steps.add_step().num_cases(11) \
 
-
     problem.steps.add_step().num_cases(41)   \
                             .initial('xi11',0.0) \
                             .initial('xi12',-1.0) \
                             .terminal('x',0) \
-                            .initial('v',1.0) \
                             .terminal('v', -1)
-                            # .const('lim',0.14)
+                            # .const('lim',0.10)
 
     # problem.steps.add_step().num_cases(41)      \
 
+    problem.steps.add_step().num_cases(61)      \
+                            .const('lim',0.13)
 
-    problem.steps.add_step().num_cases(11, spacing='log')      \
-                            .const('lim',0.10)
-
+    problem.steps.add_step().num_cases(41,spacing='log')      \
+                            .const('eps1',1e-3)
     return problem
 
 if __name__ == '__main__':
