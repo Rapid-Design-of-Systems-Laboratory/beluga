@@ -43,29 +43,32 @@ def get_problem():
     # Define constants (change to have units as well)
     problem.constant('g','9.81','m/s^2')
 
-    #
-    # # Smoothed path constraint
-    # c1 = '( y + x )'                            # Constraint
-    # c1_1 = '( -v*sin(theta) + v*cos(theta) )'   # First derivative
-    #
+
+    # Smoothed path constraint
+    c1 = '( y + x )'                            # Constraint
+    c1_1 = '( -v*sin(theta) + v*cos(theta) )'   # First derivative
+
     # # Saturation function and its first derivative
     # psi1   = '(2*h0/(1+exp((2/h0)*xi11)))'
     # psi1_1 = '(-(4*exp((2*xi11)/h0))/(exp((2*xi11)/h0) + 1)^2)'
     #
-    # h1_2   = '('+psi1_1+'*'+'ue1)'      # Function for equality constraint
-    #
-    # problem.constant('h0','3','m')
-    #
-    # problem.state('xi11','ue1','m')
-    # problem.control('ue1','m/s')
-    # problem.constraints('default',0) \
-    #                     .initial('xi11-(x_0+y_0)','m')
-    #                     .equality(c1_1+' - '+h1_2,'m/s')
-    #
-    # problem.cost['path'] = Expression('1 + eps1*ue1^2','s')
-    # problem.constant('eps1',1,'s^2/m^2')    # Units to make cost non-dimensional
+    h1_2   = '(psi1_1 * ue1)'      # Function for equality constraint
 
-    problem.quantity = [Value('sumXY','x+y')]
+    problem.constant('h0','3','m')
+
+    problem.state('xi11','ue1','m')
+    problem.control('ue1','m/s')
+    problem.constraints('default',0) \
+                        .initial('xi11-(x_0+y_0)','m') \
+                        .equality(c1_1+' - '+h1_2,'m/s')
+
+    problem.quantity = [Value('psi1','(2*h0/(1+exp((2/h0)*xi11)))'),
+                        Value('psi11','(-(4*exp((2*xi11)/h0))/(exp((2*xi11)/h0) + 1)^2)'),
+                       ]
+
+    problem.cost['path'] = Expression('1 + eps1*ue1^2','s')
+    problem.constant('eps1',1,'s^2/m^2')    # Units to make cost non-dimensional
+
 
     problem.scale.unit('m','x')     \
                    .unit('s','x/v')\
