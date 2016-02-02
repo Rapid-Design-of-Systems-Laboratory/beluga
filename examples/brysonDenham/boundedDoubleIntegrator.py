@@ -30,7 +30,8 @@ def get_problem():
                         .initial('x-x_0','m')    \
                         .initial('v-v_0','m/s')  \
                         .terminal('x-x_f','m')   \
-                        .terminal('v-v_f','m/s')
+                        .terminal('v-v_f','m/s') \
+                        .independent('tf - 1','s') # Fixed final time
 
     problem.scale.unit('m',1)     \
                    .unit('s',1)\

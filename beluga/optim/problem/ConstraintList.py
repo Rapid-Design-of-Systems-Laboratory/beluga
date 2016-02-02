@@ -12,6 +12,13 @@ class ConstraintList(list):
         self.add(Constraint('terminal',expr,unit))
         return self
 
+    def independent(self, expr, unit):
+        """
+        Add a constraint on the independent variable
+        """
+        self.add(Constraint('independent',expr,unit))
+        return self
+
     def interior_point(self, expr, unit):
         self.add(Constraint('interior_point',expr,unit))
         return self
