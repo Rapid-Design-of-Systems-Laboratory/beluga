@@ -115,20 +115,20 @@ class NecessaryConditions(object):
         self.mu_vars = []
         self.mu_lhs = []
         if len(self.equality_constraints) > 0:
-            self.mu_vars = [sympify('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
+            self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
             # vars += mu_vars
-            self.mu_lhs = [sympify(c.expr) for c in self.equality_constraints]
+            self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
         try:
             logging.info("Attempting using SymPy ...")
-            logging.debug("dHdu = "+str(self.ham_ctrl_partial))
 
+            logging.debug("dHdu = "+str(lhs+self.mu_lhs))
             var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
             logging.debug(var_sol)
             # ctrl_sol = var_sol[:len(vars)]
             # mu_sol = var_sol[len(vars):]
             ctrl_sol = var_sol
             # raise ValueError() # Force mathematica
-        except Exception as e:
+        except Exception as e:  # FIXME: Use right exception name here
             logging.debug(e)
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
@@ -334,7 +334,7 @@ class NecessaryConditions(object):
 
         # Construct Hamiltonian
         self.make_ham(problem)
-
+        logging.debug(self.ham)
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
         # TODO: Move to separate method?

@@ -56,7 +56,9 @@ def compute_control(_t,_X,_p,_aux):
     {{name}} = {{expr}}
 {{/quantity_list}}
 
-    _saved = []
+    _saved = np.empty({{num_controls}})
+    _saved[:] = np.nan
+    
     _ham_saved = float('inf')
 # Evaluate all control options
 
