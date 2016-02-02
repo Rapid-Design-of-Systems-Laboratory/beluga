@@ -112,16 +112,17 @@ class NecessaryConditions(object):
         # We need to solve for 'mu's as well
         lhs = self.ham_ctrl_partial
         vars = controls
+        self.mu_vars = []
+        self.mu_lhs = []
         if len(self.equality_constraints) > 0:
-            mu_vars = [sympify('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
+            self.mu_vars = [sympify('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
             # vars += mu_vars
-            mu_lhs = [sympify(c.expr) for c in self.equality_constraints]
-
+            self.mu_lhs = [sympify(c.expr) for c in self.equality_constraints]
         try:
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(self.ham_ctrl_partial))
 
-            var_sol = solve(lhs+mu_lhs,vars+mu_vars,dict=True)
+            var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
             logging.debug(var_sol)
             # ctrl_sol = var_sol[:len(vars)]
             # mu_sol = var_sol[len(vars):]
@@ -132,7 +133,7 @@ class NecessaryConditions(object):
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
             logging.info("Attempting using Mathematica ...")
-            var_sol = mathematica_solve(lhs+mu_lhs,vars+mu_vars)
+            var_sol = mathematica_solve(lhs+self.mu_lhs,vars+self.mu_vars)
             # TODO: Extend numerical control laws to mu's
             if var_sol == []:
                 logging.info("No analytic control law found, switching to numerical method")
@@ -269,9 +270,13 @@ class NecessaryConditions(object):
         if not all(x is None for x in invalid):
             raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
 
+        # Create new variable for output to avoid mutating original object
+        output = Constraint()
+        output.type = constraint.type
+        output.unit = constraint.unit
+        output.expr = _re.sub(pattern,prefix+r"['\1']",constraint.expr)
 
-        constraint.expr = _re.sub(pattern,prefix+r"['\1']",constraint.expr)
-        return constraint
+        return output
 
     # def process_systems(self,problem):
     #     """Traverses dynamic systems list and extracts information"""
@@ -352,11 +357,14 @@ class NecessaryConditions(object):
         self.make_costate_bc(problem.states(),'initial')
         self.make_costate_bc(problem.states(),'terminal')
 
-        # TODO: Make this more generalized
-        # Add free final time boundary condition
-        # self.bc_terminal.append('_H - 0')
-        self.bc_initial.append('tf - 1')   ## Fixed final time HARDCODED
-        # self.bc_terminal.append('tf - 1')   ## Fixed final time HARDCODED
+        # TODO: Make this more generalized free final time condition
+        # HARDCODED tf variable
+        time_constraints = problem.constraints().get('independent')
+        if len(time_constraints) > 0:
+            self.bc_terminal.append('tf - 1')
+        else:
+            # Add free final time boundary condition
+            self.bc_terminal.append('_H - 0')
 
         # Compute costate process equations
         self.make_costate_rate(problem.states())
@@ -418,8 +426,8 @@ class NecessaryConditions(object):
          'left_bc_list': self.bc_initial,
          'right_bc_list': self.bc_terminal,
          'control_options': self.control_options,
-         'control_list': [str(u) for u in problem.controls()] + ['mu'+str(i+1) for i in range(len(self.equality_constraints))],
-         'num_controls': len(problem.controls()) + len(self.equality_constraints),  # Count mu multipliers
+         'control_list': [str(u) for u in problem.controls()] + [str(mu) for mu in self.mu_vars],
+         'num_controls': len(problem.controls()) + len(self.mu_vars),  # Count mu multipliers
          'ham_expr':self.ham,
          'quantity_list': self.quantity_list
         }
