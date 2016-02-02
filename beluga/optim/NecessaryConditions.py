@@ -120,10 +120,11 @@ class NecessaryConditions(object):
         try:
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(self.ham_ctrl_partial))
-            # keyboard()
-            var_sol = solve(lhs,vars,dict=True)
-            logging.debug(var_sol)
 
+            var_sol = solve(lhs+mu_lhs,vars+mu_vars,dict=True)
+            logging.debug(var_sol)
+            # ctrl_sol = var_sol[:len(vars)]
+            # mu_sol = var_sol[len(vars):]
             ctrl_sol = var_sol
             # raise ValueError() # Force mathematica
         except Exception as e:
@@ -131,9 +132,12 @@ class NecessaryConditions(object):
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
             logging.info("Attempting using Mathematica ...")
-            ctrl_sol = mathematica_solve(self.ham_ctrl_partial,vars)
-            if ctrl_sol == []:
+            var_sol = mathematica_solve(lhs+mu_lhs,vars+mu_vars)
+            # TODO: Extend numerical control laws to mu's
+            if var_sol == []:
                 logging.info("No analytic control law found, switching to numerical method")
+            else:
+                ctrl_sol = var_sol
 
         logging.info("Done")
         # solve() returns answer in the form
@@ -292,7 +296,6 @@ class NecessaryConditions(object):
         # self.process_systems(problem)
 
         ## Create costate list
-
         self.costates = [state.make_costate() for state in problem.states()]
 
         # for i in range(len(self.problem.states())):
@@ -323,9 +326,9 @@ class NecessaryConditions(object):
         self.quantity_expr = [sympify2(qty.value) for qty in problem.quantity]
         self.quantity_atoms = [sympify2(qty.value).atoms(Symbol) for qty in problem.quantity]
         ## Unconstrained arc calculations
+
         # Construct Hamiltonian
         self.make_ham(problem)
-
 
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
@@ -351,12 +354,29 @@ class NecessaryConditions(object):
 
         # TODO: Make this more generalized
         # Add free final time boundary condition
-        self.bc_terminal.append('_H - 0')
+        # self.bc_terminal.append('_H - 0')
+        self.bc_initial.append('tf - 1')   ## Fixed final time HARDCODED
+        # self.bc_terminal.append('tf - 1')   ## Fixed final time HARDCODED
 
         # Compute costate process equations
         self.make_costate_rate(problem.states())
         self.make_ctrl_partial(problem.controls())
 
+        # # Add support for state and control constraints
+        # problem.state('xi11','xi12','m')
+        # problem.state('xi12','ue1','m')
+        # self.costates += ['eta11','eta12']   # Costates for xi
+        #
+        # # Add new states to hamiltonian
+        # h1_3 = '(psi12*xi12^2 + psi11*ue1)';  # xi12dot = ue1
+        # c1_2 = 'u'
+        # self.ham += sympify2('eta11*xi12 + eta12*ue1')  #
+        # self.ham += sympify2('mu1 * ('+c1_2+' - '+h1_3')')
+        #
+        # # TODO: Compute these automatically
+        # self.costate_rates += ['mu1*(xi12**2*psi1_3 + psi12*ue1)',
+        #                        'mu1*(2*psi12*xi12)  - eta1']
+        #
         # Compute unconstrained control law
         # (need to add singular arc and bang/bang smoothing, numerical solutions)
         self.make_ctrl(problem.controls())
@@ -398,8 +418,8 @@ class NecessaryConditions(object):
          'left_bc_list': self.bc_initial,
          'right_bc_list': self.bc_terminal,
          'control_options': self.control_options,
-         'control_list':[str(u) for u in problem.controls()],
-         'num_controls': len(problem.controls()),
+         'control_list': [str(u) for u in problem.controls()] + ['mu'+str(i+1) for i in range(len(self.equality_constraints))],
+         'num_controls': len(problem.controls()) + len(self.equality_constraints),  # Count mu multipliers
          'ham_expr':self.ham,
          'quantity_list': self.quantity_list
         }

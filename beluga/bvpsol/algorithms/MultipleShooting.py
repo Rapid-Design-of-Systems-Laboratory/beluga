@@ -306,11 +306,11 @@ class MultipleShooting(Algorithm):
                     logging.info("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
-            logging.debug(paramGuess)
+            # logging.debug(paramGuess)
             # Compute Jacobian of boundary conditions using numerical derviatives
             J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
-            # Compute correction vector
 
+            # Compute correction vector
             r1 = np.linalg.norm(res)
             if self.verbose:
                 logging.debug('Residue: '+str(r1))

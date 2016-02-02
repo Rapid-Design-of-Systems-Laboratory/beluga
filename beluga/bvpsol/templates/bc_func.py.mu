@@ -17,9 +17,9 @@ def bc_func_left(_ya, _p, _aux):
 
 
     # Declare all predefined expressions
-    {{#quantity_list}}
+{{#quantity_list}}
     {{name}} = {{expr}}
-    {{/quantity_list}}
+{{/quantity_list}}
 
     _x0 = _aux['initial']
 

@@ -25,9 +25,12 @@ def compute_hamiltonian(_t,_X,_p,_aux,_u):
 
 
     [{{#control_list}}{{.}},{{/control_list}}] = _u
+
+    # Declare all quantities
 {{#quantity_list}}
     {{name}} = {{expr}}
 {{/quantity_list}}
+
     return {{ham_expr}}
 
 @static_var('guess_u',[{{#control_list}}0,{{/control_list}}])
@@ -47,6 +50,8 @@ def compute_control(_t,_X,_p,_aux):
     __nancontrols = np.empty({{num_controls}})
     __nancontrols[:] = np.nan
     [{{#control_list}}{{.}},{{/control_list}}] = __nancontrols
+
+    # Declare all quantities
 {{#quantity_list}}
     {{name}} = {{expr}}
 {{/quantity_list}}
