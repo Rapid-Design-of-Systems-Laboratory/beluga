@@ -178,10 +178,9 @@ class NecessaryConditions(object):
             logging.info("Attempting using Mathematica ...")
             var_sol = mathematica_solve(lhs+self.mu_lhs,vars+self.mu_vars)
             # TODO: Extend numerical control laws to mu's
-            if var_sol == []:
+            ctrl_sol = var_sol
+            if ctrl_sol == []:
                 logging.info("No analytic control law found, switching to numerical method")
-            else:
-                ctrl_sol = var_sol
 
         logging.info("Done")
         # solve() returns answer in the form
