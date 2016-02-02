@@ -166,8 +166,12 @@ class Beluga(object):
         logging.info("Computing the necessary conditions of optimality")
         self.nec_cond = NecessaryConditions()
 
-        # Create corresponding boundary value problem
-        bvp = self.nec_cond.get_bvp(self.problem)
+        # Try loading cached BVP from disk
+        bvp = self.nec_cond.load_bvp(self.problem)
+        if bvp is None:
+            # Create corresponding boundary value problem
+            bvp = self.nec_cond.get_bvp(self.problem)
+            self.nec_cond.cache_bvp(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
         #       Array: Automatic?
@@ -180,7 +184,7 @@ class Beluga(object):
         solinit = self.problem.guess.generate(bvp)
 
         # includes costates
-        state_names = self.nec_cond.problem_data['state_list']
+        state_names = bvp.problem_data['state_list']
         initial_states = solinit.y[:,0] # First column
         terminal_states = solinit.y[:,-1] # Last column
         initial_bc = dict(zip(state_names,initial_states))
@@ -192,7 +196,7 @@ class Beluga(object):
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
         self.out = {};
-        self.out['problem_data'] = self.nec_cond.problem_data;
+        self.out['problem_data'] = bvp.problem_data;
         self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
         total_time = toc();
 
@@ -218,7 +222,7 @@ class Beluga(object):
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
-        s.initialize(self.problem,self.nec_cond.problem_data)
+        s.initialize(self.problem,bvp_start.problem_data)
 
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
@@ -244,11 +248,11 @@ class Beluga(object):
 
                 # Post-processing phase
                 # Compute control history
-                # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
+                # sol.u = np.zeros((len(bvp.problem_data['control_list']),len(sol.x)))
 
                 # Required for plotting to work with control variables
-                sol.ctrl_expr = self.nec_cond.problem_data['control_options']
-                sol.ctrl_vars = self.nec_cond.problem_data['control_list']
+                sol.ctrl_expr = bvp.problem_data['control_options']
+                sol.ctrl_vars = bvp.problem_data['control_list']
 
                 #TODO: Make control computation more efficient
                 # for i in range(len(sol.x)):
