@@ -40,10 +40,7 @@ def get_problem():
     # problem.constant('x1','7.5','m')
     # problem.constant('y1','-15','m')
 
-    # Define quantity (not implemented at present)
-    # Is this actually an Expression rather than a Value?
-    # TODO: Implement this
-    problem.quantity = [Value('gDown','g*sin(theta)')]
+    problem.quantity('gDown','g*sin(theta)')
 
     problem.scale.unit('m','x')     \
                    .unit('s','x/v')\
