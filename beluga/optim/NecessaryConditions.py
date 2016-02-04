@@ -165,10 +165,10 @@ class NecessaryConditions(object):
             logging.info("Attempting using SymPy ...")
 
             logging.debug("dHdu = "+str(lhs+self.mu_lhs))
-            var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
+            keyboard()
+            # var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
+            var_sol = []
             logging.debug(var_sol)
-            # ctrl_sol = var_sol[:len(vars)]
-            # mu_sol = var_sol[len(vars):]
             ctrl_sol = var_sol
             # raise ValueError() # Force mathematica
         except Exception as e:  # FIXME: Use right exception name here
@@ -176,7 +176,7 @@ class NecessaryConditions(object):
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
             logging.info("Attempting using Mathematica ...")
-            var_sol = mathematica_solve(lhs+self.mu_lhs,vars+self.mu_vars)
+            # var_sol = mathematica_solve(lhs+self.mu_lhs,vars+self.mu_vars)
             # TODO: Extend numerical control laws to mu's
             ctrl_sol = var_sol
             if ctrl_sol == []:
@@ -366,7 +366,7 @@ class NecessaryConditions(object):
         # Remove recursive relations
         # TODO: Sanitize quantity expressions
         # Dictionary for use with mustache templating library
-        self.quantity_list = [{'name':qty.var, 'expr':qty.value} for qty in problem.quantity()]
+        self.quantity_list = [{'name':qty.var, 'expr':str(sympify2(qty.value))} for qty in problem.quantity()]
         # self.quantity_list = [(sympify2(qty.var), sympify2(qty.value), sympify2(qty.value).atoms(Symbol)) for qty in problem.quantity]
         self.quantity_sym = [sympify2(qty.var) for qty in problem.quantity()]
         self.quantity_expr = [sympify2(qty.value) for qty in problem.quantity()]
@@ -463,7 +463,7 @@ class NecessaryConditions(object):
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'num_states': 2*len(problem.states()) + 1,
-         'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial],
+         'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial] + self.mu_lhs,
          'left_bc_list': self.bc_initial,
          'right_bc_list': self.bc_terminal,
          'control_options': self.control_options,

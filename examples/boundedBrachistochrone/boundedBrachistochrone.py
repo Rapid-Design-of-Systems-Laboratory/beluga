@@ -62,8 +62,8 @@ def get_problem():
                         .initial('xi11-(x_0+y_0)','m') \
                         .equality(c1_1+' - '+h1_2,'m/s')
 
-    problem.quantity('psi1','(2*h0/(1+exp((2/h0)*xi11)))') \
-            .quantity('psi11','(-(4*exp((2*xi11)/h0))/(exp((2*xi11)/h0) + 1)^2)')
+    problem.quantity('psi1','(-h0 + exp(xi11))') \
+            .quantity('psi11','(exp(xi11)*xi12)')
 
     problem.cost['path'] = Expression('1 + eps1*ue1^2','s')
     problem.constant('eps1',1,'s^2/m^2')    # Units to make cost non-dimensional

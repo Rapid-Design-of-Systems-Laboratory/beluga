@@ -12,7 +12,7 @@ def get_problem():
     """A simple planar hypersonic problem example."""
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('planarHypersonicWithHeatRate')
+    problem = beluga.optim.Problem('planarWithFPA')
 
     # Define independent variables
     problem.independent('t', 's')
@@ -59,14 +59,14 @@ def get_problem():
     problem.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
     problem.constant('g0',9.80665,'m/s^2')   # Sutton-Graves constant
     problem.constant('alfaRateMax',20*pi/180,'rad/s')
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10000, verbose = True, cached = False, number_arcs=8)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-5, max_iterations=10000, verbose = True, cached = False, number_arcs=2)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
                    .unit('kg','mass')   \
-                   .unit('rad',1)       \
-                   .unit('W',1000)
+                   .unit('rad',1)
+
 
     # Smoothed path constraint
     c1 = '( k*sqrt('+rho+'/rn)*v^3 )' # Constraint (units W/m^2 = kg m^2 s^−3/m^2 = kgs^-3)
@@ -74,20 +74,20 @@ def get_problem():
     problem.quantity('dcdv','(3*k*v**2*((rho0*exp(-h/H))/rn)**(1/2))')
     # dcdv = '(3*k*v**2*((rho0*exp(-h/H))/rn)**(1/2))'
     # dcdh = '(-(k*rho0*v^3*exp(-h/H))/(2*H*rn*((rho0*exp(-h/H))/rn)^(1/2)))'
-    c1_1 = 'WattSecondCubedPerKilogram*(dcdh*(v*sin(gam)) + dcdv*'+dvdt+')'  # First derivative
-    h1_2 = '(psi11*ue1)';              # xi11dot = ue1
+    c1_1 = '(dcdh*(v*sin(gam)) + dcdv*'+dvdt+')'  # First derivative
+    h1_2 = '(psi11*0)';              # xi11dot = ue1
     # problem.constant('eps1',1e-4,'m^2/s^2')   # The smoothing 'penalty' factor
     problem.constant('eps1',1e-4,'m^2/s^2')   # The smoothing 'penalty' factor
 
-    problem.state('xi11','ue1','W')
-    problem.control('ue1','W/s')    # The extra control
-    problem.constant('lim',5000e4,'W')  # The constraint limit
+    problem.state('xi11','0','kg/s^3')
+    # problem.control('ue1','kg/s^4')    # The extra control
+    problem.constant('lim',5000e4,'kg/s^3')  # The constraint limit
     problem.quantity ('psi1','(lim - exp(-xi11))') \
-            .quantity('psi11','(exp(-xi11)*ue1)')
+            .quantity('psi11','(exp(-xi11)*0)')
     problem.constraints('default',0).initial('xi11 - xi11_0','kg/s^3') \
-                                .equality(c1_1+' - '+h1_2,'kg/s^4')
+                                # .equality(c1_1+' - '+h1_2,'kg/s^4')
     problem.constant('inverseKgSecondSquared',1,'kg^(-1)*s^2')
-    problem.constant('WattSecondCubedPerKilogram',1,'W*s^3/kg')
+
     # # Control constraint
     # c2 = '(alfaDot)'
     # h2 = '(psi2)'
@@ -97,19 +97,19 @@ def get_problem():
     # problem.constant('inverseSecondSquared',1,'1/s^2')
     # problem.constraints('default',0).equality(c2+' - '+h2,'rad/s')
 
-    problem.cost['path'] = Expression('eps1*(ue1^2)','m^2/s^2')
+    # problem.cost['path'] = Expression('eps1*(inverseKgSecondSquared^2*ue1^2)','m^2/s^2')
     # problem.cost['path'] = Expression('eps1*(inverseKgSecondSquared^2*ue1^2 + inverseSecondSquared*ue2^2)','m^2/s^2')
 
-    # problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180,72240])
-    problem.guess.setup('file',filename='fpa.dill',step=-1, iteration=-1)
+    problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180,0])
 
-    problem.steps.add_step().num_cases(101) \
-                            .initial('xi11', 72240)
-    #
-    # problem.steps.add_step().num_cases(101).initial('gam',-70*pi/180)\
-    #                         .terminal('theta', 0.3*pi/180)
-    # problem.steps.add_step().num_cases(21)  \
-    #                          .terminal('theta', 4*pi/180)
+    problem.steps.add_step().num_cases(5) \
+                            .terminal('h', 0)
+
+    problem.steps.add_step().num_cases(31).initial('gam',-60*pi/180)\
+                            .terminal('theta', 1.0*pi/180)
+    problem.steps.add_step().num_cases(41)  \
+                            .terminal('theta', 4*pi/180)
+
     return problem
 
 if __name__ == '__main__':
