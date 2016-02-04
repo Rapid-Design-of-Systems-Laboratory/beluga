@@ -33,21 +33,19 @@ def get_problem():
     # Define independent variables
     problem.independent('t', 's')
 
-    rho = 'rho0*exp(-h/H)'
-    Cl  = '(1.5658*alfa + -0.0000)'
-    Cd  = '(1.6537*alfa^2 + 0.0612)'
-    # Cl = 'CLfunction(alfa)'
-    # Cd = 'CDfunction(alfa)'
-
-    D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
-    L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
-    r   = '(re+h)'
+    # Define quantities used in the problem
+    problem.quantity('rho','rho0*exp(-h/H)')
+    problem.quantity('Cl','(1.5658*alfa + -0.0000)')
+    problem.quantity('Cd','(1.6537*alfa^2 + 0.0612)')
+    problem.quantity('D','0.5*rho*v^2*Cd*Aref')
+    problem.quantity('L','0.5*rho*v^2*Cl*Aref')
+    problem.quantity('r','re+h')
 
     # Define equations of motion
     problem.state('h','v*sin(gam)','m')   \
-           .state('theta','v*cos(gam)/'+r,'rad')  \
-           .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'**2','m/s') \
-           .state('gam',L+'/(mass*v) + (v/'+r+' - mu/(v*'+r+'^2))*cos(gam)','rad')
+           .state('theta','v*cos(gam)/r','rad')  \
+           .state('v','-D/mass - mu*sin(gam)/r**2','m/s') \
+           .state('gam','L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)','rad')
 
     # Define controls
     problem.control('alfa','rad')
@@ -80,10 +78,6 @@ def get_problem():
                    .unit('s','h/v')     \
                    .unit('kg','mass')   \
                    .unit('rad',1)
-
-    # Define quantity (not implemented at present)
-    # Is this actually an Expression rather than a Value?
-    # problem.quantity = [Value('tanAng','tan(theta)')]
 
     problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
