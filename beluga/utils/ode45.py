@@ -45,7 +45,7 @@ def ode45_multi(f,tspan,y0,*args,**kwargs):
 def ode45(f,tspan,y0,*args,**kwargs):
     """Implements interface similar to MATLAB's ode45 using scipy"""
 
-    return ode45_old(f,tspan,y0,*args,**kwargs)
+    # return ode45_old(f,tspan,y0,*args,**kwargs)
 
     if len(tspan) == 2:
         # TODO: Change hardcoding?

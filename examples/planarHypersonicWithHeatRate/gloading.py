@@ -9,10 +9,10 @@ from math import *
 import functools
 
 def get_problem():
-    """A simple planar hypersonic problem example."""
+    """A simple planar hypersonic problem example with Gloading constraint."""
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('planarHypersonicWithHeatRate')
+    problem = beluga.optim.Problem('planarHypersonicWithGloading')
 
     # Define independent variables
     problem.independent('t', 's')

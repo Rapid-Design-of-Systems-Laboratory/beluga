@@ -9,6 +9,7 @@
 # }
 
 import numpy as np
+import scipy
 import scipy.optimize
 from math import *
 from beluga.utils import static_var
@@ -58,7 +59,7 @@ def compute_control(_t,_X,_p,_aux):
 
     _saved = np.empty({{num_controls}})
     _saved[:] = np.nan
-    
+
     _ham_saved = float('inf')
 # Evaluate all control options
 
@@ -88,7 +89,7 @@ def compute_control(_t,_X,_p,_aux):
 
     # guess_u = [{{#control_list}}0,{{/control_list}}]
 
-    _saved = scipy.optimize.fsolve(dHdu, compute_control.guess_u)
+    _saved = scipy.optimize.fsolve(dHdu, compute_control.guess_u,xtol=1e-6)
 {{/control_options}}
     compute_control.guess_u = _saved
     return _saved

@@ -5,6 +5,7 @@ from beluga.optim import *
 import matplotlib.pyplot as plt
 import numpy as np
 import sys,os,imp,inspect,warnings
+import scipy.optimize
 
 from beluga import BelugaConfig
 from beluga.continuation import *
@@ -171,7 +172,7 @@ class Beluga(object):
         if bvp is None:
             # Create corresponding boundary value problem
             bvp = self.nec_cond.get_bvp(self.problem)
-            self.nec_cond.cache_bvp(self.problem)
+            # self.nec_cond.cache_bvp(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
         #       Array: Automatic?
