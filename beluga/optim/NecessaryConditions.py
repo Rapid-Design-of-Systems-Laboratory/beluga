@@ -165,9 +165,9 @@ class NecessaryConditions(object):
             logging.info("Attempting using SymPy ...")
 
             logging.debug("dHdu = "+str(lhs+self.mu_lhs))
-            keyboard()
-            # var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
-            var_sol = []
+            # keyboard()
+            var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
+            # var_sol = []
             logging.debug(var_sol)
             ctrl_sol = var_sol
             # raise ValueError() # Force mathematica
@@ -363,16 +363,16 @@ class NecessaryConditions(object):
         self.equality_constraints = problem.constraints().get('equality')
 
         # Process quantities
-        # Remove recursive relations
+        # Substitute all quantities that show up in other quantities with their expressions
         # TODO: Sanitize quantity expressions
+        # TODO: Check for circular references in quantity expressions
+        quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
+        self.quantity_sym, self.quantity_expr = zip(*quantity_subs)
+        self.quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in self.quantity_expr]
         # Dictionary for use with mustache templating library
-        self.quantity_list = [{'name':qty.var, 'expr':str(sympify2(qty.value))} for qty in problem.quantity()]
-        # self.quantity_list = [(sympify2(qty.var), sympify2(qty.value), sympify2(qty.value).atoms(Symbol)) for qty in problem.quantity]
-        self.quantity_sym = [sympify2(qty.var) for qty in problem.quantity()]
-        self.quantity_expr = [sympify2(qty.value) for qty in problem.quantity()]
-        self.quantity_atoms = [sympify2(qty.value).atoms(Symbol) for qty in problem.quantity()]
-        ## Unconstrained arc calculations
+        self.quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
 
+        ## Unconstrained arc calculations
         # Construct Hamiltonian
         self.make_ham(problem)
         logging.debug(self.ham)
