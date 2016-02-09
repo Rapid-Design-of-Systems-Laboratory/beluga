@@ -124,7 +124,8 @@ class Beluga(object):
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:
-            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2)
 
         # Set the cache directory to be in the current folder
         cache_dir = os.getcwd()+'/_cache'
