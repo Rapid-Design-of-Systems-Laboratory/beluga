@@ -7,12 +7,12 @@
 #     ],
 #     'control_list':['theta','sigma']
 # }
-
 import numpy as np
 import scipy
 import scipy.optimize
 from math import *
 from beluga.utils import static_var
+import logging
 
 def compute_hamiltonian(_t,_X,_p,_aux,_u):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
