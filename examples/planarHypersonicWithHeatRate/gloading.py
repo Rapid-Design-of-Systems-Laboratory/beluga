@@ -16,22 +16,20 @@ def get_problem():
 
     # Define independent variables
     problem.independent('t', 's')
+    # Define quantities used in the problem
+    problem.quantity('rho','rho0*exp(-h/H)')
+    problem.quantity('Cl','(1.5658*alfa + -0.0000)')
+    problem.quantity('Cd','(1.6537*alfa^2 + 0.0612)')
+    problem.quantity('D','0.5*rho*v^2*Cd*Aref')
+    problem.quantity('L','0.5*rho*v^2*Cl*Aref')
+    problem.quantity('r','re+h')
 
-    rho = 'rho0*exp(-h/H)'
-    Cl  = '(1.5658*alfa + -0.0000)'
-    Cd  = '(1.6537*alfa^2 + 0.0612)'
-
-    D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
-    L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
-    r   = '(re+h)'
-
-    dvdt = '-'+D+'/mass - mu*sin(gam)/'+r+'**2'
     # Define equations of motion
     problem.state('h','v*sin(gam)','m')   \
-           .state('theta','v*cos(gam)/'+r,'rad')  \
-           .state('v',dvdt,'m/s') \
-           .state('gam',L+'/(mass*v) + (v/'+r+' - mu/(v*'+r+'^2))*cos(gam)','rad') \
-        #    .state('alfa','alfaDot','rad')
+           .state('theta','v*cos(gam)/r','rad')  \
+           .state('v','-D/mass - mu*sin(gam)/r**2','m/s') \
+           .state('gam','L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)','rad')
+
     # Define controls
     # problem.control('alfaDot','rad/s')
     problem.control('alfa','rad')
@@ -43,10 +41,9 @@ def get_problem():
     problem.constraints().initial('h-h_0','m') \
                         .initial('theta-theta_0','rad') \
                         .initial('v-v_0','m/s') \
-                        .initial('gam-gam_0','rad') \
                         .terminal('h-h_f','m')  \
-                        .terminal('theta-theta_f','rad')
-
+                        .terminal('theta-theta_f','rad') \
+                        .initial('gam-gam_0','rad')
     # Define constants
     problem.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
     problem.constant('rho0', 1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
@@ -59,57 +56,39 @@ def get_problem():
     problem.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
     problem.constant('g0',9.80665,'m/s^2')   # Sutton-Graves constant
     problem.constant('alfaRateMax',20*pi/180,'rad/s')
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10000, verbose = True, cached = False, number_arcs=8)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-6, max_iterations=10000, verbose = True, cached = False, number_arcs=2)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
                    .unit('kg','mass')   \
-                   .unit('rad',1)       \
-                   .unit('W',1000)
+                   .unit('rad',1)\
+                   .unit('nd',100**2)
 
     # Smoothed path constraint
-    c1 = '( k*sqrt('+rho+'/rn)*v^3 )' # Constraint (units W/m^2 = kg m^2 s^−3/m^2 = kgs^-3)
-    problem.quantity('dcdh','(-(k*rho0*v^3*exp(-h/H))/(2*H*rn*((rho0*exp(-h/H))/rn)^(1/2)))')
-    problem.quantity('dcdv','(3*k*v**2*((rho0*exp(-h/H))/rn)**(1/2))')
-    # dcdv = '(3*k*v**2*((rho0*exp(-h/H))/rn)**(1/2))'
-    # dcdh = '(-(k*rho0*v^3*exp(-h/H))/(2*H*rn*((rho0*exp(-h/H))/rn)^(1/2)))'
-    c1_1 = 'WattSecondCubedPerKilogram*(dcdh*(v*sin(gam)) + dcdv*'+dvdt+')'  # First derivative
-    h1_2 = '(psi11*ue1)';              # xi11dot = ue1
+    c1 = '( (D^2 + L^2)/(mass^2*g0^2) )' # Non dimensional
+    h1_1 = '(psi1)';              # xi11dot = ue1
     # problem.constant('eps1',1e-4,'m^2/s^2')   # The smoothing 'penalty' factor
-    problem.constant('eps1',1e-4,'m^2/s^2')   # The smoothing 'penalty' factor
-
-    problem.state('xi11','ue1','W')
-    problem.control('ue1','W/s')    # The extra control
-    problem.constant('lim',5000e4,'W')  # The constraint limit
-    problem.quantity ('psi1','(lim - exp(-xi11))') \
-            .quantity('psi11','(exp(-xi11)*ue1)')
-    problem.constraints('default',0).initial('xi11 - xi11_0','kg/s^3') \
-                                .equality(c1_1+' - '+h1_2,'kg/s^4')
-    problem.constant('inverseKgSecondSquared',1,'kg^(-1)*s^2')
-    problem.constant('WattSecondCubedPerKilogram',1,'W*s^3/kg')
-    # # Control constraint
-    # c2 = '(alfaDot)'
-    # h2 = '(psi2)'
-    # problem.quantity ('psi2','(2*alfaRateMax/(1+exp((2/alfaRateMax)*ue2)))')
-    # problem.control('ue2','rad/s^2')
-
-    # problem.constant('inverseSecondSquared',1,'1/s^2')
-    # problem.constraints('default',0).equality(c2+' - '+h2,'rad/s')
+    problem.constant('eps1',1,'m^2/s^2')   # The smoothing 'penalty' factor
+    problem.constant('gMax',300**2,'nd')  # The constraint limit
+    problem.control('ue1','1/s')    # The extra control
+    # problem.quantity ('psi1','(2*gMax/(1+ exp((2/gMax)*ue1)))')
+    problem.quantity ('psi1','(gMax - exp(-ue1))')
+    problem.constraints('default',0).equality(c1+' - '+h1_1,'nd')
 
     problem.cost['path'] = Expression('eps1*(ue1^2)','m^2/s^2')
-    # problem.cost['path'] = Expression('eps1*(inverseKgSecondSquared^2*ue1^2 + inverseSecondSquared*ue2^2)','m^2/s^2')
 
-    # problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180,72240])
-    problem.guess.setup('file',filename='fpa.dill',step=-1, iteration=-1)
+    problem.guess.setup('auto',start=[20000,0,2000,-85*pi/180])
+    # problem.guess.setup('file',filename='fpa.dill',step=-1, iteration=-1)
 
-    problem.steps.add_step().num_cases(101) \
-                            .initial('xi11', 72240)
-    #
-    # problem.steps.add_step().num_cases(101).initial('gam',-70*pi/180)\
-    #                         .terminal('theta', 0.3*pi/180)
-    # problem.steps.add_step().num_cases(21)  \
-    #                          .terminal('theta', 4*pi/180)
+
+    problem.steps.add_step().num_cases(21).initial('h',0) 
+    problem.steps.add_step().num_cases(101).initial('gam',-70*pi/180)\
+                            .terminal('theta', 0.3*pi/180)
+    problem.steps.add_step().num_cases(21)  \
+                             .terminal('theta', 4*pi/180)
+    problem.steps.add_step().num_cases(21)  \
+                            .const('gMax',50**2)
     return problem
 
 if __name__ == '__main__':

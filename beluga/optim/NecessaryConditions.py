@@ -91,7 +91,7 @@ class NecessaryConditions(object):
         Take derivative taking pre-defined quantities into consideration
         """
 
-        dFdq = [diff(expr, qty_var) for qty_var in self.quantity_sym]
+        dFdq = [diff(expr, qty_var).subs(self.quantity_subs) for qty_var in self.quantity_sym]
         dqdx = [diff(qexpr, var) for qexpr in self.quantity_expr]
 
         # Chain rule + total derivative
@@ -134,7 +134,7 @@ class NecessaryConditions(object):
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
                         for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
 
-            self.ham_ctrl_partial.append(dHdu.subs(repl))
+            self.ham_ctrl_partial.append(dHdu.subs(repl).subs(self.quantity_subs))
         # self.ham_ctrl_partial = [diff(sympify2(self.ham),ctrl) for ctrl in controls]
         # self.ham_ctrl_partial.append(str(diff(sympify2(self.ham),
         #     symbols(ctrl))))
@@ -159,15 +159,12 @@ class NecessaryConditions(object):
         self.mu_lhs = []
         if len(self.equality_constraints) > 0:
             self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
-            # vars += mu_vars
-            self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
+            self.mu_lhs = [sympify2(c.expr).subs(self.quantity_subs) for c in self.equality_constraints]
         try:
             logging.info("Attempting using SymPy ...")
-
             logging.debug("dHdu = "+str(lhs+self.mu_lhs))
             # keyboard()
             var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
-            # var_sol = []
             logging.debug(var_sol)
             ctrl_sol = var_sol
             # raise ValueError() # Force mathematica
@@ -201,7 +198,7 @@ class NecessaryConditions(object):
         """
 
         # Do in two steps so that indices are "right"
-
+        # TODO: apply quantities
         filtered_list = [c for c in constraint if c.type==location]
         self.parameter_list += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
         # self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
@@ -340,6 +337,19 @@ class NecessaryConditions(object):
 
         # Should this be moved into __init__ ?
         # self.process_systems(problem)
+        logging.info('Processing quantity expressions')
+        # Process quantities
+        # Substitute all quantities that show up in other quantities with their expressions
+        # TODO: Sanitize quantity expressions
+        # TODO: Check for circular references in quantity expressions
+        if len(problem.quantity()) > 0:
+            self.quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
+            self.quantity_sym, self.quantity_expr = zip(*self.quantity_subs)
+            self.quantity_expr = [qty_expr.subs(self.quantity_subs) for qty_expr in self.quantity_expr]
+            # Dictionary for use with mustache templating library
+            self.quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
+        else:
+            self.quantity_list = self.quantity_sym = self.quantity_expr = self.quantity_subs = []
 
         ## Create costate list
         self.costates = [state.make_costate() for state in problem.states()]
@@ -362,15 +372,6 @@ class NecessaryConditions(object):
 
         self.equality_constraints = problem.constraints().get('equality')
 
-        # Process quantities
-        # Substitute all quantities that show up in other quantities with their expressions
-        # TODO: Sanitize quantity expressions
-        # TODO: Check for circular references in quantity expressions
-        quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
-        self.quantity_sym, self.quantity_expr = zip(*quantity_subs)
-        self.quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in self.quantity_expr]
-        # Dictionary for use with mustache templating library
-        self.quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
 
         ## Unconstrained arc calculations
         # Construct Hamiltonian
@@ -458,8 +459,8 @@ class NecessaryConditions(object):
          ,
          'parameter_list': [str(param) for param in self.parameter_list],
          'deriv_list':
-             ['tf*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
-             ['tf*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
+             ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
+             ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'num_states': 2*len(problem.states()) + 1,
