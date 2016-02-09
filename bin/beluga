@@ -30,7 +30,7 @@ Options:
                             (overrides option specified in input file)
 
 Arguments:
-  SCENARIO                  name of python module or path to python file
+  SCENARIO                  name of python module orpath to python/json/yaml file
                             containing the problem scenario [REQUIRED]
 
   <file>                    path to the data file for solution
@@ -61,6 +61,82 @@ from docopt import docopt
 import beluga.Beluga as Beluga
 import os, sys, logging
 import importlib # Only works with Python >= 3.4
+import logging
+import yaml
+
+from beluga.optim.problem import *
+from beluga.optim import Problem
+from beluga.continuation import *
+
+def load_yaml(filename):
+    with open(filename,'r') as stream:
+        # TODO: Add data validation for YAML
+        scenario_data = yaml.load(stream)
+
+        if not 'name' in scenario_data.keys():
+            scenario_name, _ = os.path.splitext(os.path.basename(filename))
+        else:
+            scenario_name = scenario_data['name']
+
+        problem = Problem(scenario_name)
+
+        # Define independent variable
+        problem.independent(scenario_data['independentVariable']['name'],
+                            scenario_data['independentVariable']['unit'])
+
+        # Define states
+        for state in scenario_data['states']:
+            problem.state(state['name'], state['equation'], state['unit'])
+
+        # Define controls
+        for control in scenario_data['controls']:
+            problem.control(control['name'], control['unit'])
+
+        # Define cost function
+        # TODO: Allow multiple cost functions
+        costFn = scenario_data['costFunction']
+        problem.cost[costFn['costType']] = Expression(costFn['expression'],costFn['unit'])
+
+        # Define scaling units
+        for unit in scenario_data['units']:
+            problem.scale.unit(unit['name'], unit['scaleExpr'])
+
+        # Define constants
+        for const in scenario_data['constants']:
+            problem.constant(const['name'], const['value'], const['unit'])
+
+        # Define constraints
+        for constraint in scenario_data['constraints']:
+            if isinstance(constraint, list):
+                problem.constraints('default',0).add(Constraint(*constraint))
+            else:
+                problem.constraints('default',0).add(Constraint(
+                                                    constraint['type'],
+                                                    constraint['expr'],
+                                                    constraint['unit'])
+                                                )
+
+        # Define initial guess
+        guess = scenario_data['guess']
+        problem.guess.setup(guess['type'],
+                            start=guess['start'],
+                            direction=guess['direction'],
+                            costate_guess=guess['costate_guess'])
+
+        # Define continuation steps
+        for step_data in scenario_data['continuation']:
+            step = ContinuationStep()
+
+            step.num_cases(step_data['num_cases'])
+            for action in step_data['actions']:
+                if isinstance(action, list):
+                    step.set(*action)
+                else:
+                    step.set(action['type'], action['variable'], action['target'])
+
+            problem.steps.add_step(step)
+
+        return problem
 
 def load_scenario(scenario_name):
     """Loads a scenario from python module name or file name/path"""
@@ -71,6 +147,9 @@ def load_scenario(scenario_name):
         module_dir, module_file = os.path.split(scenario_name)
         module_name, module_ext = os.path.splitext(module_file)
         sys.path.append(module_dir)
+    elif (scenario_name.endswith('.yml') or scenario_name.endswith('.json'))and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
+        logging.info('Loading from YAML scenario ..')
+        return load_yaml(scenario_name)
     else:
         if scenario_name.isidentifier():
             module_name = scenario_name
@@ -83,7 +162,8 @@ def load_scenario(scenario_name):
          # Check if module has a get_problem() function
         if hasattr(scenario,'get_problem') and callable(scenario.get_problem):
             # Module loaded successfully
-            return scenario
+            # print('Module loaded successfully. 😂')
+            return scenario.get_problem()
         else:
             print('Unable to find get_problem() function in scenario module')
             return None
@@ -146,9 +226,7 @@ def main(options):
     else:
         output = None
 
-    # print('Module loaded successfully. 😂')
-    problem = scenario.get_problem()
-    Beluga.run(problem, logging_level=logging_lvl, display_level=display_lvl, output_file=output)
+    Beluga.run(scenario, logging_level=logging_lvl, display_level=display_lvl, output_file=output)
     # print(options)
 
 options = docopt(__doc__,version=0.1)
