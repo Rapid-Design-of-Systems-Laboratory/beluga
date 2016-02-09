@@ -3,30 +3,46 @@ name: brachisto
 # definitions:  # Used to define shortcut expressions
 #   rho: rho0*exp(-h/H)
 #   L:   0.5*rho*v^2*Cl*Aref
-independent: [t, s]
+independentVariable:
+  name: t
+  unit: s
+
 states:
-  - [x, v*cos(theta), m]
-  - [y, -v*sin(theta), m]
-  - [v, g*sin(theta), m/s]
+  - name: x
+    equation: v*cos(theta)
+    unit: m
+  - name: y
+    equation: -v*sin(theta)
+    unit: m
+  - name: v
+    equation: g*sin(theta)
+    unit: m/s
 controls:
-  theta: rad
+  - name: theta
+    unit: rad
 
 constants:
-  g: [9.81, m/s^2]
+  - name: g
+    value: 9.81
+    unit: m/s^2
 
-scaling:
-  m:   x
-  s:   x/v
-  kg:  1
-  rad: 1
-
-solver:
-  class: SingleShooting   #  Should be a valid solver class
-  options:                # Assumes options are valid for given class
-    derivative_method:  fd
-    tolerance:          1e-4
-    max_iterations:     1000,
-    cached:             False
+units:
+  - name: m
+    scaleExpr: x
+  - name: s
+    scaleExpr: x/v
+  - name: kg
+    scaleExpr: 1
+  - name: rad
+    scaleExpr: 1
+#
+# solver:
+#   class: SingleShooting   #  Should be a valid solver class
+#   options:                # Assumes options are valid for given class
+#     derivative_method:  fd
+#     tolerance:          1e-4
+#     max_iterations:     1000,
+#     cached:             False
 
 constraints:
   - [initial, x-x_0, m]
@@ -35,8 +51,10 @@ constraints:
   - [terminal, x-x_f, m]
   - [terminal, y-y_f, m]
 
-# possibly use a different way to define different cost types
-path_cost: [1, s]
+costFunction:
+  costType: path
+  expression: 1
+  unit: s
 
 guess:
   type:          auto
@@ -48,9 +66,7 @@ guess:
 continuation:
   - type: manual    # Specify class here?
     num_cases: 11
-    action:
+    actions:
       - [terminal, x, 5]
-      - type:     terminal    # Alternate format
-        variable: x
-        target:   5
+      - [terminal, y, -5]
 ...
