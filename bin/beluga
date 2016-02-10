@@ -61,7 +61,6 @@ from docopt import docopt
 import beluga.Beluga as Beluga
 import os, sys, logging
 import importlib # Only works with Python >= 3.4
-import logging
 import yaml
 
 from beluga.optim.problem import *
@@ -148,7 +147,7 @@ def load_scenario(scenario_name):
         module_name, module_ext = os.path.splitext(module_file)
         sys.path.append(module_dir)
     elif (scenario_name.endswith('.yml') or scenario_name.endswith('.json'))and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
-        logging.info('Loading from YAML scenario ..')
+        # print('Loading from YAML scenario ..')
         return load_yaml(scenario_name)
     else:
         if scenario_name.isidentifier():
