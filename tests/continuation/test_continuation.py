@@ -154,5 +154,5 @@ def test_continuation_bisection(dummy_bvp_1):
     bvp1 = step_one.next() # First step successful
     bvp1.solution.converged = False # Second step failed (ctr=1 failed, but ctr is now 2)
     bvp2 = step_one.next()
-
     assert(bvp2.solution.aux['initial']['h'] == (dh[1] + dh[0])/2)
+    assert(step_one.num_cases() == 12)
