@@ -1,4 +1,5 @@
-from beluga.continuation import ContinuationList, ContinuationStep, ContinuationStepBisection
+from beluga.continuation import ContinuationList
+from beluga.continuation.strategies import ManualStrategy, BisectionStrategy
 from beluga.bvpsol import BVP, Solution
 import numpy.testing as npt
 import numpy as np
@@ -8,7 +9,7 @@ import pytest
 def test_continuation_terminal(dummy_bvp_1):
     """Tests change in terminal variables"""
 
-    step_one = ContinuationStep(num_cases=11)
+    step_one = ManualStrategy(num_cases=11)
     # Test for changing one 'terminal' variable
     step_one.terminal('x',10)
     dummy_bvp_1.solution.aux = {'terminal':{'x':0}}
@@ -28,7 +29,7 @@ def test_continuation_terminal(dummy_bvp_1):
 
 def test_continuation_initial(dummy_bvp_1):
     """Tests change in initial variables"""
-    step_one = ContinuationStep(num_cases=11)
+    step_one = ManualStrategy(num_cases=11)
     # Test for changing one 'initial' variable
     step_one.clear()
     dummy_bvp_1.solution.aux = {'initial':{'a':10}}
@@ -51,7 +52,7 @@ def test_continuation_initial(dummy_bvp_1):
 def test_continuation_const(dummy_bvp_1):
     """Tests change in 'const' values"""
 
-    step_one = ContinuationStep(num_cases=5)
+    step_one = ManualStrategy(num_cases=5)
     # Test for changing one 'const' variable
     dummy_bvp_1.solution.aux = {'const':{'rho0':0}}
     step_one.const('rho0',1.217)
@@ -62,7 +63,7 @@ def test_continuation_const(dummy_bvp_1):
 def test_continuation_mixed(dummy_bvp_1):
     """Tests change in mixed variable types"""
 
-    step_one = ContinuationStep(num_cases=51)
+    step_one = ManualStrategy(num_cases=51)
     # Test for changing one 'const' variable
     dummy_bvp_1.solution.aux = {'const':{'rho0':0},'terminal':{'h':80000}}
     step_one.const('rho0',1.217)
@@ -74,9 +75,9 @@ def test_continuation_mixed(dummy_bvp_1):
     npt.assert_equal(step_one.vars['terminal']['h'].steps, np.linspace(80000,0,51))
 
 def test_continuation(dummy_bvp_1):
-    """Tests ContinuationStep functionality"""
+    """Tests ManualStrategy functionality"""
 
-    step_one = ContinuationStep(num_cases=100)
+    step_one = ManualStrategy(num_cases=100)
     step_one.terminal('x',10)
 
     # Test for error when no BVP has been set
@@ -132,9 +133,9 @@ def test_continuation(dummy_bvp_1):
     assert len(steps) == 2
 
 def test_continuation_bisection(dummy_bvp_1):
-    """Tests ContinuationStepBisection functionality"""
+    """Tests BisectionStrategy functionality"""
 
-    step_one = ContinuationStepBisection(initial_num_cases=11)
+    step_one = BisectionStrategy(initial_num_cases=11)
 
     dummy_bvp_1.solution.aux = {'terminal':{'h':0},'initial':{'h':80000}}
     dummy_bvp_1.solution.converged = True

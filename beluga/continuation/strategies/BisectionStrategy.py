@@ -1,16 +1,16 @@
-from .ContinuationVariable import ContinuationVariable
-from .ContinuationStep import ContinuationStep
+from ..ContinuationVariable import ContinuationVariable
+from .ManualStrategy import ManualStrategy
 import numpy as np
 import logging
 
 # Can be subclassed to allow automated stepping
-class ContinuationStepBisection(ContinuationStep):
+class BisectionStrategy(ManualStrategy):
     """Defines one continuation step in continuation set"""
     # A unique short name to select this class
-    short_name = 'bisection'
-    
+    name = 'bisection'
+
     def __init__(self, initial_num_cases = 5, num_divisions = 2, tolerance = 1e-6, vars=[], bvp=None):
-        super(ContinuationStepBisection, self).__init__(num_cases=initial_num_cases)
+        super(BisectionStrategy, self).__init__(num_cases=initial_num_cases)
         self.last_bvp = None
         self.num_divisions = num_divisions
         self.tolerance = tolerance
@@ -28,7 +28,7 @@ class ContinuationStepBisection(ContinuationStep):
         # If it is the first step or if previous step converged
         # continue with usual behavior
         if self.ctr == 0 or self.last_bvp.solution.converged:
-            return super(ContinuationStepBisection, self).next()
+            return super(BisectionStrategy, self).next()
 
         # If first step didn't converge, the process fails
         if self.ctr == 1:
@@ -55,4 +55,4 @@ class ContinuationStepBisection(ContinuationStep):
         self._num_cases = self._num_cases + 1
 
         logging.info('Increasing number of cases to '+str(self._num_cases))
-        return super(ContinuationStepBisection, self).next(True)
+        return super(BisectionStrategy, self).next(True)
