@@ -89,7 +89,7 @@ def compute_control(_t,_X,_p,_aux):
 
     # guess_u = [{{#control_list}}0,{{/control_list}}]
 
-    _saved = scipy.optimize.fsolve(dHdu, compute_control.guess_u,xtol=1e-6)
+    _saved = scipy.optimize.fsolve(dHdu, compute_control.guess_u,xtol=1e-4)
 {{/control_options}}
     compute_control.guess_u = _saved
     return _saved

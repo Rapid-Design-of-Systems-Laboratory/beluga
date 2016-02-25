@@ -154,21 +154,37 @@ class NecessaryConditions(object):
         # If equality constraints are present
         # We need to solve for 'mu's as well
         lhs = self.ham_ctrl_partial
-        vars = controls
+        vars = [c.sym for c in controls]
         self.mu_vars = []
         self.mu_lhs = []
         if len(self.equality_constraints) > 0:
             self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
             self.mu_lhs = [sympify2(c.expr).subs(self.quantity_subs) for c in self.equality_constraints]
         try:
+            # var_list = list(vars + self.mu_vars)
+            # eqn_list = list(self.mu_lhs + lhs)
+
+            # for (i,ctrl_v) in enumerate(var_list):
+            #     logging.debug('Solving for '+str(ctrl_v)+' ...')
+            #     keyboard()
+            #     sol = solve(eqn_list[i], ctrl_v, dict=True)
+            #
+            #     # Substitute solution in other equations
+            #     for (j,eqn) in enumerate(eqn_list):
+            #         if j>i:
+            #             eqn_list[j] = eqn.subs(ctrl_v,sol[0][ctrl_v])
+            #     var_sol.append(sol)
+            # keyboard()
+
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(lhs+self.mu_lhs))
             # keyboard()
             var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
             logging.debug(var_sol)
             ctrl_sol = var_sol
+            # var_sol = []
             # raise ValueError() # Force mathematica
-        except Exception as e:  # FIXME: Use right exception name here
+        except ValueError as e:  # FIXME: Use right exception name here
             logging.debug(e)
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve

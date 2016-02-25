@@ -82,7 +82,7 @@ def get_problem():
     # problem.guess.setup('file',filename='fpa.dill',step=-1, iteration=-1)
 
 
-    problem.steps.add_step().num_cases(21).initial('h',0) 
+    problem.steps.add_step().num_cases(21).initial('h',0)
     problem.steps.add_step().num_cases(101).initial('gam',-70*pi/180)\
                             .terminal('theta', 0.3*pi/180)
     problem.steps.add_step().num_cases(21)  \
