@@ -24,6 +24,7 @@ class Solution(object):
         self.aux = aux
         self.state_list = state_list
         self.var_dict = None
+        self.converged = False
 
     def prepare(self, problem_data):
         """

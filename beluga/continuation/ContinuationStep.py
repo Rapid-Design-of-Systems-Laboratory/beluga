@@ -90,6 +90,5 @@ class ContinuationStep(object):
                 self.bvp.solution.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
 
         self.ctr += 1
+        self.last_bvp = self.bvp
         return self.bvp
-    # def update_var(self):
-    #     pass

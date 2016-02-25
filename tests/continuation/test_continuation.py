@@ -1,4 +1,4 @@
-from beluga.continuation import ContinuationList, ContinuationStep
+from beluga.continuation import ContinuationList, ContinuationStep, ContinuationStepBisection
 from beluga.bvpsol import BVP, Solution
 import numpy.testing as npt
 import numpy as np
@@ -122,3 +122,37 @@ def test_continuation(dummy_bvp_1):
     steps.add_step()
 
     assert len(steps) == 2
+
+def test_continuation_bisection(dummy_bvp_1):
+    """Tests ContinuationStepBisection functionality"""
+
+    step_one = ContinuationStepBisection(initial_num_cases=11)
+
+    dummy_bvp_1.solution.aux = {'terminal':{'h':0},'initial':{'h':80000}}
+    dummy_bvp_1.solution.converged = True
+    step_one.clear()
+
+    # Verify that num_cases function raises Exception
+    with pytest.raises(RuntimeError):
+        step_one.num_cases(21)
+
+    assert(step_one.num_cases() == 11)
+
+    step_one.initial('h',50000)
+    step_one.set_bvp(dummy_bvp_1)
+    i = 0
+    dh = np.linspace(80000,50000,11)
+    for bvp in step_one:
+        assert(bvp.solution.aux['initial']['h'] == dh[i])
+        i += 1
+
+    step_one.reset()
+    # Test next() function when convergence is false on second step
+    # and next() is called the third time
+
+    step_one.next()     # No parameter since no step before this one
+    bvp1 = step_one.next() # First step successful
+    bvp1.solution.converged = False # Second step failed (ctr=1 failed, but ctr is now 2)
+    bvp2 = step_one.next()
+
+    assert(bvp2.solution.aux['initial']['h'] == (dh[1] + dh[0])/2)

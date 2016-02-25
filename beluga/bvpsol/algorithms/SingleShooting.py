@@ -67,7 +67,7 @@ class SingleShooting(Algorithm):
             f = bc_func(ya,yb,p,aux)
             N[:,i] = np.imag(f)/h
             yb[i] = yb[i] - h*1.j
-            
+
         if parameters is not None:
             P = np.zeros((nBCs, p.size))
             for i in range(p.size):
@@ -286,6 +286,7 @@ class SingleShooting(Algorithm):
         else:
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
+        sol.converged = converged
         bvp.solution = sol
         sol.aux = aux
         # logging.debug(sol.y[:,0])
