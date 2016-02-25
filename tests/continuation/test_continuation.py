@@ -3,7 +3,7 @@ from beluga.bvpsol import BVP, Solution
 import numpy.testing as npt
 import numpy as np
 import pytest
-from mock import *
+# from mock import *
 
 def test_continuation_terminal(dummy_bvp_1):
     """Tests change in terminal variables"""
@@ -95,6 +95,12 @@ def test_continuation(dummy_bvp_1):
     assert(step_one.vars['terminal']['h'].value == 0)
     npt.assert_equal(step_one.vars['terminal']['h'].steps, np.zeros(100))
 
+    # Verify that error is thrown if solution diverges
+    with pytest.raises(RuntimeError):
+        bvp = step_one.next()
+        bvp.solution.converged = False
+        step_one.next()
+
     step_one.clear()
 
     # Test num_cases function
@@ -103,10 +109,12 @@ def test_continuation(dummy_bvp_1):
 
     step_one.initial('h',50000)
     step_one.set_bvp(dummy_bvp_1)
+    dummy_bvp_1.solution.coverged = True
     i = 0
     dh = np.linspace(80000,50000,21)
     for bvp in step_one:
         assert(bvp.solution.aux['initial']['h'] == dh[i])
+        bvp.solution.converged = True
         i += 1
 
     # Test reset function
@@ -132,10 +140,6 @@ def test_continuation_bisection(dummy_bvp_1):
     dummy_bvp_1.solution.converged = True
     step_one.clear()
 
-    # Verify that num_cases function raises Exception
-    with pytest.raises(RuntimeError):
-        step_one.num_cases(21)
-
     assert(step_one.num_cases() == 11)
 
     step_one.initial('h',50000)
@@ -151,6 +155,11 @@ def test_continuation_bisection(dummy_bvp_1):
     # and next() is called the third time
 
     step_one.next()     # No parameter since no step before this one
+
+    # Verify that num_cases function raises Exception if called between iterations
+    with pytest.raises(RuntimeError):
+        step_one.num_cases(21)
+
     bvp1 = step_one.next() # First step successful
     bvp1.solution.converged = False # Second step failed (ctr=1 failed, but ctr is now 2)
     bvp2 = step_one.next()
