@@ -355,6 +355,7 @@ class MultipleShooting(Algorithm):
             # Fix this to be something more elegant
             sol = Solution(np.nan, np.nan, np.nan)
 
+        sol.converged = converged
         bvp.solution = sol
         sol.aux = aux
 
