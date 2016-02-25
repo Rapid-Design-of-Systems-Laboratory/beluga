@@ -290,7 +290,7 @@ class MultipleShooting(Algorithm):
                 #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
             # Propagate STM and original system together
-            tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux)
+            tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance, reltol=self.tolerance)
 
             # Obtain just last timestep for use with correction
             yf = [yySTM[i][-1] for i in range(self.number_arcs)]
@@ -317,13 +317,17 @@ class MultipleShooting(Algorithm):
             if r0 is not None:
                 beta = (r0-r1)/(alpha*r0)
                 if beta < 0:
-                    beta = 1
+                    beta = 0.01*abs(beta)  # Damp more if error increasing
+
             if r1>1:
                 alpha = 1/(2*r1)
+            elif r0 is not None and r0 > r1 and (r0-r1) < self.tolerance/10: # If change from last step is too small, kick it up
+                alpha = alpha*10
+                beta = 1
             else:
                 alpha = 1
-            r0 = r1
 
+            r0 = r1
             dy0 = alpha*beta*np.linalg.solve(J,-res)
 
             #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
@@ -349,7 +353,7 @@ class MultipleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=1e-6, reltol=1e-6)
+            x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=self.tolerance, reltol=self.tolerance*10)
             sol = Solution(x1,y1.T,paramGuess)
         else:
             # Fix this to be something more elegant

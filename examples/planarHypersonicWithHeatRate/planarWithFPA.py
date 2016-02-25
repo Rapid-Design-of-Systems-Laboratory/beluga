@@ -86,7 +86,9 @@ def get_problem():
             .quantity('psi11','(exp(-xi11)*0)')
     problem.constraints('default',0).initial('xi11 - xi11_0','kg/s^3') \
                                 # .equality(c1_1+' - '+h1_2,'kg/s^4')
-    problem.constant('inverseKgSecondSquared',1,'kg^(-1)*s^2')
+    problem.constant('Wsec3pkg',1,'W*s^3*kg^-1')
+    problem.constant('invW',1,'W^-1')
+    problem.constant('sec',1,'s')
 
     # # Control constraint
     # c2 = '(alfaDot)'
@@ -97,15 +99,12 @@ def get_problem():
     # problem.constant('inverseSecondSquared',1,'1/s^2')
     # problem.constraints('default',0).equality(c2+' - '+h2,'rad/s')
 
-    # problem.cost['path'] = Expression('eps1*(inverseKgSecondSquared^2*ue1^2)','m^2/s^2')
-    # problem.cost['path'] = Expression('eps1*(inverseKgSecondSquared^2*ue1^2 + inverseSecondSquared*ue2^2)','m^2/s^2')
-
     problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180,0])
 
-    problem.steps.add_step().num_cases(5) \
+    problem.steps.add_step().num_cases(101) \
                             .terminal('h', 0)
 
-    problem.steps.add_step().num_cases(31).initial('gam',-60*pi/180)\
+    problem.steps.add_step().num_cases(61).initial('gam',-60*pi/180)\
                             .terminal('theta', 1.0*pi/180)
     problem.steps.add_step().num_cases(41)  \
                             .terminal('theta', 4*pi/180)
