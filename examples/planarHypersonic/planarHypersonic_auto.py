@@ -74,7 +74,7 @@ def get_problem():
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
     # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=50, verbose = True, cached = False)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -85,21 +85,15 @@ def get_problem():
     # Is this actually an Expression rather than a Value?
     # problem.quantity = [Value('tanAng','tan(theta)')]
 
-    problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
+    problem.guess.setup('auto',start=[80000,0.0001,5000,-90*pi/180])
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
     # Figure out nicer way of representing this. Done?
 
-    problem.steps.add_step().num_cases(5) \
-                            .terminal('h', 0)
-
-    problem.steps.add_step().num_cases(11)  \
+    problem.steps.add_step(ContinuationStepBisection()) \
+                            .terminal('h', 0)  \
+                            .initial('theta',0) \
                             .terminal('theta', 10*pi/180)
-    # #
-    # problem.steps.add_step()
-    #                 .num_cases(3)
-    #                 .terminal('x', 40.0)
-    #                 .terminal('y',-40.0)
-    # )
+    
     return problem
 
 if __name__ == '__main__':

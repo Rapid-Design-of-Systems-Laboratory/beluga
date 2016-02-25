@@ -1,20 +1,24 @@
 from .ContinuationVariable import ContinuationVariable
 from .ContinuationStep import ContinuationStep
 import numpy as np
+import logging
 
 # Can be subclassed to allow automated stepping
 class ContinuationStepBisection(ContinuationStep):
     """Defines one continuation step in continuation set"""
-
-    def __init__(self, initial_num_cases = 10, num_divisions = 2, vars=[], bvp=None):
+    # A unique short name to select this class
+    short_name = 'bisection'
+    
+    def __init__(self, initial_num_cases = 5, num_divisions = 2, tolerance = 1e-6, vars=[], bvp=None):
         super(ContinuationStepBisection, self).__init__(num_cases=initial_num_cases)
         self.last_bvp = None
         self.num_divisions = num_divisions
+        self.tolerance = tolerance
 
-    def num_cases(self,num_cases=None):
-        if num_cases is not None:
-            raise RuntimeError('Cannot set num_cases on automated continuation object')
-        return super(ContinuationStepBisection, self).num_cases()
+    def tolerance(self, tolerance=None):
+        if tolerance is not None:
+            return self.tolerance
+        self.tolerance = tolerance
 
     def next(self):
         """Generator class to create BVPs for the continuation step iterations
@@ -28,6 +32,7 @@ class ContinuationStepBisection(ContinuationStep):
 
         # If first step didn't converge, the process fails
         if self.ctr == 1:
+            logging.error('Initial guess should converge for automated continuation to work!!')
             raise RuntimeError('Initial guess should converge for automated continuation to work!!')
             return self.last_bvp
 
@@ -39,11 +44,15 @@ class ContinuationStepBisection(ContinuationStep):
                 # insert new steps
                 old_steps = self.vars[var_type][var_name].steps
                 new_steps = np.linspace(old_steps[self.ctr-2],old_steps[self.ctr-1],self.num_divisions+1)
-
                 # Insert new steps
                 self.vars[var_type][var_name].steps = np.insert(self.vars[var_type][var_name].steps,
                                                                 self.ctr-1,
                                                                 new_steps[1:-1] # Ignore repeated elements
                                                                 )
+        # Move the counter back
         self.ctr = self.ctr - 1
-        return super(ContinuationStepBisection, self).next()
+        # Increment total number of steps
+        self._num_cases = self._num_cases + 1
+
+        logging.info('Increasing number of cases to '+str(self._num_cases))
+        return super(ContinuationStepBisection, self).next(True)
