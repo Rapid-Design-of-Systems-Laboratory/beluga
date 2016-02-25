@@ -4,6 +4,7 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
+from beluga.continuation.strategies import BisectionStrategy
 from math import *
 
 import functools
@@ -89,11 +90,11 @@ def get_problem():
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
     # Figure out nicer way of representing this. Done?
 
-    problem.steps.add_step(ContinuationStepBisection()) \
+    problem.steps.add_step('bisection') \
                             .terminal('h', 0)  \
                             .initial('theta',0) \
                             .terminal('theta', 10*pi/180)
-    
+
     return problem
 
 if __name__ == '__main__':

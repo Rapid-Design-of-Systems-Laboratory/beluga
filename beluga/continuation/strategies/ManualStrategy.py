@@ -1,12 +1,11 @@
-from .ContinuationVariable import ContinuationVariable
+from beluga.continuation.ContinuationVariable import ContinuationVariable
 import numpy as np
 import logging
 # Can be subclassed to allow automated stepping
-class ContinuationStep(object):
+class ManualStrategy(object):
     """Defines one continuation step in continuation set"""
-
     # A unique short name to select this class
-    short_name = 'manual'
+    name = 'manual'
 
     def __init__(self, num_cases = 1,vars=[], bvp=None):
         self.bvp = bvp
@@ -18,10 +17,12 @@ class ContinuationStep(object):
     def reset(self):
         """Resets the internal step counter to zero"""
         self.ctr = 0
+        self.last_bvp = None
 
     def clear(self):
         """Clears all the previously set continuation variables"""
         self.vars = {}
+        self.reset()
     #
     # def get_ctr(self):
     #     return self.ctr

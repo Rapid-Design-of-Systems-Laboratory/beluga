@@ -85,7 +85,8 @@ def problem_1():
 
 def dummy_bvp_1():
     dummy_bvp = Mock(bvpsol.BVP)
-    dummy_bvp.solution = Mock(bvpsol.Solution)
+    dummy_bvp.solution = bvpsol.Solution()
+    dummy_bvp.solution.converged = True
     return dummy_bvp
 
 @pytest.fixture(scope='session')
