@@ -40,7 +40,7 @@ def get_problem():
                    .unit('nd',1)
 
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10000, verbose = True, cached=False, number_arcs=2)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=40, verbose = True, cached=False, number_arcs=2)
 
 
     # Smoothed path constraint
@@ -78,16 +78,16 @@ def get_problem():
                     )
 
     # problem.steps.add_step().num_cases(11) \
-    problem.steps.add_step().num_cases(41)   \
+    problem.steps.add_step('bisection', max_divisions=30).num_cases(51)   \
                             .terminal('x',0) \
                             .initial('v',1) \
                             .terminal('v', -1)
                             # .const('lim',0.20)
-
-    problem.steps.add_step().num_cases(101)      \
+    #
+    problem.steps.add_step('bisection').num_cases(11)      \
                             .const('lim',0.14)
     # #
-    problem.steps.add_step().num_cases(101,spacing='log')      \
+    problem.steps.add_step('bisection').num_cases(11,spacing='log')      \
                             .const('eps1',1e-5)
     return problem
 
