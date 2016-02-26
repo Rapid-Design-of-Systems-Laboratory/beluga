@@ -352,9 +352,10 @@ class MultipleShooting(Algorithm):
             x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=1e-6, reltol=1e-6)
             sol = Solution(x1,y1.T,paramGuess)
         else:
-            # Fix this to be something more elegant
-            sol = Solution(np.nan, np.nan, np.nan)
+            # Return initial guess if it failed to converge
+            sol = solinit
 
+        sol.converged = converged
         bvp.solution = sol
         sol.aux = aux
 
