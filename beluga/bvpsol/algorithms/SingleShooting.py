@@ -67,7 +67,7 @@ class SingleShooting(Algorithm):
             f = bc_func(ya,yb,p,aux)
             N[:,i] = np.imag(f)/h
             yb[i] = yb[i] - h*1.j
-            
+
         if parameters is not None:
             P = np.zeros((nBCs, p.size))
             for i in range(p.size):
@@ -284,8 +284,9 @@ class SingleShooting(Algorithm):
             x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-5, reltol=1e-5)
             sol = Solution(x1,y1.T,paramGuess,aux)
         else:
-            # Fix this to be something more elegant
-            sol = Solution(np.nan, np.nan, np.nan)
+            # Return initial guess if it failed to converge
+            sol = solinit
+        sol.converged = converged
         bvp.solution = sol
         sol.aux = aux
         # logging.debug(sol.y[:,0])

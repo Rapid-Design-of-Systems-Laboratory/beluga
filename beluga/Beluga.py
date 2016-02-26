@@ -125,7 +125,8 @@ class Beluga(object):
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:
-            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2)
 
         # Set the cache directory to be in the current folder
         cache_dir = os.getcwd()+'/_cache'
@@ -197,6 +198,7 @@ class Beluga(object):
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
         self.out = {};
+
         self.out['problem_data'] = bvp.problem_data;
         self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
         total_time = toc();
@@ -223,56 +225,58 @@ class Beluga(object):
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
-        s.initialize(self.problem,bvp_start.problem_data)
 
-        for step_idx,step in enumerate(steps):
-            # Assign BVP from last continuation set
-            step.reset()
-            logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+        s.initialize(self.problem,self.nec_cond.problem_data)
+        try:
+            for step_idx,step in enumerate(steps):
+                # Assign BVP from last continuation set
+                step.reset()
+                logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
-            solution_set.append(ContinuationSolution())
-            if step_idx == 0:
-                step.set_bvp(bvp_start)
-            else:
-                # Use the bvp & solution from last continuation set
-                step.set_bvp(steps[step_idx-1].bvp)
+                solution_set.append(ContinuationSolution())
+                if step_idx == 0:
+                    step.set_bvp(bvp_start)
+                else:
+                    # Use the bvp & solution from last continuation set
+                    step.set_bvp(steps[step_idx-1].bvp)
 
-            for bvp in step:
-                logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
-                tic()
+                for bvp in step:
+                    logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                    tic()
 
-                s.compute_scaling(bvp)
-                s.scale(bvp)
+                    s.compute_scaling(bvp)
+                    s.scale(bvp)
 
-                # sol is just a reference to bvp.solution
-                sol = self.problem.bvp_solver.solve(bvp)
+                    # sol is just a reference to bvp.solution
+                    sol = self.problem.bvp_solver.solve(bvp)
 
-                # Post-processing phase
-                # Compute control history
-                # sol.u = np.zeros((len(bvp.problem_data['control_list']),len(sol.x)))
+                    s.unscale(bvp)
+                    if sol.converged:
+                        # Post-processing phase
+                        # Compute control history
+                        # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
 
-                # Required for plotting to work with control variables
-                sol.ctrl_expr = bvp.problem_data['control_options']
-                sol.ctrl_vars = bvp.problem_data['control_list']
+                        # Required for plotting to work with control variables
+                        sol.ctrl_expr = self.nec_cond.problem_data['control_options']
+                        sol.ctrl_vars = self.nec_cond.problem_data['control_list']
 
-                #TODO: Make control computation more efficient
-                # for i in range(len(sol.x)):
-                #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
-                #     sol.u[:,i] = _u
-                f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
-                sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
+                        #TODO: Make control computation more efficient
+                        # for i in range(len(sol.x)):
+                        #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
+                        #     sol.u[:,i] = _u
+                        f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
+                        sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
-                s.unscale(bvp)
+                        # Update solution for next iteration
+                        solution_set[step_idx].append(copy.deepcopy(bvp.solution))
 
-                # Update solution for next iteration
-                solution_set[step_idx].append(copy.deepcopy(bvp.solution))
+                        elapsed_time = toc()
+                        logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
+                    else:
+                        elapsed_time = toc()
+                        logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+        except Exception as e:
+            logging.error('Exception : '+str(e))
+            logging.error('Stopping')
 
-                elapsed_time = toc()
-                logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
-                # plt.plot(sol.y[0,:], sol.y[1,:],'-')
-                # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
-
-            # plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
-            # plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
-            # print(sol.y[:,0])
         return solution_set
