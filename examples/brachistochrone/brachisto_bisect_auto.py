@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import beluga.Beluga as Beluga
@@ -65,23 +64,10 @@ def get_problem():
                     costate_guess = -0.1
                     )
 
-    # Figure out nicer way of representing this. Done?
-    problem.steps.add_step(ContinuationStep()
-                    .num_cases(11)
-                    .terminal('x', 5)
-                    .terminal('y',-5)
-                    )
+    problem.steps.add_step('bisection', initial_num_cases=5) \
+                    .terminal('x', 1000) \
+                    .terminal('y',-1000)
 
-    # (
-    # problem.steps.add_step().num_cases(2)
-    #                  .terminal('x', 30.0)
-    #                  .terminal('y',-30.0),
-
-    # problem.steps.add_step()
-    #                 .num_cases(10)
-    #                 .terminal('x', 1000.0)
-    #                 .terminal('y',-1000.0)
-    # )
     return problem
 
 if __name__ == '__main__':
