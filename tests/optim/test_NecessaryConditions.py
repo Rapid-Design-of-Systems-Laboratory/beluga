@@ -110,7 +110,8 @@ def test_make_ham():
     mock_obj = Mock(NecessaryConditions)
     mock_obj.costates = [sympify2('lamX'), sympify2('lamY')]
     mock_obj.ham = sympify2('0')
-
+    mock_obj.equality_constraints = []
+    
     problem = Problem('test_make_ham')
     problem.cost = {}
     problem.cost['initial'] = Expression('x','m')
