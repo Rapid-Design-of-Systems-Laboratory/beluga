@@ -5,8 +5,9 @@ import os, sys
 if sys.argv[-1] == 'test':
     test_requirements = [
         'pytest',
-        'pytest-cov'
-        'coverage'
+        'pytest-cov',
+        'coverage',
+	'mock'
     ]
     try:
         modules = map(__import__, test_requirements)

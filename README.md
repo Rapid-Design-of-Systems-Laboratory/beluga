@@ -31,7 +31,7 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
 
   Enter all the information that is requested.
 
-  3. Get a text editor or development environment of your choice. My favorite is [Atom](http://atom.io). Others recommend [PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/).
+  3. Get a text editor or development environment of your choice. My favorite is [Atom](http://atom.io). Some of the recommended addons for Atom are: TODO-show, minimap, linter, linter-pep8, minimap-linter, highlight-selected, minimap-highlight-selected and many more.  [PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/). is another editor you may want to check out.
 
   4. Start coding!
 

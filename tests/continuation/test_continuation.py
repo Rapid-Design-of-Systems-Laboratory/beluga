@@ -1,14 +1,15 @@
-from beluga.continuation import ContinuationList, ContinuationStep
+from beluga.continuation import ContinuationList
+from beluga.continuation.strategies import ManualStrategy, BisectionStrategy
 from beluga.bvpsol import BVP, Solution
 import numpy.testing as npt
 import numpy as np
 import pytest
-from mock import *
+# from mock import *
 
 def test_continuation_terminal(dummy_bvp_1):
     """Tests change in terminal variables"""
 
-    step_one = ContinuationStep(num_cases=11)
+    step_one = ManualStrategy(num_cases=11)
     # Test for changing one 'terminal' variable
     step_one.terminal('x',10)
     dummy_bvp_1.solution.aux = {'terminal':{'x':0}}
@@ -28,7 +29,7 @@ def test_continuation_terminal(dummy_bvp_1):
 
 def test_continuation_initial(dummy_bvp_1):
     """Tests change in initial variables"""
-    step_one = ContinuationStep(num_cases=11)
+    step_one = ManualStrategy(num_cases=11)
     # Test for changing one 'initial' variable
     step_one.clear()
     dummy_bvp_1.solution.aux = {'initial':{'a':10}}
@@ -51,7 +52,7 @@ def test_continuation_initial(dummy_bvp_1):
 def test_continuation_const(dummy_bvp_1):
     """Tests change in 'const' values"""
 
-    step_one = ContinuationStep(num_cases=5)
+    step_one = ManualStrategy(num_cases=5)
     # Test for changing one 'const' variable
     dummy_bvp_1.solution.aux = {'const':{'rho0':0}}
     step_one.const('rho0',1.217)
@@ -62,7 +63,7 @@ def test_continuation_const(dummy_bvp_1):
 def test_continuation_mixed(dummy_bvp_1):
     """Tests change in mixed variable types"""
 
-    step_one = ContinuationStep(num_cases=51)
+    step_one = ManualStrategy(num_cases=51)
     # Test for changing one 'const' variable
     dummy_bvp_1.solution.aux = {'const':{'rho0':0},'terminal':{'h':80000}}
     step_one.const('rho0',1.217)
@@ -74,9 +75,9 @@ def test_continuation_mixed(dummy_bvp_1):
     npt.assert_equal(step_one.vars['terminal']['h'].steps, np.linspace(80000,0,51))
 
 def test_continuation(dummy_bvp_1):
-    """Tests ContinuationStep functionality"""
+    """Tests ManualStrategy functionality"""
 
-    step_one = ContinuationStep(num_cases=100)
+    step_one = ManualStrategy(num_cases=100)
     step_one.terminal('x',10)
 
     # Test for error when no BVP has been set
@@ -95,6 +96,12 @@ def test_continuation(dummy_bvp_1):
     assert(step_one.vars['terminal']['h'].value == 0)
     npt.assert_equal(step_one.vars['terminal']['h'].steps, np.zeros(100))
 
+    # Verify that error is thrown if solution diverges
+    with pytest.raises(RuntimeError):
+        bvp = step_one.next()
+        bvp.solution.converged = False
+        step_one.next()
+
     step_one.clear()
 
     # Test num_cases function
@@ -103,10 +110,12 @@ def test_continuation(dummy_bvp_1):
 
     step_one.initial('h',50000)
     step_one.set_bvp(dummy_bvp_1)
+    dummy_bvp_1.solution.coverged = True
     i = 0
     dh = np.linspace(80000,50000,21)
     for bvp in step_one:
         assert(bvp.solution.aux['initial']['h'] == dh[i])
+        bvp.solution.converged = True
         i += 1
 
     # Test reset function
@@ -120,5 +129,49 @@ def test_continuation(dummy_bvp_1):
     steps = ContinuationList()
     steps.add_step(step_one)
     steps.add_step()
+    steps.add_step('manual')
 
-    assert len(steps) == 2
+    assert len(steps) == 3
+
+def test_continuation_bisection(dummy_bvp_1):
+    """Tests BisectionStrategy functionality"""
+
+    step_one = BisectionStrategy(initial_num_cases=11)
+
+    dummy_bvp_1.solution.aux = {'terminal':{'h':0},'initial':{'h':80000}}
+    dummy_bvp_1.solution.converged = True
+    step_one.clear()
+
+    assert(step_one.num_cases() == 11)
+
+    step_one.initial('h',50000)
+    step_one.set_bvp(dummy_bvp_1)
+    i = 0
+    dh = np.linspace(80000,50000,11)
+    for bvp in step_one:
+        assert(bvp.solution.aux['initial']['h'] == dh[i])
+        i += 1
+
+    step_one.reset()
+    # Test next() function when convergence is false on second step
+    # and next() is called the third time
+
+    step_one.next()     # No parameter since no step before this one
+
+    # Verify that num_cases function raises Exception if called between iterations
+    with pytest.raises(RuntimeError):
+        step_one.num_cases(21)
+
+    # Test bisection strategy
+    bvp1 = step_one.next() # First step successful
+    bvp1.solution.converged = False # Second step failed (ctr=1 failed, but ctr is now 2)
+    bvp2 = step_one.next()
+    assert(bvp2.solution.aux['initial']['h'] == (dh[1] + dh[0])/2)
+    assert(step_one.num_cases() == 12)
+
+    # Check if stopping condition is functional
+    with pytest.raises(RuntimeError):
+        step_one.reset()
+        step_one.max_divisions = 2
+        for bvp in step_one:
+            bvp.solution.converged = False
