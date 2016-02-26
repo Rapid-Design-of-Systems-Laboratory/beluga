@@ -327,8 +327,8 @@ class MultipleShooting(Algorithm):
                     beta = 1
                 else:
                     alpha = 1
-
                 r0 = r1
+                
                 dy0 = alpha*beta*np.linalg.solve(J,-res)
 
                 #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
