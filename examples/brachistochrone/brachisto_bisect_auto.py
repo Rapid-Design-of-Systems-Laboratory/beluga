@@ -64,10 +64,9 @@ def get_problem():
                     costate_guess = -0.1
                     )
 
-    problem.steps.add_step(ContinuationStepBisection(initial_num_cases=2)
-                    .terminal('x', 1000)
+    problem.steps.add_step('bisection', initial_num_cases=5) \
+                    .terminal('x', 1000) \
                     .terminal('y',-1000)
-                    )
 
     return problem
 
