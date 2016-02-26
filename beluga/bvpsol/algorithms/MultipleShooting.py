@@ -276,7 +276,7 @@ class MultipleShooting(Algorithm):
 
         while True:
             if iter>self.max_iterations:
-                logging.WARN("Maximum iterations exceeded!")
+                logging.warn("Maximum iterations exceeded!")
                 break
 
             y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
