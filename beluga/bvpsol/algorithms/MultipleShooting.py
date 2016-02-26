@@ -274,80 +274,82 @@ class MultipleShooting(Algorithm):
 
         tspan = [t0,tf]
 
-        while True:
-            if iter>self.max_iterations:
-                logging.WARN("Maximum iterations exceeded!")
-                break
+        try:
+            while True:
+                if iter>self.max_iterations:
+                    logging.warn("Maximum iterations exceeded!")
+                    break
 
-            y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
+                y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
 
-            for i in range(self.number_arcs):
-                left = np.floor(i/self.number_arcs*t.shape[0])
-                right = np.floor((i+1)/self.number_arcs*t.shape[0])
-                if i == self.number_arcs-1:
-                    right = t.shape[0] - 1
-                tspanset[i] = [t[left],t[right]]
-                #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
-
-            # Propagate STM and original system together
-            tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance, reltol=self.tolerance)
-
-            # Obtain just last timestep for use with correction
-            yf = [yySTM[i][-1] for i in range(self.number_arcs)]
-            # Extract states and STM from ode45 output
-            yb = [yf[i][:nOdes] for i in range(self.number_arcs)]  # States
-            phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(self.number_arcs)] # STM
-
-            # Evaluate the boundary conditions
-            res = self.get_bc(y0g, yb, paramGuess, aux)
-            # Solution converged if BCs are satisfied to tolerance
-            if max(abs(res)) < self.tolerance:
-                if self.verbose:
-                    logging.info("Converged in "+str(iter)+" iterations.")
-                converged = True
-                break
-            # logging.debug(paramGuess)
-            # Compute Jacobian of boundary conditions using numerical derviatives
-            J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
-
-            # Compute correction vector
-            r1 = np.linalg.norm(res)
-            if self.verbose:
-                logging.debug('Residue: '+str(r1))
-            if r0 is not None:
-                beta = (r0-r1)/(alpha*r0)
-                if beta < 0:
-                    beta = 0.01*abs(beta)  # Damp more if error increasing
-
-            if r1>1:
-                alpha = 1/(2*r1)
-            elif r0 is not None and r0 > r1 and (r0-r1) < self.tolerance/10: # If change from last step is too small, kick it up
-                alpha = alpha*10
-                beta = 1
-            else:
-                alpha = 1
-
-            r0 = r1
-            dy0 = alpha*beta*np.linalg.solve(J,-res)
-
-            #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
-
-            # dy0 = np.linalg.solve(J,-res)
-            # if abs(r1 - 0.110277711594) < 1e-4:
-            #     from beluga.utils import keyboard
-
-            # Apply corrections to states and parameters (if any)
-
-            if nParams > 0:
-                dp = dy0[(nOdes*self.number_arcs):]
-                dy0 = dy0[:(nOdes*self.number_arcs)]
-                paramGuess = paramGuess + dp
                 for i in range(self.number_arcs):
-                    y0g[i] = y0g[i] + dy0[(i*nOdes):((i+1)*nOdes)]
-            else:
-                y0g = y0g + dy0
-            iter = iter+1
+                    left = np.floor(i/self.number_arcs*t.shape[0])
+                    right = np.floor((i+1)/self.number_arcs*t.shape[0])
+                    if i == self.number_arcs-1:
+                        right = t.shape[0] - 1
+                    tspanset[i] = [t[left],t[right]]
+                    #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
+                # Propagate STM and original system together
+                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance, reltol=self.tolerance)
+
+                # Obtain just last timestep for use with correction
+                yf = [yySTM[i][-1] for i in range(self.number_arcs)]
+                # Extract states and STM from ode45 output
+                yb = [yf[i][:nOdes] for i in range(self.number_arcs)]  # States
+                phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(self.number_arcs)] # STM
+
+                # Evaluate the boundary conditions
+                res = self.get_bc(y0g, yb, paramGuess, aux)
+                # Solution converged if BCs are satisfied to tolerance
+                if max(abs(res)) < self.tolerance:
+                    if self.verbose:
+                        logging.info("Converged in "+str(iter)+" iterations.")
+                    converged = True
+                    break
+                # logging.debug(paramGuess)
+                # Compute Jacobian of boundary conditions using numerical derviatives
+                J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
+
+                # Compute correction vector
+                r1 = np.linalg.norm(res)
+                if self.verbose:
+                    logging.debug('Residue: '+str(r1))
+                if r0 is not None:
+                    beta = (r0-r1)/(alpha*r0)
+                    if beta < 0:
+                        beta = 0.1*abs(beta)  # Damp more if error increasing
+
+                if r1>1:
+                    alpha = 1/(2*r1)
+                elif r0 is not None and r0 > r1 and (r0-r1) < self.tolerance/100: # If change from last step is too small, kick it up
+                    alpha = alpha*10
+                    beta = 1
+                else:
+                    alpha = 1
+
+                r0 = r1
+                dy0 = alpha*beta*np.linalg.solve(J,-res)
+
+                #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
+
+                # dy0 = np.linalg.solve(J,-res)
+                # if abs(r1 - 0.110277711594) < 1e-4:
+                #     from beluga.utils import keyboard
+
+                # Apply corrections to states and parameters (if any)
+
+                if nParams > 0:
+                    dp = dy0[(nOdes*self.number_arcs):]
+                    dy0 = dy0[:(nOdes*self.number_arcs)]
+                    paramGuess = paramGuess + dp
+                    for i in range(self.number_arcs):
+                        y0g[i] = y0g[i] + dy0[(i*nOdes):((i+1)*nOdes)]
+                else:
+                    y0g = y0g + dy0
+                iter = iter+1
+        except Exception as e:
+            logging.warn(e)
             # print iter
 
         # If problem converged, propagate solution to get full trajectory

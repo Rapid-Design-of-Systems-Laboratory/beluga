@@ -28,7 +28,7 @@ class ConstraintList(list):
         return self
 
     def path(self, expr, direction, limit, unit):
-        self.add(Constraint('path',expr, unit, direction, limit))
+        self.add(Constraint('path', expr, unit, direction, limit))
         return self
 
     def add(self,constraint=None):

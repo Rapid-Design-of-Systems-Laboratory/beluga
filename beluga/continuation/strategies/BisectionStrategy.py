@@ -60,7 +60,7 @@ class BisectionStrategy(ManualStrategy):
         # Move the counter back
         self.ctr = self.ctr - 1
         # Increment total number of steps
-        self._num_cases = self._num_cases + 1
+        self._num_cases = self._num_cases + self.num_divisions-1
 
         logging.info('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
