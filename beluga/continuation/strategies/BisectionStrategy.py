@@ -9,16 +9,12 @@ class BisectionStrategy(ManualStrategy):
     # A unique short name to select this class
     name = 'bisection'
 
-    def __init__(self, initial_num_cases = 5, num_divisions = 2, tolerance = 1e-6, vars=[], bvp=None):
+    def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2, vars=[], bvp=None):
         super(BisectionStrategy, self).__init__(num_cases=initial_num_cases)
         self.last_bvp = None
         self.num_divisions = num_divisions
-        self.tolerance = tolerance
-
-    def tolerance(self, tolerance=None):
-        if tolerance is not None:
-            return self.tolerance
-        self.tolerance = tolerance
+        self.max_divisions = max_divisions
+        self.division_ctr = 0
 
     def next(self):
         """Generator class to create BVPs for the continuation step iterations
@@ -28,13 +24,19 @@ class BisectionStrategy(ManualStrategy):
         # If it is the first step or if previous step converged
         # continue with usual behavior
         if self.ctr == 0 or self.last_bvp.solution.converged:
+            # Reset division counter
+            self.division_ctr = 0
             return super(BisectionStrategy, self).next()
 
         # If first step didn't converge, the process fails
         if self.ctr == 1:
             logging.error('Initial guess should converge for automated continuation to work!!')
-            raise RuntimeError('Initial guess should converge for automated continuation to work!!')
+            raise RuntimeError('Initial guess does not converge.')
             return self.last_bvp
+
+        if self.division_ctr > self.max_divisions:
+            logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
+            raise RuntimeError('Exceeded max_divisions')
 
         # If previous step did not converge, move back a half step
         for var_type in self.vars.keys():
@@ -54,5 +56,6 @@ class BisectionStrategy(ManualStrategy):
         # Increment total number of steps
         self._num_cases = self._num_cases + 1
 
-        logging.info('Increasing number of cases to '+str(self._num_cases))
+        logging.info('Increasing number of cases to '+str(self._num_cases)+'\n')
+        self.division_ctr = self.division_ctr + 1
         return super(BisectionStrategy, self).next(True)

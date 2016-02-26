@@ -129,8 +129,9 @@ def test_continuation(dummy_bvp_1):
     steps = ContinuationList()
     steps.add_step(step_one)
     steps.add_step()
+    steps.add_step('manual')
 
-    assert len(steps) == 2
+    assert len(steps) == 3
 
 def test_continuation_bisection(dummy_bvp_1):
     """Tests BisectionStrategy functionality"""
@@ -161,8 +162,16 @@ def test_continuation_bisection(dummy_bvp_1):
     with pytest.raises(RuntimeError):
         step_one.num_cases(21)
 
+    # Test bisection strategy
     bvp1 = step_one.next() # First step successful
     bvp1.solution.converged = False # Second step failed (ctr=1 failed, but ctr is now 2)
     bvp2 = step_one.next()
     assert(bvp2.solution.aux['initial']['h'] == (dh[1] + dh[0])/2)
     assert(step_one.num_cases() == 12)
+
+    # Check if stopping condition is functional
+    with pytest.raises(RuntimeError):
+        step_one.reset()
+        step_one.max_divisions = 2
+        for bvp in step_one:
+            bvp.solution.converged = False
