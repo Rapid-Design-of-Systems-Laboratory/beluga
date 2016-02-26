@@ -5,9 +5,16 @@ from .. import Solution
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
-from beluga.utils.joblib import Memory
+# from beluga.utils.joblib import Memory
+# from joblib import Memory
 import logging
 
+from klepto.archives import file_archive, dir_archive
+from klepto import inf_cache as memoized
+from klepto.keymaps import picklemap
+
+dumps = picklemap(typed=True, flat=False, serializer='dill')
+#TODO: Save time steps from ode45 and use for fixed step RK4
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
         self.tolerance = tolerance
@@ -28,9 +35,13 @@ class SingleShooting(Algorithm):
 
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
-        if self.cached and cache_dir is not None:
-            memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
-            self.solve = memory.cache(self.solve)
+        # if self.cached and cache_dir is not None:
+        #     # memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
+        #     #
+        #     # self.solve = memory.cache(self.solve)
+        #     dumps = picklemap(flat=False, serializer='dill')
+        #     # dircache = file_archive()
+        #     # self.solve = memoized(cache=dircache, keymap=dumps, ignore='self')(self.solve)
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
@@ -47,19 +58,13 @@ class SingleShooting(Algorithm):
         N = np.zeros((nBCs, nOdes))
         for i in range(nOdes):
             ya[i] = ya[i] + h*1.j
-            # if parameters is not None:
             f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
-
             M[:,i] = np.imag(f)/h
             ya[i] = ya[i] - h*1.j
-        # for i in range(nOdes):
+
             yb[i] = yb[i] + h*1.j
-            # if parameters is not None:
+
             f = bc_func(ya,yb,p,aux)
-            # else:
-            #     f = bc_func(ya,yb)
             N[:,i] = np.imag(f)/h
             yb[i] = yb[i] - h*1.j
 
@@ -156,33 +161,8 @@ class SingleShooting(Algorithm):
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
         # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
-    # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
-    #     "Automatic differentiation version of State Transition Matrix"
-    #     phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-    #     # Y = np.array(y[0:nOdes],dtype=complex)  # Just states
-    #     # F = np.zeros((nOdes,nOdes))
-    #     # # Compute Jacobian matrix using complex step derivative
-    #     # for i in range(nOdes):
-    #     #     Y[i] = Y[i] + StepSize*1.j
-    #     #     F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
-    #     #     Y[i] = Y[i] - StepSize*1.j
-    #     f = Function(odefn)
-    #     g = Gradient(odefn)
-    #
-    #     # Phidot = F*Phi (matrix product)
-    #     # phiDot = np.real(np.dot(F,phi))
-    #     phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
-    #     # return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-    #     return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
-
-
-    # @staticmethod
-    # def ode_wrap(func,*args, **argd):
-    #    def func_wrapper(x,y0):
-    #        return func(x,y0,*args,**argd)
-    #    return func_wrapper
-
-    def solve(self,bvp,worker=None):
+    # @memoized(cache=file_archive(serialized=True, cached=False), ignore='self')
+    def solve(self,bvp):
         """Solve a two-point boundary value problem
             using the single shooting method
 
@@ -248,7 +228,7 @@ class SingleShooting(Algorithm):
             # Evaluate the boundary conditions
             res = bc_func(y0g, yb, paramGuess, aux)
 
-            self.bc_jac_func = self.__bcjac_csd
+            # self.bc_jac_func = self.__bcjac_csd
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
@@ -294,8 +274,9 @@ class SingleShooting(Algorithm):
                 y0g = y0g + dy0
             else:
                 y0g = y0g + dy0
+
             iter = iter+1
-            # print iters
+            logging.debug('Iteration #'+str(iter))
 
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
@@ -303,9 +284,10 @@ class SingleShooting(Algorithm):
             x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-5, reltol=1e-5)
             sol = Solution(x1,y1.T,paramGuess,aux)
         else:
-            # Fix this to be something more elegant
-            sol = Solution(np.nan, np.nan, np.nan)
+            # Return initial guess if it failed to converge
+            sol = solinit
+        sol.converged = converged
         bvp.solution = sol
         sol.aux = aux
-        logging.debug(sol.y[:,0])
+        # logging.debug(sol.y[:,0])
         return sol

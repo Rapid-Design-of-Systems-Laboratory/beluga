@@ -6,6 +6,7 @@ Utilities for fast persistence of big data, with optional compression.
 # Copyright (c) 2009 Gael Varoquaux
 # License: BSD Style, 3 clauses.
 
+import dill
 import pickle
 import traceback
 import sys
@@ -22,16 +23,16 @@ from io import BytesIO
 PY3 = sys.version_info[0] >= 3
 
 if PY3:
-    Unpickler = pickle._Unpickler
-    Pickler = pickle._Pickler
+    Unpickler = dill.Unpickler
+    Pickler = dill.Pickler
 
     def asbytes(s):
         if isinstance(s, bytes):
             return s
         return s.encode('latin1')
 else:
-    Unpickler = pickle.Unpickler
-    Pickler = pickle.Pickler
+    Unpickler = dill.Unpickler
+    Pickler = dill.Pickler
     asbytes = str
 
 
@@ -278,7 +279,7 @@ class NumpyPickler(Pickler):
         return Pickler.save(self, obj)
 
     def save_bytes(self, obj):
-        """Strongly inspired from python 2.7 pickle.Pickler.save_string"""
+        """Strongly inspired from python 2.7 dill.Pickler.save_string"""
         if self.bin:
             n = len(obj)
             if n < 256:
@@ -331,7 +332,7 @@ class NumpyUnpickler(Unpickler):
     # functionality
     if PY3 and sys.version_info.minor < 4:
         def _decode_string(self, value):
-            """Copied from python 3.4 pickle.Unpickler._decode_string"""
+            """Copied from python 3.4 dill.Unpickler._decode_string"""
             # Used to allow strings from Python 2 to be decoded either as
             # bytes or Unicode strings.  This should be used only with the
             # STRING, BINSTRING and SHORT_BINSTRING opcodes.
@@ -341,30 +342,30 @@ class NumpyUnpickler(Unpickler):
                 return value.decode(self.encoding, self.errors)
 
         def load_string(self):
-            """Copied from python 3.4 pickle.Unpickler.load_string"""
+            """Copied from python 3.4 dill.Unpickler.load_string"""
             data = self.readline()[:-1]
             # Strip outermost quotes
             if len(data) >= 2 and data[0] == data[-1] and data[0] in b'"\'':
                 data = data[1:-1]
             else:
-                raise pickle.UnpicklingError(
+                raise dill.UnpicklingError(
                     "the STRING opcode argument must be quoted")
             self.append(self._decode_string(codecs.escape_decode(data)[0]))
-        dispatch[pickle.STRING[0]] = load_string
+        dispatch[dill.STRING[0]] = load_string
 
         def load_binstring(self):
-            """Copied from python 3.4 pickle.Unpickler.load_binstring"""
+            """Copied from python 3.4 dill.Unpickler.load_binstring"""
             # Deprecated BINSTRING uses signed 32-bit length
             len, = struct.unpack('<i', self.read(4))
             if len < 0:
-                raise pickle.UnpicklingError(
+                raise dill.UnpicklingError(
                     "BINSTRING pickle has negative byte count")
             data = self.read(len)
             self.append(self._decode_string(data))
         dispatch[pickle.BINSTRING[0]] = load_binstring
 
         def load_short_binstring(self):
-            """Copied from python 3.4 pickle.Unpickler.load_short_binstring"""
+            """Copied from python 3.4 dill.Unpickler.load_short_binstring"""
             len = self.read(1)[0]
             data = self.read(len)
             self.append(self._decode_string(data))

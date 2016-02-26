@@ -1,0 +1,72 @@
+---
+name: brachisto
+# definitions:  # Used to define shortcut expressions
+#   rho: rho0*exp(-h/H)
+#   L:   0.5*rho*v^2*Cl*Aref
+independentVariable:
+  name: t
+  unit: s
+
+states:
+  - name: x
+    equation: v*cos(theta)
+    unit: m
+  - name: y
+    equation: -v*sin(theta)
+    unit: m
+  - name: v
+    equation: g*sin(theta)
+    unit: m/s
+controls:
+  - name: theta
+    unit: rad
+
+constants:
+  - name: g
+    value: 9.81
+    unit: m/s^2
+
+units:
+  - name: m
+    scaleExpr: x
+  - name: s
+    scaleExpr: x/v
+  - name: kg
+    scaleExpr: 1
+  - name: rad
+    scaleExpr: 1
+#
+# solver:
+#   class: SingleShooting   #  Should be a valid solver class
+#   options:                # Assumes options are valid for given class
+#     derivative_method:  fd
+#     tolerance:          1e-4
+#     max_iterations:     1000,
+#     cached:             False
+
+constraints:
+  - [initial, x-x_0, m]
+  - [initial, y-y_0, m]
+  - [initial, v-v_0, m/s]
+  - [terminal, x-x_f, m]
+  - [terminal, y-y_f, m]
+
+costFunction:
+  costType: path
+  expression: 1
+  unit: s
+
+guess:
+  type:          auto
+  start:         [0, 0, 1]
+  direction:     forward
+  costate_guess: -0.1
+
+# Need better way of representing continuation steps (manual vs auto)
+continuation:
+  - type: manual    # Specify class here?
+    num_cases: 11
+    actions:
+      - [terminal, x, 5]
+      - [terminal, y, -5]
+...

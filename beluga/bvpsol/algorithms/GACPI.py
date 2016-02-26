@@ -71,8 +71,7 @@ class GACPI(Algorithm):
 
         while ((tol < err1 or tol < err2) and (ctr < max_iter)):
             ctr = ctr + 1
-
-            F = vode(s_tau,x_guess,p,aux)*omega2
+            F = vode(s_tau,x_guess,params,aux)*omega2
             Beta_r = np.dot(TV,F)
             Beta_k = np.r_[np.dot(S,Beta_r) + 2*x_guess[0,:],Beta_r]    # [2*x0+S*Beta_r; Beta_r]
             x_new = np.dot(Cx,Beta_k)
@@ -127,6 +126,7 @@ class GACPI(Algorithm):
         else:
             J = M+np.dot(N,phi)
         return J
+
 def chebypoly(k, tau):
     # Computes T_k(x) for all points in tau for all k
     return np.cos(k*np.arccos(tau));

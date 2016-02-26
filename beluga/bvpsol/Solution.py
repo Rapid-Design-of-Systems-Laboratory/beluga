@@ -24,6 +24,7 @@ class Solution(object):
         self.aux = aux
         self.state_list = state_list
         self.var_dict = None
+        self.converged = False
 
     def prepare(self, problem_data):
         """
@@ -50,7 +51,6 @@ class Solution(object):
 
         variables += [('t',self.x*self.y[-1,1])]
         self.var_dict = dict(variables)
-        print(self.var_dict['alfa'])
 
     def evaluate(self,expr):
         """
