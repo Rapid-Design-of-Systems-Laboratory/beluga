@@ -86,13 +86,18 @@ class NecessaryConditions(object):
                 logging.debug(e)
                 return None
 
-    def derivative(self, expr, var):
+    def derivative(self, expr, var, dependent_variables):
         """
         Take derivative taking pre-defined quantities into consideration
-        """
 
-        dFdq = [diff(expr, qty_var).subs(self.quantity_subs) for qty_var in self.quantity_sym]
-        dqdx = [diff(qexpr, var) for qexpr in self.quantity_expr]
+        dependent_variables: Dictionary containing dependent variables as keys and
+                             their expressions as values
+        """
+        dep_var_names = dependent_variables.keys()
+        dep_var_expr = [(expr) for (_,expr) in dependent_variables.items()]
+
+        dFdq = [diff(expr, dep_var).subs(dependent_variables.items()) for dep_var in dep_var_names]
+        dqdx = [diff(qexpr, var) for qexpr in dep_var_expr]
 
         # Chain rule + total derivative
         out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + diff(expr, var)
@@ -112,7 +117,7 @@ class NecessaryConditions(object):
         #     rate = diff(sympify2('-1*(' + self.ham + ')'),state)
         #     # numerical_diff = rate.atoms(Derivative)
         #     self.costate_rates.append(str(rate))
-        self.costate_rates = [self.derivative(-1*(self.ham),state) for state in states]
+        self.costate_rates = [self.derivative(-1*(self.ham),state, self.quantity_vars) for state in states]
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
 
@@ -128,13 +133,14 @@ class NecessaryConditions(object):
         # TODO: Automate partial derivatives of numerical functions
         self.ham_ctrl_partial = []
         for ctrl in controls:
-            dHdu = self.derivative(sympify2(self.ham),ctrl)
+            dHdu = self.derivative(sympify2(self.ham),ctrl, self.quantity_vars)
+            keyboard()
             custom_diff = dHdu.atoms(Derivative)
 
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
                         for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
 
-            self.ham_ctrl_partial.append(dHdu.subs(repl).subs(self.quantity_subs))
+            self.ham_ctrl_partial.append(dHdu.subs(repl))#.subs(self.quantity_subs))
         # self.ham_ctrl_partial = [diff(sympify2(self.ham),ctrl) for ctrl in controls]
         # self.ham_ctrl_partial.append(str(diff(sympify2(self.ham),
         #     symbols(ctrl))))
@@ -159,7 +165,8 @@ class NecessaryConditions(object):
         self.mu_lhs = []
         if len(self.equality_constraints) > 0:
             self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
-            self.mu_lhs = [sympify2(c.expr).subs(self.quantity_subs) for c in self.equality_constraints]
+            # self.mu_lhs = [sympify2(c.expr).subs(self.quantity_subs) for c in self.equality_constraints]
+            self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
         try:
             # var_list = list(vars + self.mu_vars)
             # eqn_list = list(self.mu_lhs + lhs)
@@ -243,11 +250,11 @@ class NecessaryConditions(object):
         if location == 'initial':
             # Using list comprehension instead of loops
             # lagrange_ changed to l. Removed hardcoded prefix
-            self.bc_initial += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym))
+            self.bc_initial += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym, self.quantity_vars))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc_terminal += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym))
+            self.bc_terminal += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym,self.quantity_vars))
                                     for state in states]
 
         # for i in range(len(state)):
@@ -342,6 +349,26 @@ class NecessaryConditions(object):
     #             new_states = [state
     #                             for state in system_inst.states]
     #     # print(new_states)
+    def process_path_constraints(self, problem):
+        return
+        constraints = problem.constraints().get('path')
+        for c in constraints:
+            # Determine order of constraint
+
+            # c0 = sympify2(c.expr)
+            order = 0
+            cq = sympify2(c.expr)
+            while True:
+                control_found = False
+
+                for u in problem.controls():
+                    if u in cq.atoms():
+                        control_found = True
+                        break
+
+                order = order + 1
+
+            pass
 
     def get_bvp(self,problem):
         """Perform variational calculus calculations on optimal control problem
@@ -362,10 +389,16 @@ class NecessaryConditions(object):
             self.quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
             self.quantity_sym, self.quantity_expr = zip(*self.quantity_subs)
             self.quantity_expr = [qty_expr.subs(self.quantity_subs) for qty_expr in self.quantity_expr]
+
+            # Use substituted expressions to recreate quantity expressions
+            self.quantity_subs = [(qty_var,qty_expr) for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
             # Dictionary for use with mustache templating library
             self.quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
+            self.quantity_vars = dict(self.quantity_subs)
         else:
             self.quantity_list = self.quantity_sym = self.quantity_expr = self.quantity_subs = []
+            self.quantity_vars = {}
+
 
         ## Create costate list
         self.costates = [state.make_costate() for state in problem.states()]
@@ -388,11 +421,10 @@ class NecessaryConditions(object):
 
         self.equality_constraints = problem.constraints().get('equality')
 
-
         ## Unconstrained arc calculations
         # Construct Hamiltonian
         self.make_ham(problem)
-        logging.debug(self.ham)
+        logging.debug('Hamiltonian : '+str(self.ham))
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
         # TODO: Move to separate method?
@@ -428,6 +460,8 @@ class NecessaryConditions(object):
         self.make_costate_rate(problem.states())
         self.make_ctrl_partial(problem.controls())
 
+        # Regularize path constraints using saturation functions
+        self.process_path_constraints(problem)
         # # Add support for state and control constraints
         # problem.state('xi11','xi12','m')
         # problem.state('xi12','ue1','m')

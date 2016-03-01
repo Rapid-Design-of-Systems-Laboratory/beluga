@@ -18,10 +18,11 @@ except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
+        self.max_error = max_error
         self.derivative_method = derivative_method
         if derivative_method == 'csd':
             self.stm_ode_func = self.__stmode_csd
@@ -313,6 +314,10 @@ class MultipleShooting(Algorithm):
 
                 # Compute correction vector
                 r1 = np.linalg.norm(res)
+                if r1 > self.max_error:
+                    logging.warn('Error exceeded max_error')
+                    raise RuntimeError('Error exceeded max_error')
+                    
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
                 if r0 is not None:
@@ -328,7 +333,7 @@ class MultipleShooting(Algorithm):
                 else:
                     alpha = 1
                 r0 = r1
-                
+
                 dy0 = alpha*beta*np.linalg.solve(J,-res)
 
                 #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
