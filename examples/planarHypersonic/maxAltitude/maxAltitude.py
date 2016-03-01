@@ -33,21 +33,28 @@ def get_problem():
     # Define independent variables
     problem.independent('t', 's')
 
-    rho = 'rho0*exp(-h/H)'
-    Cl  = '(1.5658*alfa + -0.0000)'
-    Cd  = '(1.6537*alfa^2 + 0.0612)'
-    # Cl = 'CLfunction(alfa)'
-    # Cd = 'CDfunction(alfa)'
-
-    D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
-    L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
-    r   = '(re+h)'
+    # rho = 'rho0*exp(-h/H)'
+    # Cl  = '(1.5658*alfa + -0.0000)'
+    # Cd  = '(1.6537*alfa^2 + 0.0612)'
+    # D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
+    # L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
+    # r   = '(re+h)'
+    problem.quantity('rho','rho0*exp(-h/H)')
+    problem.quantity('Cl','(1.5658*alfa + -0.0000)')
+    problem.quantity('Cd','(1.6537*alfa^2 + 0.0612)')
+    problem.quantity('D','0.5*rho*v^2*Cd*Aref')
+    problem.quantity('L','0.5*rho*v^2*Cl*Aref')
+    problem.quantity('r','re+h')
 
     # Define equations of motion
     problem.state('h','v*sin(gam)','m')   \
-           .state('theta','v*cos(gam)/'+r,'rad')  \
-           .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'**2','m/s') \
-           .state('gam',L+'/(mass*v) + (v/'+r+' - mu/(v*'+r+'^2))*cos(gam)','rad')
+           .state('theta','v*cos(gam)/r','rad')  \
+           .state('v','-D/mass - mu*sin(gam)/r**2','m/s') \
+           .state('gam','L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)','rad')
+    # problem.state('h','v*sin(gam)','m')   \
+    #        .state('theta','v*cos(gam)/'+r,'rad')  \
+    #        .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'**2','m/s') \
+    #        .state('gam',L+'/(mass*v) + (v/'+r+' - mu/(v*'+r+'^2))*cos(gam)','rad')
 
     # Define controls
     problem.control('alfa','rad')
@@ -74,7 +81,7 @@ def get_problem():
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10, verbose = True, cached = False, number_arcs=2)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=20, verbose = True, cached = False, number_arcs=2)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \

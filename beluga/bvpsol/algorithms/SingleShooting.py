@@ -16,10 +16,11 @@ from klepto.keymaps import picklemap
 dumps = picklemap(typed=True, flat=False, serializer='dill')
 #TODO: Save time steps from ode45 and use for fixed step RK4
 class SingleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
+        self.max_error = max_error
         self.derivative_method = derivative_method
         if derivative_method == 'csd':
             self.stm_ode_func = self.__stmode_csd
@@ -208,76 +209,82 @@ class SingleShooting(Algorithm):
 
         tspan = [t0,tf]
         # tspan = np.linspace(0,1,100)
-        while True:
-            if iter>self.max_iterations:
-                logging.warn("Maximum iterations exceeded!")
-                break
-            y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
+        try:
+            while True:
+                if iter>self.max_iterations:
+                    logging.warn("Maximum iterations exceeded!")
+                    break
+                y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
-            # Propagate STM and original system together
-            # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+                # Propagate STM and original system together
+                # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
 
-            # t,yy = ode45(stm_ode45, tspan, y0)
-            t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-            # Obtain just last timestep for use with correction
-            yf = yy[-1]
-            # Extract states and STM from ode45 output
-            yb = yf[:nOdes]  # States
-            phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
+                # t,yy = ode45(stm_ode45, tspan, y0)
+                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+                # Obtain just last timestep for use with correction
+                yf = yy[-1]
+                # Extract states and STM from ode45 output
+                yb = yf[:nOdes]  # States
+                phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
 
-            # Evaluate the boundary conditions
-            res = bc_func(y0g, yb, paramGuess, aux)
+                # Evaluate the boundary conditions
+                res = bc_func(y0g, yb, paramGuess, aux)
 
-            # self.bc_jac_func = self.__bcjac_csd
-            # Solution converged if BCs are satisfied to tolerance
-            if max(abs(res)) < self.tolerance:
+                # self.bc_jac_func = self.__bcjac_csd
+                # Solution converged if BCs are satisfied to tolerance
+                if max(abs(res)) < self.tolerance:
+                    if self.verbose:
+                        logging.info("Converged in "+str(iter)+" iterations.")
+                    converged = True
+                    break
+
+                # Compute Jacobian of boundary conditions using numerical derviatives
+                J   = self.bc_jac_func(bc_func, y0g, yb, phi, paramGuess, aux)
+                # Compute correction vector
+                r1 = np.linalg.norm(res)
+                if r1 > self.max_error:
+                    logging.warn('Error exceeded max_error')
+                    raise RuntimeError('Error exceeded max_error')
+                    
                 if self.verbose:
-                    logging.info("Converged in "+str(iter)+" iterations.")
-                converged = True
-                break
-
-            # Compute Jacobian of boundary conditions using numerical derviatives
-            J   = self.bc_jac_func(bc_func, y0g, yb, phi, paramGuess, aux)
-            # Compute correction vector
-            r1 = np.linalg.norm(res)
-            if self.verbose:
-                logging.debug('Residue: '+str(r1))
-            if r0 is not None:
-                beta = (r0-r1)/(alpha*r0)
-                if beta < 0:
-                    beta = 1
-            if r1>1:
-                alpha = 1/(2*r1)
-            else:
-                alpha = 1
-            r0 = r1
-
-            try:
-                dy0 = alpha*beta*np.linalg.solve(J,-res)
-            except:
-                rank1 = np.linalg.matrix_rank(J)
-                rank2 = np.linalg.matrix_rank(np.c_[J,-res])
-                if rank1 == rank2:
-                    # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
-                    dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
-                    # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
+                    logging.debug('Residue: '+str(r1))
+                if r0 is not None:
+                    beta = (r0-r1)/(alpha*r0)
+                    if beta < 0:
+                        beta = 1
+                if r1>1:
+                    alpha = 1/(2*r1)
                 else:
-                    # Re-raise exception if system is infeasible
-                    raise
-            # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
+                    alpha = 1
+                r0 = r1
 
-            # Apply corrections to states and parameters (if any)
-            if nParams > 0:
-                dp = dy0[nOdes:]
-                dy0 = dy0[:nOdes]
-                paramGuess = paramGuess + dp
-                y0g = y0g + dy0
-            else:
-                y0g = y0g + dy0
+                try:
+                    dy0 = alpha*beta*np.linalg.solve(J,-res)
+                except:
+                    rank1 = np.linalg.matrix_rank(J)
+                    rank2 = np.linalg.matrix_rank(np.c_[J,-res])
+                    if rank1 == rank2:
+                        # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
+                        dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
+                        # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
+                    else:
+                        # Re-raise exception if system is infeasible
+                        raise
+                # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
 
-            iter = iter+1
-            logging.debug('Iteration #'+str(iter))
+                # Apply corrections to states and parameters (if any)
+                if nParams > 0:
+                    dp = dy0[nOdes:]
+                    dy0 = dy0[:nOdes]
+                    paramGuess = paramGuess + dp
+                    y0g = y0g + dy0
+                else:
+                    y0g = y0g + dy0
 
+                iter = iter+1
+                logging.debug('Iteration #'+str(iter))
+        except Exception as e:
+            logging.warn(e)
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:

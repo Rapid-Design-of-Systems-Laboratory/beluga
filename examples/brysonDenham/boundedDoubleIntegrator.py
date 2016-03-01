@@ -39,8 +39,8 @@ def get_problem():
                    .unit('rad',1)   \
                    .unit('nd',1)
 
-    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=40, verbose = True, cached=False, number_arcs=2)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=30, verbose = True, cached=False)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=40, verbose = True, cached=False, number_arcs=2)
 
 
     # Smoothed path constraint
