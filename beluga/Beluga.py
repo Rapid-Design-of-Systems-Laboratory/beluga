@@ -265,8 +265,10 @@ class Beluga(object):
                         # for i in range(len(sol.x)):
                         #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                         #     sol.u[:,i] = _u
-                        f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
-                        sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
+                        ## DAE mode
+                        sol.u = sol.y[self.nec_cond.problem_data['num_states']:,:]
+                        # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
+                        # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
                         # Update solution for next iteration
                         solution_set[step_idx].append(copy.deepcopy(bvp.solution))
@@ -277,6 +279,8 @@ class Beluga(object):
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logging.error('Exception : '+str(e))
             logging.error('Stopping')
 
