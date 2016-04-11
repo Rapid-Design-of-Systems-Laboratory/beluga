@@ -40,7 +40,7 @@ def get_problem():
 
     # Define constants (change to have units as well)
     problem.constant('g','9.81','m/s^2')
-    problem.constant('h0',-6,'m')
+    problem.constant('h0',-1,'m')
 
     # Smoothed path constraint
     # c1 = '( y + x )'                            # Constraint
@@ -72,8 +72,8 @@ def get_problem():
                    .unit('kg',1)   \
                    .unit('rad',1)
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4)
-    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
     # problem.bvp_solver = algorithms.BroydenShooting(tolerance=1e-4, max_iterations=1000)
 
     # Can be array or function handle
@@ -93,11 +93,11 @@ def get_problem():
                     .terminal('y',-5)
                     )
     # (
-    problem.steps.add_step('bisection').num_cases(21,spacing='log') \
+    problem.steps.add_step('bisection').num_cases(51,spacing='log') \
                      .const('eps1', 1e-6)
-
-    problem.steps.add_step('bisection').num_cases(41)\
-                    .const('h0',-1)
+    #
+    # problem.steps.add_step('bisection').num_cases(41)\
+    #                 .const('h0',-1)
 
     # problem.steps.add_step()
     #                 .num_cases(10)
