@@ -442,7 +442,6 @@ class NecessaryConditions(object):
             cq = sympify2(c.expr)
             dxdt = [sympify2(state.process_eqn) for state in problem.states()]
 
-
             # Zeroth order constraints have no 'xi' state
             xi_vars = []
             h = []
@@ -470,7 +469,7 @@ class NecessaryConditions(object):
             xi_vars.append(Symbol('ue'+str(ind+1)))
 
             #TODO: Fix hardconding of upper bound
-            psi = self.get_satfn(xi_vars[0], ubound=Symbol('hMax'))
+            psi = self.get_satfn(xi_vars[0], ubound=Symbol('-h0'), lbound=Symbol('h0'))
             # psi_vars = [(Function('psi'+str(ind+1))(xi_vars[0]), psi)]
             psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
 
@@ -493,13 +492,14 @@ class NecessaryConditions(object):
             # FIXME: Hardcoded h derivatives for now
             h = [psi_vars[0][0]]
             h.append(psi_vars[1][0]*xi_vars[1]) # psi'*xi12
-            h.append(psi_vars[2][0]*xi_vars[1] + psi_vars[1][0]*xi_vars[2]) # psi''*xi12 + psi'*xi13
+            # h.append(psi_vars[2][0]*xi_vars[1] + psi_vars[1][0]*xi_vars[2]) # psi''*xi12 + psi'*xi13
             # psi'''*xi12 + xi13*psi12'' + psi12*xi13 + psi11*ue1
-            h.append(psi_vars[3][0]*xi_vars[1] + 2 * psi_vars[2][0]*xi_vars[2] + psi_vars[1][0]*xi_vars[3] )
+            # h.append(psi_vars[3][0]*xi_vars[1] + 2 * psi_vars[2][0]*xi_vars[2] + psi_vars[1][0]*xi_vars[3] )
 
             # h.append(psi_vars[0][0])
             #TODO: Hardcoded 't' as independent variable with unit of 's'
-            c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
+            # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
+            c_vals = [0]
             # c_vals = [0.1, 0.1] #
 
             for i in range(order):
@@ -522,13 +522,14 @@ class NecessaryConditions(object):
 
             # cq = simplify(cq)
             # Add the smoothing control
-            problem.control(str(xi_vars[-1]), '('+c.unit+')/s^('+str(order)+')')
+            problem.control(str(xi_vars[-1]), '('+c.unit+')/(s^('+str(order)+'))')
+            logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+'('+c.unit+')/(s^('+str(order)+'))')
 
             # Add equality constraint
             problem.constraints().equality(str(cq - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
 
             # Add smoothing factor
-            problem.constant('eps'+str(ind+1), 10, '(m^2/s^2)/ ( (m/s^3)^2 )')
+            # problem.constant('eps'+str(ind+1), 10, '(m^2/s^2)/ ( (m/s^3)^2 )')
 
             # problem.cost['path'] = Expression('eps'+str(ind+1)+'*('+str(xi_vars[-1])+'^2)','m^2/s^2')
             # problem.state('costC1','eps'+str(ind+1)+'*('+str(xi_vars[-1])+'^2)','m^2/s^2')
