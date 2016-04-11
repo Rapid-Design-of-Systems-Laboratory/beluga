@@ -9,7 +9,7 @@ from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 from beluga.utils.Worker import Worker
-import logging
+import logging, sys, os
 
 try:
     from mpi4py import MPI
@@ -202,7 +202,7 @@ class MultipleShooting(Algorithm):
         f1 = self.bc_func(ya[0],yb[-1],p,aux)
         for i in range(self.number_arcs-1):
             nextbc = yb[i]-ya[i+1]
-            f1 = np.concatenate((f1,nextbc))
+            f1 = np.concatenate((f1,nextbc)).astype(np.float64)
         return f1
 
     def solve(self,bvp):
@@ -280,7 +280,7 @@ class MultipleShooting(Algorithm):
                 if iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")
                     break
-
+                # keyboard
                 y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
 
                 for i in range(self.number_arcs):
@@ -310,14 +310,14 @@ class MultipleShooting(Algorithm):
                     break
                 # logging.debug(paramGuess)
                 # Compute Jacobian of boundary conditions using numerical derviatives
-                J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
+                J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux).astype(np.float64)
 
                 # Compute correction vector
                 r1 = np.linalg.norm(res)
                 if r1 > self.max_error:
                     logging.warn('Error exceeded max_error')
                     raise RuntimeError('Error exceeded max_error')
-                    
+
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
                 if r0 is not None:
@@ -333,7 +333,6 @@ class MultipleShooting(Algorithm):
                 else:
                     alpha = 1
                 r0 = r1
-
                 dy0 = alpha*beta*np.linalg.solve(J,-res)
 
                 #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
@@ -354,7 +353,12 @@ class MultipleShooting(Algorithm):
                     y0g = y0g + dy0
                 iter = iter+1
         except Exception as e:
-            logging.warn(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.warn(fname+'('+str(exc_tb.tb_lineno)+'): '+str(exc_type))
+
+            # print(exc_type, fname, exc_tb.tb_lineno)
+            # keyboard()
             # print iter
 
         # If problem converged, propagate solution to get full trajectory
