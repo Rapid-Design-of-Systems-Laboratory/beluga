@@ -44,7 +44,6 @@ class Solution(object):
         variables += [(state,np.array(self.y[idx,:]))
                         for idx,state in enumerate(problem_data['state_list'])]
 
-
         # Define control variables
         variables += [(control,np.array(self.u[idx,:]))
                         for idx,control in enumerate(problem_data['control_list'])]
