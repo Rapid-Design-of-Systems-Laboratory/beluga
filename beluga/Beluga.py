@@ -171,9 +171,10 @@ class Beluga(object):
         # Try loading cached BVP from disk
         # bvp = self.nec_cond.load_bvp(self.problem)
         # if bvp is None:
-            # Create corresponding boundary value problem
+        #     # Create corresponding boundary value problem
+        #     bvp = self.nec_cond.get_bvp(self.problem)
+        #     self.nec_cond.cache_bvp(self.problem)
         bvp = self.nec_cond.get_bvp(self.problem)
-            # self.nec_cond.cache_bvp(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
         #       Array: Automatic?

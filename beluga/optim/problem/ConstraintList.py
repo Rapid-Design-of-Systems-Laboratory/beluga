@@ -31,6 +31,14 @@ class ConstraintList(list):
         self.add(Constraint('path', expr, unit, direction, limit))
         return self
 
+    def control(self, expr, lbound, ubound, unit):
+        # TODO: Maybe make a better, unified way of defining constraints?
+        c = Constraint('control', expr, unit)
+        c.ubound = ubound
+        c.lbound = lbound
+        self.add(c)
+
+
     def add(self,constraint=None):
         if constraint is None:
             constraint = Constraint()
