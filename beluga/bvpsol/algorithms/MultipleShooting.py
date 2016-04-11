@@ -315,8 +315,9 @@ class MultipleShooting(Algorithm):
                 # Compute correction vector
                 r1 = np.linalg.norm(res)
                 if r1 > self.max_error:
-                    logging.warn('Error exceeded max_error')
-                    raise RuntimeError('Error exceeded max_error')
+                    logging.warn('Residue: '+str(r1) )
+                    logging.warn('Residue exceeded max_error')
+                    raise RuntimeError('Residue exceeded max_error')
 
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))

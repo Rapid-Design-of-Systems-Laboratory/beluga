@@ -245,7 +245,7 @@ class SingleShooting(Algorithm):
                 if r1 > self.max_error:
                     logging.warn('Error exceeded max_error')
                     raise RuntimeError('Error exceeded max_error')
-                    
+
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
                 if r0 is not None:
@@ -285,6 +285,8 @@ class SingleShooting(Algorithm):
                 logging.debug('Iteration #'+str(iter))
         except Exception as e:
             logging.warn(e)
+            import traceback
+            traceback.print_exc()
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:

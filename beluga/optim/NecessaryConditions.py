@@ -6,7 +6,7 @@ import re as _re
 
 import beluga.bvpsol.BVP as BVP
 
-from beluga.utils import sympify2, keyboard
+from beluga.utils import sympify2, keyboard, ipsh
 from beluga.optim.problem import *
 import dill
 
@@ -130,22 +130,61 @@ class NecessaryConditions(object):
         \date      06/30/15
         """
 
-        # TODO: Automate partial derivatives of numerical functions
         self.ham_ctrl_partial = []
+        # keyboard()
         for ctrl in controls:
-            dHdu = self.derivative(sympify2(self.ham),ctrl, self.quantity_vars)
-            keyboard()
+            dHdu = self.derivative(sympify2(self.ham), ctrl, self.quantity_vars)
             custom_diff = dHdu.atoms(Derivative)
-
+            # Substitute "Derivative" with complex step derivative
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
                         for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
 
-            self.ham_ctrl_partial.append(dHdu.subs(repl))#.subs(self.quantity_subs))
-        # self.ham_ctrl_partial = [diff(sympify2(self.ham),ctrl) for ctrl in controls]
-        # self.ham_ctrl_partial.append(str(diff(sympify2(self.ham),
-        #     symbols(ctrl))))
+            self.ham_ctrl_partial.append(dHdu.subs(repl))
 
-    def make_ctrl(self, controls):
+    def selective_expand(self, expr, var_select, subs_list):
+        # Expands the expressions specified by subs_list if they contain the
+        # variables in var_select
+        select_subs = [qty for qty in subs_list.items() for var in var_select if var.sym in qty[1].atoms()]
+        # Substitute only relevant symbols in the expression
+        return expr.subs(select_subs)
+
+    def make_ctrl(self, problem, mode='dae'):
+        if mode == 'dae':
+            self.make_ctrl_dae(problem)
+        else:
+            self.make_ctrl_analytic(problem.controls())
+
+    def make_ctrl_dae(self, problem):
+        """!
+        \brief     Compute EOMs for controls.
+        \author    Michael Grant
+        \author    Thomas Antony
+        \version   0.1
+        \date      04/10/16
+        """
+        if len(self.equality_constraints) > 0:
+            self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
+            self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
+        else:
+            self.mu_vars = self.mu_lhs = []
+
+        g = self.ham_ctrl_partial + self.mu_lhs
+        X = [state.sym for state in problem.states()] + [Symbol(costate) for costate in self.costates]
+        U = [c.sym for c in problem.controls()] + self.mu_vars
+
+        xdot = Matrix([sympify2(state.process_eqn) for state in problem.states()] + self.costate_rates)
+        # Compute Jacobian
+        dgdX = Matrix([[self.derivative(g_i, x_i, self.quantity_vars) for x_i in X] for g_i in g])
+        dgdU = Matrix([[self.derivative(g_i, u_i, self.quantity_vars) for u_i in U] for g_i in g])
+
+        udot = dgdU.LUsolve(-dgdX*xdot); # dgdU * udot + dgdX * xdot = 0
+
+        self.dae_states = U
+        self.dae_equations = list(udot)
+        self.dae_bc = g
+
+
+    def make_ctrl_analytic(self, controls):
         """!
         \brief     Symbolically compute the solutions for the control along control-unconstrained arcs.
         \author    Michael Grant
@@ -163,33 +202,59 @@ class NecessaryConditions(object):
         vars = [c.sym for c in controls]
         self.mu_vars = []
         self.mu_lhs = []
+
         if len(self.equality_constraints) > 0:
             self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
-            # self.mu_lhs = [sympify2(c.expr).subs(self.quantity_subs) for c in self.equality_constraints]
+
             self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
         try:
-            # var_list = list(vars + self.mu_vars)
-            # eqn_list = list(self.mu_lhs + lhs)
+            var_list = list(vars + self.mu_vars)
+            # var_list = vars
+            eqn_list = []
+            for eqn in list(lhs + self.mu_lhs ):
+                eqn_list.append(self.selective_expand(eqn, controls, self.quantity_vars))
 
-            # for (i,ctrl_v) in enumerate(var_list):
-            #     logging.debug('Solving for '+str(ctrl_v)+' ...')
-            #     keyboard()
-            #     sol = solve(eqn_list[i], ctrl_v, dict=True)
-            #
-            #     # Substitute solution in other equations
-            #     for (j,eqn) in enumerate(eqn_list):
-            #         if j>i:
-            #             eqn_list[j] = eqn.subs(ctrl_v,sol[0][ctrl_v])
-            #     var_sol.append(sol)
-            # keyboard()
-
+            # 1. Find mu1 from dHdalfa (possibly exclude other controls )
+            # 2. Find ue1 from dHdue1
+            # 3. Find alfa from constraint expr
             logging.info("Attempting using SymPy ...")
-            logging.debug("dHdu = "+str(lhs+self.mu_lhs))
+            logging.debug("dHdu = "+str(eqn_list))
+
             # keyboard()
-            var_sol = solve(lhs+self.mu_lhs,vars+self.mu_vars,dict=True)
+            # var_sol = solve(eqn_list[1:], var_list, dict=True)
+
+            # Add to quantity list
+
+            # keyboard()
+            # var_sol = []
+            # Long time to solve
+            # aue1 = solve([eqn_list[3],eqn_list[4]], [var_list[0], var_list[1]])
+            # mu12 = solve(eqn_list[:2], self.mu_vars)
+            # eqn3 = eqn_list[2].subs(mu12.items()).subs(aue1.items())
+
+            # With both constraints
+            # Solve eqn_list[4] for uw1 as function of alfaDot or alfaDot as fn of uw1
+            # mu12a = solve([eqn_list[0], eqn_list[1], eqn_list[4]], [var_list[0],var_list[3], var_list[4]], dict=True)
+            # eqn3 = eqn_list[3].subs(mu12a[0].items())
+            # ue1 = 'scipy.optimize.fsolve(lambda ue1: '+str(eqn3)+', -10, 10)'
+
+            # eqn3 = eqn_list[3]
+            # uw1 = 'scipy.optimize.brentq(lambda uw1: '+str(eqn3)+', -10, 10)'
+            # from collections import OrderedDict
+            # var_sol = [OrderedDict({var_list[2]: uw1})]
+
+            var_sol = []
+
+            # var_sol[0][var_list[0]] = aue1[var_list[0]]
+            # var_sol[0][var_list[1]] = aue1[var_list[1]]
+            # var_sol[0][self.mu_vars[0]] = mu12[self.mu_vars[0]]
+            # var_sol[0][self.mu_vars[1]] = mu12[self.mu_vars[1]]
+
+
             logging.debug(var_sol)
             ctrl_sol = var_sol
-            # var_sol = []
+
+
             # raise ValueError() # Force mathematica
         except ValueError as e:  # FIXME: Use right exception name here
             logging.debug(e)
@@ -349,34 +414,153 @@ class NecessaryConditions(object):
     #             new_states = [state
     #                             for state in system_inst.states]
     #     # print(new_states)
+
+    def get_satfn(self, var, ubound=None, lbound=None):
+        # var -> varible inside saturation function
+        if ubound is None and lbound is None:
+            raise ValueError('At least one bound should be specified for the constraint.')
+        if ubound == lbound:
+            raise ValueError('The upper and lower bounds should be different.')
+
+        # Symmetric bounds
+        if ubound is None:
+            ubound = -lbound
+        if lbound is None:
+            lbound = -ubound
+
+        s = 4/(ubound - lbound)
+        return ubound - ( ubound - lbound )/( 1 + exp(s*var) )
+
     def process_path_constraints(self, problem):
-        return
         constraints = problem.constraints().get('path')
-        for c in constraints:
+        quantity_subs = self.quantity_vars.items()
+        for (ind,c) in enumerate(constraints):
             # Determine order of constraint
 
             # c0 = sympify2(c.expr)
             order = 0
             cq = sympify2(c.expr)
+            dxdt = [sympify2(state.process_eqn) for state in problem.states()]
+
+            # Zeroth order constraints have no 'xi' state
+            xi_vars = []
+            h = []
             while True:
                 control_found = False
 
                 for u in problem.controls():
-                    if u in cq.atoms():
+                    if u.sym in cq.subs(quantity_subs).atoms():
+                        logging.info('Constraint is of order '+str(order))
                         control_found = True
                         break
+                if control_found:
+                    break
 
+                dcdx = [self.derivative(cq, state.sym, self.quantity_vars) for state in problem.states()]
+
+                # Chain rule (Assume there is no explciit time-dependence) to find dcdt
+                cq = sum(d1*d2 for d1,d2 in zip(dcdx, dxdt))
                 order = order + 1
 
-            pass
+                # Add the auxiliary states and their EOMs
+                # xi_vars.append(Function('xi'+str(ind+1)+str(order))('t'))
+                xi_vars.append(Symbol('xi'+str(ind+1)+str(order)))
 
-    def get_bvp(self,problem):
+            xi_vars.append(Symbol('ue'+str(ind+1)))
+
+            #TODO: Fix hardconding of upper bound
+            psi = self.get_satfn(xi_vars[0], ubound=Symbol('-h0'), lbound=Symbol('h0'))
+            # psi_vars = [(Function('psi'+str(ind+1))(xi_vars[0]), psi)]
+            psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
+
+            # Add to quantity list
+            self.quantity_vars[Symbol('psi'+str(ind+1))] = psi
+            self.quantity_list.append({'name':('psi'+str(ind+1)), 'expr':str(psi)})
+
+            # m-th order constraint needs up to m-th derivative of psi to be defined
+            psi_i = psi
+            for i in range(order):
+                psi_i = diff(psi_i, xi_vars[0])
+                # psi_vars.append((Symbol('psi'+str(ind+1)+str(i+1)+'('+str(xi_vars[0])+')'), psi_i))
+                psi_vars.append((Symbol('psi'+str(ind+1)+str(i+1)), psi_i))
+                self.quantity_vars[Symbol('psi'+str(ind+1)+str(i+1))] =  psi_i
+                self.quantity_list.append({'name':('psi'+str(ind+1)+str(i+1)), 'expr':str(psi_i)})
+
+            # psi_vars = psi_vars + []
+            psi_var_sub = [(v,k) for k,v in psi_vars]
+
+            # FIXME: Hardcoded h derivatives for now
+            h = [psi_vars[0][0]]
+            h.append(psi_vars[1][0]*xi_vars[1]) # psi'*xi12
+            # h.append(psi_vars[2][0]*xi_vars[1] + psi_vars[1][0]*xi_vars[2]) # psi''*xi12 + psi'*xi13
+            # psi'''*xi12 + xi13*psi12'' + psi12*xi13 + psi11*ue1
+            # h.append(psi_vars[3][0]*xi_vars[1] + 2 * psi_vars[2][0]*xi_vars[2] + psi_vars[1][0]*xi_vars[3] )
+
+            # h.append(psi_vars[0][0])
+            #TODO: Hardcoded 't' as independent variable with unit of 's'
+            # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
+            c_vals = [0]
+            # c_vals = [0.1, 0.1] #
+
+            for i in range(order):
+                problem.state(str(xi_vars[i]), str(xi_vars[i+1]),'('+c.unit+')/s^('+str(i)+')')
+                problem.constraints().initial(str(xi_vars[i])+' - '+str(xi_vars[i])+'_0','('+c.unit+')/s^('+str(i)+')')
+                # Add to initial guess vector
+                problem.guess.start.append(c_vals[i])
+                # # h_i = h[i].subs(psi_vars)
+                # dhdpsi  = [diff(h[i], psi_v[0]) for psi_v in psi_vars[:-1]]
+                # # Derivatve w.r.t all 'xi' variables ignore ue
+                # dhdxi   = [diff(h[i], xi_v) for xi_v in xi_vars[:-1]]
+                #
+                # # h1 = sum(d1*d2[0]*d3 for d1,d2,d3 in zip(dhdpsi, psi_vars[1:], xi_vars[1:])) + \
+                # #      sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
+                # h1 = sum(d1*d2[0] for d1,d2 in zip(dhdpsi, psi_vars[1:])) + \
+                #      sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
+                # # h1 = sum(d1*d2[0]*d3 for d1,d2,d3 in zip(dhdpsi, psi_vars[1:], xi_vars[1:]))
+                # h1 = sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
+                # h.append(h1)
+
+            # cq = simplify(cq)
+            # Add the smoothing control
+            problem.control(str(xi_vars[-1]), '('+c.unit+')/(s^('+str(order)+'))')
+            logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+'('+c.unit+')/(s^('+str(order)+'))')
+
+            # Add equality constraint
+            problem.constraints().equality(str(cq - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
+
+            # Add smoothing factor
+            # problem.constant('eps'+str(ind+1), 10, '(m^2/s^2)/ ( (m/s^3)^2 )')
+
+            # problem.cost['path'] = Expression('eps'+str(ind+1)+'*('+str(xi_vars[-1])+'^2)','m^2/s^2')
+            # problem.state('costC1','eps'+str(ind+1)+'*('+str(xi_vars[-1])+'^2)','m^2/s^2')
+
+
+        u_constraints = problem.constraints().get('control')
+
+        for (ind,c) in enumerate(u_constraints):
+            w_i = sympify2('uw'+str(ind+1))
+            psi = self.get_satfn(w_i, ubound=sympify2(c.ubound), lbound = sympify2(c.lbound))
+
+            # Add the smoothing control
+            problem.control(str(w_i), c.unit)
+            csym = sympify2(c.expr)
+            # Add equality constraint
+            problem.constraints().equality(str(csym - psi),c.unit)
+
+            problem.constant('eps2', 1e-1, '(m^2/s^2)/( rad^2/s^2  )')
+
+            # problem.state('costC2','eps2*('+str(w_i)+'^2)','m^2/s^2')
+
+        # problem.cost['path'] = Expression('eps1*(ue1^2) + eps2*(uw1^2)','m^2/s^2')
+        # problem.cost['path'] = Expression('eps1*(ue1^2)','m^2/s^2')
+        # problem.cost['terminal'] = Expression('-v^2 + costC2 + costC2','m^2/s^2')
+
+    def get_bvp(self,problem,mode='dae'):
         """Perform variational calculus calculations on optimal control problem
            and returns an object describing the boundary value problem to be solved
 
         Returns: bvpsol.BVP object
         """
-
 
         # Should this be moved into __init__ ?
         # self.process_systems(problem)
@@ -386,20 +570,27 @@ class NecessaryConditions(object):
         # TODO: Sanitize quantity expressions
         # TODO: Check for circular references in quantity expressions
         if len(problem.quantity()) > 0:
-            self.quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
-            self.quantity_sym, self.quantity_expr = zip(*self.quantity_subs)
-            self.quantity_expr = [qty_expr.subs(self.quantity_subs) for qty_expr in self.quantity_expr]
+            quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
+            quantity_sym, quantity_expr = zip(*quantity_subs)
+            quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
 
             # Use substituted expressions to recreate quantity expressions
-            self.quantity_subs = [(qty_var,qty_expr) for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
+            quantity_subs = [(qty_var,qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
             # Dictionary for use with mustache templating library
-            self.quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(self.quantity_sym, self.quantity_expr)]
-            self.quantity_vars = dict(self.quantity_subs)
+            self.quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
+
+            # Dictionary for substitution
+            self.quantity_vars = dict(quantity_subs)
         else:
-            self.quantity_list = self.quantity_sym = self.quantity_expr = self.quantity_subs = []
+            self.quantity_list = quantity_subs = []
             self.quantity_vars = {}
 
+        self.dae_states = self.dae_equations = []
 
+        # Regularize path constraints using saturation functions
+        self.process_path_constraints(problem)
+
+        # self.state_subs = [(state.sym, sympify2(state.process_eqn)) for state in problem.states()]
         ## Create costate list
         self.costates = [state.make_costate() for state in problem.states()]
 
@@ -460,8 +651,7 @@ class NecessaryConditions(object):
         self.make_costate_rate(problem.states())
         self.make_ctrl_partial(problem.controls())
 
-        # Regularize path constraints using saturation functions
-        self.process_path_constraints(problem)
+
         # # Add support for state and control constraints
         # problem.state('xi11','xi12','m')
         # problem.state('xi12','ue1','m')
@@ -479,7 +669,7 @@ class NecessaryConditions(object):
         #
         # Compute unconstrained control law
         # (need to add singular arc and bang/bang smoothing, numerical solutions)
-        self.make_ctrl(problem.controls())
+        self.make_ctrl(problem)
 
         # Create problem dictionary
         # NEED TO ADD BOUNDARY CONDITIONS
@@ -513,28 +703,41 @@ class NecessaryConditions(object):
              ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
+         'dae_var_list':
+             [str(dae_state) for dae_state in self.dae_states],
+         'dae_eom_list':
+             ['(tf)*('+str(dae_eom)+')' for dae_eom in self.dae_equations],
+         'dae_var_num': len(self.dae_states),
          'num_states': 2*len(problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial] + self.mu_lhs,
-         'left_bc_list': self.bc_initial,
+         'left_bc_list': self.bc_initial + self.dae_bc,
          'right_bc_list': self.bc_terminal,
-         'control_options': self.control_options,
+         'control_options': [] if (mode == 'dae') else self.control_options,
          'control_list': [str(u) for u in problem.controls()] + [str(mu) for mu in self.mu_vars],
          'num_controls': len(problem.controls()) + len(self.mu_vars),  # Count mu multipliers
          'ham_expr':self.ham,
-         'quantity_list': self.quantity_list
+         'quantity_list': self.quantity_list,
+        #  'dae_mode': mode == 'dae',
         }
-
     #    problem.constraints[i].expr for i in range(len(problem.constraints))
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('_probobj_'+problem.name)
-        # self.compiled = imp.new_module("blaaaa")
+
+        if mode == 'dae':
+            self.template_suffix = '_dae' + self.template_suffix
 
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
 
+        if mode == 'dae':
+            dhdu_fn = self.compiled.get_dhdu_func
+            dae_num = len(problem.controls()) + len(self.mu_vars)
+        else:
+            dhdu_fn = None
+            dae_num = 0
 
-        self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func)
+        self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
         self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
         self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
         self.bvp.solution.aux['function']  = problem.functions
