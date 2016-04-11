@@ -125,7 +125,7 @@ class Guess(object):
             raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.solution.aux['parameters']))
 
         dae_num_states = bvp.dae_num_states
-        dae_guess = np.ones(dae_num_states)*0.01
+        dae_guess = np.ones(dae_num_states)*0.1
         dhdu_fn = bvp.dae_func_gen(0,x0,param_guess,bvp.solution.aux)
         dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
 
