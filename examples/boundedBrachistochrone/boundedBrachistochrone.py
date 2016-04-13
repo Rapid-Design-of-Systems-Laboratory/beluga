@@ -34,7 +34,7 @@ def get_problem():
                         .initial('v-v_0','m/s')  \
                         .terminal('x-x_f','m')   \
                         .terminal('y-y_f','m')   \
-                        .path('y + x','>','h0','m')  # y + x + h0 > 0 -- above the line y= -x - h0
+                        .path('constraint1','y + x','>','h0','m')  # y + x > h0 -- above the line y= -x + h0
 
     # problem.constraints().interior_point('(x-x1)^2+(y-y1)^2','m^2')
 
@@ -42,26 +42,6 @@ def get_problem():
     problem.constant('g','9.81','m/s^2')
     problem.constant('h0',-1,'m')
 
-    # Smoothed path constraint
-    # c1 = '( y + x )'                            # Constraint
-    # c1_1 = '( -v*sin(theta) + v*cos(theta) )'   # First derivative
-
-    # # Saturation function and its first derivative
-    # psi1   = '(2*h0/(1+exp((2/h0)*xi11)))'
-    # psi1_1 = '(-(4*exp((2*xi11)/h0))/(exp((2*xi11)/h0) + 1)^2)'
-    #
-    # h1_2   = '(psi1_1 * ue1)'      # Function for equality constraint
-
-    # problem.constant('h0','3','m')
-    #
-    # problem.state('xi11','ue1','m')
-    # problem.control('ue1','m/s')
-    # problem.constraints('default',0) \
-    #                     .initial('xi11-(x_0+y_0)','m') \
-    #                     .equality(c1_1+' - '+h1_2,'m/s')
-
-    # problem.quantity('psi1','(-h0 + exp(xi11))') \
-    #         .quantity('psi11','(exp(xi11)*xi12)')
 
     problem.cost['path'] = Expression('1 + eps1*ue1^2','s')
     problem.constant('eps1',1,'s^2/m^2')    # Units to make cost non-dimensional
@@ -72,7 +52,7 @@ def get_problem():
                    .unit('kg',1)   \
                    .unit('rad',1)
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2)
     problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
     # problem.bvp_solver = algorithms.BroydenShooting(tolerance=1e-4, max_iterations=1000)
 
@@ -93,7 +73,7 @@ def get_problem():
                     .terminal('y',-5)
                     )
     # (
-    problem.steps.add_step('bisection').num_cases(51,spacing='log') \
+    problem.steps.add_step('bisection').num_cases(41,spacing='log') \
                      .const('eps1', 1e-6)
     #
     # problem.steps.add_step('bisection').num_cases(41)\

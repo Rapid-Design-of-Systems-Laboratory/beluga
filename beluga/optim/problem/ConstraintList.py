@@ -27,8 +27,8 @@ class ConstraintList(list):
         self.add(Constraint('equality',expr,unit))
         return self
 
-    def path(self, expr, direction, limit, unit):
-        self.add(Constraint('path', expr, unit, direction, limit))
+    def path(self, label, expr, direction, limit, unit):
+        self.add(Constraint('path', expr, unit, direction, limit, label))
         return self
 
     def control(self, expr, lbound, ubound, unit):

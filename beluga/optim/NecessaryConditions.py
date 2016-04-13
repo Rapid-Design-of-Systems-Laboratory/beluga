@@ -9,6 +9,7 @@ import beluga.bvpsol.BVP as BVP
 from beluga.utils import sympify2, keyboard, ipsh
 from beluga.optim.problem import *
 import dill
+import numpy as np
 
 class NecessaryConditions(object):
     """Defines necessary conditions of optimality."""
@@ -424,22 +425,26 @@ class NecessaryConditions(object):
 
         # Symmetric bounds
         if ubound is None:
-            ubound = -lbound
-        if lbound is None:
-            lbound = -ubound
-
-        s = 4/(ubound - lbound)
-        return ubound - ( ubound - lbound )/( 1 + exp(s*var) )
+            # Return lower bound sat fn
+            #ubound = -lbound
+            return lbound + exp(var)
+        elif lbound is None:
+            # Return upper bound sat fn
+            #lbound = -ubound
+            return ubound - exp(-var)
+        else:
+            s = 4/(ubound - lbound)
+            return ubound - ( ubound - lbound )/( 1 + exp(s*var) )
 
     def process_path_constraints(self, problem):
         constraints = problem.constraints().get('path')
         quantity_subs = self.quantity_vars.items()
         for (ind,c) in enumerate(constraints):
             # Determine order of constraint
-
+            logging.debug('Processing path constraint: '+c.label)
             # c0 = sympify2(c.expr)
             order = 0
-            cq = sympify2(c.expr)
+            cq = [sympify2(c.expr)]
             dxdt = [sympify2(state.process_eqn) for state in problem.states()]
 
             # Zeroth order constraints have no 'xi' state
@@ -449,17 +454,17 @@ class NecessaryConditions(object):
                 control_found = False
 
                 for u in problem.controls():
-                    if u.sym in cq.subs(quantity_subs).atoms():
+                    if u.sym in cq[-1].subs(quantity_subs).atoms():
                         logging.info('Constraint is of order '+str(order))
                         control_found = True
                         break
                 if control_found:
                     break
 
-                dcdx = [self.derivative(cq, state.sym, self.quantity_vars) for state in problem.states()]
+                dcdx = [self.derivative(cq[-1], state.sym, self.quantity_vars) for state in problem.states()]
 
                 # Chain rule (Assume there is no explciit time-dependence) to find dcdt
-                cq = sum(d1*d2 for d1,d2 in zip(dcdx, dxdt))
+                cq.append(sum(d1*d2 for d1,d2 in zip(dcdx, dxdt)))
                 order = order + 1
 
                 # Add the auxiliary states and their EOMs
@@ -468,9 +473,7 @@ class NecessaryConditions(object):
 
             xi_vars.append(Symbol('ue'+str(ind+1)))
 
-            #TODO: Fix hardconding of upper bound
-            psi = self.get_satfn(xi_vars[0], ubound=Symbol('-h0'), lbound=Symbol('h0'))
-            # psi_vars = [(Function('psi'+str(ind+1))(xi_vars[0]), psi)]
+            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound)
             psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
 
             # Add to quantity list
@@ -496,17 +499,18 @@ class NecessaryConditions(object):
             # psi'''*xi12 + xi13*psi12'' + psi12*xi13 + psi11*ue1
             # h.append(psi_vars[3][0]*xi_vars[1] + 2 * psi_vars[2][0]*xi_vars[2] + psi_vars[1][0]*xi_vars[3] )
 
-            # h.append(psi_vars[0][0])
             #TODO: Hardcoded 't' as independent variable with unit of 's'
             # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
-            c_vals = [0]
+            c_vals = np.zeros(len(cq)-1)
             # c_vals = [0.1, 0.1] #
 
             for i in range(order):
                 problem.state(str(xi_vars[i]), str(xi_vars[i+1]),'('+c.unit+')/s^('+str(i)+')')
-                problem.constraints().initial(str(xi_vars[i])+' - '+str(xi_vars[i])+'_0','('+c.unit+')/s^('+str(i)+')')
+                # Constraint all cq at initial point (forms constraints for xi_ij)
+                problem.constraints().initial(str(cq[i] - h[0]),'('+c.unit+')/s^('+str(i)+')')
                 # Add to initial guess vector
                 problem.guess.start.append(c_vals[i])
+
                 # # h_i = h[i].subs(psi_vars)
                 # dhdpsi  = [diff(h[i], psi_v[0]) for psi_v in psi_vars[:-1]]
                 # # Derivatve w.r.t all 'xi' variables ignore ue
@@ -526,7 +530,7 @@ class NecessaryConditions(object):
             logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+'('+c.unit+')/(s^('+str(order)+'))')
 
             # Add equality constraint
-            problem.constraints().equality(str(cq - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
+            problem.constraints().equality(str(cq[-1] - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
 
             # Add smoothing factor
             # problem.constant('eps'+str(ind+1), 10, '(m^2/s^2)/ ( (m/s^3)^2 )')
@@ -543,8 +547,9 @@ class NecessaryConditions(object):
 
             # Add the smoothing control
             problem.control(str(w_i), c.unit)
-            csym = sympify2(c.expr)
+
             # Add equality constraint
+            csym = sympify2(c.expr)
             problem.constraints().equality(str(csym - psi),c.unit)
 
             problem.constant('eps2', 1e-1, '(m^2/s^2)/( rad^2/s^2  )')
