@@ -34,16 +34,15 @@ def get_problem():
                         .initial('v-v_0','m/s')  \
                         .terminal('x-x_f','m')   \
                         .terminal('y-y_f','m')   \
-                        .path('constraint1','y + x','>','h0','m')  # y + x > h0 -- above the line y= -x + h0
+                        .path('constraint1','y + x','>',-1,'m')  # y + x > h0 -- above the line y= -x + h0
 
-    # problem.constraints().interior_point('(x-x1)^2+(y-y1)^2','m^2')
-
-    # Define constants (change to have units as well)
+    # Define constants
     problem.constant('g','9.81','m/s^2')
-    problem.constant('h0',-1,'m')
 
+    # Cost function
     problem.cost['path'] = Expression('1','s')
 
+    # Scaling poptions
     problem.scale.unit('m','x')     \
                    .unit('s','x/v')\
                    .unit('kg',1)   \
@@ -60,7 +59,7 @@ def get_problem():
     problem.guess.setup('auto',
                     start=[0,0,1],          # Starting values for states in order
                     direction='forward',
-                    costate_guess = 0.1
+                    costate_guess = -0.1
                     )
 
     # Figure out nicer way of representing this. Done?
@@ -68,8 +67,9 @@ def get_problem():
                     .terminal('x', 5) \
                     .terminal('y',-5)
 
+    # TODO: Automate addition of epsilon continuation
     problem.steps.add_step('bisection').num_cases(41,spacing='log') \
-                     .const('eps1', 1e-6)
+                     .const('eps_constraint1', 1e-6)
 
     return problem
 
