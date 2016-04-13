@@ -1,11 +1,10 @@
-# from sympy import Expr
 from beluga.utils import sympify2
 
 class Constraint(object):
     """Defines constraint information."""
     # NEED TO ADD PATH CONSTRAINT
 
-    def __init__(self, type = '', expr = '', unit = '', direction='', limit='',preprocess=True):
+    def __init__(self, type = '', expr = '', unit = '', direction='', limit='', label=''):
         """
         Input: type (string)
                expr (string)
@@ -14,11 +13,20 @@ class Constraint(object):
         self.type = type
         self.expr = expr
         self.unit = unit
+        self.label = label
 
-        # TODO: Make path constraint a sub-class
         self.direction = direction
         self.limit = limit
-        # super().__init__()
+        #TODO: Fix constraint object to accept two limits
+        if direction == '>':
+            self.lbound = sympify2(limit)
+            self.ubound = -sympify2(limit)
+        elif direction == '<':
+            self.ubound = sympify2(limit)
+            self.lbound = -sympify2(limit)
+        else:
+            if self.limit is not '':
+                raise ValueError('Invalid direction specified for constraint')
 
     def __str__(self):
         "Returns constraint expression when object is converted to a string"
