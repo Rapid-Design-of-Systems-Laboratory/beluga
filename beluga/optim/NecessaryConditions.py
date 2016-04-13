@@ -471,10 +471,29 @@ class NecessaryConditions(object):
                 cq.append(sum(d1*d2 for d1,d2 in zip(dcdx, dxdt)))
                 order = order + 1
 
-                # Add the auxiliary states and their EOMs
+                # Create the auxiliary state variables
                 xi_vars.append(Symbol('xi'+str(ind+1)+str(order)))
 
+            # Create the smoothing control variable
             xi_vars.append(Symbol('ue'+str(ind+1)))
+
+            # TODO: Fix constraint object to accept two limits
+            c_limit = sympify2(c.limit)
+            if c_limit.is_Number:
+                # TODO: Allow continuation on constraints
+                # Define new hidden constant
+                c_limit = sympify2('_'+c.label+'_lim')
+                problem.constant(str(c_limit),float(c.limit),c.unit)
+                logging.debug('Added constant '+str(c_limit))
+
+            if c.direction == '>':
+                c.lbound = c_limit
+                c.ubound = -c_limit
+            elif c.direction == '<':
+                c.ubound = c_limit
+                c.lbound = -c_limit
+            else:
+                raise ValueError('Invalid direction specified for constraint')
 
             psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound)
             psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
@@ -504,7 +523,7 @@ class NecessaryConditions(object):
 
             #TODO: Hardcoded 't' as independent variable with unit of 's'
             # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
-            c_vals = np.zeros(len(cq)-1)
+            c_vals = np.zeros(order)
 
             for i in range(order):
                 # Add 'xi' state
@@ -537,9 +556,9 @@ class NecessaryConditions(object):
             problem.constraints().equality(str(cq[-1] - h[-1]),str(cqi_unit))
 
             # Add smoothing factor
-            eps_const = Symbol('eps'+str(ind+1))
+            eps_const = Symbol('eps_'+c.label)
             eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
-            problem.constant(str(eps_const), 1, str(eps_unit))
+            problem.constant(str(eps_const), 1e-1, str(eps_unit))
             logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
             # Append new control to path cost
@@ -561,14 +580,12 @@ class NecessaryConditions(object):
             csym = sympify2(c.expr)
             problem.constraints().equality(str(csym - psi),c.unit)
 
-            problem.constant('eps2', 1e-1, '(m^2/s^2)/( rad^2/s^2  )')
+            uw_unit = symipfy2(c.unit)
+            eps_const = Symbol('eps_'+str(ind+1))
+            eps_unit = (path_cost_unit/uw_unit**2)/time_unit #Unit of integrand
+            problem.constant(str(eps_const), 1e-1, str(eps_unit))
 
             # problem.state('costC2','eps2*('+str(w_i)+'^2)','m^2/s^2')
-
-        # problem.cost['path'] = Expression('eps1*(ue1^2) + eps2*(uw1^2)','m^2/s^2')
-        # problem.cost['path'] = Expression('eps1*(ue1^2)','m^2/s^2')
-        # problem.cost['terminal'] = Expression('-v^2 + costC2 + costC2','m^2/s^2')
-
     def get_bvp(self,problem,mode='dae'):
         """Perform variational calculus calculations on optimal control problem
            and returns an object describing the boundary value problem to be solved

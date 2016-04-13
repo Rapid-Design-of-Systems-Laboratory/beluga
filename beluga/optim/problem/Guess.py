@@ -130,7 +130,8 @@ class Guess(object):
         dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
 
         x0 = np.append(x0,dae_x0) # Add dae states
-        print(x0)
+        logging.debug('Generating initial guess by propagating: ')
+        logging.debug(str(x0))
         [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.solution.aux)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         bvp.solution.x = t

@@ -17,16 +17,8 @@ class Constraint(object):
 
         self.direction = direction
         self.limit = limit
-        #TODO: Fix constraint object to accept two limits
-        if direction == '>':
-            self.lbound = sympify2(limit)
-            self.ubound = -sympify2(limit)
-        elif direction == '<':
-            self.ubound = sympify2(limit)
-            self.lbound = -sympify2(limit)
-        else:
-            if self.limit is not '':
-                raise ValueError('Invalid direction specified for constraint')
+        self.ubound = None
+        self.lbound = None
 
     def __str__(self):
         "Returns constraint expression when object is converted to a string"
