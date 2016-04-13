@@ -65,7 +65,7 @@ def get_problem():
 
     # Figure out nicer way of representing this. Done?
     problem.steps.add_step().num_cases(11) \
-                    .terminal('x', 5)
+                    .terminal('x', 5) \
                     .terminal('y',-5)
 
     problem.steps.add_step('bisection').num_cases(41,spacing='log') \

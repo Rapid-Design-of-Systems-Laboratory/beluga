@@ -533,8 +533,7 @@ class NecessaryConditions(object):
             logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+str(ue_unit))
 
             # Add equality constraint
-            cqi_unit = ue_unit*Symbol('s')
-            # problem.constraints().equality(str(cq[-1] - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
+            cqi_unit = ue_unit*time_unit
             problem.constraints().equality(str(cq[-1] - h[-1]),str(cqi_unit))
 
             # Add smoothing factor
