@@ -42,10 +42,7 @@ def get_problem():
     problem.constant('g','9.81','m/s^2')
     problem.constant('h0',-1,'m')
 
-
-    problem.cost['path'] = Expression('1 + eps1*ue1^2','s')
-    problem.constant('eps1',1,'s^2/m^2')    # Units to make cost non-dimensional
-
+    problem.cost['path'] = Expression('1','s')
 
     problem.scale.unit('m','x')     \
                    .unit('s','x/v')\
@@ -67,23 +64,13 @@ def get_problem():
                     )
 
     # Figure out nicer way of representing this. Done?
-    problem.steps.add_step(ContinuationStep()
-                    .num_cases(11)
+    problem.steps.add_step().num_cases(11) \
                     .terminal('x', 5)
                     .terminal('y',-5)
-                    )
-    # (
+
     problem.steps.add_step('bisection').num_cases(41,spacing='log') \
                      .const('eps1', 1e-6)
-    #
-    # problem.steps.add_step('bisection').num_cases(41)\
-    #                 .const('h0',-1)
 
-    # problem.steps.add_step()
-    #                 .num_cases(10)
-    #                 .terminal('x', 1000.0)
-    #                 .terminal('y',-1000.0)
-    # )
     return problem
 
 if __name__ == '__main__':

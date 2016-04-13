@@ -439,10 +439,14 @@ class NecessaryConditions(object):
     def process_path_constraints(self, problem):
         constraints = problem.constraints().get('path')
         quantity_subs = self.quantity_vars.items()
+
+        path_cost_expr = sympify2(problem.cost['path'].expr)
+        path_cost_unit = sympify2(problem.cost['path'].unit)
+        time_unit = Symbol('s')
+
         for (ind,c) in enumerate(constraints):
             # Determine order of constraint
             logging.debug('Processing path constraint: '+c.label)
-            # c0 = sympify2(c.expr)
             order = 0
             cq = [sympify2(c.expr)]
             dxdt = [sympify2(state.process_eqn) for state in problem.states()]
@@ -468,7 +472,6 @@ class NecessaryConditions(object):
                 order = order + 1
 
                 # Add the auxiliary states and their EOMs
-                # xi_vars.append(Function('xi'+str(ind+1)+str(order))('t'))
                 xi_vars.append(Symbol('xi'+str(ind+1)+str(order)))
 
             xi_vars.append(Symbol('ue'+str(ind+1)))
@@ -502,9 +505,9 @@ class NecessaryConditions(object):
             #TODO: Hardcoded 't' as independent variable with unit of 's'
             # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
             c_vals = np.zeros(len(cq)-1)
-            # c_vals = [0.1, 0.1] #
 
             for i in range(order):
+                # Add 'xi' state
                 problem.state(str(xi_vars[i]), str(xi_vars[i+1]),'('+c.unit+')/s^('+str(i)+')')
                 # Constraint all cq at initial point (forms constraints for xi_ij)
                 problem.constraints().initial(str(cq[i] - h[0]),'('+c.unit+')/s^('+str(i)+')')
@@ -524,20 +527,27 @@ class NecessaryConditions(object):
                 # h1 = sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
                 # h.append(h1)
 
-            # cq = simplify(cq)
-            # Add the smoothing control
-            problem.control(str(xi_vars[-1]), '('+c.unit+')/(s^('+str(order)+'))')
-            logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+'('+c.unit+')/(s^('+str(order)+'))')
+            # Add the smoothing control with the right unit
+            ue_unit = sympify2('('+c.unit+')/(s^('+str(order)+'))')
+            problem.control(str(xi_vars[-1]), str(ue_unit))
+            logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+str(ue_unit))
 
             # Add equality constraint
-            problem.constraints().equality(str(cq[-1] - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
+            cqi_unit = ue_unit*Symbol('s')
+            # problem.constraints().equality(str(cq[-1] - h[-1]),'('+c.unit+')*s^('+str(order-1)+')')
+            problem.constraints().equality(str(cq[-1] - h[-1]),str(cqi_unit))
 
             # Add smoothing factor
-            # problem.constant('eps'+str(ind+1), 10, '(m^2/s^2)/ ( (m/s^3)^2 )')
+            eps_const = Symbol('eps'+str(ind+1))
+            eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
+            problem.constant(str(eps_const), 1, str(eps_unit))
+            logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
-            # problem.cost['path'] = Expression('eps'+str(ind+1)+'*('+str(xi_vars[-1])+'^2)','m^2/s^2')
-            # problem.state('costC1','eps'+str(ind+1)+'*('+str(xi_vars[-1])+'^2)','m^2/s^2')
+            # Append new control to path cost
+            path_cost_expr = path_cost_expr + eps_const*xi_vars[-1]**2
 
+        logging.debug('Updated path cost is :'+str(path_cost_expr))
+        problem.cost['path'].expr = str(path_cost_expr)
 
         u_constraints = problem.constraints().get('control')
 
