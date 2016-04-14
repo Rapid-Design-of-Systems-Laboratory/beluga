@@ -482,7 +482,7 @@ class NecessaryConditions(object):
             if c_limit.is_Number:
                 # TODO: Allow continuation on constraints
                 # Define new hidden constant
-                c_limit = sympify2('_'+c.label+'_lim')
+                c_limit = sympify2('_'+c.label)
                 problem.constant(str(c_limit),float(c.limit),c.unit)
                 logging.debug('Added constant '+str(c_limit))
 
@@ -515,8 +515,8 @@ class NecessaryConditions(object):
             psi_var_sub = [(v,k) for k,v in psi_vars]
 
             # FIXME: Hardcoded h derivatives for now
-            h = [psi_vars[0][0]]
-            h.append(psi_vars[1][0]*xi_vars[1]) # psi'*xi12
+            # h = [psi_vars[0][0]]
+            # h.append(psi_vars[1][0]*xi_vars[1]) # psi'*xi12
             # h.append(psi_vars[2][0]*xi_vars[1] + psi_vars[1][0]*xi_vars[2]) # psi''*xi12 + psi'*xi13
             # psi'''*xi12 + xi13*psi12'' + psi12*xi13 + psi11*ue1
             # h.append(psi_vars[3][0]*xi_vars[1] + 2 * psi_vars[2][0]*xi_vars[2] + psi_vars[1][0]*xi_vars[3] )
@@ -524,27 +524,19 @@ class NecessaryConditions(object):
             #TODO: Hardcoded 't' as independent variable with unit of 's'
             # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
             c_vals = np.zeros(order)
-
+            h = [psi_vars[0][1]]
             for i in range(order):
                 # Add 'xi' state
                 problem.state(str(xi_vars[i]), str(xi_vars[i+1]),'('+c.unit+')/s^('+str(i)+')')
                 # Constraint all cq at initial point (forms constraints for xi_ij)
-                problem.constraints().initial(str(cq[i] - h[0]),'('+c.unit+')/s^('+str(i)+')')
+                problem.constraints().initial(str(cq[i] - h[i]),'('+c.unit+')/s^('+str(i)+')')
                 # Add to initial guess vector
                 problem.guess.start.append(c_vals[i])
 
-                # # h_i = h[i].subs(psi_vars)
-                # dhdpsi  = [diff(h[i], psi_v[0]) for psi_v in psi_vars[:-1]]
-                # # Derivatve w.r.t all 'xi' variables ignore ue
-                # dhdxi   = [diff(h[i], xi_v) for xi_v in xi_vars[:-1]]
-                #
-                # # h1 = sum(d1*d2[0]*d3 for d1,d2,d3 in zip(dhdpsi, psi_vars[1:], xi_vars[1:])) + \
-                # #      sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
-                # h1 = sum(d1*d2[0] for d1,d2 in zip(dhdpsi, psi_vars[1:])) + \
-                #      sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
-                # # h1 = sum(d1*d2[0]*d3 for d1,d2,d3 in zip(dhdpsi, psi_vars[1:], xi_vars[1:]))
-                # h1 = sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
-                # h.append(h1)
+                dhdxi = [diff(h[i], xi_v) for xi_v in xi_vars[:-1]]
+                dhdt  = sum(d1*d2 for d1,d2 in zip(dhdxi,xi_vars[1:])) # xi11dot = xi12 etc.
+                dhdt = dhdt.subs(psi_var_sub)
+                h.append(dhdt)
 
             # Add the smoothing control with the right unit
             ue_unit = sympify2('('+c.unit+')/(s^('+str(order)+'))')
@@ -558,13 +550,13 @@ class NecessaryConditions(object):
             # Add smoothing factor
             eps_const = Symbol('eps_'+c.label)
             eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
-            problem.constant(str(eps_const), 1e-1, str(eps_unit))
+            problem.constant(str(eps_const), 1, str(eps_unit))
             logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
             # Append new control to path cost
             path_cost_expr = path_cost_expr + eps_const*xi_vars[-1]**2
 
-        logging.debug('Updated path cost is :'+str(path_cost_expr))
+        logging.debug('Updated path cost is: '+str(path_cost_expr))
         problem.cost['path'].expr = str(path_cost_expr)
 
         u_constraints = problem.constraints().get('control')
@@ -583,7 +575,7 @@ class NecessaryConditions(object):
             uw_unit = symipfy2(c.unit)
             eps_const = Symbol('eps_'+str(ind+1))
             eps_unit = (path_cost_unit/uw_unit**2)/time_unit #Unit of integrand
-            problem.constant(str(eps_const), 1e-1, str(eps_unit))
+            problem.constant(str(eps_const), 1, str(eps_unit))
 
             # problem.state('costC2','eps2*('+str(w_i)+'^2)','m^2/s^2')
     def get_bvp(self,problem,mode='dae'):
