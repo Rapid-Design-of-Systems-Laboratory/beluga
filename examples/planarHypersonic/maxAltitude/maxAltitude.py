@@ -68,8 +68,8 @@ def get_problem():
                         .initial('v-v_0','m/s') \
                         .terminal('h-h_f','m')  \
                         .terminal('theta-theta_f','rad') \
-                        .path('h','<','hMax','m') \
-                        .control('alfaDot','-alfaRateMax','alfaRateMax','rad/s')
+                        .path('maxAltitude','h','<','hMax','m') \
+                        # .control('alfaDot','-alfaRateMax','alfaRateMax','rad/s')
 
     # Define constants
     problem.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
@@ -85,7 +85,7 @@ def get_problem():
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
     problem.constant('hMax', 85000, 'm')
-    problem.constant('alfaRateMax', 10*pi/180, 'rad/s')
+    # problem.constant('alfaRateMax', 10*pi/180, 'rad/s')
 
     # problem.constant('eps',10, 'm/s')
     # problem.constant('w',0, 'nd')
@@ -113,7 +113,7 @@ def get_problem():
 
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
 
-    problem.guess.setup('auto',start=[80000,0.01,5000,-90*pi/180, 0*pi/180], costate_guess=0.1, time_integrate=0.1)
+    problem.guess.setup('auto',start=[80000,0.0,5000,-90*pi/180, 0*pi/180], costate_guess=0.1, time_integrate=0.1)
     # problem.guess.setup('auto',start=[80000,0.01,5000,-90*pi/180])
     problem.steps.add_step('bisection') \
                             .num_cases(11) \
@@ -121,6 +121,9 @@ def get_problem():
     problem.steps.add_step('bisection') \
                             .num_cases(31) \
                             .terminal('theta', 10*pi/180)
+    problem.steps.add_step('bisection') \
+                            .num_cases(41) \
+                            .const('eps_maxAltitude', 1e-4)
     #
 
     return problem
