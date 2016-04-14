@@ -39,9 +39,6 @@ def get_problem():
     # Define constants
     problem.constant('g','9.81','m/s^2')
 
-    # Cost function
-    problem.cost['path'] = Expression('1','s')
-
     # Scaling poptions
     problem.scale.unit('m','x')     \
                    .unit('s','x/v')\
@@ -59,7 +56,7 @@ def get_problem():
     problem.guess.setup('auto',
                     start=[0,0,1],          # Starting values for states in order
                     direction='forward',
-                    costate_guess = -0.1
+                    costate_guess = 0.1
                     )
 
     # Figure out nicer way of representing this. Done?
