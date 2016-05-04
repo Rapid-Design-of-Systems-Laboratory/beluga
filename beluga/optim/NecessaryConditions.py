@@ -225,32 +225,7 @@ class NecessaryConditions(object):
             # var_sol = solve(eqn_list[1:], var_list, dict=True)
 
             # Add to quantity list
-
-            # keyboard()
-            # var_sol = []
-            # Long time to solve
-            # aue1 = solve([eqn_list[3],eqn_list[4]], [var_list[0], var_list[1]])
-            # mu12 = solve(eqn_list[:2], self.mu_vars)
-            # eqn3 = eqn_list[2].subs(mu12.items()).subs(aue1.items())
-
-            # With both constraints
-            # Solve eqn_list[4] for uw1 as function of alfaDot or alfaDot as fn of uw1
-            # mu12a = solve([eqn_list[0], eqn_list[1], eqn_list[4]], [var_list[0],var_list[3], var_list[4]], dict=True)
-            # eqn3 = eqn_list[3].subs(mu12a[0].items())
-            # ue1 = 'scipy.optimize.fsolve(lambda ue1: '+str(eqn3)+', -10, 10)'
-
-            # eqn3 = eqn_list[3]
-            # uw1 = 'scipy.optimize.brentq(lambda uw1: '+str(eqn3)+', -10, 10)'
-            # from collections import OrderedDict
-            # var_sol = [OrderedDict({var_list[2]: uw1})]
-
             var_sol = []
-
-            # var_sol[0][var_list[0]] = aue1[var_list[0]]
-            # var_sol[0][var_list[1]] = aue1[var_list[1]]
-            # var_sol[0][self.mu_vars[0]] = mu12[self.mu_vars[0]]
-            # var_sol[0][self.mu_vars[1]] = mu12[self.mu_vars[1]]
-
 
             logging.debug(var_sol)
             ctrl_sol = var_sol
@@ -416,7 +391,10 @@ class NecessaryConditions(object):
     #                             for state in system_inst.states]
     #     # print(new_states)
 
-    def get_satfn(self, var, ubound=None, lbound=None):
+    # 1/4 s (c1-c2) = slope at x=0
+    # when slope = 1, s = 4/(c1-c2)
+    # wyen slope = 10, s = 40/(c1-c2)
+    def get_satfn(self, var, ubound=None, lbound=None, slopeAtZero=1):
         # var -> varible inside saturation function
         if ubound is None and lbound is None:
             raise ValueError('At least one bound should be specified for the constraint.')
@@ -433,7 +411,8 @@ class NecessaryConditions(object):
             #lbound = -ubound
             return ubound - exp(-var)
         else:
-            s = 4/(ubound - lbound)
+            print(ubound)
+            s = 4*slopeAtZero/(ubound - lbound)
             return ubound - ( ubound - lbound )/( 1 + exp(s*var) )
 
     def process_path_constraints(self, problem):
@@ -442,6 +421,12 @@ class NecessaryConditions(object):
 
         path_cost_expr = sympify2(problem.cost['path'].expr)
         path_cost_unit = sympify2(problem.cost['path'].unit)
+        if path_cost_expr == 0:
+            logging.debug('No path cost specified, using unit from terminal cost function')
+            problem.cost['path'].unit = problem.cost['terminal'].unit
+            path_cost_unit = sympify2(problem.cost['terminal'].unit)
+
+        logging.debug('Path cost is of unit: '+str(path_cost_unit))
         time_unit = Symbol('s')
 
         for (ind,c) in enumerate(constraints):
@@ -483,6 +468,7 @@ class NecessaryConditions(object):
                 # TODO: Allow continuation on constraints
                 # Define new hidden constant
                 c_limit = sympify2('_'+c.label)
+                print(c.limit)
                 problem.constant(str(c_limit),float(c.limit),c.unit)
                 logging.debug('Added constant '+str(c_limit))
 
@@ -495,7 +481,7 @@ class NecessaryConditions(object):
             else:
                 raise ValueError('Invalid direction specified for constraint')
 
-            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound)
+            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=10)
             psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
 
             # Add to quantity list
@@ -523,7 +509,7 @@ class NecessaryConditions(object):
 
             #TODO: Hardcoded 't' as independent variable with unit of 's'
             # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
-            c_vals = np.zeros(order)
+            c_vals = np.ones(order)*0.1
             h = [psi_vars[0][1]]
             for i in range(order):
                 # Add 'xi' state
@@ -550,7 +536,7 @@ class NecessaryConditions(object):
             # Add smoothing factor
             eps_const = Symbol('eps_'+c.label)
             eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
-            problem.constant(str(eps_const), 1, str(eps_unit))
+            problem.constant(str(eps_const), 1e-2, str(eps_unit))
             logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
             # Append new control to path cost
@@ -722,14 +708,14 @@ class NecessaryConditions(object):
          ,
          'parameter_list': [str(param) for param in self.parameter_list],
          'deriv_list':
-             ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
-             ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
+             ['abs(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
+             ['abs(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'dae_var_list':
              [str(dae_state) for dae_state in self.dae_states],
          'dae_eom_list':
-             ['(tf)*('+str(dae_eom)+')' for dae_eom in self.dae_equations],
+             ['abs(tf)*('+str(dae_eom)+')' for dae_eom in self.dae_equations],
          'dae_var_num': len(self.dae_states),
          'num_states': 2*len(problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial] + self.mu_lhs,

@@ -2,6 +2,7 @@
 import numpy as np
 
 from .. import Solution
+from beluga.utils import keyboard
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
@@ -220,13 +221,12 @@ class SingleShooting(Algorithm):
                 # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
 
                 # t,yy = ode45(stm_ode45, tspan, y0)
-                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
+                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance, reltol=1e-3)
                 # Obtain just last timestep for use with correction
                 yf = yy[-1]
                 # Extract states and STM from ode45 output
                 yb = yf[:nOdes]  # States
                 phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
-
                 # Evaluate the boundary conditions
                 res = bc_func(y0g, yb, paramGuess, aux)
 
@@ -290,7 +290,9 @@ class SingleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=1e-5, reltol=1e-5)
+            # keyboard()
+            x1, y1 = t, yy[:,:nOdes]
+            # x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=self.tolerance, reltol=1e-3)
             sol = Solution(x1,y1.T,paramGuess,aux)
         else:
             # Return initial guess if it failed to converge

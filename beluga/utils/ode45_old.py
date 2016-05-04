@@ -12,7 +12,8 @@ def warning(type, string):
 def error(type, string):
     logging.error('error: ' + type)
     logging.error(string)
-    exit
+    raise RuntimeError(string)  # Raise error to notify shooting solver
+    # exit
 
 # specify default arguments here:
 
