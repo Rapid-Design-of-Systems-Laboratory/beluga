@@ -34,7 +34,11 @@ def get_problem():
                         .initial('v-v_0','m/s')  \
                         .terminal('x-x_f','m')   \
                         .terminal('y-y_f','m')   \
-                        .path('constraint1','y + x','>',-1,'m')  # y + x > h0 -- above the line y= -x + h0
+                        .path('constraint1','y + 1.5*x','>',-0.5,'m')\
+                        .path('constraint2','y + 0.75*x','>',-2,'m')  #\
+                        # .path('constraint1','y + x','>',-1,'m')  #\
+                        # .path('constraint2','y - 0.5*x','>',-2,'m')
+                        # y + x > h0 -- above the line y= -x + h0
 
     # Define constants
     problem.constant('g','9.81','m/s^2')
@@ -60,13 +64,14 @@ def get_problem():
                     )
 
     # Figure out nicer way of representing this. Done?
-    problem.steps.add_step().num_cases(11) \
+    problem.steps.add_step().num_cases(41) \
                     .terminal('x', 5) \
                     .terminal('y',-5)
 
     # TODO: Automate addition of epsilon continuation
     problem.steps.add_step('bisection').num_cases(41,spacing='log') \
-                     .const('eps_constraint1', 1e-6)
+                     .const('eps_constraint1', 1e-6) #\
+                    #  .const('eps_constraint2', 1e-6)
 
     return problem
 

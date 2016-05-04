@@ -65,28 +65,27 @@ def get_problem():
     problem.constant('rho0', 1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
     problem.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
 
-
     problem.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
     problem.constant('re',6378000,'m') # Radius of planet, m
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
     problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
-    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
+    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
                    .unit('kg','mass')   \
                    .unit('rad',1)
 
-    problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180])
+    problem.guess.setup('auto',start=[80000,0,5000,-90*pi/180],costate_guess=-0.1)
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
     # Figure out nicer way of representing this. Done?
 
     problem.steps.add_step().num_cases(11) \
                             .terminal('h', 0)
 
-    problem.steps.add_step().num_cases(11)  \
+    problem.steps.add_step().num_cases(41)  \
                             .terminal('theta', 10*pi/180)
     # #
     # problem.steps.add_step()

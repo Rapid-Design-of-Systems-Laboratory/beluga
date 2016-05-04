@@ -7,6 +7,7 @@ from beluga.utils import keyboard
 import os.path
 import dill
 import logging
+from math import *
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
 
@@ -128,6 +129,7 @@ class Guess(object):
         dae_guess = np.ones(dae_num_states)*0.1
         dhdu_fn = bvp.dae_func_gen(0,x0,param_guess,bvp.solution.aux)
         dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
+        # dae_x0 = dae_guess
 
         x0 = np.append(x0,dae_x0) # Add dae states
         logging.debug('Generating initial guess by propagating: ')

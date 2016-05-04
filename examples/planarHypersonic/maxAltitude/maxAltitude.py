@@ -46,7 +46,7 @@ def get_problem():
            .state('theta','v*cos(gam)/r','rad')  \
            .state('v','-qA*Cd/mass - mu*sin(gam)/r**2','m/s') \
            .state('gam','qA*Cl/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)','rad') \
-           .state('alfa','alfaDot','rad')
+        #    .state('alfa','alfaDot','rad')
         #    .state('alfa','alfaRateMax*sin(alfaDotTrig)','rad')
     # problem.state('h','v*sin(gam)','m')   \
     #        .state('theta','v*cos(gam)/'+r,'rad')  \
@@ -54,8 +54,8 @@ def get_problem():
     #        .state('gam',L+'/(mass*v) + (v/'+r+' - mu/(v*'+r+'^2))*cos(gam)','rad')
 
     # Define controls
-    # problem.control('alfa','rad')
-    problem.control('alfaDot','rad/s')
+    problem.control('alfa','rad')
+    # problem.control('alfaDot','rad/s')
     # problem.control('alfaDotTrig','rad')
     # problem.control('alfaCtrl','rad')
 
@@ -89,8 +89,8 @@ def get_problem():
 
     # problem.constant('eps',10, 'm/s')
     # problem.constant('w',0, 'nd')
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=21, verbose = True, cached = False, number_arcs=2, max_error=100000)
-    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1001, verbose = True, cached = False, number_arcs=4, max_error=100000)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -111,16 +111,16 @@ def get_problem():
     # sol.u = np.vstack((alfaDot, sol.u))
     # problem.guess.setup('static', solinit=sol)
 
-    #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
 
-    problem.guess.setup('auto',start=[80000,0.0,5000,-90*pi/180, 0*pi/180], costate_guess=0.1, time_integrate=0.1)
+    problem.guess.setup('auto',start=[80000,0.01,5000,-90*pi/180], costate_guess=0.1, time_integrate=0.01)
     # problem.guess.setup('auto',start=[80000,0.01,5000,-90*pi/180])
     problem.steps.add_step('bisection') \
-                            .num_cases(11) \
-                            .terminal('h', 0)
-    problem.steps.add_step('bisection') \
-                            .num_cases(31) \
+                            .num_cases(101) \
+                            .terminal('h', 0) \
                             .terminal('theta', 10*pi/180)
+    # problem.steps.add_step('bisection') \
+    #                         .num_cases(41) \
+    #
     problem.steps.add_step('bisection') \
                             .num_cases(41) \
                             .const('eps_maxAltitude', 1e-4)
