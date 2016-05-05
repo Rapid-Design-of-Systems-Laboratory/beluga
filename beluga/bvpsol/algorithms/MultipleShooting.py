@@ -302,15 +302,6 @@ class MultipleShooting(Algorithm):
 
                 # Evaluate the boundary conditions
                 res = self.get_bc(y0g, yb, paramGuess, aux)
-                # Solution converged if BCs are satisfied to tolerance
-                if max(abs(res)) < self.tolerance:
-                    if self.verbose:
-                        logging.info("Converged in "+str(iter)+" iterations.")
-                    converged = True
-                    break
-                # logging.debug(paramGuess)
-                # Compute Jacobian of boundary conditions using numerical derviatives
-                J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux).astype(np.float64)
 
                 # Compute correction vector
                 r1 = np.linalg.norm(res)
@@ -321,6 +312,17 @@ class MultipleShooting(Algorithm):
 
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
+
+                # Solution converged if BCs are satisfied to tolerance
+                if max(abs(res)) < self.tolerance:
+                    if self.verbose:
+                        logging.info("Converged in "+str(iter)+" iterations.")
+                    converged = True
+                    break
+                # logging.debug(paramGuess)
+                # Compute Jacobian of boundary conditions using numerical derviatives
+                J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux).astype(np.float64)
+
                 if r0 is not None:
                     beta = (r0-r1)/(alpha*r0)
                     if beta < 0:
@@ -334,6 +336,12 @@ class MultipleShooting(Algorithm):
                 else:
                     alpha = 1
                 r0 = r1
+
+                # No damping if error within one order of magnitude
+                # of tolerance
+                if r1 < 10*self.tolerance:
+                    alpha, beta = 1, 1
+
                 dy0 = alpha*beta*np.linalg.solve(J,-res)
 
                 #dy0 = -alpha*beta*np.dot(np.transpose(np.dot(np.linalg.inv(np.dot(J,np.transpose(J))),J)),res)
