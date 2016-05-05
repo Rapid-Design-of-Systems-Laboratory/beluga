@@ -44,12 +44,13 @@ class Solution(object):
         variables += [(state,np.array(self.y[idx,:]))
                         for idx,state in enumerate(problem_data['state_list'])]
 
-
         # Define control variables
         variables += [(control,np.array(self.u[idx,:]))
                         for idx,control in enumerate(problem_data['control_list'])]
 
-        variables += [('t',self.x*self.y[-1,1])]
+        # TODO: Name 'tf' is hardcoded
+        tf_ind = problem_data['state_list'].index('tf')
+        variables += [('t',self.x*self.y[tf_ind,1])]
         self.var_dict = dict(variables)
 
     def evaluate(self,expr):
