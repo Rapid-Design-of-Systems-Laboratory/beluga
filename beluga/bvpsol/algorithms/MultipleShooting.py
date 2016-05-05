@@ -233,7 +233,7 @@ class MultipleShooting(Algorithm):
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
-            x,ynew = ode45.solve(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux)
+            x,ynew = ode45.solve(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux, abstol=self.tolerance/10, reltol=1e-3)
             guess.y = np.transpose(ynew)
             guess.x = x
 
@@ -292,7 +292,7 @@ class MultipleShooting(Algorithm):
                     #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
                 # Propagate STM and original system together
-                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance, reltol=self.tolerance)
+                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-3)
 
                 # Obtain just last timestep for use with correction
                 yf = [yySTM[i][-1] for i in range(self.number_arcs)]
@@ -322,17 +322,12 @@ class MultipleShooting(Algorithm):
                 # logging.debug(paramGuess)
                 # Compute Jacobian of boundary conditions using numerical derviatives
                 J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux).astype(np.float64)
-
                 if r0 is not None:
                     beta = (r0-r1)/(alpha*r0)
                     if beta < 0:
-                        beta = 0.1*abs(beta)  # Damp more if error increasing
-
+                        beta = 1
                 if r1>1:
                     alpha = 1/(2*r1)
-                elif r0 is not None and r0 > r1 and (r0-r1) < self.tolerance/100: # If change from last step is too small, kick it up
-                    alpha = alpha*10
-                    beta = 1
                 else:
                     alpha = 1
                 r0 = r1
@@ -373,7 +368,7 @@ class MultipleShooting(Algorithm):
         # If problem converged, propagate solution to get full trajectory
         # Possibly reuse 'yy' from above?
         if converged:
-            x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=self.tolerance, reltol=self.tolerance*10)
+            x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=self.tolerance/10, reltol=1e-3)
             sol = Solution(x1,y1.T,paramGuess)
         else:
             # Return initial guess if it failed to converge
