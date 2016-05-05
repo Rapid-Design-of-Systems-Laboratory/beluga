@@ -45,7 +45,7 @@ class SingleShooting(Algorithm):
         #     # dircache = file_archive()
         #     # self.solve = memoized(cache=dircache, keymap=dumps, ignore='self')(self.solve)
 
-    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
+    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-16):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
         # if parameters is not None:
@@ -82,7 +82,7 @@ class SingleShooting(Algorithm):
             J = M+np.dot(N,phi)
         return J
 
-    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-7):
+    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-6):
 
         ya = np.array(ya, ndmin=1)
         yb = np.array(yb, ndmin=1)
@@ -209,7 +209,7 @@ class SingleShooting(Algorithm):
         r0 = None
 
         tspan = [t0,tf]
-        # tspan = np.linspace(0,1,100)
+        # tspan = np.linspace(0,1,200)
         try:
             while True:
                 if iter>self.max_iterations:
@@ -221,7 +221,7 @@ class SingleShooting(Algorithm):
                 # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
 
                 # t,yy = ode45(stm_ode45, tspan, y0)
-                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance, reltol=1e-3)
+                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
                 # Obtain just last timestep for use with correction
                 yf = yy[-1]
                 # Extract states and STM from ode45 output
@@ -229,6 +229,14 @@ class SingleShooting(Algorithm):
                 phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
                 # Evaluate the boundary conditions
                 res = bc_func(y0g, yb, paramGuess, aux)
+
+                r1 = np.linalg.norm(res)
+                if r1 > self.max_error:
+                    logging.warn('Error exceeded max_error')
+                    raise RuntimeError('Error exceeded max_error')
+
+                if self.verbose:
+                    logging.debug('Residue: '+str(r1))
 
                 # self.bc_jac_func = self.__bcjac_csd
                 # Solution converged if BCs are satisfied to tolerance
@@ -241,13 +249,7 @@ class SingleShooting(Algorithm):
                 # Compute Jacobian of boundary conditions using numerical derviatives
                 J   = self.bc_jac_func(bc_func, y0g, yb, phi, paramGuess, aux)
                 # Compute correction vector
-                r1 = np.linalg.norm(res)
-                if r1 > self.max_error:
-                    logging.warn('Error exceeded max_error')
-                    raise RuntimeError('Error exceeded max_error')
 
-                if self.verbose:
-                    logging.debug('Residue: '+str(r1))
                 if r0 is not None:
                     beta = (r0-r1)/(alpha*r0)
                     if beta < 0:
@@ -257,6 +259,11 @@ class SingleShooting(Algorithm):
                 else:
                     alpha = 1
                 r0 = r1
+
+                # No damping if error within one order of magnitude
+                # of tolerance
+                if r1 < 10*self.tolerance:
+                    alpha, beta = 1, 1
 
                 try:
                     dy0 = alpha*beta*np.linalg.solve(J,-res)

@@ -708,14 +708,14 @@ class NecessaryConditions(object):
          ,
          'parameter_list': [str(param) for param in self.parameter_list],
          'deriv_list':
-             ['abs(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
-             ['abs(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
+             ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
+             ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'dae_var_list':
              [str(dae_state) for dae_state in self.dae_states],
          'dae_eom_list':
-             ['abs(tf)*('+str(dae_eom)+')' for dae_eom in self.dae_equations],
+             ['(tf)*('+str(dae_eom)+')' for dae_eom in self.dae_equations],
          'dae_var_num': len(self.dae_states),
          'num_states': 2*len(problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial] + self.mu_lhs,

@@ -13,6 +13,8 @@ def deriv_func(_t,_X,_p,_aux):
 {{/vars}}
 {{/aux_list}}
 
+    # print(eps_alfaLim)
+
     # Declare all predefined expressions
 {{#quantity_list}}
     {{name}} = {{expr}}
