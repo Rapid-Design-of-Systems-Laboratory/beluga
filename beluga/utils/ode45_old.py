@@ -12,7 +12,8 @@ def warning(type, string):
 def error(type, string):
     logging.error('error: ' + type)
     logging.error(string)
-    exit
+    raise RuntimeError(string)  # Raise error to notify shooting solver
+    # exit
 
 # specify default arguments here:
 
@@ -128,6 +129,8 @@ def ode45_old(vfun, vslot, vinit, *args, **kwargs):
     vdirection = sign(vtimestop)  # Flag for direction to solve
 
     eps = finfo(double).eps
+    # TODO: eps hardcoded in ode45
+    # eps = 1e-16
     if not vstepsizefixed:
         vstepsize = vodeoptions['initialstep']
         vminstepsize = double(vtimestop - vtimestamp) / (1. / eps)
@@ -263,10 +266,9 @@ def ode45_old(vfun, vslot, vinit, *args, **kwargs):
         # Update counters that count the number of iteration cycles
         vcntcycles = vcntcycles + 1		# Needed for cost statistics
         vcntiter = vcntiter + 1			# Needed to find iteration problems
-
         # Stop solving because in the last 1000 steps no successful valid value
         # has been found
-        if (vcntiter >= 5000):
+        if (vcntiter >= 1000):
             error("fatal", "Solving has not been successful. The iterative integration loop exited at time t = %f before endpoint at tend = %f was reached. This happened because the iterative integration loop does not find a valid solution at this time stamp. Try to reduce the value of \"initialstep\" and/or \"maxstep\" with the command \"odeset\".\n" %
                   (vtimestamp, vtimestop))
 
@@ -277,7 +279,7 @@ def ode45_old(vfun, vslot, vinit, *args, **kwargs):
     # print 'vodeoptions[initialstep]',vodeoptions['initialstep']
     # print 'vminstepsize',vminstepsize
     # print 'maxstep',vodeoptions['initialstep']
-    # print 'vcntiter',vcntiter
+
     if vdirection * vtimestamp < vdirection * vtimestop:
         error('OdePkg:InvalidArgument', 'Solving has not been successful. The iterative integration loop exited at time t = %f before endpoint at tend = %f was reached. This may happen if the stepsize grows smaller than defined in vminstepsize. Try to reduce the value of "initialstep" and/or "maxstep" with the command "odeset".\n' %
               (vtimestamp, vtimestop))

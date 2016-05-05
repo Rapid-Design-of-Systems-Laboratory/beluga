@@ -45,16 +45,22 @@ class BisectionStrategy(ManualStrategy):
                 # self.vars[var_type][var_name].value = bvp.solution.aux[var_type][var_name]
                 # insert new steps
                 old_steps = self.vars[var_type][var_name].steps
-                new_steps = np.linspace(old_steps[self.ctr-2],old_steps[self.ctr-1],self.num_divisions+1)
+                if self._spacing == 'linear':
+                    new_steps = np.linspace(old_steps[self.ctr-2],old_steps[self.ctr-1],self.num_divisions+1)
+                elif self._spacing == 'log':
+                    new_steps = np.logspace(np.log10(old_steps[self.ctr-2]),np.log10(old_steps[self.ctr-1]),self.num_divisions+1)
+                else:
+                    raise ValueError('Invalid spacing type')
+
                 # Insert new steps
                 self.vars[var_type][var_name].steps = np.insert(self.vars[var_type][var_name].steps,
-                                                                self.ctr-1,
-                                                                new_steps[1:-1] # Ignore repeated elements
-                                                                )
+                                                            self.ctr-1,
+                                                            new_steps[1:-1] # Ignore repeated elements
+                                                            )
         # Move the counter back
         self.ctr = self.ctr - 1
         # Increment total number of steps
-        self._num_cases = self._num_cases + 1
+        self._num_cases = self._num_cases + self.num_divisions-1
 
         logging.info('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
