@@ -481,7 +481,7 @@ class NecessaryConditions(object):
             else:
                 raise ValueError('Invalid direction specified for constraint')
 
-            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=10)
+            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=50)
             psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
 
             # Add to quantity list
