@@ -34,7 +34,7 @@ class BelugaPlot:
             step = self.default_step_idx
         if sol is None:
             sol = self.default_sol_idx
-        plot = Plot(step,sol)
+        plot = Plot(step, sol)
         self._plots.append(plot)
         return plot
 
