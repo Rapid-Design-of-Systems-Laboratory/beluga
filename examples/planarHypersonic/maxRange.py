@@ -58,7 +58,7 @@ def get_problem():
     problem.constant('re',6378000,'m') # Radius of planet, m
     problem.constant('Aref',0.1877,'m^2') # Reference area of vehicle, m^2
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100, verbose = True, cached = False, number_arcs=2)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-5, max_iterations=100, verbose = True, cached = False, number_arcs=2)
     problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-5, max_iterations=20, max_error=100, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
@@ -67,12 +67,12 @@ def get_problem():
                    .unit('rad',1)
 
     # Need long integration time to avoid local min?
-    problem.guess.setup('auto',start=[15000,0,500,0*pi/180],costate_guess=-0.0000001,time_integrate=50)
+    problem.guess.setup('auto',start=[15000,0,500,0*pi/180],costate_guess=-0.00000001,time_integrate=10)
 
-    problem.steps.add_step('bisection').num_cases(11) \
+    problem.steps.add_step('bisection').num_cases(41) \
                             .initial('v', 1000) \
                             .terminal('h', 12000)
-    problem.steps.add_step('bisection').num_cases(31) \
+    problem.steps.add_step('bisection').num_cases(101) \
                             .initial('v', 2500)
     # #
     # # problem.guess.setup('file',filename='phu_2k5_eps2.dill', step=-1, iteration=-1)
