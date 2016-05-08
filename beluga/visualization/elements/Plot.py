@@ -73,6 +73,7 @@ class Plot(object):
                 for ind in range(line['start'], line['end'], line['skip']+1):
                     sol = sol_set[ind]
                     sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
+                    # sol.prepare(problem_data)
                     line['data'].append({'x_data': sol.evaluate(line['x']),
                                          'y_data': sol.evaluate(line['y'])})
             else:
