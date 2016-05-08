@@ -30,13 +30,19 @@ class Solution(object):
         """
         Fits splines to all states in the solution data
         """
-        self.y_splines = self.u_splines = []
+        self.y_splines = []
+        self.u_splines = []
         for i,row in enumerate(self.y):
             spline = InterpolatedUnivariateSpline(self.x, row)
             self.y_splines.append(spline)
-        for i,row in enumerate(self.u):
-            spline = InterpolatedUnivariateSpline(self.x, row)
+
+        if len(self.u.shape) ==1 :
+            spline = InterpolatedUnivariateSpline(self.x, self.u)
             self.u_splines.append(spline)
+        else:
+            for i,row in enumerate(self.u):
+                spline = InterpolatedUnivariateSpline(self.x, row)
+                self.u_splines.append(spline)
 
     def interpolate(self, new_x, overwrite=False):
         """
@@ -68,9 +74,13 @@ class Solution(object):
         """
 
         if mesh_size is not None and mesh_size > len(self.x):
+            # Update solution to use new mesh if needed
             new_x = np.linspace(self.x[0],self.x[-1],mesh_size)
-            # Update solution to use new mesh
-            self.interpolate(new_x, overwrite=overwrite)
+            (new_y, new_u) = self.interpolate(new_x, overwrite=overwrite)
+
+        x,y,u = self.x, self.y, self.u
+        if not overwrite:
+            x,y,u = new_x, new_y, new_u
 
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
@@ -83,16 +93,16 @@ class Solution(object):
                 ]
         # Define state variables
         # Have to do in this order to override state values with arrays
-        variables += [(state,np.array(self.y[idx,:]))
+        variables += [(state,np.array(y[idx,:]))
                         for idx,state in enumerate(problem_data['state_list'])]
 
         # Define control variables
-        variables += [(control,np.array(self.u[idx,:]))
+        variables += [(control,np.array(u[idx,:]))
                         for idx,control in enumerate(problem_data['control_list'])]
 
         # TODO: Name 'tf' is hardcoded
         tf_ind = problem_data['state_list'].index('tf')
-        variables += [('t',self.x*self.y[tf_ind,1])]
+        variables += [('t',x*y[tf_ind,1])]
         self.var_dict = dict(variables)
 
 
