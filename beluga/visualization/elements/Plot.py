@@ -11,9 +11,10 @@ class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
     """
-    def __init__(self, step = 0, sol = 0):
+    def __init__(self, step, sol, mesh_size):
         self.step_index = step
         self.sol_index = sol
+        self.mesh_size = mesh_size
         self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
 
@@ -62,7 +63,8 @@ class Plot(object):
             if line['type'] == 'line':
                 sol_idx = line['sol'] if line['sol'] is not None else self.sol_index
                 sol = solution[step_idx][sol_idx]
-                sol.prepare(problem_data)
+
+                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
                 line['data'].append({'x_data': sol.evaluate(line['x']),
                                      'y_data': sol.evaluate(line['y'])})
             elif line['type'] == 'line_series':
@@ -70,7 +72,7 @@ class Plot(object):
                 line['end'] = len(sol_set) if line['end'] == -1 else line['end']
                 for ind in range(line['start'], line['end'], line['skip']+1):
                     sol = sol_set[ind]
-                    sol.prepare(problem_data)
+                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
                     line['data'].append({'x_data': sol.evaluate(line['x']),
                                          'y_data': sol.evaluate(line['y'])})
             else:

@@ -1,5 +1,7 @@
 import numpy as np
 import numexpr as ne
+from scipy.interpolate import InterpolatedUnivariateSpline
+
 class Solution(object):
     x = None
     y = None
@@ -16,20 +18,60 @@ class Solution(object):
             self.parameters = np.array(parameters)
         else:
             self.parameters = None
-        # if y is not None:
-        #     self.nOdes = self.y.shape[0] # Number of rows of y = number of ODEs
-        # else:
-        #     self.nOdes = 0
+
+        self.y_splines = self.u_splines = None
 
         self.aux = aux
         self.state_list = state_list
         self.var_dict = None
         self.converged = False
 
-    def prepare(self, problem_data):
+    def init_interpolate(self):
+        """
+        Fits splines to all states in the solution data
+        """
+        self.y_splines = self.u_splines = []
+        for i,row in enumerate(self.y):
+            spline = InterpolatedUnivariateSpline(self.x, row)
+            self.y_splines.append(spline)
+        for i,row in enumerate(self.u):
+            spline = InterpolatedUnivariateSpline(self.x, row)
+            self.u_splines.append(spline)
+
+    def interpolate(self, new_x, overwrite=False):
+        """
+        Interpolates solution data over a new mesh of 'x'
+
+        new_x : new mesh to evaluate
+        overwrite: Should the current solution be overwritten?
+        """
+        # Account for old data files with no sol_splines
+        if not hasattr(self,'y_splines') or not hasattr(self,'u_splines') \
+            or self.y_splines is None or self.u_splines is None:
+            self.init_interpolate()
+
+        new_y = np.array([spline(new_x) for spline in self.y_splines])
+        new_u = np.array([spline(new_x) for spline in self.u_splines])
+        if overwrite:
+            self.x = new_x
+            self.y = new_y
+            self.u = new_u
+
+        return (new_y, new_u)
+
+    def prepare(self, problem_data, mesh_size = None, overwrite=False):
         """
         Creates the dictionary required to evaluate expressions over the solution
+
+        mesh_size: Evaluate over new mesh
+        overwrite: Overwrite existing solution with new mesh
         """
+
+        if mesh_size is not None and mesh_size > len(self.x):
+            new_x = np.linspace(self.x[0],self.x[-1],mesh_size)
+            # Update solution to use new mesh
+            self.interpolate(new_x, overwrite=overwrite)
+
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
 
@@ -52,6 +94,7 @@ class Solution(object):
         tf_ind = problem_data['state_list'].index('tf')
         variables += [('t',self.x*self.y[tf_ind,1])]
         self.var_dict = dict(variables)
+
 
     def evaluate(self,expr):
         """
