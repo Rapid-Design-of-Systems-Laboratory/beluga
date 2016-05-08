@@ -10,17 +10,12 @@ from math import *
 import functools
 
 def get_problem():
-    # Figure out way to implement caching automatically
-    #@functools.lru_cache(maxsize=None)
-    """A simple planar hypersonic problem example."""
+    """A simple planar hypersonic maximum range problem."""
 
-    # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('planarHypersonic')
-    # problem = beluga.optim.Problem()
 
     # Define independent variables
     problem.independent('t', 's')
-
 
     # Define equations of motion
     problem.state('h','v*sin(gam)','m')   \
