@@ -1,12 +1,13 @@
-import dill
+from . import renderers
 from .elements import PlotList,Plot
-from .renderers import *
+from .renderers import BaseRenderer
+import dill, inspect
 
 class BelugaPlot:
     """
     Manages the plotting framework
     """
-    def __init__(self, filename='data.dill', renderer = None, default_step = -1, default_sol = -1):
+    def __init__(self, filename='data.dill', renderer = 'matplotlib', default_step = -1, default_sol = -1):
         """
         Initializes plotting framework with given data file
         """
@@ -20,10 +21,17 @@ class BelugaPlot:
 
         # TODO: Get default renderer information from global configuration
         # TODO: Pass in extra renderer options here?
-        if renderer is None:
-            self.renderer = MatPlotLib()
-        else:
+        if isinstance(renderer, BaseRenderer):
             self.renderer = renderer
+        else:
+            # Load renderer from the list of existing classes
+            self.renderer = None
+            for name, obj in inspect.getmembers(renderers):
+                if inspect.isclass(obj) and issubclass(obj, BaseRenderer):
+                    if name.lower() == renderer.lower():
+                        self.renderer = obj()
+            if self.renderer is None:
+                raise ValueError('Renderer '+renderer+' not found')
 
     def add_plot(self, step = None, sol = None):
         """
