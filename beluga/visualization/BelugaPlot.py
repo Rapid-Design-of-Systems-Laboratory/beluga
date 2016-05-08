@@ -29,6 +29,7 @@ class BelugaPlot:
             for name, obj in inspect.getmembers(renderers):
                 if inspect.isclass(obj) and issubclass(obj, BaseRenderer):
                     if name.lower() == renderer.lower():
+                        # Renderer initialized with its default settings
                         self.renderer = obj()
             if self.renderer is None:
                 raise ValueError('Renderer '+renderer+' not found')
