@@ -57,7 +57,8 @@ class MatPlotLib(Renderer):
         has_legend = False
         for line in p.plot_data:
             has_legend = has_legend or (line['legend'] is not None)
-            plot(line['x_data'],line['y_data'],label=line['legend'],figure=fh)
+            for dataset in line['data']:
+                plot(dataset['x_data'],dataset['y_data'],label=line['legend'],figure=fh)
         if has_legend:
             fh.gca().legend()
         if p._xlabel is not None:
