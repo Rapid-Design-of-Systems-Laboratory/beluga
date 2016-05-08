@@ -14,7 +14,6 @@ plots.add_plot().line_series('theta*re/1000','h/1000', step=-1, skip=3)         
 # plots.add_plot().line('t','alfa*180/3.14')                    \
 #                 .xlabel('t (s)').ylabel('alfa (degrees)')      \
 #                 .title('Angle of attack vs. Time')
-#
 
 plots.add_plot().line_series('v/1000','h/1000', step=-1, skip=9)                    \
                 .xlabel('v (km/s)').ylabel('h (km)')      \
