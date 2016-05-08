@@ -1,5 +1,6 @@
-from .Renderer import Renderer
+from .BaseRenderer import BaseRenderer
 from .MatPlotLib import MatPlotLib
+from .ToyPlot import ToyPlot
 
 import os
 import glob

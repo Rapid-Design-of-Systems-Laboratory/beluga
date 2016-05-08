@@ -1,7 +1,7 @@
-from beluga.visualization.renderers import Renderer
+from beluga.visualization.renderers import BaseRenderer
 from matplotlib.pyplot import *
 
-class MatPlotLib(Renderer):
+class MatPlotLib(BaseRenderer):
     """
     A renderer class that implements matplotlib
     """
