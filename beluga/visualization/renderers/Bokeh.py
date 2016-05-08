@@ -1,17 +1,16 @@
 from beluga.visualization.renderers import BaseRenderer
+from bokeh.plotting import *
+from bokeh.palettes import *
+from bokeh.models import HoverTool
 
-import toyplot.browser, toyplot.qt, toyplot.html, toyplot.pdf, toyplot.png, toyplot.svg
-from toyplot import *
+import webbrowser
 
-class ToyPlot(BaseRenderer):
-    def __init__(self, backend = 'browser'):
+class Bokeh(BaseRenderer):
+    def __init__(self, filename='plot.html'):
         self._figures = []
-        backends = {'browser': toyplot.browser,
-                    'pdf': toyplot.pdf,
-                    'png': toyplot.png,
-                    'svg': toyplot.svg,
-                    'html': toyplot.html}
-        self.backend = toyplot.browser
+        self.filename = filename
+        output_file(filename, title="beluga Output")
+
 
     def _get_figure(self,f):
         """
@@ -28,12 +27,11 @@ class ToyPlot(BaseRenderer):
         except:
             raise ValueError('Invalid figure handle specified!')
 
-    def create_figure(self):
+    def create_figure(self, width=600, height=600):
         """
         Creates a new figure and returns a handle (index into array)
         """
-        canvas = toyplot.Canvas(width=600, height=600)
-        self._figures.append(canvas)
+        self._figures.append(figure(width=width, height=height))
         return len(self._figures)-1
 
     def close_figure(self,f):
@@ -47,35 +45,56 @@ class ToyPlot(BaseRenderer):
         """
         Shows a specified figure
         """
-        self.backend.show(self._get_figure(f))
+        show(self._get_figure(f))
 
     def show_all(self):
         """
         Show all rendered figures
         """
-        for f in self._figures:
-            self.backend.show(f)
+        p = vplot(*self._figures)
+        show(p)
+        # for f in self._figures:
+        #
+        #     show(f)
+        webbrowser.open(self.filename, new=2, autoraise=True)
 
     def render_plot(self,f,p):
         """
         Adds a line plot using the given data to the specified figure
         """
-        canvas = self._get_figure(f);
-        axes = canvas.axes()
-        # has_legend = False
-        for line in p.plot_data:
-            # has_legend = has_legend or (line['legend'] is not None)
-            for dataset in line['data']:
-                axes.plot(dataset['x_data'], dataset['y_data'])
+        plot = self._get_figure(f);
 
-        # if has_legend:
-        #     fh.gca().legend()
+        for line in p.plot_data:
+            dataset = [(data['x_data'],data['y_data']) for data in line['data']]
+            xlist, ylist = zip(*dataset)
+            if len(dataset) < 5:
+                mypalette=Spectral4[0:len(dataset)]
+            else:
+                mypalette=Spectral10[0:len(dataset)]
+            plot.multi_line(xs=xlist, ys=ylist, line_color=mypalette)
+
+        # NOT WORKING!
+        # if p._xlabel is not None and p._ylabel is not None:
+        #     hover = HoverTool(
+        #         tooltips=[
+        #             (p._xlabel+":", "$x"),
+        #             (p._ylabel+":", "$y"),
+        #         ]
+        #     )
+        # else:
+        #     hover = HoverTool(
+        #         tooltips=[
+        #             ("($x, $y)")
+        #         ]
+        #     )
+        # plot.add_tools(hover)
+
         if p._xlabel is not None:
-            axes.x.label.text = p._xlabel
+            plot.xaxis.axis_label = p._xlabel
         if p._ylabel is not None:
-            axes.y.label.text = p._ylabel
+            plot.yaxis.axis_label = p._ylabel
         if p._title is not None:
-            axes.label.text = p._title
+            plot.title = p._title
 
     def render_subplot(self,f,index,plot):
         """
@@ -87,7 +106,7 @@ if __name__ == '__main__':
     from beluga.visualization.elements import Plot
     import dill
 
-    r = ToyPlot()
+    r = Bokeh()
     fig = r.create_figure()
 
     with open('/Users/tantony/dev/tantony-beluga/examples/planarHypersonic/phu_2k5_eps2.dill','rb') as f:
