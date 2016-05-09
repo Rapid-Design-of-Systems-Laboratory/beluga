@@ -13,8 +13,7 @@ def bc_func_left(_ya, _p, _aux):
     # Generalize to multipoint later
     # Left BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _ya[:{{num_states}}]
-    [{{#control_list}}{{.}},{{/control_list}}] = compute_control(0,_ya,_p,_aux)
-
+    [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _ya[{{num_states}}:]
 
     # Declare all predefined expressions
 {{#quantity_list}}
@@ -39,7 +38,7 @@ def bc_func_right(_yb, _p, _aux):
 
     # Right BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _yb[:{{num_states}}]
-    [{{#control_list}}{{.}},{{/control_list}}] = compute_control(1,_yb,_p,_aux)
+    [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _yb[{{num_states}}:]
     # Declare all predefined expressions
 {{#quantity_list}}
     {{name}} = {{expr}}
