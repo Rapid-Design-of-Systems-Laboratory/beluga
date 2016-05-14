@@ -12,11 +12,9 @@ def get_problem():
     # Figure out way to implement caching automatically
     #@functools.lru_cache(maxsize=None)
 
-    # @custom(unit='m/s')
     def CLfunction(alfa):
         return 1.5658*alfa
 
-    #@functools.lru_cache(maxsize=None)
     def CDfunction(alfa):
         return 1.6537*alfa**2 + 0.0612
     #
