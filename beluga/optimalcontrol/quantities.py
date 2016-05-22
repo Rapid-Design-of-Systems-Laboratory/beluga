@@ -1,0 +1,2 @@
+class QuantityList(list):
+    pass

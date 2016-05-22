@@ -4,14 +4,15 @@ from sympy.core.function import AppliedUndef, Function
 import pystache, imp, inspect, logging, os
 import re as _re
 
-import beluga.bvpsol.BVP as BVP
+# import beluga.bvpsol.BVP as BVP
 
-from beluga.utils import sympify2, keyboard, ipsh
-from beluga.optim.problem import *
+# from beluga.utils import sympify2, keyboard, ipsh
+# from beluga.optim.problem import *
 import dill
 import numpy as np
 
-class NecessaryConditions(object):
+sympify2 = sympify
+class NumOptControl(object):
     """Defines necessary conditions of optimality."""
 
     # pystache renderer without HTML escapes
@@ -31,62 +32,61 @@ class NecessaryConditions(object):
         self.costate_rates = []
         self.ham = sympify2('0')
         self.ham_ctrl_partial = []
+        self.ctrl_free = []
         self.parameter_list = []
         self.bc_initial = []
         self.bc_terminal = []
-        from .. import Beluga # helps prevent cyclic imports
+        # from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
-        self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
+        # self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
         self.template_suffix = '.py.mu'
-        self.dae_states = []
-        self.dae_equations = []
 
-    def cache_bvp(self, problem, filename=None):
-        """
-        \brief Saves BVP object into file on disk
-        Arguments:
-            problem : Problem object
-            filename: Full path to cache file (optional)
-                      default value: <self.problem.name>_bvp.dat
-        \date  01/27/2016
-        """
-        if filename is None:
-            filename = problem.name+'_bvp.dat'
-
-        with open(filename,'wb') as f:
-            try:
-                logging.info('Caching BVP information to file')
-                bvp = dill.dump(self.bvp,f)
-                return True
-            except:
-                logging.warn('Failed to save BVP to '+filename)
-                return False
-
-    def load_bvp(self, problem, filename=None):
-        """
-        \brief  Loads pre-computed BVP object from cache file
-        \author Thomas Antony
-        Arguments:
-            problem : Problem object
-            filename: Full path to cache file (optional)
-                      default value: <self.problem.name>_bvp.dat
-        \date  01/27/2016
-        """
-        if filename is None:
-            filename = problem.name+'_bvp.dat'
-
-        if not os.path.exists(filename):
-            return None
-
-        with open(filename,'rb') as f:
-            try:
-                logging.info('Loading BVP information from cache')
-                bvp = dill.load(f)
-                return bvp
-            except Exception as e:
-                logging.warn('Failed to load BVP from '+filename)
-                logging.debug(e)
-                return None
+    # def cache_bvp(self, problem, filename=None):
+    #     """
+    #     \brief Saves BVP object into file on disk
+    #     Arguments:
+    #         problem : Problem object
+    #         filename: Full path to cache file (optional)
+    #                   default value: <self.problem.name>_bvp.dat
+    #     \date  01/27/2016
+    #     """
+    #     if filename is None:
+    #         filename = problem.name+'_bvp.dat'
+    #
+    #     with open(filename,'wb') as f:
+    #         try:
+    #             logging.info('Caching BVP information to file')
+    #             bvp = dill.dump(self.bvp,f)
+    #             return True
+    #         except:
+    #             logging.warn('Failed to save BVP to '+filename)
+    #             return False
+    #
+    # def load_bvp(self, problem, filename=None):
+    #     """
+    #     \brief  Loads pre-computed BVP object from cache file
+    #     \author Thomas Antony
+    #     Arguments:
+    #         problem : Problem object
+    #         filename: Full path to cache file (optional)
+    #                   default value: <self.problem.name>_bvp.dat
+    #     \date  01/27/2016
+    #     """
+    #     if filename is None:
+    #         filename = problem.name+'_bvp.dat'
+    #
+    #     if not os.path.exists(filename):
+    #         return None
+    #
+    #     with open(filename,'rb') as f:
+    #         try:
+    #             logging.info('Loading BVP information from cache')
+    #             bvp = dill.load(f)
+    #             return bvp
+    #         except Exception as e:
+    #             logging.warn('Failed to load BVP from '+filename)
+    #             logging.debug(e)
+    #             return None
 
     def derivative(self, expr, var, dependent_variables):
         """
@@ -565,7 +565,7 @@ class NecessaryConditions(object):
             problem.constant(str(eps_const), 1, str(eps_unit))
 
             # problem.state('costC2','eps2*('+str(w_i)+'^2)','m^2/s^2')
-    def process_quantities(self, problem):
+    def process_quantities(self):
         # Should this be moved into __init__ ?
         # self.process_systems(problem)
         logging.info('Processing quantity expressions')
@@ -589,25 +589,22 @@ class NecessaryConditions(object):
             self.quantity_list = quantity_subs = []
             self.quantity_vars = {}
 
-    def make_costates(self, problem):
-        self.costates = [state.make_costate() for state in problem.states()]
-
     def get_bvp(self,problem,mode='dae'):
         """Perform variational calculus calculations on optimal control problem
            and returns an object describing the boundary value problem to be solved
 
         Returns: bvpsol.BVP object
         """
-        # Process intermediate variables
-        self.process_quantities(problem)
+
+        self.process_quantities()
+        self.dae_states = self.dae_equations = []
 
         # Regularize path constraints using saturation functions
         self.process_path_constraints(problem)
 
         # self.state_subs = [(state.sym, sympify2(state.process_eqn)) for state in problem.states()]
         ## Create costate list
-        # self.costates = [state.make_costate() for state in problem.states()]
-        self.make_costates(problem)
+        self.costates = [state.make_costate() for state in problem.states()]
 
         # for i in range(len(self.problem.states())):
         #     self.costates.append(self.problem.states()[i].make_costate())
@@ -665,6 +662,7 @@ class NecessaryConditions(object):
         # Compute costate process equations
         self.make_costate_rate(problem.states())
         self.make_ctrl_partial(problem.controls())
+
 
         # # Add support for state and control constraints
         # problem.state('xi11','xi12','m')
@@ -751,13 +749,13 @@ class NecessaryConditions(object):
             dhdu_fn = None
             dae_num = 0
 
-        self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
-        self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
-        self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
-        self.bvp.solution.aux['function']  = problem.functions
-
-        # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
-        self.bvp.control_func = self.compiled.compute_control
-        self.bvp.problem_data = self.problem_data
-        # TODO: ^^ Do same for constraint values
+        # self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
+        # self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
+        # self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
+        # self.bvp.solution.aux['function']  = problem.functions
+        #
+        # # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
+        # self.bvp.control_func = self.compiled.compute_control
+        # self.bvp.problem_data = self.problem_data
+        # # TODO: ^^ Do same for constraint values
         return self.bvp
