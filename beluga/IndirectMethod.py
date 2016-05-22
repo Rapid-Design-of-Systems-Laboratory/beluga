@@ -1,6 +1,7 @@
+# from beluga.optim import *
+from optimalcontrol.elements import Problem
 from sympy import *
 from sympy.core.function import AppliedUndef, Function
-# from sympy.parsing.sympy_parser import parse_expr
 import pystache, imp, inspect, logging, os
 import re as _re
 
@@ -10,33 +11,56 @@ from beluga.utils import sympify2, keyboard, ipsh
 from beluga.optim.problem import *
 import dill
 import numpy as np
+from collections import Iterable
 
-class NecessaryConditions(object):
-    """Defines necessary conditions of optimality."""
+class OCDAENumerical(object):
+    name = 'dae-numerical'
 
-    # pystache renderer without HTML escapes
-    renderer = pystache.Renderer(escape=lambda u: u)
+    def get_actions(self):
+        # Tuple: (func, arg1, arg2, ...)
+        self.actions = [
+            (self.process_quantities),
+            (self.make_costates),
+            (self.make_aug_cost, 'initial'),
+            (self.make_aug_cost, 'terminal'),
+            # (self.process_path_constraints, problem),
+        ]
+        return self.actions
 
-    def __init__(self, cached=True):
+    def run(self):
+        for action in self.actions:
+            if isinstance(action, Iterable):
+                action[0](*action[1:])
+            else:
+                action()
+
+        # pystache renderer without HTML escapes
+        renderer = pystache.Renderer(escape=lambda u: u)
+
+    def __init__(self, problem, cached=True):
         """!
         \brief     Initializes all of the relevant necessary conditions of opimality.
         \author    Michael Grant
         \author    Thomas Antony
-        \version   0.1
-        \date      06/30/15
+        \version   0.2
+        \date      05/15/16
         """
+
+        self.problem = problem
+        self.get_actions()
 
         self.aug_cost = {}
         self.costates = []
         self.costate_rates = []
         self.ham = sympify2('0')
         self.ham_ctrl_partial = []
+        self.ctrl_free = []
         self.parameter_list = []
         self.bc_initial = []
         self.bc_terminal = []
-        from .. import Beluga # helps prevent cyclic imports
+        # from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
-        self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
+        # self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
         self.template_suffix = '.py.mu'
         self.dae_states = []
         self.dae_equations = []
@@ -253,7 +277,7 @@ class NecessaryConditions(object):
                                     for (ctrl,expr) in option.items()]
                                 for option in ctrl_sol]
 
-    def make_aug_cost(self, aug_cost, constraint, location):
+    def make_aug_cost(self, location):
         """!
         \brief     Symbolically create the augmented cost functional.
         \author    Michael Grant
@@ -261,7 +285,8 @@ class NecessaryConditions(object):
         \version   0.1
         \date      06/30/15
         """
-
+        aug_cost   = self.problem.cost[location].expr
+        constraint = self.problem.constraints(location)
         # Do in two steps so that indices are "right"
         # TODO: apply quantities
         filtered_list = [c for c in constraint if c.type==location]
@@ -298,11 +323,6 @@ class NecessaryConditions(object):
             # Using list comprehension instead of loops
             self.bc_terminal += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym,self.quantity_vars))
                                     for state in states]
-
-        # for i in range(len(state)):
-        #     self.bc_initial.append(
-        #         diff(sympify2(sign + '(' + self.aug_cost[location] + ')'),
-        #         state[i].sym))
 
     def make_ham(self, problem):
         """!
@@ -565,7 +585,7 @@ class NecessaryConditions(object):
             problem.constant(str(eps_const), 1, str(eps_unit))
 
             # problem.state('costC2','eps2*('+str(w_i)+'^2)','m^2/s^2')
-    def process_quantities(self, problem):
+    def process_quantities(self,):
         # Should this be moved into __init__ ?
         # self.process_systems(problem)
         logging.info('Processing quantity expressions')
@@ -573,8 +593,8 @@ class NecessaryConditions(object):
         # Substitute all quantities that show up in other quantities with their expressions
         # TODO: Sanitize quantity expressions
         # TODO: Check for circular references in quantity expressions
-        if len(problem.quantity()) > 0:
-            quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
+        if len(self.problem.quantity()) > 0:
+            quantity_subs = [(qty.var, qty.expr) for qty in self.problem.quantity()]
             quantity_sym, quantity_expr = zip(*quantity_subs)
             quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
 
@@ -589,8 +609,8 @@ class NecessaryConditions(object):
             self.quantity_list = quantity_subs = []
             self.quantity_vars = {}
 
-    def make_costates(self, problem):
-        self.costates = [state.make_costate() for state in problem.states()]
+    def make_costates(self):
+        self.costates = [state.make_costate() for state in self.problem.states()]
 
     def get_bvp(self,problem,mode='dae'):
         """Perform variational calculus calculations on optimal control problem
@@ -613,11 +633,13 @@ class NecessaryConditions(object):
         #     self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
-        aug_cost_init = sympify2(problem.cost['initial'].expr)
-        self.make_aug_cost(aug_cost_init, problem.constraints(), 'initial')
+        # aug_cost_init = sympify2(problem.cost['initial'].expr)
+        self.make_aug_cost('initial')
+        # self.make_aug_cost(aug_cost_init, problem.constraints(), 'initial')
 
-        aug_cost_term = sympify2(problem.cost['terminal'].expr)
-        self.make_aug_cost(aug_cost_term, problem.constraints(), 'terminal')
+        # aug_cost_term = sympify2(problem.cost['terminal'].expr)
+        self.make_aug_cost('terminal')
+        # self.make_aug_cost(aug_cost_term, problem.constraints(), 'terminal')
 
         # Add state boundary conditions
         self.bc_initial = [self.sanitize_constraint(x,problem).expr
@@ -744,12 +766,8 @@ class NecessaryConditions(object):
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
 
-        if mode == 'dae':
-            dhdu_fn = self.compiled.get_dhdu_func
-            dae_num = len(problem.controls()) + len(self.mu_vars)
-        else:
-            dhdu_fn = None
-            dae_num = 0
+        dhdu_fn = self.compiled.get_dhdu_func
+        dae_num = len(problem.controls()) + len(self.mu_vars)
 
         self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
         self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
@@ -761,3 +779,10 @@ class NecessaryConditions(object):
         self.bvp.problem_data = self.problem_data
         # TODO: ^^ Do same for constraint values
         return self.bvp
+
+if __name__ == '__main__':
+    problem = Problem('brachisto')
+    problem.quantity('foo','bar')
+    im = OCDAENumerical(problem)
+    im.run()
+    print(im.quantity_list)
