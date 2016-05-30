@@ -100,6 +100,7 @@ class SingleShooting(Algorithm):
 
         M = np.zeros((nBCs, nOdes))
         N = np.zeros((nBCs, nOdes))
+
         for i in range(nOdes):
             ya[i] = ya[i] + h
             f = bc_func(ya,yb,p,aux)
