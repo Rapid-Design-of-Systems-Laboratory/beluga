@@ -14,6 +14,16 @@ def compute_jacobian(f, X, indices=None, StepSize=1e-16, *args):
                 for index, ih in enumerate(I)
                 if index in indices],order='F').T
 
+def compute_jacobian_fd(f, X, indices=None, StepSize=1e-6, *args):
+    I = np.eye({{num_states}}+{{dae_var_num}})*StepSize
+    if indices is None:
+        indices = range({{num_states}}+{{dae_var_num}})
+
+    fx = f(X[:({{num_states}}+{{dae_var_num}})], *args)
+    return np.array([ (f(X[:({{num_states}}+{{dae_var_num}})]+h, *args) - fx)/StepSize
+                for index, h in enumerate(I)
+                if index in indices],order='F').T
+
 def compute_g(_t, _X, _p, _aux):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:({{num_states}})]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
