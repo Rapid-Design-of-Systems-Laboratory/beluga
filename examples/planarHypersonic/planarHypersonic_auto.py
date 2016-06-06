@@ -99,7 +99,12 @@ def get_problem():
 if __name__ == '__main__':
     import beluga.Beluga as Beluga
     problem = get_problem()
+
+    from vprof import profiler
+
     sol = Beluga.run(problem)
+    # profiler.run(Beluga.run, 'cmh', args=(problem, ), host='localhost', port=8000)
+
 
 # Numerical
 # Guess.py:136: x0: [  8.00000000e+04   1.00000000e-02   5.00000000e+03  -1.57079633e+00
