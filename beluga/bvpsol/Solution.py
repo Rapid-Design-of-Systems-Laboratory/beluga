@@ -11,7 +11,7 @@ class Solution(object):
             self.x = np.array(x)
             self.y = np.array(y)
         else:
-            self.x = self.y = None
+            self.x = self.y = self.u = None
         if parameters is not None:
             self.parameters = np.array(parameters)
         else:
@@ -24,6 +24,7 @@ class Solution(object):
         self.aux = aux
         self.state_list = state_list
         self.var_dict = None
+        self.converged = False
 
     def prepare(self, problem_data):
         """
@@ -32,23 +33,24 @@ class Solution(object):
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
 
+        # Define every aux variable (such as constants) in the dictionary
         variables = [(aux_name,aux_val)
                 for aux_type in self.aux
                 if isinstance(self.aux[aux_type],dict)
                 for (aux_name,aux_val) in self.aux[aux_type].items()
                 ]
+        # Define state variables
         # Have to do in this order to override state values with arrays
         variables += [(state,np.array(self.y[idx,:]))
                         for idx,state in enumerate(problem_data['state_list'])]
 
 
-        # controls = np.vectorize(self.ctrl_func)
+        # Define control variables
         variables += [(control,np.array(self.u[idx,:]))
                         for idx,control in enumerate(problem_data['control_list'])]
 
         variables += [('t',self.x*self.y[-1,1])]
         self.var_dict = dict(variables)
-        print(self.var_dict['alfa'])
 
     def evaluate(self,expr):
         """

@@ -9,11 +9,12 @@ from beluga.utils import keyboard
 from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 from beluga.utils.Worker import Worker
+import logging
 
 try:
     from mpi4py import MPI
     HPCSUPPORTED = 1
-except:
+except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
@@ -34,6 +35,13 @@ class MultipleShooting(Algorithm):
         if cached and cache_dir is not None:
             self.set_cache_dir(cache_dir)
         self.number_arcs = number_arcs
+
+        # TODO: Implement the host worker in a nicer way
+        # Start Host MPI process
+        # self.worker = Worker(mode='HOST')
+        # self.worker.startWorker()
+        # self.worker.Propagator.setSolver(solver='ode45')
+        self.worker = None
 
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
@@ -196,7 +204,7 @@ class MultipleShooting(Algorithm):
             f1 = np.concatenate((f1,nextbc))
         return f1
 
-    def solve(self,bvp,worker=None):
+    def solve(self,bvp):
         """Solve a two-point boundary value problem
             using the multiple shooting method
 
@@ -215,8 +223,8 @@ class MultipleShooting(Algorithm):
             Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
             return Single.solve(bvp)
 
-        if worker is not None:
-            ode45 = worker.Propagator
+        if self.worker is not None:
+            ode45 = self.worker.Propagator
         else:
             # Start local pool
             ode45 = Propagator(solver='ode45',process_count=self.number_arcs)
@@ -268,7 +276,7 @@ class MultipleShooting(Algorithm):
 
         while True:
             if iter>self.max_iterations:
-                print("Maximum iterations exceeded!")
+                logging.WARN("Maximum iterations exceeded!")
                 break
 
             y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
@@ -295,17 +303,17 @@ class MultipleShooting(Algorithm):
             # Solution converged if BCs are satisfied to tolerance
             if max(abs(res)) < self.tolerance:
                 if self.verbose:
-                    print("Converged in "+str(iter)+" iterations.")
+                    logging.info("Converged in "+str(iter)+" iterations.")
                 converged = True
                 break
-            print(paramGuess)
+            logging.debug(paramGuess)
             # Compute Jacobian of boundary conditions using numerical derviatives
             J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux)
             # Compute correction vector
 
             r1 = np.linalg.norm(res)
             if self.verbose:
-                print(r1)
+                logging.debug('Residue: '+str(r1))
             if r0 is not None:
                 beta = (r0-r1)/(alpha*r0)
                 if beta < 0:
@@ -344,12 +352,13 @@ class MultipleShooting(Algorithm):
             x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=1e-6, reltol=1e-6)
             sol = Solution(x1,y1.T,paramGuess)
         else:
-            # Fix this to be something more elegant
-            sol = Solution(np.nan, np.nan, np.nan)
+            # Return initial guess if it failed to converge
+            sol = solinit
 
+        sol.converged = converged
         bvp.solution = sol
         sol.aux = aux
 
-        if worker is None:
+        if self.worker is None:
             ode45.closePool()
         return sol

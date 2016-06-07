@@ -1,22 +1,28 @@
-from .ContinuationVariable import ContinuationVariable
+from beluga.continuation.ContinuationVariable import ContinuationVariable
 import numpy as np
+import logging
 # Can be subclassed to allow automated stepping
-class ContinuationStep(object):
+class ManualStrategy(object):
     """Defines one continuation step in continuation set"""
+    # A unique short name to select this class
+    name = 'manual'
 
     def __init__(self, num_cases = 1,vars=[], bvp=None):
         self.bvp = bvp
         self._num_cases = num_cases
         self.vars = {}  # dictionary of values
         self.ctr  = 0   # iteration counter
+        self.last_bvp = None
 
     def reset(self):
         """Resets the internal step counter to zero"""
         self.ctr = 0
+        self.last_bvp = None
 
     def clear(self):
         """Clears all the previously set continuation variables"""
         self.vars = {}
+        self.reset()
     #
     # def get_ctr(self):
     #     return self.ctr
@@ -46,9 +52,13 @@ class ContinuationStep(object):
         return self
 
     def num_cases(self,num_cases=None):
+
         if num_cases is None:
             return self._num_cases
         else:
+            if self.ctr > 0:
+                raise RuntimeError('Cannot set num_cases during iteration')
+
             self._num_cases = num_cases
             return self
 
@@ -75,11 +85,17 @@ class ContinuationStep(object):
     def __next__(self):
         return self.next()
 
-    def next(self):
-        """Generator class to create BVPs for the continuation step iterations"""
+    def next(self, ignore_last_step = False):
+        """Generator class to create BVPs for the continuation step iterations
+        ignore_last_bvp: Should the non-convergence of previous step be ignored?
+        """
 
         if self.bvp is None:
             raise ValueError('No boundary value problem associated with this object')
+
+        if not ignore_last_step and self.last_bvp is not None and not self.last_bvp.solution.converged:
+            logging.error('The last step did not converge!')
+            raise RuntimeError('Solution diverged! Stopping.')
 
         if self.ctr >= self._num_cases:
             raise StopIteration
@@ -90,6 +106,5 @@ class ContinuationStep(object):
                 self.bvp.solution.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
 
         self.ctr += 1
+        self.last_bvp = self.bvp
         return self.bvp
-    # def update_var(self):
-    #     pass

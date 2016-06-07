@@ -8,3 +8,4 @@ class BVP(object):
         self.bc_func = bc_func
         self.solution = Solution()
         self.solution.aux = {"initial": initial_bc, "terminal": terminal_bc, "const": const, "constraint":constraint, "parameters":parameters}
+        self.solution.converged = False
