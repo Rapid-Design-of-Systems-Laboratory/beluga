@@ -3,15 +3,15 @@
 
 from numpy import double, sign, finfo, array, zeros, dot, mod, size, inf, all, max, min, abs, mat
 from numpy.linalg import norm
+import logging
 
 def warning(type, string):
-    print('warning: ' + type)
-    print(string)
-
+    logging.warning('warning: ' + type)
+    logging.warning(string)
 
 def error(type, string):
-    print('error: ' + type)
-    print(string)
+    logging.error('error: ' + type)
+    logging.error(string)
     exit
 
 # specify default arguments here:

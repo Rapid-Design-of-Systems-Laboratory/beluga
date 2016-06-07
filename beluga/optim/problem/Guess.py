@@ -2,7 +2,9 @@ from beluga.utils import ode45
 from beluga.bvpsol import Solution
 import numpy as np
 from beluga.utils import keyboard
-
+import os.path
+import dill
+import logging
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
 
@@ -10,7 +12,6 @@ class Guess(object):
         self.setup_funcs = {'auto':self.setup_auto,
                         'file':self.setup_file,
                         'static':self.setup_static,
-                        # 'custom':self.setup_custom
                         }
         self.generate_funcs = {'auto':self.auto,
                         'file':self.file,
@@ -38,19 +39,39 @@ class Guess(object):
 
 
     def setup_static(self, solinit=None):
-        raise NotImplementedError('Not implemented')
+        self.solinit = solinit
 
-    def static(self):
+    def static(self, bvp):
         """Directly specify initial guess structure"""
-        raise NotImplementedError("Method not implemented yet!")
+        bvp.solution = self.solinit
+        return self.solinit
 
+    def setup_file(self, filename='', step=0, iteration=0):
+        self.filename = filename
+        self.step = step
+        self.iteration = iteration
+        if not os.path.exists(self.filename) or not os.path.isfile(self.filename):
+            logging.error('Data file '+self.filename+' not found.')
+            raise ValueError('Data file not found!')
 
-    def setup_file(self, filename='', step=0, iter=0):
-        raise NotImplementedError('Not implemented')
-
-    def file(self):
+    def file(self, bvp):
         """Generates initial guess by loading an existing data file"""
-        raise NotImplementedError("Method not implemented yet!")
+        logging.info('Loading initial guess from '+self.filename)
+        fp = open(self.filename,'rb')
+        out = dill.load(fp)
+        if self.step >= len(out['solution']):
+            logging.error('Continuation step index exceeds bounds. Only '+str(len(out['solution']))+' continuation steps found.')
+            raise ValueError('Initial guess step index out of bounds')
+
+        if self.iteration >= len(out['solution'][self.step]):
+            logging.error('Continuation iteration index exceeds bounds. Only '+str(len(out['solution'][self.step]))+' iterations found.')
+            raise ValueError('Initial guess iteration index out of bounds')
+
+        sol = out['solution'][self.step][self.iteration]
+        fp.close()
+        bvp.solution = sol
+        logging.info('Initial guess loaded')
+        return sol
 
     def setup_auto(self,start=None,
                         direction='forward',

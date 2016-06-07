@@ -9,15 +9,8 @@ import sys,os,imp,inspect,warnings
 from beluga import BelugaConfig
 from beluga.continuation import *
 from beluga.bvpsol import algorithms
-from beluga.utils.Worker import Worker
 
-try:
-    from mpi4py import MPI
-    HPCSUPPORTED = 1
-except:
-    HPCSUPPORTED = 0
-
-import dill
+import dill, logging
 
 class Beluga(object):
     """!
@@ -37,7 +30,7 @@ class Beluga(object):
     _THE_MAGIC_WORD = object()
     instance = None
 
-    config = BelugaConfig().config # class variable globally accessible
+    config = BelugaConfig() # class variable globally accessible
 
     def __init__(self,problem,token,input_module=None):
         """!
@@ -55,7 +48,58 @@ class Beluga(object):
         #     raise ValueError("Don't construct directly, use create() or run()")
 
     @classmethod
-    def run(cls,problem):
+    def init_logging(cls, logging_level, display_level):
+        """Initializes the logging system"""
+        # Define custom formatter class that formats messages based on level
+        # Ref: http://stackoverflow.com/a/8349076/538379
+        class InfoFormatter(logging.Formatter):
+            """Custom logging formatter to output info messages by themselves"""
+            info_fmt = '%(message)s'
+            def format(self, record):
+                # Save the original format configured by the user
+                # when the logger formatter was instantiated
+                format_orig = self._fmt
+
+                # Replace the original format with one customized by logging level
+                if record.levelno == logging.INFO:
+                    self._fmt = self.info_fmt
+                    # For Python>3.2
+                    self._style = logging.PercentStyle(self._fmt)
+
+                # Call the original formatter class to do the grunt work
+                result = logging.Formatter.format(self, record)
+
+                # Restore the original format configured by the user
+                self._fmt = format_orig
+                # For Python>3.2
+                self._style = logging.PercentStyle(self._fmt)
+
+                return result
+
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+
+        fh = logging.FileHandler(cls.config['logfile'])
+        fh.setLevel(logging_level)
+        # Set default format string based on logging level
+        # TODO: Change this to use logging configuration file?
+        if logging_level == logging.DEBUG:
+            formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(module)s#%(lineno)d-%(funcName)s(): %(message)s')
+        else:
+            formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(filename)s:%(lineno)d: %(message)s')
+
+        # Create logging handler for console output
+        ch = logging.StreamHandler(sys.stdout)
+        # Set console logging level and formatter
+        ch.setLevel(display_level)
+        formatter = InfoFormatter('%(filename)s:%(lineno)d: %(message)s')
+        ch.setFormatter(formatter)
+
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+
+    @classmethod
+    def run(cls, problem, logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
         """!
         \brief     Returns Beluga object.
         \details   Takes a problem statement, instantiates a solver object and begins
@@ -76,11 +120,12 @@ class Beluga(object):
         warnings.filterwarnings("ignore")
 
         # Include configuration file path
-        sys.path.append(cls.config['root'])
+        sys.path.append(cls.config.getroot())
 
         # TODO: Get default solver options from configuration or a defaults file
         if problem.bvp_solver is None:
-            problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+            problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2)
 
         # Set the cache directory to be in the current folder
         cache_dir = os.getcwd()+'/_cache'
@@ -91,6 +136,12 @@ class Beluga(object):
             pass
         problem.bvp_solver.set_cache_dir(cache_dir)
 
+        # Initialize logging system
+        cls.init_logging(logging_level,display_level)
+
+        # Set the output file name
+        if output_file is not None:
+            problem.output_file = output_file
 
         if isinstance(problem,Problem):
             # Create instance of Beluga class
@@ -112,7 +163,8 @@ class Beluga(object):
         """
 
         # Initialize necessary conditions of optimality object
-        print("Computing the necessary conditions of optimality")
+        # print("Computing the necessary conditions of optimality")
+        logging.info("Computing the necessary conditions of optimality")
         self.nec_cond = NecessaryConditions()
 
         # Create corresponding boundary value problem
@@ -142,13 +194,14 @@ class Beluga(object):
         # TODO: Make class to store result from continuation set?
         self.out = {};
         self.out['problem_data'] = self.nec_cond.problem_data;
+
         self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
         total_time = toc();
 
-        print('Continuation process completed in %0.4f seconds.\n' % total_time)
+        logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
 
         # Save data
-        output = open('data.dill', 'wb')
+        output = open(self.problem.output_file, 'wb')
         # dill.settings['recurse'] = True
         dill.dump(self.out, output) # Dill Beluga object only
         output.close()
@@ -164,65 +217,60 @@ class Beluga(object):
         # Loop through all the continuation steps
         solution_set = []
 
-        # TODO: Implement the host worker in a nicer way
-        # Start Host MPI process
-        worker = Worker(mode='HOST')
-        worker.startWorker()
-        worker.Propagator.setSolver(solver='ode45')
-
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
         s.initialize(self.problem,self.nec_cond.problem_data)
+        try:
+            for step_idx,step in enumerate(steps):
+                # Assign BVP from last continuation set
+                step.reset()
+                logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
-        for step_idx,step in enumerate(steps):
-            # Assign BVP from last continuation set
-            step.reset()
-            print('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+                solution_set.append(ContinuationSolution())
+                if step_idx == 0:
+                    step.set_bvp(bvp_start)
+                else:
+                    # Use the bvp & solution from last continuation set
+                    step.set_bvp(steps[step_idx-1].bvp)
 
-            solution_set.append(ContinuationSolution())
-            if step_idx == 0:
-                step.set_bvp(bvp_start)
-            else:
-                # Use the bvp & solution from last continuation set
-                step.set_bvp(steps[step_idx-1].bvp)
+                for bvp in step:
+                    logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                    tic()
 
-            for bvp in step:
-                print('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
-                tic()
+                    s.compute_scaling(bvp)
+                    s.scale(bvp)
 
-                s.compute_scaling(bvp)
-                s.scale(bvp)
+                    # sol is just a reference to bvp.solution
+                    sol = self.problem.bvp_solver.solve(bvp)
 
-                # sol is just a reference to bvp.solution
-                sol = self.problem.bvp_solver.solve(bvp,worker=worker)
+                    s.unscale(bvp)
+                    if sol.converged:
+                        # Post-processing phase
+                        # Compute control history
+                        # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
 
-                # Post-processing phase
-                # Compute control history
-                # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
+                        # Required for plotting to work with control variables
+                        sol.ctrl_expr = self.nec_cond.problem_data['control_options']
+                        sol.ctrl_vars = self.nec_cond.problem_data['control_list']
 
-                # Required for plotting to work with control variables
-                sol.ctrl_expr = self.nec_cond.problem_data['control_options']
-                sol.ctrl_vars = self.nec_cond.problem_data['control_list']
+                        #TODO: Make control computation more efficient
+                        # for i in range(len(sol.x)):
+                        #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
+                        #     sol.u[:,i] = _u
+                        f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
+                        sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
-                #TODO: Make control computation more efficient
-                # for i in range(len(sol.x)):
-                #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
-                #     sol.u[:,i] = _u
-                f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
-                sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
+                        # Update solution for next iteration
+                        solution_set[step_idx].append(copy.deepcopy(bvp.solution))
 
-                s.unscale(bvp)
+                        elapsed_time = toc()
+                        logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
+                    else:
+                        elapsed_time = toc()
+                        logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+        except Exception as e:
+            logging.error('Exception : '+str(e))
+            logging.error('Stopping')
 
-                # Update solution for next iteration
-                solution_set[step_idx].append(copy.deepcopy(bvp.solution))
-
-                elapsed_time = toc()
-                print('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
-                # plt.plot(sol.y[0,:], sol.y[1,:],'-')
-                # plt.plot(sol_copy.y[2,:]/1000, sol_copy.y[0,:]/1000,'-')
-
-            # plt.plot(sol.y[2,:]/1000, sol.y[0,:]/1000,'-')
-            # plt.plot(sol.y[1,:]*180/pi, sol.y[0,:]/1000,'-')
-            # print(sol.y[:,0])
         return solution_set
