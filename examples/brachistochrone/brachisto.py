@@ -70,7 +70,7 @@ def get_problem():
                     .num_cases(11)
                     .terminal('x', 5)
                     .terminal('y',-5)
-                    )
+                    ) 
 
     # (
     # problem.steps.add_step().num_cases(2)
