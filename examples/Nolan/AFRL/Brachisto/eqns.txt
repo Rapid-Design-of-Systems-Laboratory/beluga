@@ -1,0 +1,6 @@
+v*cos(theta_n*theta_s)/x_s
+-v*sin(theta_n*theta_s)/y_s
+g*sin(theta_n*theta_s)/theta_s
+2*p13*cos(theta_n*theta_s)/p11_s
+(-p13*sin(theta_n*theta_s) + p23*cos(theta_n*theta_s))/p12_s
+p33*cos(theta_n*theta_s)/p22_s
