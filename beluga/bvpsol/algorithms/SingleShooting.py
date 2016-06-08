@@ -9,11 +9,13 @@ from math import *
 # from joblib import Memory
 import logging
 
-from klepto.archives import file_archive, dir_archive
-from klepto import inf_cache as memoized
-from klepto.keymaps import picklemap
+#TODO: reinstate klepto?
+#from klepto.archives import file_archive, dir_archive
+#from klepto import inf_cache as memoized
+#from klepto.keymaps import picklemap
+#
+#dumps = picklemap(typed=True, flat=False, serializer='dill')
 
-dumps = picklemap(typed=True, flat=False, serializer='dill')
 #TODO: Save time steps from ode45 and use for fixed step RK4
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, derivative_method='csd',cache_dir = None,verbose=False,cached=True):
