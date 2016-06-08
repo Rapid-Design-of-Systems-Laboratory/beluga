@@ -67,10 +67,10 @@ def get_problem():
 
     # Figure out nicer way of representing this. Done?
     problem.steps.add_step(ContinuationStep()
-                    .num_cases(11)
+                    .num_cases(16)
                     .terminal('x', 5)
                     .terminal('y',-5)
-                    ) 
+                    )
 
     # (
     # problem.steps.add_step().num_cases(2)
