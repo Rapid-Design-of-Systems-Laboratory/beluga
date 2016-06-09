@@ -10,8 +10,10 @@ from beluga import Beluga
 
 def test_make_costate_rate():
     mock_obj = Mock(NecessaryConditions)
+
     mock_obj.ham = sympify2('x^2 - y^3 + 4*x*y')
     states = [sympify2('x')]
+    mock_obj.quantity_vars = []
     NecessaryConditions.make_costate_rate(mock_obj,states)
 
     assert mock_obj.costate_rates == [sympify2('-2*x - 4*y')]
@@ -20,6 +22,7 @@ def test_make_ctrl_partial():
     mock_obj = Mock(NecessaryConditions)
     mock_obj.ham = sympify2('x^2 + u^2 + u + 1/3*y^3')
     controls = [sympify2('u')]
+    mock_obj.quantity_vars = []
     NecessaryConditions.make_ctrl_partial(mock_obj,controls)
 
     assert mock_obj.ham_ctrl_partial == [sympify2('2*u + 1')]
@@ -29,7 +32,8 @@ def test_make_ctrl():
     # Test case where control has an analytic
     mock_obj = Mock(NecessaryConditions)
     mock_obj.ham_ctrl_partial = sympify2('u^2 + 2*u + 1')
-
+    mock_obj.quantity_vars = []
+    mock_obj.control_options = []
     controls = [sympify2('u')]
     NecessaryConditions.make_ctrl(mock_obj,controls)
 
@@ -47,6 +51,7 @@ def test_make_aug_cost():
     mock_obj = Mock(NecessaryConditions)
     mock_obj.aug_cost = {}
     mock_obj.parameter_list = []
+    mock_obj.quantity_vars = []
     aug_cost = sympify2('x^2 + u^2')
 
     # Test initial constraint
@@ -111,7 +116,7 @@ def test_make_ham():
     mock_obj.costates = [sympify2('lamX'), sympify2('lamY')]
     mock_obj.ham = sympify2('0')
     mock_obj.equality_constraints = []
-    
+
     problem = Problem('test_make_ham')
     problem.cost = {}
     problem.cost['initial'] = Expression('x','m')
