@@ -12,7 +12,7 @@ This will allow you to view all the repositories you have been given access to.
 Go to File -> Clone Repository and you should see "beluga" in the list of repositories to be cloned.
 
 ## Setting up the Python development environment
-### Mac OSX
+
   1. Install [anaconda](https://www.continuum.io/downloads/ "Download Anaconda") with Python 3.x
   2. Run the following commands in command line in the folder where you cloned the code
   <pre>
@@ -34,11 +34,6 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
   3. Get a text editor or development environment of your choice. My favorite is [Atom](http://atom.io). Some of the recommended addons for Atom are: TODO-show, minimap, linter, linter-pep8, minimap-linter, highlight-selected, minimap-highlight-selected and many more.  [PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/). is another editor you may want to check out.
 
   4. Start coding!
-
-### Windows
-I don't know lol!
-
-### Linux
 
 ## Running a test problem
 
