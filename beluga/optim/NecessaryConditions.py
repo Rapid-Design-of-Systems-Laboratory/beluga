@@ -35,6 +35,7 @@ class NecessaryConditions(object):
         self.parameter_list = []
         self.bc_initial = []
         self.bc_terminal = []
+        
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
