@@ -28,3 +28,4 @@ plots.add_plot().line_series('t','alfa*180/3.14', step=-1, skip=9)              
 #                 .title('Angle of attack vs. Time')
 
 plots.render()
+#
