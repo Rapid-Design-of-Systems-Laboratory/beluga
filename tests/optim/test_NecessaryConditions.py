@@ -11,6 +11,7 @@ from beluga import Beluga
 def test_make_costate_rate():
     mock_obj = Mock(NecessaryConditions)
     mock_obj.ham = sympify2('x^2 - y^3 + 4*x*y')
+    mock_obj.quantity_vars = []
     states = [sympify2('x')]
     NecessaryConditions.make_costate_rate(mock_obj,states)
 
@@ -19,6 +20,7 @@ def test_make_costate_rate():
 def test_make_ctrl_partial():
     mock_obj = Mock(NecessaryConditions)
     mock_obj.ham = sympify2('x^2 + u^2 + u + 1/3*y^3')
+    mock_obj.quantity_vars = []
     controls = [sympify2('u')]
     NecessaryConditions.make_ctrl_partial(mock_obj,controls)
 
@@ -81,7 +83,7 @@ def test_make_costate_bc():
     mock_obj.aug_cost = {}
     mock_obj.aug_cost['initial'] = sympify2('x^2 + y^2')
     mock_obj.aug_cost['terminal'] = sympify2('cos(x) + sin(y)')
-
+    mock_obj.quantity_vars = []
     var = 'x'
     process_eqn = '-x'
     unit = 'nd'
@@ -111,7 +113,7 @@ def test_make_ham():
     mock_obj.costates = [sympify2('lamX'), sympify2('lamY')]
     mock_obj.ham = sympify2('0')
     mock_obj.equality_constraints = []
-    
+
     problem = Problem('test_make_ham')
     problem.cost = {}
     problem.cost['initial'] = Expression('x','m')
