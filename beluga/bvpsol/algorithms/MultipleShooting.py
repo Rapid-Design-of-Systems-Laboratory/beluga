@@ -292,7 +292,7 @@ class MultipleShooting(Algorithm):
                     #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
                 # Propagate STM and original system together
-                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-3)
+                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/1, reltol=1e-3)
 
                 # Obtain just last timestep for use with correction
                 yf = [yySTM[i][-1] for i in range(self.number_arcs)]

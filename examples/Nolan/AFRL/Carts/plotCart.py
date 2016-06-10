@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from beluga.visualization import BelugaPlot2 as Bp2
 
-file = 'cart75'
+file = 'cart120'
 
 sols_def = range(0, 40)
 cols = 'jet'
