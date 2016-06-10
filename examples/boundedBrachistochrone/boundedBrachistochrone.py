@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import beluga.Beluga as Beluga
@@ -12,7 +11,7 @@ def get_problem():
     """Brachistochrone example."""
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('brachisto')
+    problem = beluga.optim.Problem('boundedBrachistochrone')
 
     # Define independent variables
     problem.independent('t', 's')
@@ -27,29 +26,31 @@ def get_problem():
     # Define costs
     problem.cost['path'] = Expression('1','s')
 
+
     # Define constraints
     problem.constraints('default',0) \
                         .initial('x-x_0','m')    \
                         .initial('y-y_0','m')    \
                         .initial('v-v_0','m/s')  \
                         .terminal('x-x_f','m')   \
-                        .terminal('y-y_f','m')
-    # problem.constraints().interior_point('(x-x1)^2+(y-y1)^2','m^2')
+                        .terminal('y-y_f','m')   \
+                        .path('constraint1','y + 1.5*x','>',-0.5,'m')\
+                        .path('constraint2','y + 0.75*x','>',-2,'m')  #\
+                        # .path('constraint1','y + x','>',-1,'m')  #\
+                        # .path('constraint2','y - 0.5*x','>',-2,'m')
+                        # y + x > h0 -- above the line y= -x + h0
 
-    # Define constants (change to have units as well)
+    # Define constants
     problem.constant('g','9.81','m/s^2')
-    # problem.constant('x1','7.5','m')
-    # problem.constant('y1','-15','m')
 
-    # problem.quantity('gDown','g*sin(theta)')
-
-    problem.scale.unit('m',1)     \
-                   .unit('s',1)\
+    # Scaling poptions
+    problem.scale.unit('m','x')     \
+                   .unit('s','x/v')\
                    .unit('kg',1)   \
                    .unit('rad',1)
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4, max_error=100)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=50, verbose = True, cached=False)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False)
     # problem.bvp_solver = algorithms.BroydenShooting(tolerance=1e-4, max_iterations=1000)
 
     # Can be array or function handle
@@ -59,25 +60,19 @@ def get_problem():
     problem.guess.setup('auto',
                     start=[0,0,1],          # Starting values for states in order
                     direction='forward',
-                    costate_guess = -0.1
+                    costate_guess = 0.1
                     )
 
     # Figure out nicer way of representing this. Done?
-    problem.steps.add_step(ContinuationStep()
-                    .num_cases(16)
-                    .terminal('x', 5)
+    problem.steps.add_step().num_cases(41) \
+                    .terminal('x', 5) \
                     .terminal('y',-5)
 
-    # (
-    # problem.steps.add_step().num_cases(2)
-    #                  .terminal('x', 30.0)
-    #                  .terminal('y',-30.0),
+    # TODO: Automate addition of epsilon continuation
+    problem.steps.add_step('bisection').num_cases(41,spacing='log') \
+                     .const('eps_constraint1', 1e-6) #\
+                    #  .const('eps_constraint2', 1e-6)
 
-    # problem.steps.add_step()
-    #                 .num_cases(10)
-    #                 .terminal('x', 1000.0)
-    #                 .terminal('y',-1000.0)
-    # )
     return problem
 
 if __name__ == '__main__':

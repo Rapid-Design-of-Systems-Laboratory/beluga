@@ -10,6 +10,7 @@ class ManualStrategy(object):
     def __init__(self, num_cases = 1,vars=[], bvp=None):
         self.bvp = bvp
         self._num_cases = num_cases
+        self._spacing = 'linear'
         self.vars = {}  # dictionary of values
         self.ctr  = 0   # iteration counter
         self.last_bvp = None
@@ -39,9 +40,16 @@ class ManualStrategy(object):
                 # Set current value of each continuation variable
                 self.vars[var_type][var_name].value = bvp.solution.aux[var_type][var_name]
                 # Calculate update steps for continuation process
-                self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
-                                                                  self.vars[var_type][var_name].target,
-                                                                  self._num_cases)
+                if self._spacing == 'linear':
+                    self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
+                                                                      self.vars[var_type][var_name].target,
+                                                                      self._num_cases)
+                elif self._spacing == 'log':
+                    self.vars[var_type][var_name].steps = np.logspace(np.log10(self.vars[var_type][var_name].value),
+                                                                      np.log10(self.vars[var_type][var_name].target),
+                                                                      self._num_cases)
+
+
 
     def set(self, var_type,name,target):
         if var_type not in self.vars.keys():
@@ -51,8 +59,7 @@ class ManualStrategy(object):
         self.vars[var_type][name] = ContinuationVariable(name,target)
         return self
 
-    def num_cases(self,num_cases=None):
-
+    def num_cases(self,num_cases=None, spacing='linear'):
         if num_cases is None:
             return self._num_cases
         else:
@@ -60,6 +67,7 @@ class ManualStrategy(object):
                 raise RuntimeError('Cannot set num_cases during iteration')
 
             self._num_cases = num_cases
+            self._spacing   = spacing
             return self
 
     def terminal(self, name,target):
