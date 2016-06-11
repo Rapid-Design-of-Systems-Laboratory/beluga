@@ -1,19 +1,31 @@
 from beluga.visualization import BelugaPlot
+from beluga.visualization.renderers import ToyPlot
 
-plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1)
+# plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1)
+plots = BelugaPlot('./phu_2k5_eps4.dill',default_sol=-1,default_step=-1, renderer='toyplot')
 
-plots.add_plot().line('t','h/1000')                    \
-                .xlabel('t (s)').ylabel('h (km)')      \
-                .title('Altitude vs. Time')
+plots.add_plot().line_series('theta*re/1000','h/1000', step=-1, skip=18)                    \
+                .xlabel('Downrange (km)').ylabel('h (km)')      \
+                .title('Altitude vs. Downrange')
 
-plots.add_plot().line('t','alfa*180/3.14')                    \
-                .xlabel('t (s)').ylabel('alfa (degrees)')      \
+# plots.add_plot().line('theta*re/1000','h/1000')                    \
+#                 .xlabel('Downrange (km)').ylabel('h (km)')      \
+#                 .title('Altitude vs. Downrange')
+#
+# plots.add_plot().line('t','alfa*180/3.14')                    \
+#                 .xlabel('t (s)').ylabel('alfa (degrees)')      \
+#                 .title('Angle of attack vs. Time')
+
+plots.add_plot().line_series('v/1000','h/1000', step=-1, skip=18)                    \
+                .xlabel('v (km/s)').ylabel('h (km)')      \
+                .title('Altitude vs. Velocity')
+
+plots.add_plot().line_series('t','alfa*180/3.14', step=-1, skip=18)                    \
+                .xlabel('t (s)').ylabel('alpha (degrees)')      \
                 .title('Angle of attack vs. Time')
 
-# plots.add_plot().line('theta*re/1000','h/1000',legend='Foo')       \
-#                 .line('theta*re/1000','h/1000',legend='Bar',step=1,sol=5)   \
-#                 .xlabel('Downrange (km)')                   \
-#                 .ylabel('h (km)')                           \
-#                 .title('Altitude vs. Downrange')
+# plots.add_plot().line('t','alfa*180/3.14')                    \
+#                 .xlabel('t (s)').ylabel('alfa (degrees)')      \
+#                 .title('Angle of attack vs. Time')
 
 plots.render()

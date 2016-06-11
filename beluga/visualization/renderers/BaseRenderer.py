@@ -1,5 +1,5 @@
 import abc
-class Renderer(object):
+class BaseRenderer(object):
     # Define class as abstract class
     __metaclass__ = abc.ABCMeta
 
