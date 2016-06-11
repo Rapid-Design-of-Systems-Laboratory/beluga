@@ -41,17 +41,14 @@ def get_problem():
     # problem.constant('x1','7.5','m')
     # problem.constant('y1','-15','m')
 
-    # Define quantity (not implemented at present)
-    # Is this actually an Expression rather than a Value?
-    # TODO: Implement this
-    problem.quantity = [Value('tanAng','tan(theta)')]
+    # problem.quantity('gDown','g*sin(theta)')
 
-    problem.scale.unit('m','x')     \
-                   .unit('s','x/v')\
+    problem.scale.unit('m',1)     \
+                   .unit('s',1)\
                    .unit('kg',1)   \
                    .unit('rad',1)
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4, max_error=100)
     problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=50, verbose = True, cached=False)
     # problem.bvp_solver = algorithms.BroydenShooting(tolerance=1e-4, max_iterations=1000)
 
@@ -66,11 +63,10 @@ def get_problem():
                     )
 
     # Figure out nicer way of representing this. Done?
-    problem.steps.add_step(ContinuationStep()
-                    .num_cases(16)
-                    .terminal('x', 5)
+    problem.steps.add_step('bisection') \
+                    .num_cases(31) \
+                    .terminal('x', 5) \
                     .terminal('y',-5)
-                    )
 
     # (
     # problem.steps.add_step().num_cases(2)
