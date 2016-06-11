@@ -2,7 +2,7 @@
 import numpy as np
 
 from .. import Solution
-from beluga.utils import keyboard
+from beluga.utils import keyboard, timeout
 from beluga.utils.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
@@ -13,6 +13,17 @@ import logging
 from klepto.archives import file_archive, dir_archive
 from klepto import inf_cache as memoized
 from klepto.keymaps import picklemap
+
+import signal
+
+class TimeoutException(Exception):   # Custom exception class
+    pass
+
+def timeout_handler(signum, frame):   # Custom signal handler
+    raise TimeoutException('ode45 exceeded maximum allowed time of 2 second')
+
+# Change the behavior of SIGALRM
+signal.signal(signal.SIGALRM, timeout_handler)
 
 dumps = picklemap(typed=True, flat=False, serializer='dill')
 #TODO: Save time steps from ode45 and use for fixed step RK4
@@ -100,6 +111,7 @@ class SingleShooting(Algorithm):
 
         M = np.zeros((nBCs, nOdes))
         N = np.zeros((nBCs, nOdes))
+
         for i in range(nOdes):
             ya[i] = ya[i] + h
             f = bc_func(ya,yb,p,aux)
@@ -221,7 +233,11 @@ class SingleShooting(Algorithm):
                 # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
 
                 # t,yy = ode45(stm_ode45, tspan, y0)
-                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+
+                #TODO: Make timeout configurable
+                with timeout(2,'ode45 exceeded maximum allowed time of 2 second'):
+                    t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+
                 # Obtain just last timestep for use with correction
                 yf = yy[-1]
                 # Extract states and STM from ode45 output
