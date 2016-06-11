@@ -365,11 +365,18 @@ class MultipleShooting(Algorithm):
             # keyboard()
             # print iter
 
-        # If problem converged, propagate solution to get full trajectory
-        # Possibly reuse 'yy' from above?
+        # Now program stitches together solution from the multiple arcs instead of propagating from beginning.
+        # This is important for sensitive problems because they can diverge from the actual solution if propagated in single arc.
+        # Therefore, the initial guess for next step and data for plotting are much better.
         if converged:
-            x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=self.tolerance/10, reltol=1e-3)
-            sol = Solution(x1,y1.T,paramGuess)
+            # x1, y1 = ode45.solve(deriv_func, [x[0],x[-1]], y0g[0], paramGuess, aux, abstol=1e-6, reltol=1e-6)
+            # sol = Solution(x1,y1.T,paramGuess)
+            x1 = tset[0]
+            y1 = yySTM[0][:, :nOdes]
+            for i in range(1, self.number_arcs):
+                x1 = np.hstack((x1, tset[i][1:]))
+                y1 = np.vstack((y1, (yySTM[i][1:, :nOdes])))
+            sol = Solution(x1, y1.T, paramGuess)
         else:
             # Return initial guess if it failed to converge
             sol = solinit

@@ -8,7 +8,7 @@ if sys.argv[-1] == 'test':
         'pytest-cov',
         'pytest-describe',
         'coverage',
-	'mock'
+	    'mock'
     ]
     try:
         modules = map(__import__, test_requirements)
