@@ -4,14 +4,15 @@ from sympy.core.function import AppliedUndef, Function
 import pystache, imp, inspect, logging, os
 import re as _re
 
-import beluga.bvpsol.BVP as BVP
+# import beluga.bvpsol.BVP as BVP
 
-from beluga.utils import sympify2, keyboard, ipsh
-from beluga.optim.problem import *
+# from beluga.utils import sympify2, keyboard, ipsh
+# from beluga.optim.problem import *
 import dill
 import numpy as np
 
-class NecessaryConditions(object):
+sympify2 = sympify
+class NumOptControl(object):
     """Defines necessary conditions of optimality."""
 
     # pystache renderer without HTML escapes
@@ -35,58 +36,57 @@ class NecessaryConditions(object):
         self.parameter_list = []
         self.bc_initial = []
         self.bc_terminal = []
-        
-        from .. import Beluga # helps prevent cyclic imports
+        # from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
-        self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
+        # self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
         self.template_suffix = '.py.mu'
 
-    def cache_bvp(self, problem, filename=None):
-        """
-        \brief Saves BVP object into file on disk
-        Arguments:
-            problem : Problem object
-            filename: Full path to cache file (optional)
-                      default value: <self.problem.name>_bvp.dat
-        \date  01/27/2016
-        """
-        if filename is None:
-            filename = problem.name+'_bvp.dat'
-
-        with open(filename,'wb') as f:
-            try:
-                logging.info('Caching BVP information to file')
-                bvp = dill.dump(self.bvp,f)
-                return True
-            except:
-                logging.warn('Failed to save BVP to '+filename)
-                return False
-
-    def load_bvp(self, problem, filename=None):
-        """
-        \brief  Loads pre-computed BVP object from cache file
-        \author Thomas Antony
-        Arguments:
-            problem : Problem object
-            filename: Full path to cache file (optional)
-                      default value: <self.problem.name>_bvp.dat
-        \date  01/27/2016
-        """
-        if filename is None:
-            filename = problem.name+'_bvp.dat'
-
-        if not os.path.exists(filename):
-            return None
-
-        with open(filename,'rb') as f:
-            try:
-                logging.info('Loading BVP information from cache')
-                bvp = dill.load(f)
-                return bvp
-            except Exception as e:
-                logging.warn('Failed to load BVP from '+filename)
-                logging.debug(e)
-                return None
+    # def cache_bvp(self, problem, filename=None):
+    #     """
+    #     \brief Saves BVP object into file on disk
+    #     Arguments:
+    #         problem : Problem object
+    #         filename: Full path to cache file (optional)
+    #                   default value: <self.problem.name>_bvp.dat
+    #     \date  01/27/2016
+    #     """
+    #     if filename is None:
+    #         filename = problem.name+'_bvp.dat'
+    #
+    #     with open(filename,'wb') as f:
+    #         try:
+    #             logging.info('Caching BVP information to file')
+    #             bvp = dill.dump(self.bvp,f)
+    #             return True
+    #         except:
+    #             logging.warn('Failed to save BVP to '+filename)
+    #             return False
+    #
+    # def load_bvp(self, problem, filename=None):
+    #     """
+    #     \brief  Loads pre-computed BVP object from cache file
+    #     \author Thomas Antony
+    #     Arguments:
+    #         problem : Problem object
+    #         filename: Full path to cache file (optional)
+    #                   default value: <self.problem.name>_bvp.dat
+    #     \date  01/27/2016
+    #     """
+    #     if filename is None:
+    #         filename = problem.name+'_bvp.dat'
+    #
+    #     if not os.path.exists(filename):
+    #         return None
+    #
+    #     with open(filename,'rb') as f:
+    #         try:
+    #             logging.info('Loading BVP information from cache')
+    #             bvp = dill.load(f)
+    #             return bvp
+    #         except Exception as e:
+    #             logging.warn('Failed to load BVP from '+filename)
+    #             logging.debug(e)
+    #             return None
 
     def derivative(self, expr, var, dependent_variables):
         """
@@ -119,19 +119,6 @@ class NecessaryConditions(object):
         #     rate = diff(sympify2('-1*(' + self.ham + ')'),state)
         #     # numerical_diff = rate.atoms(Derivative)
         #     self.costate_rates.append(str(rate))
-
-        # Create complex version (to be defined in template)
-        states_c = [sympify2(str(state)+'_c') for state in states]
-
-        # Complex version of Hamiltonian expression
-        ham_c = self.ham.subs(zip(states, states_c))
-
-        # Complex step
-        _h = sympify2('1j*(1e-30)')
-
-        # self.costate_rates = [(self.ham.subs(state.sym, state.sym+_h))/1e-30 for state in states]
-        # self.costate_rates = ['('+str(lamdot)+').imag' for lamdot in self.costate_rates]
-
         self.costate_rates = [self.derivative(-1*(self.ham),state, self.quantity_vars) for state in states]
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
@@ -146,7 +133,7 @@ class NecessaryConditions(object):
         """
 
         self.ham_ctrl_partial = []
-
+        # keyboard()
         for ctrl in controls:
             dHdu = self.derivative(sympify2(self.ham), ctrl, self.quantity_vars)
             custom_diff = dHdu.atoms(Derivative)
@@ -195,7 +182,6 @@ class NecessaryConditions(object):
         udot = dgdU.LUsolve(-dgdX*xdot); # dgdU * udot + dgdX * xdot = 0
 
         self.dae_states = U
-
         self.dae_equations = list(udot)
         self.dae_bc = g
 
@@ -235,6 +221,9 @@ class NecessaryConditions(object):
             # 3. Find alfa from constraint expr
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(eqn_list))
+
+            # keyboard()
+            # var_sol = solve(eqn_list[1:], var_list, dict=True)
 
             # Add to quantity list
             var_sol = []
@@ -576,13 +565,7 @@ class NecessaryConditions(object):
             problem.constant(str(eps_const), 1, str(eps_unit))
 
             # problem.state('costC2','eps2*('+str(w_i)+'^2)','m^2/s^2')
-    def get_bvp(self,problem,mode='dae'):
-        """Perform variational calculus calculations on optimal control problem
-           and returns an object describing the boundary value problem to be solved
-
-        Returns: bvpsol.BVP object
-        """
-
+    def process_quantities(self):
         # Should this be moved into __init__ ?
         # self.process_systems(problem)
         logging.info('Processing quantity expressions')
@@ -590,7 +573,6 @@ class NecessaryConditions(object):
         # Substitute all quantities that show up in other quantities with their expressions
         # TODO: Sanitize quantity expressions
         # TODO: Check for circular references in quantity expressions
-
         if len(problem.quantity()) > 0:
             quantity_subs = [(sympify2(qty.var), sympify2(qty.value)) for qty in problem.quantity()]
             quantity_sym, quantity_expr = zip(*quantity_subs)
@@ -607,6 +589,14 @@ class NecessaryConditions(object):
             self.quantity_list = quantity_subs = []
             self.quantity_vars = {}
 
+    def get_bvp(self,problem,mode='dae'):
+        """Perform variational calculus calculations on optimal control problem
+           and returns an object describing the boundary value problem to be solved
+
+        Returns: bvpsol.BVP object
+        """
+
+        self.process_quantities()
         self.dae_states = self.dae_equations = []
 
         # Regularize path constraints using saturation functions
@@ -723,7 +713,6 @@ class NecessaryConditions(object):
          'deriv_list':
              ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
              ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
-            #  ['(tf)*((' + str(costate_rate) + ').imag)' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
          'dae_var_list':
@@ -748,8 +737,7 @@ class NecessaryConditions(object):
         self.compiled = imp.new_module('_probobj_'+problem.name)
 
         if mode == 'dae':
-            # self.template_suffix = '_dae' + self.template_suffix
-            self.template_suffix = '_dae_num' + self.template_suffix
+            self.template_suffix = '_dae' + self.template_suffix
 
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
@@ -761,13 +749,13 @@ class NecessaryConditions(object):
             dhdu_fn = None
             dae_num = 0
 
-        self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
-        self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
-        self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
-        self.bvp.solution.aux['function']  = problem.functions
-
-        # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
-        self.bvp.control_func = self.compiled.compute_control
-        self.bvp.problem_data = self.problem_data
-        # TODO: ^^ Do same for constraint values
+        # self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
+        # self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
+        # self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
+        # self.bvp.solution.aux['function']  = problem.functions
+        #
+        # # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
+        # self.bvp.control_func = self.compiled.compute_control
+        # self.bvp.problem_data = self.problem_data
+        # # TODO: ^^ Do same for constraint values
         return self.bvp
