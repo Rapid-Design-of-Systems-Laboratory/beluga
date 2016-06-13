@@ -18,7 +18,7 @@ except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose

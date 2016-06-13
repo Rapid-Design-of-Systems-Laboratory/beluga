@@ -63,10 +63,10 @@ def get_problem():
                     )
 
     # Figure out nicer way of representing this. Done?
-    problem.steps.add_step(ContinuationStep() \
-                    .num_cases(16) \
+    problem.steps.add_step('bisection') \
+                    .num_cases(31) \
                     .terminal('x', 5) \
-                    .terminal('y', -5)
+                    .terminal('y',-5)
 
     # (
     # problem.steps.add_step().num_cases(2)
