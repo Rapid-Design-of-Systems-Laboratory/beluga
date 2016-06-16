@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     problem.constant('ep', 0.5, 'm/rad')
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd', tolerance=1e-4, max_iterations=1000, verbose=True, cached=False, number_arcs=16)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd', tolerance=1e-6, max_iterations=1000, verbose=True, cached=False, number_arcs=16)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose=True, cached=False)
 
     problem.scale.unit('m', 1)       \
@@ -65,6 +65,10 @@ if __name__ == "__main__":
     #     .const('ep', 0.05) \
 
     problem.steps.add_step().num_cases(10) \
+        .terminal('x', 1.0) \
+        .terminal('y', 0) \
+
+    problem.steps.add_step().num_cases(10) \
         .terminal('x', 10.05) \
         .terminal('y', 0) \
 
@@ -72,7 +76,10 @@ if __name__ == "__main__":
         .terminal('y', 10) \
 
     problem.steps.add_step().num_cases(10) \
-        .const('ep', 0.05) \
+        .const('ep', 0.1) \
+
+    problem.steps.add_step().num_cases(6) \
+        .const('ep', 0.01)
 
     Beluga.run(problem, display_level=logging.DEBUG)
 

@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from beluga.visualization import BelugaPlot2 as Bp2
 
-out = Bp2.load_dill('cart120')
+out = Bp2.load_dill('cart123')
 num_sol = len(out['solution'][-1])
-
-freqs = np.arange(2, 20, 3)
 
 fig, ax = plt.subplots()
 plt.subplots_adjust(bottom=0.2)

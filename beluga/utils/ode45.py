@@ -60,7 +60,7 @@ def ode45(f,tspan,y0,*args,**kwargs):
 
     from beluga.utils import keyboard
 
-    r = scipy.integrate.ode(f).set_integrator('lsoda')
+    r = scipy.integrate.ode(f).set_integrator('lsode')
     r.set_f_params(*args)   # Add extra arguments to be passed in
     r.set_initial_value(y0,tspan[0])
 

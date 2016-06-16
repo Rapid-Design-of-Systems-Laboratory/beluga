@@ -17,16 +17,16 @@ import logging
 #
 #dumps = picklemap(typed=True, flat=False, serializer='dill')
 
-import signal
+# import signal
 
-class TimeoutException(Exception):   # Custom exception class
-    pass
+# class TimeoutException(Exception):   # Custom exception class
+#     pass
 
-def timeout_handler(signum, frame):   # Custom signal handler
-    raise TimeoutException('ode45 exceeded maximum allowed time of 2 second')
+# def timeout_handler(signum, frame):   # Custom signal handler
+#     raise TimeoutException('ode45 exceeded maximum allowed time of 2 second')
 
 # Change the behavior of SIGALRM
-signal.signal(signal.SIGALRM, timeout_handler)
+# signal.signal(signal.SIGALRM, timeout_handler)
 
 # dumps = picklemap(typed=True, flat=False, serializer='dill')
 #TODO: Save time steps from ode45 and use for fixed step RK4
@@ -238,8 +238,8 @@ class SingleShooting(Algorithm):
                 # t,yy = ode45(stm_ode45, tspan, y0)
 
                 #TODO: Make timeout configurable
-                with timeout(2,'ode45 exceeded maximum allowed time of 2 second'):
-                    t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                # with timeout(2,'ode45 exceeded maximum allowed time of 2 second'):
+                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-5)
 
                 # Obtain just last timestep for use with correction
                 yf = yy[-1]
