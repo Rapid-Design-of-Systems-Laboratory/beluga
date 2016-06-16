@@ -18,7 +18,7 @@ except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=100, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
@@ -159,12 +159,13 @@ class MultipleShooting(Algorithm):
 
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes],dtype=complex)  # Just states
+        Z = Y
         F = np.zeros((nOdes,nOdes))
         # Compute Jacobian matrix using complex step derivative
         for i in range(nOdes):
-            Y[i] = Y[i] + StepSize*1.j
-            F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
-            Y[i] = Y[i] - StepSize*1.j
+            Z[i] = Y[i] + StepSize*1.j
+            F[:,i] = np.imag(odefn(x, Z, parameters, aux))/StepSize
+            Z[i] = Y[i]
 
         # Phidot = F*Phi (matrix product)
         phiDot = np.real(np.dot(F,phi))
@@ -292,13 +293,20 @@ class MultipleShooting(Algorithm):
                     #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
                 # Propagate STM and original system together
-                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/1, reltol=1e-3)
+                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-5)
 
                 # Obtain just last timestep for use with correction
                 yf = [yySTM[i][-1] for i in range(self.number_arcs)]
                 # Extract states and STM from ode45 output
                 yb = [yf[i][:nOdes] for i in range(self.number_arcs)]  # States
                 phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(self.number_arcs)] # STM
+
+                # y1 = yySTM[0][:, :nOdes]
+                # for i in range(1, self.number_arcs):
+                #     y1 = np.vstack((y1, (yySTM[i][1:, :nOdes])))
+                #
+                # for i in range(0,len(y1[:,3])):
+                #     print('den = ' + str((-0.5 * 1 * y1[i,3] * cos(y1[i,7]) - 1 * y1[i,5] * sin(y1[i,7]))) + '  u =' + str(y1[i,7]) + '  lamX =' + str(y1[i,3]) + '  lamA =' + str(y1[i,5]))
 
                 # Evaluate the boundary conditions
                 res = self.get_bc(y0g, yb, paramGuess, aux)
