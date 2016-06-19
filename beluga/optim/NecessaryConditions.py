@@ -35,7 +35,7 @@ class NecessaryConditions(object):
         self.parameter_list = []
         self.bc_initial = []
         self.bc_terminal = []
-        
+
         from .. import Beluga # helps prevent cyclic imports
         self.compile_list = ['deriv_func','bc_func','compute_control']
         self.template_prefix = Beluga.config.getroot()+'/beluga/bvpsol/templates/'
@@ -229,19 +229,10 @@ class NecessaryConditions(object):
             eqn_list = []
             for eqn in list(lhs + self.mu_lhs ):
                 eqn_list.append(self.selective_expand(eqn, controls, self.quantity_vars))
-
-            # 1. Find mu1 from dHdalfa (possibly exclude other controls )
-            # 2. Find ue1 from dHdue1
-            # 3. Find alfa from constraint expr
             logging.info("Attempting using SymPy ...")
             logging.debug("dHdu = "+str(eqn_list))
 
-            # Add to quantity list
-            var_sol = []
-
-            logging.debug(var_sol)
-            ctrl_sol = var_sol
-
+            ctrl_sol = solve(eqn_list, var_list, dict=True)
 
             # raise ValueError() # Force mathematica
         except ValueError as e:  # FIXME: Use right exception name here
@@ -583,6 +574,11 @@ class NecessaryConditions(object):
         Returns: bvpsol.BVP object
         """
 
+        # Use mode if it is defined
+        if hasattr(problem, 'mode'):
+            logging.info('Switching off DAE mode')
+            mode = problem.mode
+
         # Should this be moved into __init__ ?
         # self.process_systems(problem)
         logging.info('Processing quantity expressions')
@@ -691,7 +687,7 @@ class NecessaryConditions(object):
         #
         # Compute unconstrained control law
         # (need to add singular arc and bang/bang smoothing, numerical solutions)
-        self.make_ctrl(problem)
+        self.make_ctrl(problem, mode)
 
         # Create problem dictionary
         # NEED TO ADD BOUNDARY CONDITIONS
@@ -733,7 +729,7 @@ class NecessaryConditions(object):
          'dae_var_num': len(self.dae_states),
          'num_states': 2*len(problem.states()) + 1,
          'dHdu': [str(dHdu) for dHdu in self.ham_ctrl_partial] + self.mu_lhs,
-         'left_bc_list': self.bc_initial + self.dae_bc,
+         'left_bc_list': self.bc_initial + (self.dae_bc if (mode == 'dae') else []),
          'right_bc_list': self.bc_terminal,
          'control_options': [] if (mode == 'dae') else self.control_options,
          'control_list': [str(u) for u in problem.controls()] + [str(mu) for mu in self.mu_vars],
