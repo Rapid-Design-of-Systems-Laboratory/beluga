@@ -176,11 +176,9 @@ if __name__ == "__main__":
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('carts0')
 
-    # Switch off DAE mode
-    problem.mode = 'analytic'
-
     # Define independent variables
     problem.independent('t', 's')
+
 
     # Define equations of motion
     problem\
@@ -247,7 +245,7 @@ if __name__ == "__main__":
 
     problem.constant('ep', 5, '1')
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd', tolerance=1e-4, max_iterations=1000, verbose=True, cached=False, number_arcs=16)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd', tolerance=1e-4, max_iterations=1000, verbose=True, cached=False, number_arcs=32)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose=True, cached=False)
 
     problem.scale.unit('m', 1)       \
@@ -266,13 +264,27 @@ if __name__ == "__main__":
         .terminal('x_n', 20) \
         .terminal('y_n', 0) \
 
+    problem.steps.add_step().num_cases(10) \
+        .const('xb', 25) \
+        .const('yb', 25)
+
     problem.steps.add_step().num_cases(50) \
-        .const('xb', 125) \
-        .const('yb', 20)
+        .const('yb', 100)
 
     problem.steps.add_step().num_cases(40) \
         .terminal('x_n', 250) \
 
+    problem.steps.add_step().num_cases(51) \
+        .const('xb', 175)
+
+    problem.steps.add_step().num_cases(23) \
+        .terminal('x_n', 470)
+
+    problem.steps.add_step().num_cases(51) \
+        .const('xb', 315)
+
+    problem.steps.add_step().num_cases(54) \
+        .terminal('x_n', 1000)
 
  #    problem.steps.add_step().num_cases(10) \
  #        .const('xb', 7) \
