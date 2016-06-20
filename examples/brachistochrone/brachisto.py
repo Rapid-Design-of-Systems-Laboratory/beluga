@@ -14,6 +14,9 @@ def get_problem():
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('brachisto')
 
+    # Switch off DAE mode
+    problem.mode = 'analytic'
+
     # Define independent variables
     problem.independent('t', 's')
 
