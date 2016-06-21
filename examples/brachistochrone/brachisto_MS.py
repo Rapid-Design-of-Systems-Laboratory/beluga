@@ -13,7 +13,7 @@ def get_problem():
     """Brachistochrone example."""
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('brachisto')
+    problem = beluga.optim.Problem('brachisto_MS')
 
     # Switch off DAE mode
     problem.mode = 'analytic'
@@ -22,9 +22,9 @@ def get_problem():
     problem.independent('t', 's')
 
     # Define equations of motion
-    problem.state('x', 'v*cos(theta)', 'm')   \
-           .state('y', '-v*sin(theta)', 'm')   \
-           .state('v', 'g*sin(theta)', 'm/s')
+    problem.state('x', 'v*cos(theta)','m')   \
+           .state('y', '-v*sin(theta)','m')   \
+           .state('v', 'g*sin(theta)','m/s')
     # Define controls
     problem.control('theta','rad')
 
@@ -52,8 +52,8 @@ def get_problem():
                    .unit('kg',1)   \
                    .unit('rad',1)
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=4, max_error=100)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=50, verbose = True, cached=False)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd', tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2, max_error=100)
+    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='csd',tolerance=1e-4, max_iterations=50, verbose = True, cached=False)
     # problem.bvp_solver = algorithms.BroydenShooting(tolerance=1e-4, max_iterations=1000)
 
     # Can be array or function handle
@@ -61,16 +61,16 @@ def get_problem():
     # problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
     # problem.guess.parameters = np.array([0.1,0.1,0.1,0.1,0.1])
     problem.guess.setup('auto',
-                    start=[0,0,1],          # Starting values for states in order
-                    direction='forward',
+                    start = [0, 0, 1],          # Starting values for states in order
+                    direction = 'forward',
                     costate_guess = -0.1
                     )
 
     # Figure out nicer way of representing this. Done?
     problem.steps.add_step('bisection') \
-                    .num_cases(31) \
+                    .num_cases(2) \
                     .terminal('x', 5) \
-                    .terminal('y', -5)
+                    .terminal('y',-5)
 
     # (
     # problem.steps.add_step().num_cases(2)

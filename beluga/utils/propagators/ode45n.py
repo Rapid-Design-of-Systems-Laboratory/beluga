@@ -9,7 +9,7 @@ def ode45n(f,tspan,y0,*args,**kwargs):
 
     from beluga.utils import keyboard
 
-    r = scipy.integrate.ode(f).set_integrator('vode', method='bdf')
+    r = scipy.integrate.ode(f).set_integrator('zvode', method='bdf')
     r.set_f_params(*args)   # Add extra arguments to be passed in
     r.set_initial_value(y0,tspan[0])
 

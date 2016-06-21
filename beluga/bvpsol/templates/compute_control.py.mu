@@ -10,7 +10,8 @@
 import numpy as np
 import scipy
 import scipy.optimize
-from math import *
+# from cmath import *
+from beluga.utils.math import *
 from beluga.utils import static_var, keyboard
 import logging
 
