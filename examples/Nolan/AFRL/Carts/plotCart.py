@@ -1,10 +1,10 @@
 from matplotlib import pyplot as plt
 from beluga.visualization import BelugaPlot2 as Bp2
 
-file = 'cart132partial'
+file = 'cart133'
 
-sols_def = range(0, 23)
-set_def = 5
+sols_def = range(0, 40)
+set_def = -1
 cols = 'autumn_r'
 
 plt.close('all')

@@ -4,6 +4,7 @@ import numpy as np
 from .. import Solution
 from beluga.utils import keyboard, timeout
 from beluga.utils.ode45 import ode45
+# from beluga.utils.propagators import ode45n as ode45
 from ..Algorithm import Algorithm
 from math import *
 # from beluga.utils.joblib import Memory
@@ -141,42 +142,41 @@ class SingleShooting(Algorithm):
     def __stmode_fd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-6):
         "Finite difference version of state transition matrix"
         N = y.shape[0]
-        nOdes = int(0.5*(sqrt(4*N+1)-1))
+        nOdes = int(0.5 * (sqrt(4 * N + 1) - 1))
 
-        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+        phi = y[nOdes:].reshape((nOdes, nOdes))  # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes])  # Just states
-        F = np.zeros((nOdes,nOdes))
+        F = np.empty((nOdes, nOdes))
 
         # Compute Jacobian matrix, F using finite difference
-        fx = odefn(x,Y,parameters,aux)
+        fx = (odefn(x, Y, parameters, aux))
         for i in range(nOdes):
-            Y[i] = Y[i] + StepSize
-            F[:,i] = (odefn(x, Y, parameters,aux)-fx)/StepSize
-            Y[i] = Y[i] - StepSize
+            Y[i] += StepSize
+            F[:, i] = (odefn(x, Y, parameters, aux) - fx) / StepSize
+            Y[i] -= StepSize
 
-        # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        phiDot = np.dot(F, phi)
+        return np.concatenate((fx, np.reshape(phiDot, (nOdes * nOdes))))
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-50):
+    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-100):
         "Complex step version of State Transition Matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
 
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-        Y = np.array(y[0:nOdes],dtype=complex)  # Just states
-        F = np.zeros((nOdes,nOdes))
+        Y = np.array(y[0:nOdes], dtype=complex)  # Just states
+        F = np.zeros((nOdes, nOdes))
+
         # Compute Jacobian matrix using complex step derivative
         for i in range(nOdes):
-            Y[i] = Y[i] + StepSize*1.j
-            F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
-            Y[i] = Y[i] - StepSize*1.j
+            Y[i] += StepSize * 1.j
+            F[:, i] = np.imag(odefn(x, Y, parameters, aux)) / StepSize
+            Y[i] -= StepSize * 1.j
 
         # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
+        phiDot = np.dot(F,phi)
         # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
-        return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+        return np.concatenate((odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes))))
 
     # @memoized(cache=file_archive(serialized=True, cached=False), ignore='self')
     def solve(self,bvp):
@@ -192,7 +192,7 @@ class SingleShooting(Algorithm):
         Raises:
         """
         solinit = bvp.solution
-        x  = solinit.x
+        x = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
         paramGuess = solinit.parameters

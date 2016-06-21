@@ -576,7 +576,7 @@ class NecessaryConditions(object):
 
         # Use mode if it is defined
         if hasattr(problem, 'mode'):
-            logging.info('Switching off DAE mode')
+            logging.info('Control Calculation Mode Set to: ' + problem.mode)
             mode = problem.mode
 
         # Should this be moved into __init__ ?

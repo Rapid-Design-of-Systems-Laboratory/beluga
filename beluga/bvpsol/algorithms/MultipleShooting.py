@@ -26,7 +26,7 @@ class MultipleShooting(Algorithm):
         self.derivative_method = derivative_method
         if derivative_method == 'csd':
             self.stm_ode_func = self.__stmode_csd
-            self.bc_jac_func  = self.__bcjac_csd
+            self.bc_jac_func  = self.__bcjac_fd
         elif derivative_method == 'fd':
             self.stm_ode_func = self.__stmode_fd
             self.bc_jac_func  = self.__bcjac_fd
@@ -50,7 +50,7 @@ class MultipleShooting(Algorithm):
             memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
-    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-15):
+    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
         # if parameters is not None:
@@ -139,39 +139,36 @@ class MultipleShooting(Algorithm):
 
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes])  # Just states
-        F = np.zeros((nOdes,nOdes))
+        F = np.empty((nOdes, nOdes))
 
         # Compute Jacobian matrix, F using finite difference
-        fx = odefn(x,Y,parameters,aux)
+        fx = (odefn(x,Y,parameters,aux))
         for i in range(nOdes):
-            Y[i] = Y[i] + StepSize
-            F[:,i] = (odefn(x, Y, parameters,aux)-fx)/StepSize
-            Y[i] = Y[i] - StepSize
+            Y[i] += StepSize
+            F[:, i] = (odefn(x, Y, parameters, aux) - fx)/StepSize
+            Y[i] -= StepSize
 
-        # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        phiDot = np.dot(F, phi)
+        return np.concatenate((fx, np.reshape(phiDot, (nOdes*nOdes))))
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-15):
+    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-100):
         "Complex step version of State Transition Matrix"
         N = y.shape[0]
-        nOdes = int(0.5*(sqrt(4*N+1)-1))
+        nOdes = int(0.5 * (sqrt(4 * N + 1) - 1))
 
-        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-        Y = np.array(y[0:nOdes],dtype=complex)  # Just states
-        Z = Y
-        F = np.zeros((nOdes,nOdes))
-        # Compute Jacobian matrix using complex step derivative
+        phi = y[nOdes:].reshape((nOdes, nOdes))  # Convert STM terms to matrix form
+        Y = np.array(y[0:nOdes], dtype=complex)  # Just states
+        F = np.empty((nOdes, nOdes))
+
+        # Compute Jacobian matrix, F using finite difference
         for i in range(nOdes):
-            Z[i] = Y[i] + StepSize*1.j
-            F[:,i] = np.imag(odefn(x, Z, parameters, aux))/StepSize
-            Z[i] = Y[i]
+            Y[i] += StepSize * 1.j
+            F[:, i] = np.imag(odefn(x, Y, parameters, aux)) / StepSize
+            Y[i] -= StepSize * 1.j
 
         # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
-        return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+        phiDot = np.dot(F, phi)
+        return np.concatenate((odefn(x, y, parameters, aux), np.reshape(phiDot, (nOdes * nOdes))))
 
     # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
     #     "Automatic differentiation version of State Transition Matrix"
