@@ -16,7 +16,7 @@ def get_problem():
     problem = beluga.optim.Problem('brachisto')
 
     # Switch off DAE mode
-    problem.mode = 'analytic'
+    problem.mode = 'num'
 
     # Define independent variables
     problem.independent('t', 's')
