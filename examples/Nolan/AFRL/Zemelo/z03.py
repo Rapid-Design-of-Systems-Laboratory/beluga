@@ -14,6 +14,8 @@ if __name__ == "__main__":
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('z03')
 
+    problem.mode = 'analytic'
+
     # Define independent variables
     problem.independent('t', 's')
 

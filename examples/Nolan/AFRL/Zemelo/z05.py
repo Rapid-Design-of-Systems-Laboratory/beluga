@@ -17,6 +17,8 @@ if __name__ == "__main__":
     # Define independent variables
     problem.independent('t', 's')
 
+    problem.mode = 'analytic'
+
 
     # Define equations of motion
     problem.state('x', 'v*cos(a) + ep*k*cos(u)', 'm')   \

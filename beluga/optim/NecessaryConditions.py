@@ -722,6 +722,9 @@ class NecessaryConditions(object):
             #  ['(tf)*((' + str(costate_rate) + ').imag)' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
+         'state_rate_list':
+            ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()]
+         ,
          'dae_var_list':
              [str(dae_state) for dae_state in self.dae_states],
          'dae_eom_list':
@@ -746,6 +749,8 @@ class NecessaryConditions(object):
         if mode == 'dae':
             # self.template_suffix = '_dae' + self.template_suffix
             self.template_suffix = '_dae_num' + self.template_suffix
+        if mode == 'num':
+            self.template_suffix = '_num' + self.template_suffix
 
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
