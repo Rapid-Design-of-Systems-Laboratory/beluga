@@ -11,6 +11,7 @@ from beluga.utils import Propagator
 from beluga.utils.Worker import Worker
 import logging, sys, os
 
+
 try:
     from mpi4py import MPI
     HPCSUPPORTED = 1
@@ -139,13 +140,13 @@ class MultipleShooting(Algorithm):
 
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes])  # Just states
-        F = np.empty((nOdes, nOdes))
+        F = np.zeros((nOdes, nOdes))
 
         # Compute Jacobian matrix, F using finite difference
-        fx = (odefn(x,Y,parameters,aux))
+        fx = (odefn(x, Y, parameters, aux)).real
         for i in range(nOdes):
             Y[i] += StepSize
-            F[:, i] = (odefn(x, Y, parameters, aux) - fx)/StepSize
+            F[:, i] = (odefn(x, Y, parameters, aux) - fx).real/StepSize
             Y[i] -= StepSize
 
         phiDot = np.dot(F, phi)
@@ -158,7 +159,7 @@ class MultipleShooting(Algorithm):
 
         phi = y[nOdes:].reshape((nOdes, nOdes))  # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes], dtype=complex)  # Just states
-        F = np.empty((nOdes, nOdes))
+        F = np.zeros((nOdes, nOdes))
 
         # Compute Jacobian matrix, F using finite difference
         for i in range(nOdes):
@@ -365,10 +366,6 @@ class MultipleShooting(Algorithm):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.warn(fname+'('+str(exc_tb.tb_lineno)+'): '+str(exc_type))
-
-            # print(exc_type, fname, exc_tb.tb_lineno)
-            # keyboard()
-            # print iter
 
         # Now program stitches together solution from the multiple arcs instead of propagating from beginning.
         # This is important for sensitive problems because they can diverge from the actual solution if propagated in single arc.
