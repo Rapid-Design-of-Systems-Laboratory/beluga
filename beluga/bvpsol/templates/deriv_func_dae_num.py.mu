@@ -5,7 +5,7 @@ from beluga.utils import keyboard
 from beluga.utils.math import *
 
 # Complex step jacobian
-def compute_jacobian(f, X, indices=None, StepSize=1e-16, *args):
+def compute_jacobian(f, X, indices=None, StepSize=1e-100, *args):
     I = np.eye({{num_states}}+{{dae_var_num}})*1j*StepSize
     if indices is None:
         indices = range({{num_states}}+{{dae_var_num}})

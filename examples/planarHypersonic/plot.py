@@ -1,8 +1,8 @@
 from beluga.visualization import BelugaPlot
-from beluga.visualization.renderers import ToyPlot
+# from beluga.visualization.renderers import ToyPlot
 
 # plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1)
-plots = BelugaPlot('./phu_2k5_eps4.dill',default_sol=-1,default_step=-1, renderer='toyplot')
+plots = BelugaPlot('./phu_2k5_eps4.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot().line_series('theta*re/1000','h/1000', step=-1, skip=18)                    \
                 .xlabel('Downrange (km)').ylabel('h (km)')      \
@@ -29,3 +29,4 @@ plots.add_plot().line_series('t','alfa*180/3.14', step=-1, skip=18)             
 #                 .title('Angle of attack vs. Time')
 
 plots.render()
+#

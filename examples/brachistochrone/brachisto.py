@@ -7,6 +7,7 @@ import beluga.bvpsol.algorithms as algorithms
 import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
+import logging
 
 def get_problem():
     """Brachistochrone example."""
@@ -15,15 +16,15 @@ def get_problem():
     problem = beluga.optim.Problem('brachisto')
 
     # Switch off DAE mode
-    problem.mode = 'analytic'
+    problem.mode = 'num'
 
     # Define independent variables
     problem.independent('t', 's')
 
     # Define equations of motion
-    problem.state('x', 'v*cos(theta)','m')   \
-           .state('y', '-v*sin(theta)','m')   \
-           .state('v', 'g*sin(theta)','m/s')
+    problem.state('x', 'v*cos(theta)', 'm')   \
+           .state('y', '-v*sin(theta)', 'm')   \
+           .state('v', 'g*sin(theta)', 'm/s')
     # Define controls
     problem.control('theta','rad')
 
@@ -69,7 +70,7 @@ def get_problem():
     problem.steps.add_step('bisection') \
                     .num_cases(31) \
                     .terminal('x', 5) \
-                    .terminal('y',-5)
+                    .terminal('y', -5)
 
     # (
     # problem.steps.add_step().num_cases(2)
@@ -84,4 +85,4 @@ def get_problem():
     return problem
 
 if __name__ == '__main__':
-    Beluga.run(get_problem())
+    Beluga.run(get_problem(), display_level=logging.DEBUG)

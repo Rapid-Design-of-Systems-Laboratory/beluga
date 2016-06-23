@@ -11,6 +11,7 @@ from beluga.utils import Propagator
 from beluga.utils.Worker import Worker
 import logging, sys, os
 
+
 try:
     from mpi4py import MPI
     HPCSUPPORTED = 1
@@ -18,7 +19,7 @@ except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=100, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
@@ -26,7 +27,7 @@ class MultipleShooting(Algorithm):
         self.derivative_method = derivative_method
         if derivative_method == 'csd':
             self.stm_ode_func = self.__stmode_csd
-            self.bc_jac_func  = self.__bcjac_csd
+            self.bc_jac_func  = self.__bcjac_fd
         elif derivative_method == 'fd':
             self.stm_ode_func = self.__stmode_fd
             self.bc_jac_func  = self.__bcjac_fd
@@ -50,7 +51,7 @@ class MultipleShooting(Algorithm):
             memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
-    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-15):
+    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
         # if parameters is not None:
@@ -139,38 +140,36 @@ class MultipleShooting(Algorithm):
 
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
         Y = np.array(y[0:nOdes])  # Just states
-        F = np.zeros((nOdes,nOdes))
+        F = np.zeros((nOdes, nOdes))
 
         # Compute Jacobian matrix, F using finite difference
-        fx = odefn(x,Y,parameters,aux)
+        fx = (odefn(x, Y, parameters, aux)).real
         for i in range(nOdes):
-            Y[i] = Y[i] + StepSize
-            F[:,i] = (odefn(x, Y, parameters,aux)-fx)/StepSize
-            Y[i] = Y[i] - StepSize
+            Y[i] += StepSize
+            F[:, i] = (odefn(x, Y, parameters, aux) - fx).real/StepSize
+            Y[i] -= StepSize
 
-        # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        phiDot = np.dot(F, phi)
+        return np.concatenate((fx, np.reshape(phiDot, (nOdes*nOdes))))
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-15):
+    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-100):
         "Complex step version of State Transition Matrix"
         N = y.shape[0]
-        nOdes = int(0.5*(sqrt(4*N+1)-1))
+        nOdes = int(0.5 * (sqrt(4 * N + 1) - 1))
 
-        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-        Y = np.array(y[0:nOdes],dtype=complex)  # Just states
-        F = np.zeros((nOdes,nOdes))
-        # Compute Jacobian matrix using complex step derivative
+        phi = y[nOdes:].reshape((nOdes, nOdes))  # Convert STM terms to matrix form
+        Y = np.array(y[0:nOdes], dtype=complex)  # Just states
+        F = np.zeros((nOdes, nOdes))
+
+        # Compute Jacobian matrix, F using finite difference
         for i in range(nOdes):
-            Y[i] = Y[i] + StepSize*1.j
-            F[:,i] = np.imag(odefn(x, Y, parameters, aux))/StepSize
-            Y[i] = Y[i] - StepSize*1.j
+            Y[i] += StepSize * 1.j
+            F[:, i] = np.imag(odefn(x, Y, parameters, aux)) / StepSize
+            Y[i] -= StepSize * 1.j
 
         # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
-        return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
+        phiDot = np.dot(F, phi)
+        return np.concatenate((odefn(x, y, parameters, aux), np.reshape(phiDot, (nOdes * nOdes))))
 
     # def __stmode_ad(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-50):
     #     "Automatic differentiation version of State Transition Matrix"
@@ -292,13 +291,20 @@ class MultipleShooting(Algorithm):
                     #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
                 # Propagate STM and original system together
-                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-3)
+                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-5)
 
                 # Obtain just last timestep for use with correction
                 yf = [yySTM[i][-1] for i in range(self.number_arcs)]
                 # Extract states and STM from ode45 output
                 yb = [yf[i][:nOdes] for i in range(self.number_arcs)]  # States
                 phiset = [np.reshape(yf[i][nOdes:],(nOdes, nOdes)) for i in range(self.number_arcs)] # STM
+
+                # y1 = yySTM[0][:, :nOdes]
+                # for i in range(1, self.number_arcs):
+                #     y1 = np.vstack((y1, (yySTM[i][1:, :nOdes])))
+                #
+                # for i in range(0,len(y1[:,3])):
+                #     print('den = ' + str((-0.5 * 1 * y1[i,3] * cos(y1[i,7]) - 1 * y1[i,5] * sin(y1[i,7]))) + '  u =' + str(y1[i,7]) + '  lamX =' + str(y1[i,3]) + '  lamA =' + str(y1[i,5]))
 
                 # Evaluate the boundary conditions
                 res = self.get_bc(y0g, yb, paramGuess, aux)
@@ -360,10 +366,6 @@ class MultipleShooting(Algorithm):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.warn(fname+'('+str(exc_tb.tb_lineno)+'): '+str(exc_type))
-
-            # print(exc_type, fname, exc_tb.tb_lineno)
-            # keyboard()
-            # print iter
 
         # Now program stitches together solution from the multiple arcs instead of propagating from beginning.
         # This is important for sensitive problems because they can diverge from the actual solution if propagated in single arc.
