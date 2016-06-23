@@ -29,6 +29,7 @@ class NecessaryConditions(object):
         self.aug_cost = {}
         self.costates = []
         self.costate_rates = []
+        self.costate_rates_numerical = []
         self.ham = sympify2('0')
         self.ham_ctrl_partial = []
         self.ctrl_free = []
@@ -135,6 +136,21 @@ class NecessaryConditions(object):
         self.costate_rates = [self.derivative(-1*(self.ham),state, self.quantity_vars) for state in states]
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
+
+        h = 1e-100
+        j = symbols('1j')
+
+        self.costate_rates_numerical = []
+
+        for state in states:
+            state = sympify(state)
+            H = self.make_state_dep_ham(state, self.problem)
+            if H != 0:
+                self.costate_rates_numerical.append('-np.imag(' + str((H.subs(state, (state + h * j)))) + ')/' + str(h))
+                # self.costate_rates_numerical.append('(' + str((H.subs(state, (state + 1e-4)))) + '-' + str(H) + ')/' + str(1e-4))
+            else:
+                self.costate_rates_numerical.append('0')
+
 
     def make_ctrl_partial(self, controls):
         """!
@@ -322,6 +338,58 @@ class NecessaryConditions(object):
         # Adjoin equality constraints
         for i in range(len(self.equality_constraints)):
             self.ham += sympify2('mu'+str(i+1)) * (sympify2(self.equality_constraints[i].expr))
+
+    def make_state_dep_ham(self, state, problem):
+        """!
+        \brief     Symbolically create the Hamiltonian.
+        \author    Michael Grant
+        \author    Sean Nolan
+        \version   0.1
+        \date      06/22/16
+        """
+        # TODO: Make symbolic
+        x = sympify2(state)
+
+        H = sympify(0)
+
+        if diff(sympify2(problem.cost['path'].expr), x) != 0:
+             H = sympify2(problem.cost['path'].expr)
+
+        for i in range(len(problem.states())):
+            if diff(sympify2(self.costates[i]) * (sympify2(problem.states()[i].process_eqn)), x) != 0:
+                H += sympify2(self.costates[i]) * (sympify2(problem.states()[i].process_eqn))
+
+        # Adjoin equality constraints
+        for i in range(len(self.equality_constraints)):
+            if diff(sympify2('mu' + str(i + 1)) * (sympify2(self.equality_constraints[i].expr)), x) != 0:
+                H += sympify2('mu' + str(i + 1)) * (sympify2(self.equality_constraints[i].expr))
+
+        raw_terms = H.as_terms()
+        H_parts = [raw_terms[0][k][0] for k in range(len(raw_terms[0]))]
+        new_H = sympify(0)
+        for part in H_parts:
+            store = sympify(0)
+            tries = 0
+            while (part != store) & (tries <= 5):
+                store = part
+                part = part.expand()
+                tries += 1
+            raw_terms = part.as_terms()
+            sub_parts = [raw_terms[0][k][0] for k in range(len(raw_terms[0]))]
+            new_part = sympify(0)
+            for sub_part in sub_parts:
+                atoms = sub_part.atoms()
+                if state in atoms:
+                    sub_part = sub_part.factor()
+                    new_part += sub_part
+            new_part = new_part.factor()
+            new_part = new_part.simplify(ratio=1.0)
+            new_H += new_part
+
+        print('New:' + str(len(str(new_H))))
+        print('Old:' + str(len(str(H))))
+
+        return new_H
 
     # Compiles a function template file into a function object
     # using the given data
@@ -639,6 +707,9 @@ class NecessaryConditions(object):
         # TODO: Move to separate method?
         func_list = sympify2(self.ham).atoms(AppliedUndef)
 
+        # TODO: Change this to not be necessary
+        self.problem = problem
+
         # Load required functions from the input file
         new_functions = {(str(f.func),getattr(problem.input_module,str(f.func)))
                             for f in func_list
@@ -722,6 +793,11 @@ class NecessaryConditions(object):
             #  ['(tf)*((' + str(costate_rate) + ').imag)' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,
+            'deriv_list_numerical':
+            ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
+            ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates_numerical] +
+            ['tf*0']  # TODO: Hardcoded 'tf'
+         ,
          'state_rate_list':
             ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()]
          ,
@@ -751,6 +827,8 @@ class NecessaryConditions(object):
             self.template_suffix = '_dae_num' + self.template_suffix
         if mode == 'num':
             self.template_suffix = '_num' + self.template_suffix
+        if mode == 'numerical':
+            self.template_suffix = '_numerical' + self.template_suffix
 
         compile_result = [self.compile_function(self.template_prefix+func+self.template_suffix, verbose=True)
                                         for func in self.compile_list]
