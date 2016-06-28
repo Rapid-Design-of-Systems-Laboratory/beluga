@@ -47,9 +47,10 @@ def get_problem():
                         .initial('v-v_0','m/s') \
                         .initial('gam-gam_0','rad') \
                         .terminal('h-h_f','m') \
-                        .path('alfaLim','alfa','<',11*pi/180,'rad')
+                        .path('alfaLim','alfa/(alfaMax)','<',1,'rad') # Units a bit inaccurate but watever
 
     # Define constants
+    problem.constant('alfaMax',11*pi/180,'rad')
     problem.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
     problem.constant('rho0', 1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
     problem.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
@@ -58,8 +59,8 @@ def get_problem():
     problem.constant('re',6378000,'m') # Radius of planet, m
     problem.constant('Aref',0.1877,'m^2') # Reference area of vehicle, m^2
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-5, max_iterations=100, verbose = True, cached = False, number_arcs=2)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-5, max_iterations=20, max_error=100, verbose = True, cached = False)
+    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-6, max_iterations=50, verbose = True, cached = False, number_arcs=2)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-6, max_iterations=20, max_error=100, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -69,11 +70,12 @@ def get_problem():
     # Need long integration time to avoid local min?
     problem.guess.setup('auto',start=[15000,0,500,0*pi/180],costate_guess=-0.00000001,time_integrate=10)
 
-    problem.steps.add_step('bisection').num_cases(41) \
+    # 41 101
+    problem.steps.add_step('bisection').num_cases(21) \
                             .initial('v', 1000) \
                             .terminal('h', 12000)
-    problem.steps.add_step('bisection').num_cases(101) \
-                            .initial('v', 2500)
+    problem.steps.add_step('bisection').num_cases(41) \
+                            .initial('v', 3800)
     # #
     # # problem.guess.setup('file',filename='phu_2k5_eps2.dill', step=-1, iteration=-1)
     # # problem.steps.add_step('bisection').num_cases(5) \
@@ -92,8 +94,12 @@ def get_problem():
     # problem.guess.setup('file',filename='phu_3k8_25k_eps2.dill', step=-1, iteration=-1)
     # problem.steps.add_step('bisection').num_cases(11) \
     #                                    .initial('h',22500)
-    # problem.steps.add_step('bisection').num_cases(51,spacing='log') \
-    #                         .const('eps_alfaLim',1e-3)
+    problem.steps.add_step('bisection').num_cases(41,spacing='log') \
+                            .const('eps_alfaLim',1e-7)
+    # problem.steps.add_step('bisection').num_cases(41) \
+    #                         .initial('v', 3000)
+
+
     return problem
 
 if __name__ == '__main__':
