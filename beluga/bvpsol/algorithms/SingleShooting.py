@@ -281,7 +281,7 @@ class SingleShooting(Algorithm):
 
                 # No damping if error within one order of magnitude
                 # of tolerance
-                if r1 < 10*self.tolerance:
+                if r1 < 100*self.tolerance:
                     alpha, beta = 1, 1
 
                 try:

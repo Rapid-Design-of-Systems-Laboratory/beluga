@@ -484,7 +484,7 @@ class NecessaryConditions(object):
             else:
                 raise ValueError('Invalid direction specified for constraint')
 
-            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=50)
+            psi = self.get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=1)
             psi_vars = [(Symbol('psi'+str(ind+1)), psi)]
 
             # Add to quantity list
@@ -539,7 +539,7 @@ class NecessaryConditions(object):
             # Add smoothing factor
             eps_const = Symbol('eps_'+c.label)
             eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
-            problem.constant(str(eps_const), 1e-2, str(eps_unit))
+            problem.constant(str(eps_const), 1e-6, str(eps_unit))
             logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
             # Append new control to path cost
