@@ -58,7 +58,7 @@ class BelugaPlot:
             if self.renderer is None:
                 raise ValueError('Renderer "'+renderer+'" not found')
 
-    def add_plot(self, step = None, sol = None):
+    def add_plot(self, step = None, sol = None, datasource = None):
         """
         Adds a new plot
             (alias for add_plot() in PlotList)
@@ -67,19 +67,17 @@ class BelugaPlot:
             step = self.default_step_idx
         if sol is None:
             sol = self.default_sol_idx
-        plot = Plot(step, sol, self.mesh_size)
+        if datasource is None:
+            datasource = self.datasource
+
+        plot = Plot(step, sol, self.mesh_size, datasource)
         self._plots.append(plot)
         return plot
 
     def render(self,show=True):
-        # with open(self.filename,'rb') as f:
-        #     logging.info("Loading datafile ...")
-        #     out = dill.load(f)
-        #     logging.info("Loaded "+str(len(out['solution']))+" solution sets from "+self.filename)
-
         for plot in self._plots:
             # plot.preprocess(out['solution'],out['problem_data'])
-            plot.preprocess(self.datasource.get_solution(), self.datasource.get_problem())
+            plot.preprocess()
             fig = self.renderer.create_figure()
             self.renderer.render_plot(fig,plot)
             self._figures.append(fig)
