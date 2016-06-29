@@ -1,7 +1,10 @@
 from beluga.visualization import BelugaPlot
+from beluga.visualization.datasources import Dill
 
 # plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1)
-plots = BelugaPlot('./phu_2k5_eps4.dill',default_sol=-1,default_step=-1, renderer='bokeh')
+ds = Dill('./data.dill')
+plots = BelugaPlot(datasource=ds,default_sol=-1,default_step=-1)
+# plots = BelugaPlot('./phu_2k5_eps4.dill',default_sol=-1,default_step=-1, renderer='bokeh')
 #
 plots.add_plot().line_series('theta*re/1000','h/1000', step=-1, skip=3)                    \
                 .xlabel('Downrange (km)').ylabel('h (km)')      \
