@@ -4,6 +4,12 @@ class BaseDataSource(object):
     __metaclass__ = abc.ABCMeta
     valid_exts = []
     @abc.abstractmethod
+    def reset(self):
+        """
+        Resets data source
+        """
+        
+    @abc.abstractmethod
     def load(self):
         """
         Loads data into memory

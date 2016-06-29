@@ -77,8 +77,6 @@ class BelugaPlot:
         #     out = dill.load(f)
         #     logging.info("Loaded "+str(len(out['solution']))+" solution sets from "+self.filename)
 
-        # Initialize datasource
-        self.datasource.load()
         for plot in self._plots:
             # plot.preprocess(out['solution'],out['problem_data'])
             plot.preprocess(self.datasource.get_solution(), self.datasource.get_problem())

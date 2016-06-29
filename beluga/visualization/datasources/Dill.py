@@ -11,32 +11,39 @@ class Dill(BaseDataSource):
         self.is_loaded = False
         self.filename = filename
 
+    def reset(self):
+        self.is_loaded = False
+        self._data = None
+
     def load(self):
         """
-        Loads solution data using dill
+        Loads solution data using dill if not already loaded
         """
-        with open(self.filename,'rb') as f:
-            logging.info("Loading datafile "+self.filename+"...")
-            self._data = dill.load(f)
-            if 'solution' not in self._data:
-                self.is_loaded = False
-                logging.error("Solution missing in data file :"+self.filename)
-                raise RuntimeError("Solution missing in data file :"+self.filename)
-            if 'problem_data' not in self._data:
-                self.is_loaded = False
-                logging.error("Problem data missing in data file :"+self.filename)
-                raise RuntimeError("Problem data missing in data file :"+self.filename)
+        if not self.is_loaded:
+            with open(self.filename,'rb') as f:
+                logging.info("Loading datafile "+self.filename+"...")
+                self._data = dill.load(f)
+                if 'solution' not in self._data:
+                    self.is_loaded = False
+                    logging.error("Solution missing in data file :"+self.filename)
+                    raise RuntimeError("Solution missing in data file :"+self.filename)
+                if 'problem_data' not in self._data:
+                    self.is_loaded = False
+                    logging.error("Problem data missing in data file :"+self.filename)
+                    raise RuntimeError("Problem data missing in data file :"+self.filename)
 
-            logging.info("Loaded "+str(len(self._data['solution']))+" solution sets from "+self.filename)
-            self.is_loaded = True
+                logging.info("Loaded "+str(len(self._data['solution']))+" solution sets from "+self.filename)
+                self.is_loaded = True
 
     def get_problem(self):
         """
         Return problem data
         """
+        # Lazy load data
         if not self.is_loaded:
-            logging.error("Data source should be loaded before being used")
-            raise RuntimeError("Data source should be loaded before being used")
+            self.load()
+            # logging.error("Data source should be loaded before being used")
+            # raise RuntimeError("Data source should be loaded before being used")
         return self._data['problem_data']
 
 
@@ -44,7 +51,9 @@ class Dill(BaseDataSource):
         """
         Returns solution array
         """
+        # Lazy load data
         if not self.is_loaded:
-            logging.error("Data source should be loaded before being used")
-            raise RuntimeError("Data source should be loaded before being used")
+            self.load()
+            # logging.error("Data source should be loaded before being used")
+            # raise RuntimeError("Data source should be loaded before being used")
         return self._data['solution']
