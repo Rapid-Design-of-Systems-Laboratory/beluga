@@ -11,10 +11,11 @@ class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
     """
-    def __init__(self, step, sol, mesh_size):
+    def __init__(self, step, sol, mesh_size, datasource):
         self.step_index = step
         self.sol_index = sol
         self.mesh_size = mesh_size
+        self.datasource = datasource
         self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
 
@@ -41,23 +42,30 @@ class Plot(object):
         self._title = title_txt
         return self
 
-    def line(self, x_expr, y_expr, legend=None, step = None, sol = None):
+    def line(self, x_expr, y_expr, legend=None, step = None, sol = None, datasource = None):
         """
         Adds a new line plot to the figure
         """
+        if datasource is None:
+            datasource = self.datasource
         # TODO: Datatype sanity checks needed here
-        self.plot_data.append({'type':'line', 'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'sol':sol})
+        self.plot_data.append({'type':'line', 'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'sol':sol, 'datasource': datasource})
         return self
 
-    def line_series(self, x_expr, y_expr, legend=None, step = None, start = 0, skip = 0, end = -1):
-        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'start':start, 'skip':skip, 'end': end})
+    def line_series(self, x_expr, y_expr, legend=None, step = None, start = 0, skip = 0, end = -1, datasource = None):
+        if datasource is None:
+            datasource = self.datasource
+        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
         return self
 
-    def preprocess(self, solution, problem_data):
+    def preprocess(self):
         """
         Evaluates the expressions using the supplied data
         """
         for line in self.plot_data:
+            solution = line['datasource'].get_solution()
+            problem_data  = line['datasource'].get_problem()
+
             step_idx = line['step'] if line['step'] is not None else self.step_index
             line['data'] = []
             if line['type'] == 'line':
