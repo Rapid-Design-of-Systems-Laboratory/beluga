@@ -76,14 +76,18 @@ class ToyPlot(BaseRenderer):
         axes.y.label.style = label_style
         axes.x.ticks.labels.style = tick_style
         axes.y.ticks.labels.style = tick_style
+
+        legends_data = []
         # has_legend = False
         for line in p.plot_data:
-            # has_legend = has_legend or (line['legend'] is not None)
+            # has_legend = has_legend or (line['label'] is not None)
             for dataset in line['data']:
-                axes.plot(dataset['x_data'], dataset['y_data'])
+                plt = axes.plot(dataset['x_data'], dataset['y_data'])
+            # TODO: Legends for line_series may not work properly
+            if line['label'] is not None:
+                legends_data.append((line['label'],plt))
+        # canvas.legend(legends_data);
 
-        # if has_legend:
-        #     fh.gca().legend()
         if p._xlabel is not None:
             axes.x.label.text = p._xlabel
         if p._ylabel is not None:
