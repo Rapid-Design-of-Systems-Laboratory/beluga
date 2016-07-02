@@ -1,7 +1,8 @@
 # TODO: Preprocess, postprocess hooks?
 import numpy as np
-# from cmath import *
+from math import *
 from beluga.utils.math import *
+
 def bc_func_left(_ya, _p, _aux):
     # Declare all auxiliary variables
 {{#aux_list}}
@@ -15,7 +16,6 @@ def bc_func_left(_ya, _p, _aux):
     # Left BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _ya[:{{num_states}}]
     [{{#control_list}}{{.}},{{/control_list}}] = compute_control(0,_ya,_p,_aux)
-
 
     # Declare all predefined expressions
 {{#quantity_list}}

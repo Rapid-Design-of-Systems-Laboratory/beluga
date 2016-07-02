@@ -73,15 +73,16 @@ class Solution(object):
         mesh_size: Evaluate over new mesh
         overwrite: Overwrite existing solution with new mesh
         """
+
+        x,y,u = self.x, self.y, self.u
+
         # TODO: Test mesh_size improvement in prepare()
         if mesh_size is not None and mesh_size > len(self.x):
             # Update solution to use new mesh if needed
             new_x = np.linspace(self.x[0],self.x[-1],mesh_size)
             (new_y, new_u) = self.interpolate(new_x, overwrite=overwrite)
-
-        x,y,u = self.x, self.y, self.u
-        if not overwrite:
-            x,y,u = new_x, new_y, new_u
+            if not overwrite:
+                x, y, u = new_x, new_y, new_u
 
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object

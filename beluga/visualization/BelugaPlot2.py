@@ -1,7 +1,5 @@
 import dill
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
 
 class BelugaPlot2:
     # def __init__(self):

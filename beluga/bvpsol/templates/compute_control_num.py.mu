@@ -17,6 +17,7 @@ import logging
 
 def compute_hamiltonian(_t,_X,_p,_aux,_u):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
+    [{{#control_list}}{{.}},{{/control_list}}] = _u
 
     # Declare all auxiliary variables
 {{#aux_list}}
@@ -24,9 +25,6 @@ def compute_hamiltonian(_t,_X,_p,_aux,_u):
     {{.}} = _aux['{{type}}']['{{.}}']
 {{/vars}}
 {{/aux_list}}
-
-
-    [{{#control_list}}{{.}},{{/control_list}}] = _u
 
     # Declare all quantities
 {{#quantity_list}}
@@ -86,8 +84,6 @@ def compute_control(_t,_X,_p,_aux):
 {{^control_options}}
     def dHdu(_u):
         [{{#control_list}}{{.}},{{/control_list}}] = _u
-        im = np.imag
-        I = 1j
         return [{{#dHdu}}{{.}},
                 {{/dHdu}}]
 
