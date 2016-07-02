@@ -6,7 +6,14 @@ plots.add_plot().line('x','y')                    \
                 # .xlabel('t (s)').ylabel('h (km)')      \
                 # .title('Altitude vs. Time')
 
-plots.add_plot().line('t', 'u') \
+plots.add_plot().line('t', '(-ep*k*lamX*cos(u) - k*lamA*sin(u))') \
+                .line('t','(-ep*k*lamX*cos(u))') \
+                .line('t','lamX') \
+                .line('t','lamA')
+
+plots.add_plot().line('t', '-k*(lamX*v*sin(a) - lamY*v*cos(a))*cos(u)') \
+
+
     # .xlabel('t (s)').ylabel('h (km)')      \
 # .title('Altitude vs. Time')
 

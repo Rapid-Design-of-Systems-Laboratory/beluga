@@ -1,4 +1,4 @@
-from math import *
+from cmath import *
 from beluga.utils import *
 from beluga.optim import *
 

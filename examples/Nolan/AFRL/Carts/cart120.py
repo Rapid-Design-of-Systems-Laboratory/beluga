@@ -176,9 +176,11 @@ if __name__ == "__main__":
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('carts0')
 
+    # Switch off DAE mode
+    problem.mode = 'analytic'
+
     # Define independent variables
     problem.independent('t', 's')
-
 
     # Define equations of motion
     problem\
