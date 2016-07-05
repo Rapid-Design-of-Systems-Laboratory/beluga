@@ -7,6 +7,8 @@ from .sympify2 import sympify2
 from .ode45_old import ode45_old
 from .ode45 import ode45_multi
 from .Propagator import Propagator
+from .ipsh import ipsh
+from .timeout import timeout
 
 from .static_var import static_var
 from .SingletonMetaClass import SingletonMetaClass

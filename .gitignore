@@ -4,7 +4,7 @@ __pycache__
 *.ini
 *.dat
 _cache
-*.dill
+data.dill
 
 # OS generated files #
 ######################

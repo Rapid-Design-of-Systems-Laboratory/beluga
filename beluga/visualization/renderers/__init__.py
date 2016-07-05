@@ -1,5 +1,7 @@
-from .Renderer import Renderer
+from .BaseRenderer import BaseRenderer
 from .MatPlotLib import MatPlotLib
+# from .ToyPlot import ToyPlot
+from .Bokeh import Bokeh
 
 import os
 import glob
