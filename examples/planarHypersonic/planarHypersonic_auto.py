@@ -74,8 +74,8 @@ def get_problem():
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-    # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=10, verbose = True, cached = False)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=20, verbose = True, cached = False, number_arcs=2)
+    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=20, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -86,18 +86,35 @@ def get_problem():
     # Is this actually an Expression rather than a Value?
     # problem.quantity = [Value('tanAng','tan(theta)')]
 
-    problem.guess.setup('auto',start=[80000,0.0001,5000,-90*pi/180])
+    problem.guess.setup('auto',start=[80000,0.0,5000,-90*pi/180],costate_guess=0.1)
     #problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14])
     # Figure out nicer way of representing this. Done?
 
     problem.steps.add_step('bisection') \
-                            .terminal('h', 0)  \
-                            .initial('theta',0) \
+                            .terminal('h', 0)
+    problem.steps.add_step('bisection').num_cases(21) \
                             .terminal('theta', 10*pi/180)
-
     return problem
 
 if __name__ == '__main__':
     import beluga.Beluga as Beluga
     problem = get_problem()
+
+    # from vprof import profiler
+
     sol = Beluga.run(problem)
+    # profiler.run(Beluga.run, 'cmh', args=(problem, ), host='localhost', port=8000)
+
+
+# Numerical
+# Guess.py:136: x0: [  8.00000000e+04   1.00000000e-02   5.00000000e+03  -1.57079633e+00
+#    1.00000000e-01   1.00000000e-01   1.00000000e-01   1.00000000e-01
+#    1.00000000e-01   9.46846466e-05]
+# Guess.py:138: xf: [  7.99499995e+04   1.00000000e-02   5.00009539e+03  -1.57079633e+00
+#    1.00000001e-01   1.00000000e-01   1.01000007e-01   1.00000363e-01
+#    1.00000000e-01   9.37457195e-05]
+#
+# Analytic
+# Guess.py:138: xf: [  7.99499995e+04   1.00000000e-02   5.00009539e+03  -1.57079633e+00
+#    1.00000001e-01   1.00000000e-01   1.01000007e-01   1.00000363e-01
+#    1.00000000e-01   9.37457195e-05]

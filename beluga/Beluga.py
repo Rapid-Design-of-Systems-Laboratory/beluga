@@ -1,10 +1,11 @@
-from math import *
+from cmath import *
 from beluga.utils import *
 from beluga.optim import *
 
 import matplotlib.pyplot as plt
 import numpy as np
 import sys,os,imp,inspect,warnings
+import scipy.optimize
 
 from beluga import BelugaConfig
 from beluga.continuation import *
@@ -167,7 +168,12 @@ class Beluga(object):
         logging.info("Computing the necessary conditions of optimality")
         self.nec_cond = NecessaryConditions()
 
-        # Create corresponding boundary value problem
+        # Try loading cached BVP from disk
+        # bvp = self.nec_cond.load_bvp(self.problem)
+        # if bvp is None:
+        #     # Create corresponding boundary value problem
+        #     bvp = self.nec_cond.get_bvp(self.problem)
+        #     self.nec_cond.cache_bvp(self.problem)
         bvp = self.nec_cond.get_bvp(self.problem)
 
         # TODO: Implement other types of initial guess depending on data type
@@ -181,7 +187,7 @@ class Beluga(object):
         solinit = self.problem.guess.generate(bvp)
 
         # includes costates
-        state_names = self.nec_cond.problem_data['state_list']
+        state_names = bvp.problem_data['state_list']
         initial_states = solinit.y[:,0] # First column
         terminal_states = solinit.y[:,-1] # Last column
         initial_bc = dict(zip(state_names,initial_states))
@@ -193,8 +199,8 @@ class Beluga(object):
         # TODO: Start from specific step for restart capability
         # TODO: Make class to store result from continuation set?
         self.out = {};
-        self.out['problem_data'] = self.nec_cond.problem_data;
 
+        self.out['problem_data'] = bvp.problem_data;
         self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
         total_time = toc();
 
@@ -220,6 +226,7 @@ class Beluga(object):
         # Initialize scaling
         import sys, copy
         s = self.problem.scale
+
         s.initialize(self.problem,self.nec_cond.problem_data)
         try:
             for step_idx,step in enumerate(steps):
@@ -258,8 +265,10 @@ class Beluga(object):
                         # for i in range(len(sol.x)):
                         #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                         #     sol.u[:,i] = _u
-                        f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
-                        sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
+                        ## DAE mode
+                        sol.u = sol.y[self.nec_cond.problem_data['num_states']:,:]
+                        # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
+                        # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
                         # Update solution for next iteration
                         solution_set[step_idx].append(copy.deepcopy(bvp.solution))
@@ -270,6 +279,8 @@ class Beluga(object):
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logging.error('Exception : '+str(e))
             logging.error('Stopping')
 

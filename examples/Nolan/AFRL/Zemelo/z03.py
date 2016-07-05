@@ -14,6 +14,8 @@ if __name__ == "__main__":
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('z03')
 
+    problem.mode = 'analytic'
+
     # Define independent variables
     problem.independent('t', 's')
 
@@ -57,7 +59,7 @@ if __name__ == "__main__":
     # Is this actually an Expression rather than a Value?
     # problem.quantity = [Value('tanAng','tan(theta)')]
 
-    problem.guess.setup('auto', start=[0, 0, 0], costate_guess=[0.1, 0.1, 0.001], time_integrate=0.1) # costate_guess=[0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    problem.guess.setup('auto', start=[0, 0, 0], costate_guess=[-0.1, -0.1, -0.001], time_integrate=0.1) # costate_guess=[0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     # problem.guess.setup('auto',start=[80000,3.38575809e-21,5000,7.98617365e-02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],direction='forward',time_integrate=229.865209,costate_guess =[-1.37514494e+01,3.80852584e+06,-3.26290152e+03,-2.31984720e-14,0.00,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01])
     # Figure out nicer way of representing this. Done?
 

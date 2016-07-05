@@ -1,4 +1,4 @@
-from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess
+from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess, Value
 from beluga.continuation import ContinuationList
 # from os import getcwd
 from .Scaling import Scaling
@@ -21,7 +21,7 @@ class Problem(object):
                      'terminal': Expression('0','nd'),
                      'path': Expression('0','nd')}
         # self.constant = []
-        self.quantity = []
+        self.quantity_list = []
         self.scale = Scaling()
         self.continuation = []
         self.execute = Execute()
@@ -96,6 +96,13 @@ class Problem(object):
     def control(self,var,unit,name='default',index=0):
         """Adds a control variable to given system"""
         return self.systems[name][index].control(var,unit)
+
+    def quantity(self, var=None, expr=None):
+        if var is None and expr is None:
+            return self.quantity_list
+        else:
+            self.quantity_list.append(Value(var,expr))
+            return self
 
     # Allows setting independent variables for select systems
     def independent(self,var,unit,name='default',select=None):
