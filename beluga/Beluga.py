@@ -285,3 +285,25 @@ class Beluga(object):
             logging.error('Stopping')
 
         return solution_set
+        
+    @classmethod
+    def algorithm(cls, algo, **kwargs):
+        """
+        Helper method to load algorithm by name
+        """
+        # Load algorithm from the package
+        for name, obj in inspect.getmembers(algorithms):
+            if inspect.isclass(obj):
+                if name.lower() == algo.lower():
+                    return obj(**kwargs)
+        else:
+            # Raise exception if the loop completes without finding an algorithm
+            # by the given name
+            raise ValueError('Algorithm '+algo+' not found')
+
+    @classmethod
+    def problem(cls, name):
+        """
+        Helper method to create new problem object
+        """
+        return Problem(name)
