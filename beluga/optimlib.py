@@ -81,6 +81,12 @@ class Problem(object):
                     arg_list=constraint_arg_list)
                 )
 
+        setattr(self.constraint_aliases,'path',
+                functools.partial(self.add_constraint,
+                    type='path',
+                    arg_list=['name','expr','direction','bound','unit'])
+                )
+
     def add_property(self, *args, property_name, arg_list=[], **kwargs ):
         """
         Adds a property of the optimal control problem
