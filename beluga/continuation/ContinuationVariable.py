@@ -4,5 +4,4 @@ class ContinuationVariable(object):
         self.name = name
         self.target = target
         self.value = np.nan
-        self.index = np.nan # Index of state in BVP, obsolete
         self.steps = []
