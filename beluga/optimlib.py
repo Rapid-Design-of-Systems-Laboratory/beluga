@@ -29,7 +29,7 @@ class Problem(object):
 
         self._systems = {'default': {}} # Dynamic system definitions
         self._properties = {} # Problem properties
-        self._constraints = []
+        self._constraints = ConstraintList()
         self.continuation = ContinuationList()
         self.steps = self.continuation  # Alias for continuation
 
@@ -70,42 +70,6 @@ class Problem(object):
         self.terminal_cost = partial(self.cost, 'terminal')
         self.Lagrange = self.path_cost
         self.Mayer = self.terminal_cost
-
-        # Aliases for defining constraints of different types
-        self.constraint_aliases = types.SimpleNamespace()
-
-        constraint_struct = namedtuple('Constraint',['type','expr', 'unit'])
-        setattr(self.constraint_aliases,'initial',
-                partial(self.add_constraint,
-                    constraint_type='initial',
-                    constraint_struct=constraint_struct)
-                )
-        setattr(self.constraint_aliases,'terminal',
-                partial(self.add_constraint,
-                    constraint_type='terminal',
-                    constraint_struct=constraint_struct)
-                )
-        setattr(self.constraint_aliases,'equality',
-                partial(self.add_constraint,
-                    constraint_type='equality',
-                    constraint_struct=constraint_struct)
-                )
-        setattr(self.constraint_aliases,'interior_point',
-                partial(self.add_constraint,
-                    constraint_type='interior_point',
-                    constraint_struct=constraint_struct)
-                )
-        setattr(self.constraint_aliases,'independent',
-                partial(self.add_constraint,
-                    constraint_type='independent',
-                    constraint_struct=constraint_struct)
-                )
-        setattr(self.constraint_aliases,'path',
-                partial(self.add_constraint,
-                    constraint_type='path',
-                    constraint_struct=namedtuple('Constraint',
-                            ['type','name','expr','direction','bound','unit']))
-                )
 
     def add_property(self, *args, property_name, property_struct=[], **kwargs ):
         """
@@ -156,18 +120,7 @@ class Problem(object):
 
         Returns the constraint_aliases object with alias methods
         """
-        return self.constraint_aliases
-
-    def add_constraint(self, *args, constraint_type='', constraint_struct=[], **kwargs):
-        """
-        Adds constraint of the specified type
-
-        Returns reference to self.constraint_aliases for chaining
-        """
-        kwargs['type'] = constraint_type
-        constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
-        self._constraints.append(constraint)
-        return self.constraint_aliases
+        return self._constraints
 
     def sympify(self):
         """
@@ -198,6 +151,53 @@ class Problem(object):
             raise ValueError("""Invalid problem name specified.
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
+class ConstraintList(list):
+    def __init__(self):
+        super(ConstraintList, self).__init__()
+
+        # Aliases for defining constraints of different types
+        constraint_struct = namedtuple('Constraint',['type','expr', 'unit'])
+        setattr(self,'initial',
+                partial(self.add_constraint,
+                    constraint_type='initial',
+                    constraint_struct=constraint_struct)
+                )
+        setattr(self,'terminal',
+                partial(self.add_constraint,
+                    constraint_type='terminal',
+                    constraint_struct=constraint_struct)
+                )
+        setattr(self,'equality',
+                partial(self.add_constraint,
+                    constraint_type='equality',
+                    constraint_struct=constraint_struct)
+                )
+        setattr(self,'interior_point',
+                partial(self.add_constraint,
+                    constraint_type='interior_point',
+                    constraint_struct=constraint_struct)
+                )
+        setattr(self,'independent',
+                partial(self.add_constraint,
+                    constraint_type='independent',
+                    constraint_struct=constraint_struct)
+                )
+        setattr(self,'path',
+                partial(self.add_constraint,
+                    constraint_type='path',
+                    constraint_struct=namedtuple('Constraint',
+                            ['type','name','expr','direction','bound','unit']))
+                )
+    def add_constraint(self, *args, constraint_type='', constraint_struct=[], **kwargs):
+        """
+        Adds constraint of the specified type
+
+        Returns reference to self.constraint_aliases for chaining
+        """
+        kwargs['type'] = constraint_type
+        constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
+        self.append(constraint)
+        return self
 
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
