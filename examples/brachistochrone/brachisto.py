@@ -1,5 +1,5 @@
 import beluga.Beluga as Beluga
-from beluga.optimlib import Problem
+from beluga.problem2 import Problem
 
 def get_problem():
     """Brachistochrone example."""
