@@ -47,6 +47,12 @@ def get_problem():
                             max_iterations=50,
                             verbose = True,
                          )
+
+    problem.scale.unit('m',1)     \
+                 .unit('s',1)     \
+                 .unit('kg',1)    \
+                 .unit('rad',1)
+
     problem.guess.setup('auto',
                     start=[0,0,1],          # Starting values for states in order
                     direction='forward',
@@ -61,14 +67,9 @@ def get_problem():
     return problem
 
 if __name__ == '__main__':
-    prob = get_problem()
-    print(prob)
+    Beluga.run(get_problem())
 
-    # problem.scale.unit('m',1)     \
-    #                .unit('s',1)\
-    #                .unit('kg',1)   \
-    #                .unit('rad',1)
-    #
+
 
 #
 # if __name__ == '__main__':

@@ -265,11 +265,14 @@ class NecessaryConditions(object):
         # Do in two steps so that indices are "right"
         # TODO: apply quantities
         filtered_list = [c for c in constraint if c.type==location]
-        self.parameter_list += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
+        # self.parameter_list += [c.make_multiplier(ind) for (ind,c) in enumerate(filtered_list,1)]
+        self.parameter_list += ['lam_'+c.type+'_'+str(ind) for (ind,c) in enumerate(filtered_list,1)]
         # self.aug_cost[location] = aug_cost + ''.join(' + (%s)' % c.make_aug_cost(ind)
         #                         for (ind,c) in enumerate(filtered_list,1))
 
-        self.aug_cost[location] = aug_cost + sum([c.make_aug_cost(ind)
+        # self.aug_cost[location] = aug_cost + sum([c.make_aug_cost(ind)
+        #                                          for (ind,c) in enumerate(filtered_list,1)])
+        self.aug_cost[location] = aug_cost + sum([sympify2('lam_'+c.type+'_'+str(ind) + '*(' + c.expr + ')')
                                                  for (ind,c) in enumerate(filtered_list,1)])
 
     def make_costate_bc(self, states, location):
@@ -292,11 +295,11 @@ class NecessaryConditions(object):
         if location == 'initial':
             # Using list comprehension instead of loops
             # lagrange_ changed to l. Removed hardcoded prefix
-            self.bc_initial += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym, self.quantity_vars))
+            self.bc_initial += [str(sympify2(self.make_costate(state)) - self.derivative(sympify2(cost_expr),state.sym, self.quantity_vars))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc_terminal += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym,self.quantity_vars))
+            self.bc_terminal += [str(sympify2(self.make_costate(state)) - self.derivative(sympify2(cost_expr),state.sym,self.quantity_vars))
                                     for state in states]
 
         # for i in range(len(state)):
@@ -313,7 +316,7 @@ class NecessaryConditions(object):
         \date      06/30/15
         """
         #TODO: Make symbolic
-        self.ham = sympify2(problem.cost['path'].expr)
+        self.ham = sympify2(problem.costs('path').expr)
         for i in range(len(problem.states())):
             self.ham += sympify2(self.costates[i]) * (sympify2(problem.states()[i].process_eqn))
 
@@ -420,12 +423,12 @@ class NecessaryConditions(object):
         constraints = problem.constraints().get('path')
         quantity_subs = self.quantity_vars.items()
 
-        path_cost_expr = sympify2(problem.cost['path'].expr)
-        path_cost_unit = sympify2(problem.cost['path'].unit)
+        path_cost_expr = sympify2(problem.costs('path').expr)
+        path_cost_unit = sympify2(problem.costs('path').unit)
         if path_cost_expr == 0:
             logging.debug('No path cost specified, using unit from terminal cost function')
-            problem.cost['path'].unit = problem.cost['terminal'].unit
-            path_cost_unit = sympify2(problem.cost['terminal'].unit)
+            problem.costs('path').unit = problem.costs('terminal').unit
+            path_cost_unit = sympify2(problem.costs('terminal').unit)
 
         logging.debug('Path cost is of unit: '+str(path_cost_unit))
         time_unit = Symbol('s')
@@ -544,7 +547,8 @@ class NecessaryConditions(object):
             path_cost_expr = path_cost_expr + eps_const*xi_vars[-1]**2
 
         logging.debug('Updated path cost is: '+str(path_cost_expr))
-        problem.cost['path'].expr = str(path_cost_expr)
+        # problem.costs('path').expr = str(path_cost_expr)
+        problem.path_cost(str(path_cost_expr), path_cost_unit)
 
         u_constraints = problem.constraints().get('control')
 
@@ -589,8 +593,11 @@ class NecessaryConditions(object):
             self.quantity_list = quantity_subs = []
             self.quantity_vars = {}
 
+    def make_costate(self, state):
+        return 'lam'+state.name.upper()
+
     def make_costates(self, problem):
-        self.costates = [state.make_costate() for state in problem.states()]
+        self.costates = [self.make_costate(state) for state in problem.states()]
 
     def get_bvp(self,problem,mode='dae'):
         """Perform variational calculus calculations on optimal control problem
@@ -606,17 +613,17 @@ class NecessaryConditions(object):
 
         # self.state_subs = [(state.sym, sympify2(state.process_eqn)) for state in problem.states()]
         ## Create costate list
-        # self.costates = [state.make_costate() for state in problem.states()]
+        # self.costates = [self.make_costate(state) for state in problem.states()]
         self.make_costates(problem)
 
         # for i in range(len(self.problem.states())):
         #     self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
-        aug_cost_init = sympify2(problem.cost['initial'].expr)
+        aug_cost_init = sympify2(problem.costs('initial').expr)
         self.make_aug_cost(aug_cost_init, problem.constraints(), 'initial')
 
-        aug_cost_term = sympify2(problem.cost['terminal'].expr)
+        aug_cost_term = sympify2(problem.costs('terminal').expr)
         self.make_aug_cost(aug_cost_term, problem.constraints(), 'terminal')
 
         # Add state boundary conditions
@@ -634,15 +641,15 @@ class NecessaryConditions(object):
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
         # TODO: Move to separate method?
-        func_list = sympify2(self.ham).atoms(AppliedUndef)
+        # func_list = sympify2(self.ham).atoms(AppliedUndef)
 
-        # Load required functions from the input file
-        new_functions = {(str(f.func),getattr(problem.input_module,str(f.func)))
-                            for f in func_list
-                            if hasattr(problem.input_module,str(f.func)) and
-                                inspect.isfunction(getattr(problem.input_module,str(f.func)))}
-
-        problem.functions.update(new_functions)
+        # # Load required functions from the input file
+        # new_functions = {(str(f.func),getattr(problem.input_module,str(f.func)))
+        #                     for f in func_list
+        #                     if hasattr(problem.input_module,str(f.func)) and
+        #                         inspect.isfunction(getattr(problem.input_module,str(f.func)))}
+        #
+        # problem.functions.update(new_functions)
 
         undefined_func = [f.func for f in func_list if str(f.func) not in problem.functions]
 
