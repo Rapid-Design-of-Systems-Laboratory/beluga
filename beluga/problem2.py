@@ -17,8 +17,7 @@ from collections import namedtuple
 from itertools import zip_longest
 from beluga.optim.Scaling import Scaling # BUG
 from beluga.bvpsol import Solution
-# from beluga.utils import keyboard
-from beluga.utils import ode45
+from beluga.utils import ode45, sympify2, keyboard
 
 class Problem(object):
     """
@@ -76,7 +75,6 @@ class Problem(object):
                 property_name='path_cost',
                 property_struct=namedtuple('Cost',['expr', 'unit'])
                 )
-
         self.initial_cost = partial(self.set_property,
                 property_name='terminal_cost',
                 property_struct=namedtuple('Cost',['expr', 'unit'])
@@ -96,7 +94,7 @@ class Problem(object):
         except KeyError:
             return namedtuple('Cost',['expr', 'unit'])('0','')
 
-    def set_property(self, *args, property_name, property_struct=[], **kwargs ):
+    def set_property(self, *args, property_name, property_struct, **kwargs ):
         """
         Adds a property of the optimal control problem
 
@@ -104,15 +102,15 @@ class Problem(object):
 
         Returns a reference to self for chaining purposes
         """
-        self._properties[property_name] = _combine_args_kwargs(property_struct,
-                                                                   args, kwargs)
+        self._properties[property_name] = SymbolicVariable(
+                                            _combine_args_kwargs(property_struct,
+                                                   args, kwargs), sym_key=None)
         return self
 
     def get_property(self, property_name):
         """
         Returns the property specified by the name
         """
-        print(self._properties)
         return self._properties[property_name]
 
 
@@ -139,7 +137,7 @@ class Problem(object):
 
         # Pair prop names and values and create an object using element_struct
         prop_obj = _combine_args_kwargs(element_struct, props, kwprops)
-        prop_list.append(prop_obj)
+        prop_list.append(SymbolicVariable(prop_obj))
 
         # Add the element with its properties to the system
         system[element_kind] = prop_list
@@ -190,7 +188,7 @@ class Problem(object):
             raise ValueError("""Invalid problem name specified.
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
-            
+
 class ConstraintList(list):
     def __init__(self):
         super(ConstraintList, self).__init__()
@@ -234,9 +232,11 @@ class ConstraintList(list):
 
         Returns reference to self.constraint_aliases for chaining
         """
-        kwargs['type'] = constraint_type
+        args = list(args)
+        args.insert(0,constraint_type)
         constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
-        self.append(constraint)
+
+        self.append(SymbolicVariable(constraint, sym_key='expr'))
         return self
 
     def get(self, type):
@@ -244,6 +244,28 @@ class ConstraintList(list):
         Returns list of constraints of a specific type
         """
         return [c for c in self if c.type==type]
+
+class SymbolicVariable(object):
+    """
+    Represents an object that can be used in SymPy and is created from a dict
+    """
+    def __init__(self, param_dict, sym_key='name'):
+        self.__dict__ = param_dict
+        if sym_key is not None:
+            self._sym = sympify2(param_dict[sym_key])
+        else:
+            self._sym = None
+    def _sympy_(self):
+        """
+        Makes the object usable in sympy expressions directly
+        """
+        return self._sym
+
+    def __repr__(self):
+        return str(self._sym)
+    def __eq__(self, other):
+        return str(self._sym) == str(other)
+
 
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
@@ -365,6 +387,7 @@ class Guess(object):
         dae_num_states = bvp.dae_num_states
         dae_guess = np.ones(dae_num_states)*0.1
         dhdu_fn = bvp.dae_func_gen(0,x0,param_guess,bvp.solution.aux)
+
         dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
         # dae_x0 = dae_guess
 
@@ -392,4 +415,4 @@ def _combine_args_kwargs(struct, args, kwargs, fillvalue=''):
     """
     arg_dict = {key: val for (key, val) in zip_longest(struct._fields, args, fillvalue=fillvalue)}
     arg_dict.update(kwargs)
-    return struct(**arg_dict) # Python 3.5 unpacking syntax
+    return (arg_dict)
