@@ -5,7 +5,7 @@ Contains class/functions related to defining the optimal control problems
 """
 import scipy.optimize
 import numpy as np
-import functools
+from functools import partial
 import logging
 import os.path
 import types
@@ -13,6 +13,9 @@ import dill
 import re
 
 from .continuation import ContinuationList
+from collections import namedtuple
+from itertools import zip_longest
+
 from beluga.bvpsol import Solution
 # from beluga.utils import keyboard
 from beluga.utils import ode45
@@ -34,71 +37,77 @@ class Problem(object):
 
         # Aliases that add known types of dynamic elements to systems
         # TODO: Write documentation for these aliases
-        self.state = functools.partial(self.add_dynamic_element,
+        self.state = partial(self.add_dynamic_element,
                 element_kind='states',
-                element_props=['name', 'eom', 'unit'])
-        self.control = functools.partial(self.add_dynamic_element,
-                element_kind='controls',
-                element_props=['name','unit']
+                element_struct=namedtuple('State',['name', 'eom', 'unit'])
                 )
-        self.constant = functools.partial(self.add_dynamic_element,
+        self.control = partial(self.add_dynamic_element,
+                element_kind='controls',
+                element_struct=namedtuple('Control',['name','unit'])
+                )
+        self.constant = partial(self.add_dynamic_element,
                 element_kind='constants',
-                element_props=['name','value','unit'])
-        self.quantity = functools.partial(self.add_dynamic_element,
+                element_struct=namedtuple('Constant',['name','value','unit'])
+                )
+        self.quantity = partial(self.add_dynamic_element,
                 element_kind='quantities',
-                element_props=['name','value'])
+                element_struct=namedtuple('Quantity',['name','value'])
+                )
 
         # TODO: Maybe write as separate function?
-        self.independent = functools.partial(self.add_property,
+        self.independent = partial(self.add_property,
                 property_name='independent',
-                arg_list=['name','unit'])
+                property_struct=namedtuple('IndependentVar',['name','unit'])
+                )
 
         # Aliases for defining properties of the problem
-        self.cost = functools.partial(self.add_property,
-                property_name='cost', arg_list=['type', 'expr', 'unit'])
+        self.cost = partial(self.add_property,
+                property_name='cost',
+                property_struct=namedtuple('Cost',['type', 'expr', 'unit'])
+                )
 
-        self.path_cost = functools.partial(self.cost, 'path')
-        self.terminal_cost = functools.partial(self.cost, 'terminal')
+        self.path_cost = partial(self.cost, 'path')
+        self.terminal_cost = partial(self.cost, 'terminal')
         self.Lagrange = self.path_cost
         self.Mayer = self.terminal_cost
 
         # Aliases for defining constraints of different types
         self.constraint_aliases = types.SimpleNamespace()
 
-        constraint_arg_list = ['expr', 'unit']
+        constraint_struct = namedtuple('Constraint',['type','expr', 'unit'])
         setattr(self.constraint_aliases,'initial',
-                functools.partial(self.add_constraint,
-                    type='initial',
-                    arg_list=constraint_arg_list)
+                partial(self.add_constraint,
+                    constraint_type='initial',
+                    constraint_struct=constraint_struct)
                 )
         setattr(self.constraint_aliases,'terminal',
-                functools.partial(self.add_constraint,
-                    type='terminal',
-                    arg_list=constraint_arg_list)
+                partial(self.add_constraint,
+                    constraint_type='terminal',
+                    constraint_struct=constraint_struct)
                 )
         setattr(self.constraint_aliases,'equality',
-                functools.partial(self.add_constraint,
-                    type='equality',
-                    arg_list=constraint_arg_list)
+                partial(self.add_constraint,
+                    constraint_type='equality',
+                    constraint_struct=constraint_struct)
                 )
         setattr(self.constraint_aliases,'interior_point',
-                functools.partial(self.add_constraint,
-                    type='interior_point',
-                    arg_list=constraint_arg_list)
+                partial(self.add_constraint,
+                    constraint_type='interior_point',
+                    constraint_struct=constraint_struct)
                 )
         setattr(self.constraint_aliases,'independent',
-                functools.partial(self.add_constraint,
-                    type='independent',
-                    arg_list=constraint_arg_list)
+                partial(self.add_constraint,
+                    constraint_type='independent',
+                    constraint_struct=constraint_struct)
                 )
-
         setattr(self.constraint_aliases,'path',
-                functools.partial(self.add_constraint,
-                    type='path',
-                    arg_list=['name','expr','direction','bound','unit'])
+                partial(self.add_constraint,
+                    constraint_type='path',
+                    constraint_struct=namedtuple('Constraint',
+                            ['type','name','expr','direction','bound','unit']))
                 )
 
-    def add_property(self, *args, property_name, arg_list=[], **kwargs ):
+    def add_property(self, *args, property_name, property_struct=[], **kwargs ):
         """
         Adds a property of the optimal control problem
 
@@ -106,11 +115,11 @@ class Problem(object):
 
         Returns a reference to self for chaining purposes
         """
-        self._properties[property_name] = _combine_args_kwargs(arg_list,
+        self._properties[property_name] = _combine_args_kwargs(property_struct,
                                                                    args, kwargs)
         return self
 
-    def add_dynamic_element(self, *props, element_kind, element_props,
+    def add_dynamic_element(self, *props, element_kind, element_struct,
                                             system_name='default', **kwprops):
         """
         Adds an dynamic element of the problem to a specified dynamic system
@@ -118,23 +127,22 @@ class Problem(object):
         element_kind: Defines category of element such as  state, control etc.
             and a list of keyword arguments (kwagrs) that form it's properties
 
-        element_props: Names of properties in order that they appear in *props
+        element_struct: Namedtuple to represent the property
 
         Returns a reference to self
 
         >>> add_element(self, 'x','v*cos(theta)','m',
                               element_kind='states',
-                              element_props=['name','eom','unit'],
+                              element_struct=namedtuple('State',['name','eom','unit']),
                         )
         """
 
         system = self._systems.get(system_name, {})
         prop_list = system.get(element_kind, []) # Get prop list of given type
 
-        # Pair prop names and values.
-        # Ignores extra prop names if enough values are not passed in
-        prop_dict = _combine_args_kwargs(element_props, props, kwprops)
-        prop_list.append(prop_dict) # Python 3.5 unpacking syntax
+        # Pair prop names and values and create an object using element_struct
+        prop_obj = _combine_args_kwargs(element_struct, props, kwprops)
+        prop_list.append(prop_obj)
 
         # Add the element with its properties to the system
         system[element_kind] = prop_list
@@ -150,16 +158,21 @@ class Problem(object):
         """
         return self.constraint_aliases
 
-    def add_constraint(self, *args, type, arg_list=[], **kwargs):
+    def add_constraint(self, *args, constraint_type='', constraint_struct=[], **kwargs):
         """
         Adds constraint of the specified type
 
         Returns reference to self.constraint_aliases for chaining
         """
-        constraint = _combine_args_kwargs(arg_list, args, kwargs)
-        constraint['type'] = type
+        kwargs['type'] = constraint_type
+        constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
         self._constraints.append(constraint)
         return self.constraint_aliases
+
+    def sympify(self):
+        """
+        Creates symbolic versions of all
+        """
 
     def __str__(self):
         """
@@ -319,7 +332,7 @@ class Guess(object):
         bvp.solution.parameters = param_guess
         return bvp.solution
 
-def _combine_args_kwargs(arg_list, args, kwargs):
+def _combine_args_kwargs(struct, args, kwargs, fillvalue=''):
     """
     arg_list: List of keys in order of positional arguments
     args: List of positional arguments
@@ -331,5 +344,6 @@ def _combine_args_kwargs(arg_list, args, kwargs):
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
     {'foo':1, 'bar':2, 'baz': 3}
     """
-    arg_dict = {key: val for (key, val) in zip(arg_list, args)}
-    return {**arg_dict, **kwargs} # Python 3.5 unpacking syntax
+    arg_dict = {key: val for (key, val) in zip_longest(struct._fields, args, fillvalue=fillvalue)}
+    arg_dict.update(kwargs)
+    return struct(**arg_dict) # Python 3.5 unpacking syntax
