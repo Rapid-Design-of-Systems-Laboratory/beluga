@@ -75,4 +75,5 @@ docs/_build/
 # PyBuilder
 target/
 
-.idea/workspace.xml
+# PyCharm configuration files
+.idea/
