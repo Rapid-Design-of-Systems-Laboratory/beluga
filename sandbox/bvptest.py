@@ -9,10 +9,10 @@ import math
 # First example problem
 def twoode(x,y, parameters,aux):
     return np.array([ y[1], -abs(y[0]) ]);
-    
+
 def twobc(ya,yb,parameters,aux):
     return np.array([ ya[0], yb[0] + 2 ]);
-    
+
 ################################################################
 # Second example
 Q = 5.0

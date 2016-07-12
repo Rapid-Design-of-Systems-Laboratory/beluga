@@ -1,4 +1,5 @@
-from .BelugaPlot import BelugaPlot
+# from .BelugaPlot import BelugaPlot
+from .BelugaPlot2 import BelugaPlot2
 
 import os
 import glob

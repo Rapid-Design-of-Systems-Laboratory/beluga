@@ -42,9 +42,9 @@ def test_solve():
     # Test that raises error
     bvp = bvpsol.BVP(odefn,bcfn)
     bvp.solution = bvpsol.Solution(x,bad_y,[pi/2])
-    with pytest.raises(np.linalg.linalg.LinAlgError):
-        sol = solver_fd1.solve(bvp)
-
+    # with pytest.raises(np.linalg.linalg.LinAlgError):
+    sol = solver_fd1.solve(bvp) #Fails
+    assert not sol.converged
 
     y = np.array([[0,0.1],[0,2]])
     bvp.solution = bvpsol.Solution(x,y,[pi/2])

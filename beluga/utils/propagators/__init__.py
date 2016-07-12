@@ -1,4 +1,5 @@
 from .ode45 import ode45
+from .ode45n import ode45n
 from .mcpi import mcpi
 
 import os

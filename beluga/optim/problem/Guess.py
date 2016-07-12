@@ -126,15 +126,18 @@ class Guess(object):
             raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.solution.aux['parameters']))
 
         dae_num_states = bvp.dae_num_states
-        dae_guess = np.ones(dae_num_states)*0.1
-        dhdu_fn = bvp.dae_func_gen(0,x0,param_guess,bvp.solution.aux)
-        dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
-        # dae_x0 = dae_guess
+        if dae_num_states > 0:
+            dae_guess = np.ones(dae_num_states)*0.1
+            dhdu_fn = bvp.dae_func_gen(0,x0,param_guess,bvp.solution.aux)
+            dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
+            # dae_x0 = dae_guess
 
-        x0 = np.append(x0,dae_x0) # Add dae states
+            x0 = np.append(x0,dae_x0) # Add dae states
+        
         logging.debug('Generating initial guess by propagating: ')
-        logging.debug(str(x0))
+        logging.debug('x0: '+str(x0))
         [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.solution.aux)
+        logging.debug('xf: '+str(x[-1]))
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         bvp.solution.x = t
         bvp.solution.y = x.T
