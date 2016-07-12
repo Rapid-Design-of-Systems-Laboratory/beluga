@@ -1,6 +1,7 @@
 # TODO: Preprocess, postprocess hooks?
 import numpy as np
-from math import *
+# from cmath import *
+from beluga.utils.math import *
 def bc_func_left(_ya, _p, _aux):
     # Declare all auxiliary variables
 {{#aux_list}}

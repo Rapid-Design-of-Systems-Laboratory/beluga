@@ -6,12 +6,14 @@ from toyplot import *
 class ToyPlot(BaseRenderer):
     def __init__(self, backend = 'browser'):
         self._figures = []
-        backends = {'browser': toyplot.browser,
+        backend_list = {'browser': toyplot.browser,
                     'pdf': toyplot.pdf,
                     'png': toyplot.png,
                     'svg': toyplot.svg,
                     'html': toyplot.html}
-        self.backend = toyplot.browser
+
+        self.backend = backend_list[backend]
+        self.fileext = '.'+backend
 
     def _get_figure(self,f):
         """
@@ -47,14 +49,19 @@ class ToyPlot(BaseRenderer):
         """
         Shows a specified figure
         """
-        self.backend.show(self._get_figure(f))
+        if hasattr(self.backend, 'show'):
+            self.backend.show(self._get_figure(f))
+        else:
+            filename = "figure_"+str(f+1)+self.fileext
+            print('Saving to '+filename)
+            self.backend.render(self._get_figure(f), filename)
 
     def show_all(self):
         """
         Show all rendered figures
         """
-        for f in self._figures:
-            self.backend.show(f)
+        for fh in range(len(self._figures)):
+            self.show_figure(fh)
 
     def render_plot(self,f,p):
         """
@@ -62,14 +69,25 @@ class ToyPlot(BaseRenderer):
         """
         canvas = self._get_figure(f);
         axes = canvas.axes()
+
+        label_style={"font-size":"14px", "font-weight":"bold"}
+        tick_style={"font-size":"12px"}
+        axes.x.label.style = label_style
+        axes.y.label.style = label_style
+        axes.x.ticks.labels.style = tick_style
+        axes.y.ticks.labels.style = tick_style
+
+        legends_data = []
         # has_legend = False
         for line in p.plot_data:
-            # has_legend = has_legend or (line['legend'] is not None)
+            # has_legend = has_legend or (line['label'] is not None)
             for dataset in line['data']:
-                axes.plot(dataset['x_data'], dataset['y_data'])
+                plt = axes.plot(dataset['x_data'], dataset['y_data'])
+            # TODO: Legends for line_series may not work properly
+            if line['label'] is not None:
+                legends_data.append((line['label'],plt))
+        # canvas.legend(legends_data);
 
-        # if has_legend:
-        #     fh.gca().legend()
         if p._xlabel is not None:
             axes.x.label.text = p._xlabel
         if p._ylabel is not None:
