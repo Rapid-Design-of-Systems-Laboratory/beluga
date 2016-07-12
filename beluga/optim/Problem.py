@@ -1,5 +1,6 @@
-from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Guess, Value
+from beluga.optim.problem import Expression, Execute, ConstraintList, DynamicSystem, DynamicSystemList, Value
 from beluga.continuation import ContinuationList
+from beluga.optimlib import Guess
 # from os import getcwd
 from .Scaling import Scaling
 import inspect
