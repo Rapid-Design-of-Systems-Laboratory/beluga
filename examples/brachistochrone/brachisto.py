@@ -67,7 +67,10 @@ def get_problem():
     return problem
 
 if __name__ == '__main__':
-    Beluga.run(get_problem())
+    from timeit import timeit
+
+    print(timeit("get_problem()","from __main__ import get_problem",number=10))
+    # Beluga.run(get_problem())
 
 
 
