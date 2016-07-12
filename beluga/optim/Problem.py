@@ -34,6 +34,7 @@ class Problem(object):
         self.output_file = 'data.dill'
 
         self.systems = {} # List of dynamic system
+        self._systems = {}
 
         self.system()   # Create default dynamic system
 
@@ -52,6 +53,16 @@ class Problem(object):
             raise ValueError("""Invalid problem name specified.
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
+
+    def add_element(self, element_type, system='default', **content):
+        """
+        Adds a new property of specified type
+        """
+        system = self._systems.get(system, {})
+        prop_list = system.get(prop_type, []) # Get prop list of given type
+        prop_list.append(content)
+        self.properties[type] = prop_list
+        return self
 
     def system(self,name='default', count=1):
         """Create new DynamicSystem objcts with given name"""
