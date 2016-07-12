@@ -4,9 +4,10 @@ optimlib
 Contains class/functions related to defining the optimal control problems
 """
 import functools
+import types
 import re
 
-from beluga.continuation import ContinuationList
+from beluga.continuation2 import ContinuationList
 class Problem(object):
     """
     Defines an optimal control problem
@@ -14,9 +15,11 @@ class Problem(object):
     def __init__(self,name):
         self.name = self._format_name(name)
 
-        self.systems = {'default': {}} # Dynamic system definitions
-        self.properties = {} # Problem properties
-        self.steps = [] # Continuation sets
+        self._systems = {'default': {}} # Dynamic system definitions
+        self._properties = {} # Problem properties
+        self._constraints = []
+        self.continuation = ContinuationList()
+        self.steps = self.continuation
 
         # Aliases that add known types of dynamic elements to systems
         # TODO: Write documentation for these aliases
@@ -34,7 +37,7 @@ class Problem(object):
                 element_kind='quantities',
                 element_props=['name','value'])
 
-        # TODO: Maybe write as separte function?
+        # TODO: Maybe write as separate function?
         self.independent = functools.partial(self.add_property,
                 property_name='independent',
                 arg_list=['name','unit'])
@@ -48,8 +51,35 @@ class Problem(object):
         self.Lagrange = self.path_cost
         self.Mayer = self.terminal_cost
 
-        # Aliases for continuation
-        self.steps = ContinuationList()
+        # Aliases for defining constraints of different types
+        self.constraint_aliases = types.SimpleNamespace()
+
+        constraint_arg_list = ['expr', 'unit']
+        setattr(self.constraint_aliases,'initial',
+                functools.partial(self.add_constraint,
+                    type='initial',
+                    arg_list=constraint_arg_list)
+                )
+        setattr(self.constraint_aliases,'terminal',
+                functools.partial(self.add_constraint,
+                    type='terminal',
+                    arg_list=constraint_arg_list)
+                )
+        setattr(self.constraint_aliases,'equality',
+                functools.partial(self.add_constraint,
+                    type='equality',
+                    arg_list=constraint_arg_list)
+                )
+        setattr(self.constraint_aliases,'interior_point',
+                functools.partial(self.add_constraint,
+                    type='interior_point',
+                    arg_list=constraint_arg_list)
+                )
+        setattr(self.constraint_aliases,'independent',
+                functools.partial(self.add_constraint,
+                    type='independent',
+                    arg_list=constraint_arg_list)
+                )
 
     def add_property(self, *args, property_name, arg_list=[], **kwargs ):
         """
@@ -59,7 +89,7 @@ class Problem(object):
 
         Returns a reference to self for chaining purposes
         """
-        self.properties[property_name] = _combine_args_kwargs(arg_list,
+        self._properties[property_name] = _combine_args_kwargs(arg_list,
                                                                    args, kwargs)
         return self
 
@@ -68,19 +98,20 @@ class Problem(object):
         """
         Adds an dynamic element of the problem to a specified dynamic system
 
-        element_kind: Defines category of element state, control, constant etc.
-        and a list of keyword arguments that form it's properties
+        element_kind: Defines category of element such as  state, control etc.
+            and a list of keyword arguments (kwagrs) that form it's properties
 
-        element_props: List of properties in order that they appear in *props
+        element_props: Names of properties in order that they appear in *props
 
+        Returns a reference to self
 
-        Returns a reference to self for chaining purposes
-
-        >>> add_element(self, 'states', element_props=['name','eom','unit'],
-                                                                'default',...)
+        >>> add_element(self, 'x','v*cos(theta)','m',
+                              element_kind='states',
+                              element_props=['name','eom','unit'],
+                        )
         """
 
-        system = self.systems.get(system_name, {})
+        system = self._systems.get(system_name, {})
         prop_list = system.get(element_kind, []) # Get prop list of given type
 
         # Pair prop names and values.
@@ -88,14 +119,40 @@ class Problem(object):
         prop_dict = _combine_args_kwargs(element_props, props, kwprops)
         prop_list.append(prop_dict) # Python 3.5 unpacking syntax
 
+        # Add the element with its properties to the system
         system[element_kind] = prop_list
-        self.systems[system_name] = system
+        self._systems[system_name] = system
         return self
 
+    def constraints(self,*args,**kwargs):
+        """
+        This function is purely for aesthetic purposes while method chaining
+        in the input file
+
+        Returns the constraint_aliases object with alias methods
+        """
+        return self.constraint_aliases
+
+    def add_constraint(self, *args, type, arg_list=[], **kwargs):
+        """
+        Adds constraint of the specified type
+
+        Returns reference to self.constraint_aliases for chaining
+        """
+        constraint = _combine_args_kwargs(arg_list, args, kwargs)
+        constraint['type'] = type
+        self._constraints.append(constraint)
+        return self.constraint_aliases
+
     def __str__(self):
+        """
+        Returns a string representation of the object
+        """
         return str({'name': self.name,
-                    'systems': self.systems,
-                    'properties': self.properties})
+                    'systems': self._systems,
+                    'properties': self._properties,
+                    'constraints': self._constraints,
+                    'continuation': str(self.continuation)})
 
     def _format_name(self, name):
         """Validates that the name is in the right format
