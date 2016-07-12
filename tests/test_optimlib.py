@@ -1,4 +1,4 @@
-from beluga.optimlib import *
+from beluga.problem2 import *
 
 def test_problem():
     p = Problem('test_problem')

@@ -1,5 +1,5 @@
 """
-optimlib
+problem2 -- Rename to 'problem' after refactoring
 
 Contains class/functions related to defining the optimal control problems
 """
