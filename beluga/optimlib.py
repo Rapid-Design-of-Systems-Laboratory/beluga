@@ -118,7 +118,7 @@ class Problem(object):
         This function is purely for aesthetic purposes while method chaining
         in the input file
 
-        Returns the constraint_aliases object with alias methods
+        Returns the ConstraintList object containing alias methods
         """
         return self._constraints
 
@@ -198,6 +198,12 @@ class ConstraintList(list):
         constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
         self.append(constraint)
         return self
+
+    def get(self, type):
+        """
+        Returns list of constraints of a specific type
+        """
+        return [c for c in self if c.type==type]
 
 class Guess(object):
     """Generates the initial guess from a variety of sources"""
