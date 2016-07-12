@@ -53,10 +53,11 @@ class BisectionStrategy(ManualStrategy):
                     raise ValueError('Invalid spacing type')
 
                 # Insert new steps
-                self.vars[var_type][var_name].steps = np.insert(self.vars[var_type][var_name].steps,
-                                                            self.ctr-1,
-                                                            new_steps[1:-1] # Ignore repeated elements
-                                                            )
+                self.vars[var_type][var_name].steps = np.insert(
+                        self.vars[var_type][var_name].steps,
+                        self.ctr-1,
+                        new_steps[1:-1] # Ignore first element as it is repeated
+                    )
         # Move the counter back
         self.ctr = self.ctr - 1
         # Increment total number of steps
