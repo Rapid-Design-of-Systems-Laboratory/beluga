@@ -16,7 +16,8 @@ class Plot(object):
         self.sol_index = sol
         self.mesh_size = mesh_size
         self.plot_data = []
-        self._title = self._xlabel = self._ylabel = None
+        self._title = self._xlabel = self._ylabel = self._xlim = self._ylim = None
+        self._grid_on = True
 
     def xlabel(self, label):
         self._xlabel = label
@@ -34,6 +35,18 @@ class Plot(object):
         self.sol_index = _sol
         return self
 
+    def grid_on(self, _grid_on):
+        self._grid_on = _grid_on
+        return self
+
+    def xlim(self, _xlim):
+        self._xlim = _xlim
+        return self
+
+    def ylim(self, _ylim):
+        self._ylim = _ylim
+        return self
+
     def title(self, title_txt):
         """
         Sets the title of the figure
@@ -41,16 +54,16 @@ class Plot(object):
         self._title = title_txt
         return self
 
-    def line(self, x_expr, y_expr, legend=None, step = None, sol = None):
+    def line(self, x_expr, y_expr, color = None, legend = None, step = None, sol = None):
         """
         Adds a new line plot to the figure
         """
         # TODO: Datatype sanity checks needed here
-        self.plot_data.append({'type':'line', 'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'sol':sol})
+        self.plot_data.append({'type':'line', 'x':x_expr, 'y':y_expr, 'color':color, 'legend':legend, 'step':step, 'sol':sol})
         return self
 
-    def line_series(self, x_expr, y_expr, legend=None, step = None, start = 0, skip = 0, end = -1):
-        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'legend':legend, 'step':step, 'start':start, 'skip':skip, 'end': end})
+    def line_series(self, x_expr, y_expr, color = None, legend = None, step = None, start = 0, skip = 0, end = -1):
+        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'color':color, 'legend':legend, 'step':step, 'start':start, 'skip':skip, 'end': end})
         return self
 
     def preprocess(self, solution, problem_data):
