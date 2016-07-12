@@ -10,7 +10,7 @@ def get_problem():
     problem.independent('t', 's')
 
     # Define equations of motion
-    problem.state('x', 'v*cos(theta)','m')   \
+    problem.state('x', 'v*cos(theta)')   \
            .state('y', '-v*sin(theta)','m')   \
            .state('v', 'g*sin(theta)','m/s')
 
@@ -21,7 +21,7 @@ def get_problem():
     problem.constant('g','9.81','m/s^2')
 
     # Define costs
-    problem.cost('path','1','s')
+    problem.path_cost('1','s')
 
     # Define constraints
     problem.constraints('default',0) \
@@ -47,6 +47,11 @@ def get_problem():
                             max_iterations=50,
                             verbose = True,
                          )
+    problem.guess.setup('auto',
+                    start=[0,0,1],          # Starting values for states in order
+                    direction='forward',
+                    costate_guess = -0.1
+    )
 
     problem.continuation.add_step('bisection') \
                     .num_cases(51) \
@@ -64,12 +69,7 @@ if __name__ == '__main__':
     #                .unit('kg',1)   \
     #                .unit('rad',1)
     #
-    # problem.guess.setup('auto',
-    #                 start=[0,0,1],          # Starting values for states in order
-    #                 direction='forward',
-    #                 costate_guess = -0.1
-    #                 )
-    #
+
 #
 # if __name__ == '__main__':
 #     Beluga.run(get_problem())
