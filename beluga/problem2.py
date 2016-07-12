@@ -15,7 +15,7 @@ import re
 from .continuation import ContinuationList
 from collections import namedtuple
 from itertools import zip_longest
-
+from beluga.optim.Scaling import Scaling # BUG
 from beluga.bvpsol import Solution
 # from beluga.utils import keyboard
 from beluga.utils import ode45
@@ -34,12 +34,13 @@ class Problem(object):
         self.steps = self.continuation  # Alias for continuation
 
         self.guess = Guess()    # Initial guess builder
+        self.scale = Scaling()  # Scaling class
 
         # Aliases that add known types of dynamic elements to systems
         # TODO: Write documentation for these aliases
         self.state = partial(self.add_dynamic_element,
                 element_kind='states',
-                element_struct=namedtuple('State',['name', 'eom', 'unit'])
+                element_struct=namedtuple('State',['name', 'process_eqn', 'unit'])
                 )
         self.control = partial(self.add_dynamic_element,
                 element_kind='controls',
@@ -54,34 +55,66 @@ class Problem(object):
                 element_struct=namedtuple('Quantity',['name','value'])
                 )
 
+        # Aliases for getting dynamic element lists
+        self.states = partial(self.get_dynamic_elements,
+                element_kind='states')
+        self.controls = partial(self.get_dynamic_elements,
+                element_kind='controls')
+        self.constants = partial(self.get_dynamic_elements,
+                element_kind='constants')
+        self.quantity = partial(self.get_dynamic_elements,
+                element_kind='quantities')
+
         # TODO: Maybe write as separate function?
-        self.independent = partial(self.add_property,
+        self.independent = partial(self.set_property,
                 property_name='independent',
                 property_struct=namedtuple('IndependentVar',['name','unit'])
                 )
 
         # Aliases for defining properties of the problem
-        self.cost = partial(self.add_property,
-                property_name='cost',
-                property_struct=namedtuple('Cost',['type', 'expr', 'unit'])
+        self.path_cost = partial(self.set_property,
+                property_name='path_cost',
+                property_struct=namedtuple('Cost',['expr', 'unit'])
                 )
 
-        self.path_cost = partial(self.cost, 'path')
-        self.terminal_cost = partial(self.cost, 'terminal')
+        self.initial_cost = partial(self.set_property,
+                property_name='terminal_cost',
+                property_struct=namedtuple('Cost',['expr', 'unit'])
+                )
+        self.terminal_cost = partial(self.set_property,
+                property_name='terminal_cost',
+                property_struct=namedtuple('Cost',['expr', 'unit'])
+                )
+
         self.Lagrange = self.path_cost
         self.Mayer = self.terminal_cost
 
-    def add_property(self, *args, property_name, property_struct=[], **kwargs ):
+    # Alias for returning cost function by type
+    def costs(self, cost_type):
+        try:
+            return self.get_property(property_name=cost_type+'_cost')
+        except KeyError:
+            return namedtuple('Cost',['expr', 'unit'])('0','')
+
+    def set_property(self, *args, property_name, property_struct=[], **kwargs ):
         """
         Adds a property of the optimal control problem
 
-        >> add_property('cost',type='path',expr='')
+        >> set_property('cost',type='path',expr='')
 
         Returns a reference to self for chaining purposes
         """
         self._properties[property_name] = _combine_args_kwargs(property_struct,
                                                                    args, kwargs)
         return self
+
+    def get_property(self, property_name):
+        """
+        Returns the property specified by the name
+        """
+        print(self._properties)
+        return self._properties[property_name]
+
 
     def add_dynamic_element(self, *props, element_kind, element_struct,
                                             system_name='default', **kwprops):
@@ -97,7 +130,7 @@ class Problem(object):
 
         >>> add_element(self, 'x','v*cos(theta)','m',
                               element_kind='states',
-                              element_struct=namedtuple('State',['name','eom','unit']),
+                              element_struct=namedtuple('State',['name','process_eqn','unit']),
                         )
         """
 
@@ -112,6 +145,12 @@ class Problem(object):
         system[element_kind] = prop_list
         self._systems[system_name] = system
         return self
+
+    def get_dynamic_elements(self, element_kind, system_name='default'):
+        """
+        Returns the list of dynamic elements of a specific kind from a system
+        """
+        return self._systems[system_name].get(element_kind, [])
 
     def constraints(self,*args,**kwargs):
         """
@@ -151,6 +190,7 @@ class Problem(object):
             raise ValueError("""Invalid problem name specified.
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
+            
 class ConstraintList(list):
     def __init__(self):
         super(ConstraintList, self).__init__()

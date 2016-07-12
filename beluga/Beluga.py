@@ -144,15 +144,16 @@ class Beluga(object):
         if output_file is not None:
             problem.output_file = output_file
 
-        if isinstance(problem,Problem):
-            # Create instance of Beluga class
-            inst = cls(problem, cls._THE_MAGIC_WORD)
-            inst.solve()
-            return
+        # if isinstance(problem,Problem):
+        # Create instance of Beluga class
+        inst = cls(problem, cls._THE_MAGIC_WORD)
+        print(problem)
+        inst.solve()
+        return
             # return inst
-        else:
-            #TODO:Add functionality for when problem is specified by filename
-            pass
+        # else:
+        #     #TODO:Add functionality for when problem is specified by filename
+        #     pass
 
     def solve(self):
         """!
