@@ -234,7 +234,7 @@ class Beluga(object):
                 step.reset()
                 logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
-                solution_set.append(ContinuationSolution())
+                solution_set.append([])
                 if step_idx == 0:
                     step.set_bvp(bvp_start)
                 else:
@@ -279,13 +279,13 @@ class Beluga(object):
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            # import traceback
+            # traceback.print_exc()
             logging.error('Exception : '+str(e))
             logging.error('Stopping')
 
         return solution_set
-        
+
     @classmethod
     def algorithm(cls, algo, **kwargs):
         """
