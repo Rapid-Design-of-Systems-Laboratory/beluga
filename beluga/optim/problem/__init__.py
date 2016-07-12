@@ -6,7 +6,6 @@ from .State import State
 from .Variable import Variable
 from .Constant import Constant
 from .Value import Value
-from .Guess import Guess
 
 # Load these last as these use the above classes
 from .DynamicSystem import DynamicSystem
