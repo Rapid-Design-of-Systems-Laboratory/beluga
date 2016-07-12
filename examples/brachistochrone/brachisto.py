@@ -18,7 +18,7 @@ def get_problem():
     problem.control('theta','rad')
 
     # Define constants
-    problem.constant('g','9.81','m/s^2')
+    problem.constant('g',9.81,'m/s^2')
 
     # Define costs
     problem.path_cost('1','s')
@@ -67,10 +67,10 @@ def get_problem():
     return problem
 
 if __name__ == '__main__':
-    from timeit import timeit
+    # from timeit import timeit
 
-    print(timeit("get_problem()","from __main__ import get_problem",number=10))
-    # Beluga.run(get_problem())
+    # print(timeit("get_problem()","from __main__ import get_problem",number=10))
+    Beluga.run(get_problem())
 
 
 

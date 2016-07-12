@@ -146,7 +146,7 @@ class NecessaryConditions(object):
     def selective_expand(self, expr, var_select, subs_list):
         # Expands the expressions specified by subs_list if they contain the
         # variables in var_select
-        select_subs = [qty for qty in subs_list.items() for var in var_select if var.sym in qty[1].atoms()]
+        select_subs = [qty for qty in subs_list.items() for var in var_select if var._sym in qty[1].atoms()]
         # Substitute only relevant symbols in the expression
         return expr.subs(select_subs)
 
@@ -171,8 +171,8 @@ class NecessaryConditions(object):
             self.mu_vars = self.mu_lhs = []
 
         g = self.ham_ctrl_partial + self.mu_lhs
-        X = [state.sym for state in problem.states()] + [Symbol(costate) for costate in self.costates]
-        U = [c.sym for c in problem.controls()] + self.mu_vars
+        X = [state._sym for state in problem.states()] + [Symbol(costate) for costate in self.costates]
+        U = [c._sym for c in problem.controls()] + self.mu_vars
 
         xdot = Matrix([sympify2(state.process_eqn) for state in problem.states()] + self.costate_rates)
         # Compute Jacobian
@@ -201,7 +201,7 @@ class NecessaryConditions(object):
         # If equality constraints are present
         # We need to solve for 'mu's as well
         lhs = self.ham_ctrl_partial
-        vars = [c.sym for c in controls]
+        vars = [c._sym for c in controls]
         self.mu_vars = []
         self.mu_lhs = []
 
@@ -295,17 +295,17 @@ class NecessaryConditions(object):
         if location == 'initial':
             # Using list comprehension instead of loops
             # lagrange_ changed to l. Removed hardcoded prefix
-            self.bc_initial += [str(sympify2(self.make_costate(state)) - self.derivative(sympify2(cost_expr),state.sym, self.quantity_vars))
+            self.bc_initial += [str(sympify2(self.make_costate(state)) - self.derivative(sympify2(cost_expr),state._sym, self.quantity_vars))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc_terminal += [str(sympify2(self.make_costate(state)) - self.derivative(sympify2(cost_expr),state.sym,self.quantity_vars))
+            self.bc_terminal += [str(sympify2(self.make_costate(state)) - self.derivative(sympify2(cost_expr),state._sym,self.quantity_vars))
                                     for state in states]
 
         # for i in range(len(state)):
         #     self.bc_initial.append(
         #         diff(sympify2(sign + '(' + self.aug_cost[location] + ')'),
-        #         state[i].sym))
+        #         state[i]._sym))
 
     def make_ham(self, problem):
         """!
@@ -447,14 +447,14 @@ class NecessaryConditions(object):
                 control_found = False
 
                 for u in problem.controls():
-                    if u.sym in cq[-1].subs(quantity_subs).atoms():
+                    if u._sym in cq[-1].subs(quantity_subs).atoms():
                         logging.info('Constraint is of order '+str(order))
                         control_found = True
                         break
                 if control_found:
                     break
 
-                dcdx = [self.derivative(cq[-1], state.sym, self.quantity_vars) for state in problem.states()]
+                dcdx = [self.derivative(cq[-1], state._sym, self.quantity_vars) for state in problem.states()]
 
                 # Chain rule (Assume there is no explciit time-dependence) to find dcdt
                 cq.append(sum(d1*d2 for d1,d2 in zip(dcdx, dxdt)))
@@ -611,7 +611,7 @@ class NecessaryConditions(object):
         # Regularize path constraints using saturation functions
         self.process_path_constraints(problem)
 
-        # self.state_subs = [(state.sym, sympify2(state.process_eqn)) for state in problem.states()]
+        # self.state_subs = [(state._sym, sympify2(state.process_eqn)) for state in problem.states()]
         ## Create costate list
         # self.costates = [self.make_costate(state) for state in problem.states()]
         self.make_costates(problem)
@@ -638,6 +638,7 @@ class NecessaryConditions(object):
         # Construct Hamiltonian
         self.make_ham(problem)
         logging.debug('Hamiltonian : '+str(self.ham))
+
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
         # TODO: Move to separate method?
@@ -651,10 +652,10 @@ class NecessaryConditions(object):
         #
         # problem.functions.update(new_functions)
 
-        undefined_func = [f.func for f in func_list if str(f.func) not in problem.functions]
-
-        if not all(x is None for x in undefined_func):
-            raise ValueError('Invalid function(s) specified: '+str(undefined_func))
+        # undefined_func = [f.func for f in func_list if str(f.func) not in problem.functions]
+        #
+        # if not all(x is None for x in undefined_func):
+        #     raise ValueError('Invalid function(s) specified: '+str(undefined_func))
 
         # Compute costate conditions
         self.make_costate_bc(problem.states(),'initial')
@@ -673,23 +674,7 @@ class NecessaryConditions(object):
         self.make_costate_rate(problem.states())
         self.make_ctrl_partial(problem.controls())
 
-        # # Add support for state and control constraints
-        # problem.state('xi11','xi12','m')
-        # problem.state('xi12','ue1','m')
-        # self.costates += ['eta11','eta12']   # Costates for xi
-        #
-        # # Add new states to hamiltonian
-        # h1_3 = '(psi12*xi12^2 + psi11*ue1)';  # xi12dot = ue1
-        # c1_2 = 'u'
-        # self.ham += sympify2('eta11*xi12 + eta12*ue1')  #
-        # self.ham += sympify2('mu1 * ('+c1_2+' - '+h1_3')')
-        #
-        # # TODO: Compute these automatically
-        # self.costate_rates += ['mu1*(xi12**2*psi1_3 + psi12*ue1)',
-        #                        'mu1*(2*psi12*xi12)  - eta1']
-        #
         # Compute unconstrained control law
-        # (need to add singular arc and bang/bang smoothing, numerical solutions)
         self.make_ctrl(problem)
 
         # Create problem dictionary
@@ -701,16 +686,16 @@ class NecessaryConditions(object):
         'aux_list': [
                 {
                 'type' : 'const',
-                'vars': [const.var for const in problem.constants()]
+                'vars': [const.name for const in problem.constants()]
                 },
                 {
                 'type' : 'constraint',
                 'vars': []
                 },
-                {
-                'type' : 'function',
-                'vars' : [func_name for func_name in problem.functions]
-                }
+                # {
+                # 'type' : 'function',
+                # 'vars' : [func_name for func_name in problem.functions]
+                # }
          ],
          # TODO: Generalize 'tf' to independent variable for current arc
          'state_list':
@@ -740,7 +725,6 @@ class NecessaryConditions(object):
          'quantity_list': self.quantity_list,
         #  'dae_mode': mode == 'dae',
         }
-    #    problem.constraints[i].expr for i in range(len(problem.constraints))
 
         # Create problem functions by importing from templates
         self.compiled = imp.new_module('_probobj_'+problem.name)
@@ -759,9 +743,9 @@ class NecessaryConditions(object):
             dae_num = 0
 
         self.bvp = BVP(self.compiled.deriv_func,self.compiled.bc_func,dae_func_gen=dhdu_fn,dae_num_states=dae_num)
-        self.bvp.solution.aux['const'] = dict((const.var,const.val) for const in problem.constants())
+        self.bvp.solution.aux['const'] = dict((const.name,const.value) for const in problem.constants())
         self.bvp.solution.aux['parameters'] = self.problem_data['parameter_list']
-        self.bvp.solution.aux['function']  = problem.functions
+        # self.bvp.solution.aux['function']  = problem.functions
 
         # TODO: Fix hardcoding of function handle name (may be needed for multivehicle/phases)?
         self.bvp.control_func = self.compiled.compute_control

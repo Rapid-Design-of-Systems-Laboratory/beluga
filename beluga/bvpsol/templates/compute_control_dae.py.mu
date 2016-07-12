@@ -40,7 +40,7 @@ def get_dhdu_func(_t,_X,_p,_aux):
       {{name}} = {{expr}}
       {{/quantity_list}}
 
-      return [{{#dHdu}}{{.}},
-                {{/dHdu}}]
+      return np.array([{{#dHdu}}{{.}},
+                {{/dHdu}}])
 
     return dHdu

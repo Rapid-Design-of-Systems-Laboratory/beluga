@@ -39,10 +39,11 @@ class Scaling(dict):
                                     for const in problem.constants()}
 
         # Cost function used for scaling costates
-        cost_used = [key for (key,val) in problem.cost.items() if val.expr is not '0']
+        cost_keys = ['path', 'terminal', 'initial']
+        cost_used = [key for key in cost_keys if problem.costs(key).expr is not '0']
         if len(cost_used) < 1:
             raise ValueError('At least one cost function must be specified as nonzero!')
-        cost_unit = problem.cost[cost_used[0]].unit
+        cost_unit = problem.costs(cost_used[0]).unit
 
         # Scaling functions for states & costates
         self.scale_func['states'] = {}
