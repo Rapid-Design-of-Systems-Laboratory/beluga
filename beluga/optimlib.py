@@ -6,8 +6,8 @@ Contains class/functions related to defining the optimal control problems
 import functools
 import types
 import re
+from .continuation import ContinuationList
 
-from beluga.continuation2 import ContinuationList
 class Problem(object):
     """
     Defines an optimal control problem
@@ -19,7 +19,7 @@ class Problem(object):
         self._properties = {} # Problem properties
         self._constraints = []
         self.continuation = ContinuationList()
-        self.steps = self.continuation
+        self.steps = self.continuation  # Alias for continuation
 
         # Aliases that add known types of dynamic elements to systems
         # TODO: Write documentation for these aliases
