@@ -12,7 +12,7 @@ import os.path
 import dill
 import re
 
-from .continuation import ContinuationList
+from continuation import ContinuationList
 from collections import namedtuple
 from itertools import zip_longest
 from beluga.optim.Scaling import Scaling  # BUG
@@ -427,7 +427,8 @@ def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
     {'foo':1, 'bar':2, 'baz': 3}
     """
-    # arg_dict = {key: val for (key, val) in zip_longest(struct._fields, args, fillvalue=fillvalue)}
+    # arg_dict = {key: val for (key, val) in
+    #             zip_longest(struct._fields, args, fillvalue=fillvalue)}
     arg_dict = {key: val for (key, val) in
                 zip_longest(arg_list, args, fillvalue=fillvalue)}
     arg_dict.update(kwargs)

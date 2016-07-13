@@ -87,19 +87,19 @@ class Solution(object):
         #TODO: Make state_list a part of the Solution object
 
         # Define every aux variable (such as constants) in the dictionary
-        variables = [(aux_name,aux_val)
-                for aux_type in self.aux
-                if isinstance(self.aux[aux_type],dict)
-                for (aux_name,aux_val) in self.aux[aux_type].items()
-                ]
+        variables = [(aux_name, aux_val)
+                     for aux_type in self.aux
+                     if isinstance(self.aux[aux_type], dict)
+                     for (aux_name, aux_val) in self.aux[aux_type].items()
+                     ]
         # Define state variables
         # Have to do in this order to override state values with arrays
         variables += [(state,np.array(y[idx,:]))
-                        for idx,state in enumerate(problem_data['state_list'])]
+                       for idx,state in enumerate(problem_data['state_list'])]
 
         # Define control variables
         variables += [(control,np.array(u[idx,:]))
-                        for idx,control in enumerate(problem_data['control_list'])]
+                       for idx,control in enumerate(problem_data['control_list'])]
 
         # TODO: Name 'tf' is hardcoded
         tf_ind = problem_data['state_list'].index('tf')
