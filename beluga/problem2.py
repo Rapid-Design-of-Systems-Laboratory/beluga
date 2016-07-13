@@ -1,33 +1,34 @@
 """
-problem2 -- Rename to 'problem' after refactoring
+problem2 -- Rename to 'problem' after refactoring.
 
-Contains class/functions related to defining the optimal control problems
+Contains class/functions related to defining the optimal control problems.
 """
+
 import scipy.optimize
 import numpy as np
 from functools import partial
 import logging
 import os.path
-import types
 import dill
 import re
 
 from .continuation import ContinuationList
 from collections import namedtuple
 from itertools import zip_longest
-from beluga.optim.Scaling import Scaling # BUG
-from beluga.bvpsol import Solution
-from beluga.utils import ode45, sympify2, keyboard
+from beluga.optim.Scaling import Scaling  # BUG
+# from beluga.bvpsol import Solution
+from beluga.utils import ode45, sympify2  # , keyboard
+
 
 class Problem(object):
-    """
-    Defines an optimal control problem
-    """
-    def __init__(self,name):
+    """Defines an optimal control problem."""
+
+    def __init__(self, name):
+        """Initializes problem object."""
         self.name = self._format_name(name)
 
-        self._systems = {'default': {}} # Dynamic system definitions
-        self._properties = {} # Problem properties
+        self._systems = {'default': {}}  # Dynamic system definitions
+        self._properties = {}  # Problem properties
         self._constraints = ConstraintList()
         self.continuation = ContinuationList()
         self.steps = self.continuation  # Alias for continuation
@@ -38,51 +39,51 @@ class Problem(object):
         # Aliases that add known types of dynamic elements to systems
         # TODO: Write documentation for these aliases
         self.state = partial(self.add_dynamic_element,
-                element_kind='states',
-                element_struct=namedtuple('State',['name', 'process_eqn', 'unit'])
-                )
+                             element_kind='states',
+                             element_list=['name', 'eom', 'unit']
+                             )
         self.control = partial(self.add_dynamic_element,
-                element_kind='controls',
-                element_struct=namedtuple('Control',['name','unit'])
-                )
+                               element_kind='controls',
+                               element_list=['name', 'unit']
+                               )
         self.constant = partial(self.add_dynamic_element,
-                element_kind='constants',
-                element_struct=namedtuple('Constant',['name','value','unit'])
-                )
+                                element_kind='constants',
+                                element_list=['name', 'value', 'unit']
+                                )
         self.quantity = partial(self.add_dynamic_element,
-                element_kind='quantities',
-                element_struct=namedtuple('Quantity',['name','value'])
-                )
+                                element_kind='quantities',
+                                element_list=['name', 'value']
+                                )
 
         # Aliases for getting dynamic element lists
         self.states = partial(self.get_dynamic_elements,
-                element_kind='states')
+                              element_kind='states')
         self.controls = partial(self.get_dynamic_elements,
-                element_kind='controls')
+                                element_kind='controls')
         self.constants = partial(self.get_dynamic_elements,
-                element_kind='constants')
+                                 element_kind='constants')
         self.quantity = partial(self.get_dynamic_elements,
-                element_kind='quantities')
+                                element_kind='quantities')
 
         # TODO: Maybe write as separate function?
         self.independent = partial(self.set_property,
-                property_name='independent',
-                property_struct=namedtuple('IndependentVar',['name','unit'])
-                )
+                                   property_name='independent',
+                                   property_list=['name', 'unit']
+                                   )
 
         # Aliases for defining properties of the problem
         self.path_cost = partial(self.set_property,
-                property_name='path_cost',
-                property_struct=namedtuple('Cost',['expr', 'unit'])
-                )
+                                 property_name='path_cost',
+                                 property_list=['expr', 'unit']
+                                 )
         self.initial_cost = partial(self.set_property,
-                property_name='terminal_cost',
-                property_struct=namedtuple('Cost',['expr', 'unit'])
-                )
+                                    property_name='terminal_cost',
+                                    property_list=['expr', 'unit']
+                                    )
         self.terminal_cost = partial(self.set_property,
-                property_name='terminal_cost',
-                property_struct=namedtuple('Cost',['expr', 'unit'])
-                )
+                                     property_name='terminal_cost',
+                                     property_list=['expr', 'unit']
+                                     )
 
         self.Lagrange = self.path_cost
         self.Mayer = self.terminal_cost
@@ -90,11 +91,11 @@ class Problem(object):
     # Alias for returning cost function by type
     def costs(self, cost_type):
         try:
-            return self.get_property(property_name=cost_type+'_cost')
+            return self.get_property(property_name=cost_type + '_cost')
         except KeyError:
-            return namedtuple('Cost',['expr', 'unit'])('0','')
+            return namedtuple('Cost', ['expr', 'unit'])('0', '')
 
-    def set_property(self, *args, property_name, property_struct, **kwargs ):
+    def set_property(self, *args, property_name, property_list, **kwargs):
         """
         Adds a property of the optimal control problem
 
@@ -102,9 +103,11 @@ class Problem(object):
 
         Returns a reference to self for chaining purposes
         """
-        self._properties[property_name] = SymbolicVariable(
-                                            _combine_args_kwargs(property_struct,
-                                                   args, kwargs), sym_key=None)
+        # self._properties[property_name] = SymbolicVariable(
+        #     _combine_args_kwargs(property_struct,
+        #                          args, kwargs), sym_key=None)
+        self._properties[property_name] = _combine_args_kwargs(property_list,
+                                                               args, kwargs)
         return self
 
     def get_property(self, property_name):
@@ -113,9 +116,8 @@ class Problem(object):
         """
         return self._properties[property_name]
 
-
-    def add_dynamic_element(self, *props, element_kind, element_struct,
-                                            system_name='default', **kwprops):
+    def add_dynamic_element(self, *props, element_kind, element_list,
+                            system_name='default', **kwprops):
         """
         Adds an dynamic element of the problem to a specified dynamic system
 
@@ -128,16 +130,17 @@ class Problem(object):
 
         >>> add_element(self, 'x','v*cos(theta)','m',
                               element_kind='states',
-                              element_struct=namedtuple('State',['name','process_eqn','unit']),
+                              element_struct=namedtuple('State',['name','eom','unit']),
                         )
         """
 
         system = self._systems.get(system_name, {})
-        prop_list = system.get(element_kind, []) # Get prop list of given type
+        prop_list = system.get(element_kind, [])  # Get prop list of given type
 
-        # Pair prop names and values and create an object using element_struct
-        prop_obj = _combine_args_kwargs(element_struct, props, kwprops)
-        prop_list.append(SymbolicVariable(prop_obj))
+        # Pair prop names and values and create an object using element_list
+        prop_obj = _combine_args_kwargs(element_list, props, kwprops)
+        # prop_list.append(SymbolicVariable(prop_obj))
+        prop_list.append(prop_obj)
 
         # Add the element with its properties to the system
         system[element_kind] = prop_list
@@ -150,12 +153,12 @@ class Problem(object):
         """
         return self._systems[system_name].get(element_kind, [])
 
-    def constraints(self,*args,**kwargs):
+    def constraints(self, *args, **kwargs):
         """
+        Returns the ConstraintList object containing alias methods
+
         This function is purely for aesthetic purposes while method chaining
         in the input file
-
-        Returns the ConstraintList object containing alias methods
         """
         return self._constraints
 
@@ -182,50 +185,53 @@ class Problem(object):
             Required for the in-memory compilation of code to work
         """
 
-        if re.match(r'[a-zA-Z]\w+',name):
+        if re.match(r'[a-zA-Z]\w+', name):
             return name
         else:
             raise ValueError("""Invalid problem name specified.
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
 
+
 class ConstraintList(list):
+
     def __init__(self):
         super(ConstraintList, self).__init__()
 
         # Aliases for defining constraints of different types
-        constraint_struct = namedtuple('Constraint',['type','expr', 'unit'])
-        setattr(self,'initial',
+        constraint_struct = namedtuple('Constraint', ['type', 'expr', 'unit'])
+        setattr(self, 'initial',
                 partial(self.add_constraint,
-                    constraint_type='initial',
-                    constraint_struct=constraint_struct)
+                        constraint_type='initial',
+                        constraint_struct=constraint_struct)
                 )
-        setattr(self,'terminal',
+        setattr(self, 'terminal',
                 partial(self.add_constraint,
-                    constraint_type='terminal',
-                    constraint_struct=constraint_struct)
+                        constraint_type='terminal',
+                        constraint_struct=constraint_struct)
                 )
-        setattr(self,'equality',
+        setattr(self, 'equality',
                 partial(self.add_constraint,
-                    constraint_type='equality',
-                    constraint_struct=constraint_struct)
+                        constraint_type='equality',
+                        constraint_struct=constraint_struct)
                 )
-        setattr(self,'interior_point',
+        setattr(self, 'interior_point',
                 partial(self.add_constraint,
-                    constraint_type='interior_point',
-                    constraint_struct=constraint_struct)
+                        constraint_type='interior_point',
+                        constraint_struct=constraint_struct)
                 )
-        setattr(self,'independent',
+        setattr(self, 'independent',
                 partial(self.add_constraint,
-                    constraint_type='independent',
-                    constraint_struct=constraint_struct)
+                        constraint_type='independent',
+                        constraint_struct=constraint_struct)
                 )
-        setattr(self,'path',
+        setattr(self, 'path',
                 partial(self.add_constraint,
-                    constraint_type='path',
-                    constraint_struct=namedtuple('Constraint',
-                            ['type','name','expr','direction','bound','unit']))
+                        constraint_type='path',
+                        constraint_struct=namedtuple('Constraint',
+                                                     ['type', 'name', 'expr', 'direction', 'bound', 'unit']))
                 )
+
     def add_constraint(self, *args, constraint_type='', constraint_struct=[], **kwargs):
         """
         Adds constraint of the specified type
@@ -233,7 +239,7 @@ class ConstraintList(list):
         Returns reference to self.constraint_aliases for chaining
         """
         args = list(args)
-        args.insert(0,constraint_type)
+        args.insert(0, constraint_type)
         constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
 
         self.append(SymbolicVariable(constraint, sym_key='expr'))
@@ -243,18 +249,21 @@ class ConstraintList(list):
         """
         Returns list of constraints of a specific type
         """
-        return [c for c in self if c.type==type]
+        return [c for c in self if c.type == type]
+
 
 class SymbolicVariable(object):
     """
     Represents an object that can be used in SymPy and is created from a dict
     """
+
     def __init__(self, param_dict, sym_key='name'):
         self.__dict__ = param_dict
         if sym_key is not None:
             self._sym = sympify2(param_dict[sym_key])
         else:
             self._sym = None
+
     def _sympy_(self):
         """
         Makes the object usable in sympy expressions directly
@@ -263,25 +272,26 @@ class SymbolicVariable(object):
 
     def __repr__(self):
         return str(self._sym)
+
     def __eq__(self, other):
         return str(self._sym) == str(other)
 
 
 class Guess(object):
-    """Generates the initial guess from a variety of sources"""
+    """Generates the initial guess from a variety of sources."""
 
     def __init__(self, **kwargs):
-        self.setup_funcs = {'auto':self.setup_auto,
-                        'file':self.setup_file,
-                        'static':self.setup_static,
-                        }
-        self.generate_funcs = {'auto':self.auto,
-                        'file':self.file,
-                        'static':self.static
-                        }
+        self.setup_funcs = {'auto': self.setup_auto,
+                            'file': self.setup_file,
+                            'static': self.setup_static,
+                            }
+        self.generate_funcs = {'auto': self.auto,
+                               'file': self.file,
+                               'static': self.static
+                               }
         self.setup(**kwargs)
 
-    def setup(self,mode='auto',**kwargs):
+    def setup(self, mode='auto', **kwargs):
         """Sets up the initial guess generation process"""
 
         self.mode = mode
@@ -292,13 +302,12 @@ class Guess(object):
 
         return self
 
-    def generate(self,*args):
+    def generate(self, *args):
         """Generates initial guess data from given settings"""
         if self.mode in self.generate_funcs:
             return self.generate_funcs[self.mode](*args)
         else:
             raise ValueError('Invalid initial guess mode specified')
-
 
     def setup_static(self, solinit=None):
         self.solinit = solinit
@@ -313,20 +322,24 @@ class Guess(object):
         self.step = step
         self.iteration = iteration
         if not os.path.exists(self.filename) or not os.path.isfile(self.filename):
-            logging.error('Data file '+self.filename+' not found.')
+            logging.error('Data file ' + self.filename + ' not found.')
             raise ValueError('Data file not found!')
 
     def file(self, bvp):
         """Generates initial guess by loading an existing data file"""
-        logging.info('Loading initial guess from '+self.filename)
-        fp = open(self.filename,'rb')
+        logging.info('Loading initial guess from ' + self.filename)
+        fp = open(self.filename, 'rb')
         out = dill.load(fp)
         if self.step >= len(out['solution']):
-            logging.error('Continuation step index exceeds bounds. Only '+str(len(out['solution']))+' continuation steps found.')
+            logging.error('Continuation step index exceeds bounds. Only ' +
+                          str(len(out['solution']))
+                          + ' continuation steps found.')
             raise ValueError('Initial guess step index out of bounds')
 
         if self.iteration >= len(out['solution'][self.step]):
-            logging.error('Continuation iteration index exceeds bounds. Only '+str(len(out['solution'][self.step]))+' iterations found.')
+            logging.error('Continuation iteration index exceeds bounds. Only '
+                          + str(len(out['solution'][self.step]))
+                          + ' iterations found.')
             raise ValueError('Initial guess iteration index out of bounds')
 
         sol = out['solution'][self.step][self.iteration]
@@ -335,18 +348,17 @@ class Guess(object):
         logging.info('Initial guess loaded')
         return sol
 
-    def setup_auto(self,start=None,
-                        direction='forward',
-                        time_integrate=0.1,
-                        costate_guess =0.1,
-                        param_guess = None):
+    def setup_auto(self, start=None,
+                   direction='forward',
+                   time_integrate=0.1,
+                   costate_guess=0.1,
+                   param_guess=None):
         """Setup automatic initial guess generation"""
 
-        if direction in ['forward','reverse']:
+        if direction in ['forward', 'reverse']:
             self.direction = direction
         else:
             raise ValueError('Direction must be either forward or reverse.')
-
 
         self.time_integrate = abs(time_integrate)
         if time_integrate == 0:
@@ -357,8 +369,8 @@ class Guess(object):
         self.costate_guess = costate_guess
         self.param_guess = param_guess
 
-    def auto(self,bvp,param_guess = None):
-        """Generates initial guess by forward/reverse integration"""
+    def auto(self, bvp, param_guess=None):
+        """Generates initial guess by forward/reverse integration."""
 
         # Assume normalized time from 0 to 1
         tspan = [0, 1]
@@ -366,12 +378,12 @@ class Guess(object):
         x0 = np.array(self.start)
 
         # Add costates
-        if isinstance(self.costate_guess,float):
-            x0 = np.r_[x0,self.costate_guess*np.ones(len(self.start))]
+        if isinstance(self.costate_guess, float):
+            x0 = np.r_[x0, self.costate_guess * np.ones(len(self.start))]
         else:
-            x0 = np.r_[x0,self.costate_guess]
+            x0 = np.r_[x0, self.costate_guess]
         # Add time of integration to states
-        x0 = np.append(x0,self.time_integrate)
+        x0 = np.append(x0, self.time_integrate)
 
         # Guess zeros for missing parameters
         # TODO: Automatically generate parameter guess values
@@ -379,29 +391,31 @@ class Guess(object):
         if param_guess is None:
             param_guess = np.zeros(len(bvp.solution.aux['parameters']))
         elif len(param_guess) < len(bvp.solution.aux['parameters']):
-            param_guess += np.zeros(len(bvp.solution.aux['parameters'])-len(param_guess))
+            param_guess += np.zeros(len(bvp.solution.aux['parameters']) - len(param_guess))
         elif len(param_guess) > len(bvp.solution.aux['parameters']):
             # TODO: Write a better error message
-            raise ValueError('param_guess too big. Maximum length allowed is '+len(bvp.solution.aux['parameters']))
+            raise ValueError('param_guess too big. Maximum length allowed is ' +
+                             len(bvp.solution.aux['parameters']))
 
         dae_num_states = bvp.dae_num_states
-        dae_guess = np.ones(dae_num_states)*0.1
-        dhdu_fn = bvp.dae_func_gen(0,x0,param_guess,bvp.solution.aux)
+        dae_guess = np.ones(dae_num_states) * 0.1
+        dhdu_fn = bvp.dae_func_gen(0, x0, param_guess, bvp.solution.aux)
 
-        dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess,xtol=1e-5)
+        dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
         # dae_x0 = dae_guess
 
-        x0 = np.append(x0,dae_x0) # Add dae states
+        x0 = np.append(x0, dae_x0)  # Add dae states
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
-        [t,x] = ode45(bvp.deriv_func,tspan,x0,param_guess,bvp.solution.aux)
+        [t, x] = ode45(bvp.deriv_func, tspan, x0, param_guess, bvp.solution.aux)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         bvp.solution.x = t
         bvp.solution.y = x.T
         bvp.solution.parameters = param_guess
         return bvp.solution
 
-def _combine_args_kwargs(struct, args, kwargs, fillvalue=''):
+
+def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """
     arg_list: List of keys in order of positional arguments
     args: List of positional arguments
@@ -413,6 +427,8 @@ def _combine_args_kwargs(struct, args, kwargs, fillvalue=''):
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
     {'foo':1, 'bar':2, 'baz': 3}
     """
-    arg_dict = {key: val for (key, val) in zip_longest(struct._fields, args, fillvalue=fillvalue)}
+    # arg_dict = {key: val for (key, val) in zip_longest(struct._fields, args, fillvalue=fillvalue)}
+    arg_dict = {key: val for (key, val) in
+                zip_longest(arg_list, args, fillvalue=fillvalue)}
     arg_dict.update(kwargs)
     return (arg_dict)
