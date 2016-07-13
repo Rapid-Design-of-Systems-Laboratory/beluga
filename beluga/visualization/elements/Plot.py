@@ -5,8 +5,6 @@ import collections
 from sympy import *
 from sympy.utilities.lambdify import lambdify
 
-from beluga.utils import keyboard
-
 class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
