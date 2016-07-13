@@ -4,6 +4,7 @@ Contains classes and functions related to Optimal Control.
 Module: optimlib
 """
 # Make chain-rule differentiation a utility function
+#
 #   1. Process quantities
 #   2. Process path constraints
 #   3. Create hamiltonian and costates with rates
@@ -47,12 +48,14 @@ def hamiltonian_and_costates(states, path_cost, constraints):
                                   {'name':'y','eom':'v*sin(theta)'}])
     >>> path_cost = {'expr': 1}
     >>> hamiltonian_and_costates(states, path_cost, [])
-    1 + lamX*v*cos(theta) + lamY*v*sin(theta)
+    (1 + lamX*v*cos(theta) + lamY*v*sin(theta), [{'name':'lamX','eom':''},
+                                  {'name':'lamY','eom':''}])
     """
     costates = [sympify_element({'name': 'lam'+str(s.name).upper(), 'eom': ''})
                 for s in states]
-    return path_cost.expr + [lam.name*s.eom
+    ham = path_cost.expr + [lam.name*s.eom
                              for (s, lam) in zip(states, costates)]
+    return (ham, costates)
 
 
 def sigmoid_two_sided(x, ub, lb, slopeAtZero=1):
