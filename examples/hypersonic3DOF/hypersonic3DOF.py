@@ -90,14 +90,9 @@ def get_problem():
 
     with open('data-initial-guess-to-ground.dill','rb') as f:
         out = dill.load(f)
-
     sol = out['solution'][-1][-1]
     sol.aux['parameters'] = np.append(sol.aux['parameters'],'lagrange_initial_5')
-    # keyboard()
-    # sol.aux['parameters'].append('lagrange_initial_5')
-    # sol.parameters = sol.parameters[0:3]
     sol.parameters = np.concatenate((sol.parameters[0:4],(0,),sol.parameters[4:]),axis=0)
-    # sol.parameters.append(0.0)
     problem.guess.setup('static', solinit = sol)
 
     # problem.guess.setup('file', filename='data-initial-guess-to-ground.dill', step=-1, iteration=-1)
