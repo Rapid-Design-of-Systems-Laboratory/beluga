@@ -7,20 +7,25 @@ import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
 from math import *
+import dill
+from beluga.utils import keyboard
+import numpy as np
 
 """Hypersonic 3DOF dynamics example."""
 def get_problem():
     # Figure out way to implement caching automatically
     # @functools.lru_cache(maxsize=None)
-    def CLfunction(alfa):
-        return 1.5658*alfa
-
-    # @functools.lru_cache(maxsize=None)
-    def CDfunction(alfa):
-        return 1.6537*alfa**2 + 0.0612
+    # def CLfunction(alfa):
+    #     return 1.5658*alfa
+    #
+    # # @functools.lru_cache(maxsize=None)
+    # def CDfunction(alfa):
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('hypersonci3DOF')
+    problem = beluga.optim.Problem('hypersonic3DOF')
+
+    # Switch off DAE mode
+    problem.mode = 'analytical'
 
     # Define independent variables
     problem.independent('t', 's')
@@ -56,7 +61,8 @@ def get_problem():
                          .initial('v-v_0','m/s')             \
                          .terminal('h-h_f','m')              \
                          .terminal('theta-theta_f','rad')    \
-                         .terminal('phi-phi_f','rad')
+                         .terminal('phi-phi_f','rad') \
+                         .initial('psi-psi_0','rad')
 
     # Define constants
     problem.constant('mu',3.986e5*1e9,'m^3/s^2') # Gravitational parameter, m^3/s^2
@@ -79,16 +85,31 @@ def get_problem():
     #problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
     problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=4000, verbose = True, cached = False, number_arcs=4)
 
-    problem.guess.setup('auto',start=[80000,0,0,5000,(-90+10)*pi/180,0])
+    # problem.guess.setup('auto',start=[80000,0,0,5000,(-90+10)*pi/180,0])
 
-    problem.steps.add_step().num_cases(11)           \
-                            .terminal('h',0)
+
+    with open('data-initial-guess-to-ground.dill','rb') as f:
+        out = dill.load(f)
+    sol = out['solution'][-1][-1]
+    sol.aux['parameters'] = np.append(sol.aux['parameters'],'lagrange_initial_5')
+    sol.parameters = np.concatenate((sol.parameters[0:4],(0,),sol.parameters[4:]),axis=0)
+    problem.guess.setup('static', solinit = sol)
+
+    # problem.guess.setup('file', filename='data-initial-guess-to-ground.dill', step=-1, iteration=-1)
+
+
+
+    # problem.steps.add_step().num_cases(11)           \
+    #                         .terminal('h',0)
     #
     # problem.steps.add_step().num_cases(11)          \
     #                         .initial('h',80000)
 
-    problem.steps.add_step().num_cases(41)          \
-                            .terminal('theta',5*pi/180) \
+    problem.steps.add_step('bisection').num_cases(41)          \
+                            .terminal('theta',5*pi/180)
+                            # .terminal('phi',2*pi/180)
+
+    problem.steps.add_step('bisection').num_cases(41) \
                             .terminal('phi',2*pi/180)
 
     # problem.steps.add_step().num_cases(10)              \
