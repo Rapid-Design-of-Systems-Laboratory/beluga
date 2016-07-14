@@ -1,6 +1,7 @@
 import numpy as np
 import numexpr as ne
 from scipy.interpolate import InterpolatedUnivariateSpline
+import inspect
 
 class Solution(object):
     x = None
@@ -110,9 +111,14 @@ class Solution(object):
 
     def evaluate(self,expr):
         """
-        Evaluates an expressions involving the variables in this solution
+        Evaluates an expression or custom function involving the variables in this solution
 
         The caller is responsible for calling the prepare() method first
         """
         #TODO: Write test for evaluate()
-        return ne.evaluate(expr,self.var_dict)
+        if callable(expr):
+            # Custom plot function
+            return expr(**{arg_name:self.var_dict[arg_name] for arg_name in inspect.getargspec(expr).args})
+        else:
+            # String specified in plot
+            return ne.evaluate(expr,self.var_dict)
