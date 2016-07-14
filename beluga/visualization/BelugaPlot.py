@@ -7,7 +7,7 @@ class BelugaPlot:
     """
     Manages the plotting framework
     """
-    def __init__(self, filename='data.dill', renderer = 'matplotlib', default_step = -1, default_sol = -1, mesh_size=512):
+    def __init__(self, filename='data.dill', renderer = 'matplotlib', default_step = -1, default_sol = -1, mesh_size=None):
         """
         Initializes plotting framework with given data file
         """

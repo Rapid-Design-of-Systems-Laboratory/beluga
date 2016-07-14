@@ -75,7 +75,7 @@ class Plot(object):
                 sol_idx = line['sol'] if line['sol'] is not None else self.sol_index
                 sol = solution[step_idx][sol_idx]
 
-                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
+                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=False)
                 line['data'].append({'x_data': sol.evaluate(line['x']),
                                      'y_data': sol.evaluate(line['y'])})
             elif line['type'] == 'line_series':
@@ -83,7 +83,7 @@ class Plot(object):
                 line['end'] = len(sol_set) if line['end'] == -1 else line['end']
                 for ind in range(line['start'], line['end'], line['skip']+1):
                     sol = sol_set[ind]
-                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
+                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=False)
                     # sol.prepare(problem_data)
                     line['data'].append({'x_data': sol.evaluate(line['x']),
                                          'y_data': sol.evaluate(line['y'])})
