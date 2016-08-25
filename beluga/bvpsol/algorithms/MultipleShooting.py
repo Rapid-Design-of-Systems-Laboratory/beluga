@@ -328,14 +328,17 @@ class MultipleShooting(Algorithm):
                 # logging.debug(paramGuess)
                 # Compute Jacobian of boundary conditions using numerical derviatives
                 J   = self.bc_jac_func(self.get_bc, y0g, yb, phiset, paramGuess, aux).astype(np.float64)
-                if r0 is not None:
-                    beta = (r0-r1)/(alpha*r0)
-                    if beta < 0:
-                        beta = 1
-                if r1>1:
-                    alpha = 1/(2*r1)
-                else:
-                    alpha = 1
+                # if r0 is not None:
+                #     beta = (r0-r1)/(alpha*r0)
+                #     if beta < 0:
+                #         beta = 1
+                # if r1>1:
+                #     alpha = 1/(2*r1)
+                # else:
+                #     alpha = 1
+                alpha = 0.5
+                beta = 1.0
+
                 r0 = r1
 
                 # No damping if error within one order of magnitude

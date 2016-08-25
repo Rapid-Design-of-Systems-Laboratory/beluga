@@ -5,8 +5,6 @@ import collections
 from sympy import *
 from sympy.utilities.lambdify import lambdify
 
-from beluga.utils import keyboard
-
 class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
@@ -17,7 +15,8 @@ class Plot(object):
         self.mesh_size = mesh_size
         self.datasource = datasource
         self.plot_data = []
-        self._title = self._xlabel = self._ylabel = None
+        self._title = self._xlabel = self._ylabel = self._xlim = self._ylim = None
+        self._grid_on = True
 
     def xlabel(self, label):
         self._xlabel = label
@@ -35,6 +34,18 @@ class Plot(object):
         self.sol_index = _sol
         return self
 
+    def grid_on(self, _grid_on):
+        self._grid_on = _grid_on
+        return self
+
+    def xlim(self, _xlim):
+        self._xlim = _xlim
+        return self
+
+    def ylim(self, _ylim):
+        self._ylim = _ylim
+        return self
+
     def title(self, title_txt):
         """
         Sets the title of the figure
@@ -42,13 +53,18 @@ class Plot(object):
         self._title = title_txt
         return self
 
+<<<<<<< HEAD
     def line(self, x_expr, y_expr, label=None, step = None, sol = None, datasource = None):
+=======
+    def line(self, x_expr, y_expr, color = None, legend = None, step = None, sol = None):
+>>>>>>> RDSL/master
         """
         Adds a new line plot to the figure
         """
         if datasource is None:
             datasource = self.datasource
         # TODO: Datatype sanity checks needed here
+<<<<<<< HEAD
         self.plot_data.append({'type':'line', 'x':x_expr, 'y':y_expr, 'label':label, 'step':step, 'sol':sol, 'datasource': datasource})
         return self
 
@@ -56,6 +72,13 @@ class Plot(object):
         if datasource is None:
             datasource = self.datasource
         self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
+=======
+        self.plot_data.append({'type':'line', 'x':x_expr, 'y':y_expr, 'color':color, 'legend':legend, 'step':step, 'sol':sol})
+        return self
+
+    def line_series(self, x_expr, y_expr, color = None, legend = None, step = None, start = 0, skip = 0, end = -1):
+        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'color':color, 'legend':legend, 'step':step, 'start':start, 'skip':skip, 'end': end})
+>>>>>>> RDSL/master
         return self
 
     def preprocess(self):
@@ -72,7 +95,7 @@ class Plot(object):
                 sol_idx = line['sol'] if line['sol'] is not None else self.sol_index
                 sol = solution[step_idx][sol_idx]
 
-                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
+                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=False)
                 line['data'].append({'x_data': sol.evaluate(line['x']),
                                      'y_data': sol.evaluate(line['y'])})
             elif line['type'] == 'line_series':
@@ -80,7 +103,7 @@ class Plot(object):
                 line['end'] = len(sol_set) if line['end'] == -1 else line['end']
                 for ind in range(line['start'], line['end'], line['skip']+1):
                     sol = sol_set[ind]
-                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
+                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=False)
                     # sol.prepare(problem_data)
                     line['data'].append({'x_data': sol.evaluate(line['x']),
                                          'y_data': sol.evaluate(line['y'])})

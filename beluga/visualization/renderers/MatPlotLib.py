@@ -1,5 +1,6 @@
 from beluga.visualization.renderers import BaseRenderer
 from matplotlib.pyplot import *
+from beluga.utils import keyboard
 
 class MatPlotLib(BaseRenderer):
     """
@@ -55,10 +56,26 @@ class MatPlotLib(BaseRenderer):
         fh = self._get_figure(f);
         fh.hold(True)
         has_legend = False
+
         for line in p.plot_data:
+<<<<<<< HEAD
             has_legend = has_legend or (line['label'] is not None)
             for dataset in line['data']:
                 plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh)
+=======
+            has_legend = has_legend or (line['legend'] is not None)
+            for dataset, ind in zip(line['data'], range(len(line['data']))):
+                # Determine coloring
+                if line['color'] is not None:
+                    _color = line['color']
+                elif line['type'] == 'line_series':
+                    _color = cm.get_cmap('jet')(ind/(len(line['data'])-1))
+                else: # use default color
+                    _color = 'b'
+
+                plot(dataset['x_data'],dataset['y_data'],label=line['legend'],figure=fh,color=_color)
+
+>>>>>>> RDSL/master
         if has_legend:
             fh.gca().legend()
         if p._xlabel is not None:
@@ -67,6 +84,12 @@ class MatPlotLib(BaseRenderer):
             ylabel(p._ylabel,figure=fh)
         if p._title is not None:
             title(p._title,figure=fh)
+        if p._grid_on:
+            fh.gca().grid(p._grid_on)
+        if p._xlim is not None:
+            fh.gca().set_xlim(p._xlim)
+        if p._ylim is not None:
+            fh.gca().set_ylim(p._ylim)
 
     def render_subplot(self,f,index,plot):
         """
