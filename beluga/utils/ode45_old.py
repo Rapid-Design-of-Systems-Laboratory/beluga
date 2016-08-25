@@ -176,7 +176,7 @@ def ode45_old(vfun, vslot, vinit, *args, **kwargs):
         # Estimate the six results using this solver
         vthetime = vtimestamp
         vtheinput = vu
-
+        
         vk[0] = vfun(vthetime, vtheinput, *args)
         for j in range(1, 6):
             vthetime = vtimestamp + vc[j - 1] * vstepsize

@@ -728,7 +728,7 @@ class NecessaryConditions(object):
                             for f in func_list
                             if hasattr(problem.input_module,str(f.func)) and
                                 inspect.isfunction(getattr(problem.input_module,str(f.func)))}
-
+        
         problem.functions.update(new_functions)
 
         undefined_func = [f.func for f in func_list if str(f.func) not in problem.functions]

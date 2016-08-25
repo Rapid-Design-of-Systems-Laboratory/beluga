@@ -76,3 +76,5 @@ docs/_build/
 target/
 
 .idea/workspace.xml
+
+beluga/optim/NecessaryConditions.py
