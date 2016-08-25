@@ -254,19 +254,22 @@ class Beluga(object):
                     s.unscale(bvp)
                     if sol.converged:
                         # Post-processing phase
-                        # Compute control history
-                        # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
 
                         # Required for plotting to work with control variables
                         sol.ctrl_expr = self.nec_cond.problem_data['control_options']
                         sol.ctrl_vars = self.nec_cond.problem_data['control_list']
 
                         #TODO: Make control computation more efficient
-                        # for i in range(len(sol.x)):
-                        #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
-                        #     sol.u[:,i] = _u
-                        ## DAE mode
-                        sol.u = sol.y[self.nec_cond.problem_data['num_states']:,:]
+                        if self.problem.mode == 'dae':
+                            ## DAE mode
+                            sol.u = sol.y[self.nec_cond.problem_data['num_states']:,:]
+                        else:
+                            # Compute control history
+                            sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
+                            for i in range(len(sol.x)):
+                                _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
+                                sol.u[:,i] = _u
+                        
                         # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
                         # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 

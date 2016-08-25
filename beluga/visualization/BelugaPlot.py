@@ -8,7 +8,11 @@ class BelugaPlot:
     """
     Manages the plotting framework
     """
+<<<<<<< HEAD
     def __init__(self, filename = None, datasource='dill', renderer = 'matplotlib', default_step = -1, default_sol = -1, mesh_size=512):
+=======
+    def __init__(self, filename='data.dill', renderer = 'matplotlib', default_step = -1, default_sol = -1, mesh_size=None):
+>>>>>>> RDSL/master
         """
         Initializes plotting framework with given data file
         """
