@@ -3,6 +3,11 @@ from math import *
 from beluga.utils.math import *
 # from beluga.utils.tictoc import *
 
+def im(exprss):
+    return np.imag(exprss)
+
+I=1j
+
 def deriv_func(_t,_X,_p,_aux):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#control_list}}{{.}},{{/control_list}}] = compute_control(_t,_X,_p,_aux)

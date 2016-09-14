@@ -1,8 +1,4 @@
 from .BelugaPlot import BelugaPlot
-<<<<<<< HEAD
-from .BelugaPlot2 import BelugaPlot2
-=======
->>>>>>> RDSL/master
 
 import os
 import glob

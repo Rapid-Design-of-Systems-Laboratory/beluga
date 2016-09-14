@@ -25,6 +25,7 @@ def get_problem():
 
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('planarHypersonic')
+    problem.mode='analytical'
     # problem = beluga.optim.Problem()
 
 
@@ -82,7 +83,7 @@ def get_problem():
     problem.steps.add_step().num_cases(11) \
                             .terminal('h', 0)
 
-    problem.steps.add_step().num_cases(41)  \
+    problem.steps.add_step().num_cases(11)  \
                             .terminal('theta', 10*pi/180)
     # #
     # problem.steps.add_step()
