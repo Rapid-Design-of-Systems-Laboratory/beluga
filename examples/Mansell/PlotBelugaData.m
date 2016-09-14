@@ -50,12 +50,12 @@ Dat15=fscanf(fileID,'%f %f',sizeData);
 fclose(fileID);
 
 %Create solution z vector
-% Datz=zeros(6,length(Dat(1,:)));
-% for j=1:6
-%     for i=1:length(Datz)
-%         Datz(j,i)=TerrainFunc(Dat(1+2*(j-1),i),Dat(2+2*(j-1),i))+0.1;
-%     end
-% end
+Datz=zeros(6,length(Dat(1,:)));
+for j=1:6
+    for i=1:length(Datz)
+        Datz(j,i)=TerrainFunc(Dat(1+2*(j-1),i),Dat(2+2*(j-1),i))+0.1;
+    end
+end
 Datz25=Dat25(1,:)*0.0;
 Datz35=Dat35(1,:)*0.0;
 Datz45=Dat45(1,:)*0.0;
@@ -98,8 +98,8 @@ plot(Dat55(2,:),Dat55(1,:),'r','Linewidth',1)
 plot(Dat65(2,:),Dat65(1,:),'r','Linewidth',1)
 plot(Dat75(2,:),Dat75(1,:),'r','Linewidth',1)
 plot(Dat15(2,:),Dat15(1,:),'r','Linewidth',1)
-%plot(Dat(4,:),Dat(3,:),Dat(10,:),Dat(9,:),'r','Linewidth',2)
-%plot(Dat(6,:),Dat(5,:),Dat(8,:),Dat(7,:),'r','Linewidth',3)
+plot(Dat(4,:),Dat(3,:),Dat(10,:),Dat(9,:),'r','Linewidth',2)
+plot(Dat(6,:),Dat(5,:),Dat(8,:),Dat(7,:),'r','Linewidth',3)
 axis([0 10 0 10])
 xlabel('East (km)')
 ylabel('North (km)')

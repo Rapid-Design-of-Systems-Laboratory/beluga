@@ -4,6 +4,11 @@ from math import *
 from beluga.utils import keyboard
 from beluga.utils.math import *
 
+def im(exprss):
+    return np.imag(exprss)
+
+I=1j
+
 # Complex step jacobian
 def compute_jacobian(f, X, indices=None, StepSize=1e-100, *args):
     I = np.eye({{num_states}}+{{dae_var_num}})*1j*StepSize

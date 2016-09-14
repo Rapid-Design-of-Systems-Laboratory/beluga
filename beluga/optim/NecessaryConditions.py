@@ -131,11 +131,42 @@ class NecessaryConditions(object):
 
         # self.costate_rates = [(self.ham.subs(state.sym, state.sym+_h))/1e-30 for state in states]
         # self.costate_rates = ['('+str(lamdot)+').imag' for lamdot in self.costate_rates]
-
-        self.costate_rates = [self.derivative(-1*(self.ham),state, self.quantity_vars) for state in states]
+        #self.costate_rates = [self.derivative(-1*(self.ham),state, self.quantity_vars) for state in states]
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
 
+        #TODO: make this more compact
+        for state in states:
+            corate=self.derivative(-1*(self.ham),state,self.quantity_vars)
+            custom_diff=corate.atoms(Derivative)
+            for d in custom_diff:
+                for f in d.atoms(AppliedUndef): #Just extracts (never more than 1 f)
+                    for v in f.atoms(Symbol):
+                        if str(v)==str(state): #This should only happen once!
+                            repl=sympify('im('+str(f.subs(v,v+_h))+')/1e-30')
+                            repl={(d,repl)}
+                            self.costate_rates.append(corate.subs(repl))
+                break
+            else:
+                self.costate_rates.append(corate) #If there is no custom_diff
+        self.costate_rates=sympify2(self.costate_rates)
+
+        #h = 1e-30
+        #j = symbols('1j')
+
+        #self.costate_rates = []
+
+        #for state in states:
+        #    state = sympify(state)
+        #    H = self.make_state_dep_ham(state, self.problem)
+        #    if H != 0:
+        #        self.costate_rates.append('im(' + str((H.subs(state, (state + h * j)))) + ')/' + str(h))
+        #    else:
+        #        self.costate_rates.append('0')
+        #self.costate_rates=sympify2(self.costate_rates)
+        #print(Matrix([sympify2(state.process_eqn) for state in self.problem.states()]+ self.costate_rates))
+        #quit()
+        
     def make_costate_rate_numeric(self, states):
         """!
         \brief     Creates the symbolic differential equations for the costates.
@@ -174,6 +205,7 @@ class NecessaryConditions(object):
             dHdu = self.derivative(sympify2(self.ham), ctrl, self.quantity_vars)
             custom_diff = dHdu.atoms(Derivative)
             # Substitute "Derivative" with complex step derivative
+            #TODO: Update the expression below to be more like make_costate_rate?
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
                         for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
 

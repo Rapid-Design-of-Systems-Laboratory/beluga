@@ -58,11 +58,6 @@ class MatPlotLib(BaseRenderer):
         has_legend = False
 
         for line in p.plot_data:
-<<<<<<< HEAD
-            has_legend = has_legend or (line['label'] is not None)
-            for dataset in line['data']:
-                plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh)
-=======
             has_legend = has_legend or (line['legend'] is not None)
             for dataset, ind in zip(line['data'], range(len(line['data']))):
                 # Determine coloring
@@ -75,7 +70,6 @@ class MatPlotLib(BaseRenderer):
 
                 plot(dataset['x_data'],dataset['y_data'],label=line['legend'],figure=fh,color=_color)
 
->>>>>>> RDSL/master
         if has_legend:
             fh.gca().legend()
         if p._xlabel is not None:

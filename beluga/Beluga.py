@@ -209,6 +209,9 @@ class Beluga(object):
         # Save data
         output = open(self.problem.output_file, 'wb')
         # dill.settings['recurse'] = True
+        # del self.out['problem_data']['aux_list'][2]
+        self.out['problem_data']['ham_expr'] = str(self.out['problem_data']['ham_expr'])
+
         dill.dump(self.out, output) # Dill Beluga object only
         output.close()
 
