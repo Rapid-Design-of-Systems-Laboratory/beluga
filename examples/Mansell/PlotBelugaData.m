@@ -4,8 +4,8 @@
 %==========================================================================
 
 %Construct Terrain Grid
-x=linspace(0,10,50);
-y=linspace(0,10,50);
+x=linspace(0,10,20);
+y=linspace(0,10,20);
 terr=transpose(x)*y;
 for i=1:length(x)
     for j=1:length(y)
@@ -49,13 +49,18 @@ sizeData=[2 Inf];
 Dat15=fscanf(fileID,'%f %f',sizeData);
 fclose(fileID);
 
+fileID=fopen('DillData00.txt','r');
+sizeData=[2 Inf];
+Dat00=fscanf(fileID,'%f %f',sizeData);
+fclose(fileID);
+
 %Create solution z vector
-Datz=zeros(6,length(Dat(1,:)));
-for j=1:6
-    for i=1:length(Datz)
-        Datz(j,i)=TerrainFunc(Dat(1+2*(j-1),i),Dat(2+2*(j-1),i))+0.1;
-    end
-end
+% Datz=zeros(7,length(Dat00));
+% for j=1:7
+%     for i=1:length(Datz)
+%         Datz(j,i)=TerrainFunc(Dat(1+2*(j-1),i),Dat(2+2*(j-1),i))+0.1;
+%     end
+% end
 Datz25=Dat25(1,:)*0.0;
 Datz35=Dat35(1,:)*0.0;
 Datz45=Dat45(1,:)*0.0;
@@ -63,6 +68,7 @@ Datz55=Dat55(1,:)*0.0;
 Datz65=Dat65(1,:)*0.0;
 Datz75=Dat75(1,:)*0.0;
 Datz15=Dat15(1,:)*0.0;
+Datz00=Dat00(1,:)*0.0;
 for i=1:length(Datz25)
     Datz25(i)=50*TerrainFunc(Dat25(1,i),Dat25(2,i))+3;
 end
@@ -84,28 +90,53 @@ end
 for i=1:length(Datz15)
     Datz15(i)=50*TerrainFunc(Dat15(1,i),Dat15(2,i))+3;
 end
+for i=1:length(Datz00)
+    Datz00(i)=50*TerrainFunc(Dat00(1,i),Dat00(2,i))+3;
+end
 
 %Plot Data
 
 %Contour Plot
+cbar=transpose(linspace(0.0,1.0,8));
+cbar=[cbar zeros(8,1) zeros(8,1)];
+%cbar=[zeros(8,1)+1 zeros(8,1) cbar];
+%cbar=spring(8);
+%cbar=flipud(cbar);
 figure(1)
-scatter([0.4,8.5],[4.9,7.2],75,'r')
+scatter([0.4,8.5],[4.9,7.2],75,[1 0 1],'filled')
 hold on
-plot(Dat25(2,:),Dat25(1,:),'r','Linewidth',1)
-plot(Dat35(2,:),Dat35(1,:),'r','Linewidth',1)
-plot(Dat45(2,:),Dat45(1,:),'r','Linewidth',1)
-plot(Dat55(2,:),Dat55(1,:),'r','Linewidth',1)
-plot(Dat65(2,:),Dat65(1,:),'r','Linewidth',1)
-plot(Dat75(2,:),Dat75(1,:),'r','Linewidth',1)
-plot(Dat15(2,:),Dat15(1,:),'r','Linewidth',1)
-plot(Dat(4,:),Dat(3,:),Dat(10,:),Dat(9,:),'r','Linewidth',2)
-plot(Dat(6,:),Dat(5,:),Dat(8,:),Dat(7,:),'r','Linewidth',3)
+
 axis([0 10 0 10])
 xlabel('East (km)')
 ylabel('North (km)')
-set(gca,'FontSize',12)
-contour(y,x,terr,...
-    'ShowText','on')
+set(gca,'FontSize',14)
+contour(y,x,terr,'ShowText','on')
+
+p0=plot(Dat00(2,:),Dat00(1,:),'Color',cbar(1,:),'Linewidth',1.5);
+plot(Dat15(2,:),Dat15(1,:),'Color',cbar(2,:),'Linewidth',1.5)
+plot(Dat25(2,:),Dat25(1,:),'Color',cbar(3,:),'Linewidth',1.5)
+plot(Dat35(2,:),Dat35(1,:),'Color',cbar(4,:),'Linewidth',1.5)
+plot(Dat45(2,:),Dat45(1,:),'Color',cbar(5,:),'Linewidth',1.5)
+plot(Dat55(2,:),Dat55(1,:),'Color',cbar(6,:),'Linewidth',1.5)
+plot(Dat65(2,:),Dat65(1,:),'Color',cbar(7,:),'Linewidth',1.5)
+p75=plot(Dat75(2,:),Dat75(1,:),'Color',cbar(8,:),'Linewidth',1.5);
+
+
+% plot(Dat00(2,:),Dat00(1,:),'r','Linewidth',0.25)
+% plot(Dat15(2,:),Dat15(1,:),'r','Linewidth',0.5)
+% plot(Dat25(2,:),Dat25(1,:),'r','Linewidth',0.75)
+% plot(Dat35(2,:),Dat35(1,:),'r','Linewidth',1.0)
+% plot(Dat45(2,:),Dat45(1,:),'r','Linewidth',1.25)
+% plot(Dat55(2,:),Dat55(1,:),'r','Linewidth',1.5)
+% plot(Dat65(2,:),Dat65(1,:),'r','Linewidth',1.75)
+% plot(Dat75(2,:),Dat75(1,:),'r','Linewidth',2)
+
+%plot(Dat(4,:),Dat(3,:),Dat(10,:),Dat(9,:),'r','Linewidth',2)
+%plot(Dat(6,:),Dat(5,:),Dat(8,:),Dat(7,:),'r','Linewidth',3)
+plegend=legend([p0 p75],'w=0','w=0.75','Location','Northwest');
+set(plegend,'FontSize',14)
+set(gca,'XTick',[0 2 4 6 8 10])
+set(gca,'YTick',[0 2 4 6 8 10])
 hold off
 
 %forest=transpose(exp(-0.4*(y-4.5).^2))*exp(-0.2*(x-5.6).^2)+...
@@ -119,11 +150,19 @@ xlabel('East (km)')
 ylabel('North (km)')
 zlabel('Elevation (m)')
 hold on
-plot3(Dat25(2,:),Dat25(1,:),Datz25,'r','Linewidth',3)
-plot3(Dat35(2,:),Dat35(1,:),Datz35,'r','Linewidth',3)
-plot3(Dat45(2,:),Dat45(1,:),Datz45,'r','Linewidth',3)
-plot3(Dat55(2,:),Dat55(1,:),Datz55,'r','Linewidth',3)
-plot3(Dat65(2,:),Dat65(1,:),Datz65,'r','Linewidth',3)
-plot3(Dat75(2,:),Dat75(1,:),Datz75,'r','Linewidth',3)
-plot3(Dat15(2,:),Dat15(1,:),Datz15,'r','Linewidth',3)
+p0=plot3(Dat00(2,:),Dat00(1,:),Datz00,'Color',cbar(1,:),'Linewidth',3);
+plot3(Dat15(2,:),Dat15(1,:),Datz15,'Color',cbar(2,:),'Linewidth',3)
+plot3(Dat25(2,:),Dat25(1,:),Datz25,'Color',cbar(3,:),'Linewidth',3)
+plot3(Dat35(2,:),Dat35(1,:),Datz35,'Color',cbar(4,:),'Linewidth',3)
+plot3(Dat45(2,:),Dat45(1,:),Datz45,'Color',cbar(5,:),'Linewidth',3)
+plot3(Dat55(2,:),Dat55(1,:),Datz55,'Color',cbar(6,:),'Linewidth',3)
+plot3(Dat65(2,:),Dat65(1,:),Datz65,'Color',cbar(7,:),'Linewidth',3)
+p75=plot3(Dat75(2,:),Dat75(1,:),Datz75,'Color',cbar(8,:),'Linewidth',3);
+set(gca,'FontSize',14)
+plegend=legend([p0 p75],'w=0','w=0.75','Location','West');
+set(plegend,'FontSize',14)
+scatter3([0.4,8.5],[4.9,7.2],[50*TerrainFunc(4.9,0.4)+3 50*TerrainFunc(7.2,8.5)+3],...
+    75,[1 0 1],'filled')
+
+
 

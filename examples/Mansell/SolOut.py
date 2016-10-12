@@ -20,7 +20,7 @@ yout=out['solution'][-1][-1].y[1,:]
 #    lengths.append(len(tout[-1]))
 
 
-f = open('DillData65.txt','w')
+f = open('DillData00.txt','w')
 for i in range(len(xout)):
     f.write('{0} {1}\n'.format(xout[i],yout[i]))
 
