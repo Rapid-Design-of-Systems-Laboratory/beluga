@@ -40,7 +40,7 @@ Go to File -> Clone Repository and you should see "beluga" in the list of reposi
 Open a terminal window and navigate to the folder where you installed beluga. Type the following commands to run the Brachistochrone problem
 
     cd examples/brachistochrone
-    beluga brachisto
+    beluga brachisto.py
 
 The solver will proceed to solve the Brachistochrone problem.
 
