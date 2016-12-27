@@ -1,10 +1,10 @@
 #==================================================================================
-# PROGRAM: "Hannibal.py"
+# PROGRAM: "Hannibal_HPAdemo.py"
 # LOCATION: beluga>examples>Mansell
 # Author: Justin Mansell (2016)
 #
-# Description: Preliminary test of a track path optimization using a user-defined
-#              terrain elevation profile.
+# Description: Preliminary test of a track path optimization using graph search
+#              continuation.
 #==================================================================================
 
 #Import Necessary Modules
@@ -64,7 +64,7 @@ def get_problem():
     """A simple test of optimal surface track planning."""
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('Hannibal_wfunctions')
+    problem = beluga.optim.Problem('Hannibal_HPAdemo')
     problem.mode='analytical' #Other options: 'numerical', 'dae'
 
     #Define independent variables
@@ -90,7 +90,7 @@ def get_problem():
                          .terminal('y-y_f','m')
 
     #Define constants
-    problem.constant('w',0.95,'1') #Initial Terrain weighting factor
+    problem.constant('w',0.9,'1') #Initial Terrain weighting factor
     problem.constant('conv',1,'s/m^2') #Integral conversion factor
     problem.constant('V',1,'m/s') #Vehicle speed
     problem.constant('elev',1,'m') #Initial Elevation
@@ -102,20 +102,20 @@ def get_problem():
 
     #Configure solver
     #problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=8)
-    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=15, verbose = True, cached = False)
 
     #Initial Guess (Classic test example [4.9,0.4])
-    problem.guess.setup('auto',start=[8.0,0.5], costate_guess=[0.1,-0.1]) #City A
+    problem.guess.setup('auto',start=[8.0,0.5], costate_guess=[0.0,-0.1]) #City A
     #problem.guess.setup('auto',start=[4.9,0.4], costate_guess=[0.1,-0.1]) #City A
 
     #Add Continuation Steps (Classic test example [7.2,8.5]) [8, 4.5]
-    problem.steps.add_step(strategy='manual').num_cases(10) \
-                            .terminal('x', 3.0) \
-                            .terminal('y', 9.5) \
+    problem.steps.add_step(strategy='HPA') \
+                            .terminal('x', 3.0, 10) \
+                            .terminal('y', 9.5, 10) \
 
     #problem.steps.add_step(strategy='manual').num_cases(10) \
-    #                        .terminal('x', 7.2) \
-    #                        .terminal('y', 8.5) \
+    #                        .terminal('x', 3.0) \
+    #                        .terminal('y', 9.5) \
 
     #problem.steps.add_step().num_cases(30) \
     #                        .const('w',0.99) #Final Terrain weighting factor

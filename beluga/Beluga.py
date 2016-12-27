@@ -272,7 +272,7 @@ class Beluga(object):
                             for i in range(len(sol.x)):
                                 _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                                 sol.u[:,i] = _u
-                        
+
                         # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
                         # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
