@@ -105,7 +105,7 @@ def get_problem():
     problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=15, verbose = True, cached = False)
 
     #Initial Guess (Classic test example [4.9,0.4])
-    problem.guess.setup('auto',start=[8.0,0.5], costate_guess=[0.0,-0.1]) #City A
+    problem.guess.setup('auto',start=[9.0,0.5], costate_guess=[0.0,-0.1]) #City A
     #problem.guess.setup('auto',start=[4.9,0.4], costate_guess=[0.1,-0.1]) #City A
 
     #Add Continuation Steps (Classic test example [7.2,8.5]) [8, 4.5]
