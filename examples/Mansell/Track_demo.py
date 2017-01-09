@@ -23,6 +23,7 @@ import gdal
 ds = gdal.Open('WL2.tif')
 band = ds.GetRasterBand(1)
 elevation = band.ReadAsArray()
+elevation = np.flipud(elevation)
 nrows, ncols = elevation.shape
 
 #------------------------Create the terrain function---------------------------#
@@ -35,14 +36,14 @@ elevation = elevation.astype(np.float) #Convert to a floating point array (impor
 
 #Spline fit lat/lon image
 print('Creating terrain function...')
-elevation = ndimage.gaussian_filter(elevation,sigma=10,order=0) #Smooth terrain
+elevation = ndimage.gaussian_filter(elevation,sigma=20,order=0) #Smooth terrain
 geo_spl=interpolate.RectBivariateSpline(lats,lons,elevation,kx=3,ky=3,s=10)
 
 def terrain(x,y):
     #Computes the elevation a point (x,y) in km as measured from the lower left
     #corner.
-    lat = x/111+lats[0]
-    lon = y/(111*np.sin(lat*np.pi/180.0))+lons[0]
+    lat = np.real(x)/111+lats[0]
+    lon = np.real(y)/(111*np.sin(lat*np.pi/180.0))+lons[0]
     if hasattr(x,'__len__') or hasattr(y,'__len__'):
         return geo_spl.ev(lat,lon)
     elif np.iscomplex(x)==True:
@@ -84,9 +85,9 @@ def get_problem():
                          .terminal('y-y_f','k')
 
     #Define constants
-    problem.constant('w',0.5,'1') #Initial Terrain weighting factor
+    problem.constant('w',0.9,'1') #Initial Terrain weighting factor
     problem.constant('conv',1,'s/k^2') #Integral conversion factor
-    problem.constant('V',50,'k/s') #Vehicle speed
+    problem.constant('V',1,'k/s') #Vehicle speed
     problem.constant('elev',0.001,'k') #Units for the elevation
 
     #Unit scaling
@@ -95,17 +96,16 @@ def get_problem():
                  .unit('rad',1)
 
     #Configure solver
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=30, verbose = True, cached = False, number_arcs=4)
+    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=50, verbose = True, cached = False, number_arcs=8)
     #problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=50, verbose = True, cached = False)
 
     #Initial Guess
-    problem.guess.setup('auto',start=[10,10], costate_guess=[0.0,-0.1])
+    problem.guess.setup('auto',start=[16,10], costate_guess=[0.0,-0.1])
 
     #Add continuation steps
     problem.steps.add_step(strategy='HPA') \
-                            .terminal('x', 85, 20) \
-                            .terminal('y', 45, 20) \
-                            .const('w', 0.75, 5)
+                            .terminal('x', 180, 50) \
+                            .terminal('y', 98, 50)
 
     return problem
 
@@ -113,3 +113,5 @@ if __name__ == '__main__':
     import beluga.Beluga as Beluga
     problem = get_problem()
     sol = Beluga.run(problem)
+
+#NOTE: DEM is upside down. Try np.flipud

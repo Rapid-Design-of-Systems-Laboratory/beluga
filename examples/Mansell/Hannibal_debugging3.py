@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 #Import terrain map and create the terrain function
 img=Image.open('terrain_test.jpg')
 img=np.array(img) #Convert to array
-#img=ndimage.gaussian_filter(img,sigma=5,order=0) #Smooth image
+img=ndimage.gaussian_filter(img,sigma=5,order=0) #Smooth image
 img=np.asfarray(img)/255.0 #Scale to unity scale
 Xcoords=np.linspace(0,10,len(img[:,0])) #North Coordinates
 Ycoords=Xcoords[0:len(img[0,:])] #East Coordinates
