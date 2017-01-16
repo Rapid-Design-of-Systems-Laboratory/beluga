@@ -109,9 +109,10 @@ def get_problem():
     #problem.guess.setup('auto',start=[4.9,0.4], costate_guess=[0.1,-0.1]) #City A
 
     #Add Continuation Steps (Classic test example [7.2,8.5]) [8, 4.5]
-    problem.steps.add_step(strategy='HPA') \
+    problem.steps.add_step(strategy='HPA',hweight=0.9, no_diag = True) \
                             .terminal('x', 3.0, 10) \
                             .terminal('y', 9.5, 10) \
+    #                        .const('w', 0.9, 2, confined=True)
 
     #problem.steps.add_step(strategy='manual').num_cases(10) \
     #                        .terminal('x', 3.0) \

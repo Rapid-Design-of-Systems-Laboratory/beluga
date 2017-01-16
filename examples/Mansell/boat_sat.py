@@ -1,10 +1,10 @@
 #==================================================================================
-# PROGRAM: "boat.py"
+# PROGRAM: "boat_sat.py"
 # LOCATION: beluga>examples>Mansell
 # Author: Justin Mansell (2016)
 #
 # Description: simple path optimization for a boat with bounded control used
-#              to demonstrate graph search continuation.
+#              to demonstrate graph search continuation. Uses saturation fcns.
 #==================================================================================
 
 #Import Necessary Modules
@@ -17,29 +17,35 @@ from beluga.continuation import *
 from math import *
 import functools
 
+def sat_func(u):
+    cu = 1 #Upper asymptote
+    cl = -1 #Lower asymptote
+    s0 = 1 #smoothing factor
+    return cu - (cu-cl)/(1+np.exp(4*s0/(cu-cl)*u))
+
 def get_problem():
 
     """A simple example of graph search continuation"""
 
     # Rename this and/or move to optim package?
-    problem = beluga.optim.Problem('boat')
+    problem = beluga.optim.Problem('boat_sat')
 
     #Define independent variables
     problem.independent('t', 's')
 
     # Define equations of motion
-    problem.state('x','V*cos(hdg)+eps*k*cos(hdgA)','m')  \
+    problem.state('x','V*cos(hdg)','m')  \
            .state('y','V*sin(hdg)','m') \
-           .state('hdg','k*sin(hdgA)','rad')
+           .state('hdg','k*(1-2/(1+exp(2*u)))','rad')
 
     # Define controls
-    problem.control('hdgA','rad')
+    problem.control('u',1)
 #    problem.control('hdgdot','rad/s')
 
-    problem.mode = 'analytic'
+    problem.mode = 'dae'
 
     # Define Cost Functional
-    problem.cost['terminal'] =  Expression('t', 's')
+    problem.cost['path'] =  Expression('1+eps*u^2', 's')
 
     #Define constraints
     problem.constraints().initial('x-x_0','m') \
@@ -52,7 +58,7 @@ def get_problem():
     problem.constant('cmax',1.0,'m/s^2') #Maximum allowed centripetal acceleration
     problem.constant('V',1,'m/s') #Velocity
     problem.constant('k',1,'rad/s')
-    problem.constant('eps',0.5,'m') #Error constant
+    problem.constant('eps',1,1) #Error constant
 
     #Problem scaling
     problem.scale.unit('m',1) \
@@ -70,22 +76,13 @@ def get_problem():
     #problem.steps.add_step().num_cases(2) \
     #                        .terminal('x', 3) \
     #                        .terminal('y', 0.1)
-    problem.steps.add_step().num_cases(10) \
-        .terminal('x', 1.0) \
-        .terminal('y', 0) \
+    problem.steps.add_step().num_cases(30) \
+        .terminal('x', 3.0) \
+        .terminal('y', 0)
 
-    problem.steps.add_step().num_cases(10) \
-        .terminal('x', 10.05) \
-        .terminal('y', 0) \
-
-    problem.steps.add_step().num_cases(10) \
-        .terminal('y', 10) \
-
-    problem.steps.add_step().num_cases(10) \
-        .const('eps', 0.1) \
-
-    problem.steps.add_step().num_cases(6) \
-        .const('eps', 0.01)
+    problem.steps.add_step().num_cases(30) \
+        .terminal('x', 3.0) \
+        .terminal('y', 3.0)
 
     return problem
 
@@ -94,5 +91,3 @@ if __name__ == '__main__':
     import beluga.Beluga as Beluga
     problem = get_problem()
     sol = Beluga.run(problem)
-
-#NOTE: Saturation functions give a "not implemented" error.

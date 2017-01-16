@@ -31,11 +31,13 @@ class HPA_Strategy(object):
     # A unique short name to select this class
     name = 'HPA'
 
-    def __init__(self, hweight=0.75, max_steps = 100, vars=[], bvp=None):
+    def __init__(self, hweight=0.75, max_steps = 100, no_diag = False, vars=[], bvp=None):
         self.bvp = bvp
         self.hweight = hweight #Heuristic weight factor (f = (1-w)*g + w*h)
         self.max_steps = max_steps #Maximum number of continuation steps
         self._num_cases = max_steps
+        self.confines = [] #List of confined options
+        self.no_diag = no_diag #Allow diagonal moves?
         self.vars = {}  # dictionary of variables
         self.ctr  = 0   # iteration counter
         self.last_bvp = None
@@ -83,8 +85,9 @@ class HPA_Strategy(object):
         graphdims = [] #List of graph dimenions
         spacings = [] #List of parameter spacing for each dimension
         target_vals = [] #List of target values for each continuation variable
+        #confined = [] #Which variables are confined to the grid
 
-        # Iterate through all variables
+        # Initialize strategy parameters
         for var_type in self.vars.keys():
             for var_name in self.vars[var_type].keys():
                 # Look for the variable name from continuation in the BVP
@@ -92,47 +95,46 @@ class HPA_Strategy(object):
                     raise ValueError('Variable '+var_name+' not found in boundary value problem')
 
                 #Load continuation variable data
-                convars.append(var_name)
-                init_vals.append(bvp.solution.aux[var_type][var_name])
-                graphdims.append(self.vars[var_type][var_name].nodes)
-                spacings.append(self.vars[var_type][var_name].spacing)
-                target_vals.append(self.vars[var_type][var_name].target)
+                self.convars.append(var_name)
+                self.init_vals.append(bvp.solution.aux[var_type][var_name])
+                self.graphdims.append(self.vars[var_type][var_name].nodes)
+                self.spacings.append(self.vars[var_type][var_name].spacing)
+                self.target_vals.append(self.vars[var_type][var_name].target)
+                self.confines.append(self.vars[var_type][var_name].confined)
 
-        #Initialize strategy parameters
-        self.convars = convars
-        self.graphdims = graphdims
-        self.init_vals = init_vals
-        self.spacings = spacings
-        self.target_vals = target_vals
-        self.start_node = node(np.zeros(len(graphdims)),init_vals)
+        self.start_node = node(np.zeros(len(self.graphdims)),self.init_vals)
         self.start_node.bvp = bvp #Initialize the bvp
-        self.goal_node = node(graphdims-np.ones(len(graphdims)),target_vals) #Might be unnecessary
-        self.open_list = []#[self.start_node]
+        self.goal_node = node(self.graphdims-np.ones(len(self.graphdims)),self.target_vals) #Might be unnecessary
+        self.open_list = []
         self.last_node = self.start_node
+
+        #Warning
+        if len(self.graphdims)<2: raise ValueError('HPA continuation not appropriate for continuation on a single variable. Use manual or bisection strategy instead.')
 
         #Generate the possible move direcitons
         moves = list(itertools.product([-1,0,1],repeat=len(self.graphdims))) #Generate possible directions
         moves.remove(tuple([0]*len(self.graphdims))) #Get rid of the 0 vector as a possible direction
+        if self.no_diag is True: moves = [d for d in moves if not np.linalg.norm(d)>1] #Get rid of diagonal directions
         self.moves = moves
 
-    def set(self, var_type,name,target,nodes,spacing='linear'):
+    def set(self, var_type,name,target,nodes,spacing='linear',confined=False):
         if var_type not in self.vars.keys():
             self.vars[var_type] = {}
 
         # Create continuation variable object
-        self.vars[var_type][name] = HPA_Variable(name,target,nodes,spacing)
+        self.vars[var_type][name] = HPA_Variable(name,target,nodes,spacing,confined)
         return self
 
-    def terminal(self, name,target,nodes,spacing='linear'):
-        self.set('terminal',name,target,nodes,spacing)
+    def terminal(self, name,target,nodes,spacing='linear',confined=False):
+        self.set('terminal',name,target,nodes,spacing,confined)
         return self
 
-    def initial(self, name,target,nodes,spacing='linear'):
-        self.set('initial',name,target,nodes,spacing)
+    def initial(self, name,target,nodes,spacing='linear',confined=False):
+        self.set('initial',name,target,nodes,spacing,confined)
         return self
 
-    def const(self, name,target,nodes,spacing='linear'):
-        self.set('const',name,target,nodes,spacing)
+    def const(self, name,target,nodes,spacing='linear',confined=False):
+        self.set('const',name,target,nodes,spacing,confined)
         return self
 
     # def constraint(self, name,target):
@@ -247,6 +249,11 @@ class HPA_Strategy(object):
                         skip = 1
                         break
 
+                #Make sure node is not outside of the grid, if this isn't allowed
+                for ii,grid_confine in enumerate(self.confines):
+                    if grid_confine == True:
+                        if successor.ind[ii]>self.graphdims[ii]-1 or successor.ind[ii]<0: skip=1
+
                 #Add successors to the frontier and assign bvp objects
                 if skip == 1:
                     continue #Check to see if we need to skip this successor
@@ -267,7 +274,7 @@ class HPA_Strategy(object):
 
         self.open_list = sorted(self.open_list, key=lambda n: n.f, reverse=True)
         q = self.open_list.pop() #Pick the node with the smallest f
-        print('Attemping node:',q.ind)
+        print('Attemping node:',q.ind,'from node',q.par.ind)
         print('Node values:',self.convars,q.val)
         print('Attempts at the goal:',self.goal_attempts)
 
