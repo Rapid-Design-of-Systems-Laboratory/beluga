@@ -42,7 +42,7 @@ plt.ylabel('North (km)')
 plt.plot(ysol,xsol,'r') #Plot final path
 xcont=[]
 ycont=[]
-for i in range(0,11):
+for i in range(0,9):
     plt.plot(out['solution'][-1][i].y[1,:],out['solution'][-1][i].y[0,:],'r--')
     xcont.append(out['solution'][-1][i].y[0,-1])
     ycont.append(out['solution'][-1][i].y[1,-1])
