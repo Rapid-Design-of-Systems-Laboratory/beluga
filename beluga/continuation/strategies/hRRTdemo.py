@@ -7,6 +7,7 @@ import numpy as np
 import itertools
 from math import *
 import matplotlib.pyplot as plt
+#import matplotlib.patches as mpatches
 from matplotlib import animation
 import random as rd
 import copy
@@ -19,15 +20,16 @@ import copy
 #Value Space: actual continuation space of the problem.
 
 #Parameters
+n_processors = 8 #Maximum number of bvp problems that can be solved at once
 val_step_size = [1,0.5] #Step size in value space
 step_spacing = ['linear','log']
 init_vals = [0,5e-1] #Continuation parameter values before the continuation
 target_vals = [15,4e-5] #Continuation parameter targets
 val_lbs = [-5,1e-6] #Continuation parameter lower bounds
 val_ubs = [25,1] #Continuation parameter upper bounds
-prob_floor = 0.75 #Probability floor to ensure algorithm is not too biased against exploration
+prob_floor = 1 #Probability floor to ensure algorithm is not too biased against exploration
 max_steps = 100 #Maximum number of continuation steps (included failed attempts)
-goal_bias = 0.15
+goal_bias = 0.25 #Percentage chance of moving directly towards the goal
 cor_step_size = 1 #Step size in coordinate space (should be 1)
 #NOTE: lbs and ubs define the limits of the continuation (value) space
 
@@ -88,8 +90,9 @@ cor_ubs = val2cor(val_ubs)
 init_node = node(init_cor)
 init_node.conv = 1
 target = node(target_cor)
-T = [init_node]
+T = [init_node] #Tree only consists of the starting node initally
 fails = [] #List of failed nodes
+obstacles = [] #List of obstacles to cover hard spots of design space
 
 #IDEA: want something like .terminal('x',[-5,25],0.5,15) ---> ('var',range,step_size,target)
 #                          .const('eps',[1e-6,1],0.25,1e-4,spacing = 'log')
@@ -109,6 +112,13 @@ def max_cost(T):
     """Finds the cost of the maximum cost node in the tree"""
     return max([n.g+Heuristic(n) for n in T])
 
+def detect_collision(n):
+    """Detects a collision with any generated obstacles"""
+    #NOTE: Obstacles are assumed to be circles/spheres with radius cor_step_size
+    #IDEA: radius = cor_step_size? Better shapes to use?
+    return any([np.linalg.norm(n.cor-obs) < cor_step_size for obs in obstacles])
+
+
 def select_node(T):
     while True:
         if rd.random() < goal_bias: #Goal biasing
@@ -117,16 +127,22 @@ def select_node(T):
             x_rand = [rd.uniform(cor_lbs[i],cor_ubs[i]) for i in range(0,len(val_lbs))]
         nearest = nearest_neighbour(x_rand, T)
         if np.linalg.norm(x_rand-nearest.cor) < cor_step_size: continue #Avoid cases where the tree sometimes grows back on itself due to x_rand being very close to nearest
-        m = 1 - (nearest.g+Heuristic(nearest)-Heuristic(init_node))/(max_cost(T)-Heuristic(init_node)) #Note: non-admissible heuristic could lead to negative quality
-        m = min(prob_floor,m)
+        if len(T) == 1:
+            m = 1
+        else:
+            m = 1 - (nearest.g+Heuristic(nearest)-Heuristic(init_node))/(max_cost(T)-Heuristic(init_node)) #Note: non-admissible heuristic could lead to negative quality
+        m = max(prob_floor,m) #Should be 'min' according to paper but that doesn't make any sense
         r = rd.random()
         if r < m: break
-    print(nearest.g,nearest.g+Heuristic(nearest),max_cost(T),Heuristic(init_node),m)
+    #print(nearest.g,nearest.g+Heuristic(nearest),max_cost(T),Heuristic(init_node),m)
     return x_rand,nearest
 
 def fake_bvp(n):
     """Pretends to solve a bvp problem at the node n"""
-    n.conv = 1
+    if n.cor[0]<16 and n.cor[0]>10 and n.cor[1]<8 and n.cor[1]>4:
+        n.conv=False
+    else:
+        n.conv = True
     return
 
 def extend(T,x_rand,nearest):
@@ -146,13 +162,20 @@ def extend(T,x_rand,nearest):
 
 def update_hRRT(T, fails):
     """Updates the hRRT tree by adding a new node"""
-    x_rand,nearest = select_node(T) #Choose a node to extend
-    candidate_node = extend(T,x_rand,nearest) #Extend a candidate node
-    fake_bvp(candidate_node) #Attempt the candidate node
-    if candidate_node.conv:
-        return T+[candidate_node], fails
-    else:
-        return T, fails+[candidate_node]
+    candidates = []
+    while len(candidates) < n_processors:
+        x_rand,nearest = select_node(T) #Choose a node to extend
+        candidate_node = extend(T,x_rand,nearest) #Extend a candidate node
+        if detect_collision(candidate_node) == False: candidates.append(candidate_node) #Check for collisions
+    for candidate_node in candidates:
+        print('Attempting node:',candidate_node.vals)
+        fake_bvp(candidate_node) #Attempt the candidate nodes
+        if candidate_node.conv:
+            T = T+[candidate_node]
+        else:
+            obstacles.append(np.array(candidate_node.cor)) #"Here be dragons"
+            fails = fails+[candidate_node]
+    return T, fails
 
 #Grow the hRRT tree
 for ii in range(0,max_steps):
@@ -175,7 +198,13 @@ ax = plt.axes(xlim=(cor_lbs[0],cor_ubs[0]),ylim=(cor_lbs[1],cor_ubs[1]))
 plt.scatter(init_node.cor[0],init_node.cor[1],s=60,c='r',marker='o') #Plot initial node
 plt.scatter(target.cor[0],target.cor[1],s=60,c='r',marker='o') #Plot goal node
 plt.plot(x_pts,y_pts,'bo')
-for n in T:
+#plt.scatter([n.cor[0] for n in fails],[n.cor[1] for n in fails],s=60,c='r',marker='x') #Plot fails
+plt.scatter([n.cor[0] for n in fails],[n.cor[1] for n in fails],s=60,facecolors='none',edgecolors='k',marker='o') #Plot fails
+circles = [plt.Circle(obs, 1, color='r',fill=False, hatch='//') for obs in obstacles]
+for circle in circles: ax.add_artist(circle) #Plot obstacles
+
+
+for n in T: #Plot arrows between closed nodes
     if bool(n.par)==False: continue
     ax.annotate('',xy=n.cor,xycoords='data',xytext=n.par.cor,textcoords='data',
                 arrowprops=dict(arrowstyle='->',connectionstyle='arc3'))
@@ -185,8 +214,6 @@ plt.show()
 #print(target.cor)
 #print(init_node.cor-target.cor)
 #print(np.linalg.norm(init_node.cor-target.cor))
-
-#TODO: need to draw lines between ancestors, not just the list of points
 
 
 #End
