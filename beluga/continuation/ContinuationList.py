@@ -1,4 +1,6 @@
 from .strategies.ManualStrategy import ManualStrategy
+from .strategies.RandomStrategy import RandomStrategy
+from .strategies.HPA_Strategy import HPA_Strategy
 from beluga.continuation import strategies
 # from .ContinuationSolution import ContinuationSolution
 
@@ -6,7 +8,7 @@ import inspect
 class ContinuationList(list):
     def __init__(self):
         # Create list of available strategies
-        self.strategy_list = {obj.name: obj  for (name,obj) in inspect.getmembers(strategies) if inspect.isclass(obj)}
+        self.strategy_list = {obj.name: obj  for (name,obj) in inspect.getmembers(strategies) if inspect.isclass(obj)}   
 
     def add_step(self, strategy='manual', *args, **kwargs):
         # Create object if strategy is specified as a string

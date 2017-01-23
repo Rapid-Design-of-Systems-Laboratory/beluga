@@ -25,8 +25,8 @@ plots.add_plot().line('t','sqrt('+D+'**2+'+L+'**2)/(mass*g0)') \
                 .xlabel('t (s)').ylabel('G-Loading')      \
                 .title('G-Loading vs. Time')
 
-# plots.add_plot().line('theta*re/1000','h/1000',legend='Foo')       \
-#                 .line('theta*re/1000','h/1000',legend='Bar',step=1,sol=5)   \
+# plots.add_plot().line('theta*re/1000','h/1000',label='Foo')       \
+#                 .line('theta*re/1000','h/1000',label='Bar',step=1,sol=5)   \
 #                 .xlabel('Downrange (km)')                   \
 #                 .ylabel('h (km)')                           \
 #                 .title('Altitude vs. Downrange')

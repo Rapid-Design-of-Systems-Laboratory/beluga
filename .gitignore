@@ -1,3 +1,4 @@
+*.img
 *.pyc
 __pycache__
 *.html
@@ -75,5 +76,11 @@ docs/_build/
 # PyBuilder
 target/
 
+<<<<<<< HEAD
+.idea/workspace.xml
+
+beluga/optim/NecessaryConditions.py
+=======
 # PyCharm configuration files
 .idea/
+>>>>>>> RDSL/master

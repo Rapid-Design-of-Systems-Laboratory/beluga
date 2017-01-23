@@ -2,29 +2,32 @@ import dill, os, numpy as np, numpy.testing as npt
 from math import *
 from beluga.utils import ode45, keyboard
 from beluga.visualization.elements import Plot
+from beluga.visualization.datasources import Dill
 
 def test_plot():
-    with open(os.path.join(os.path.dirname(__file__),'planar.dill'),'rb') as f:
-        out = dill.load(f)
+    filename = os.path.join(os.path.dirname(__file__),'planar.dill')
+    # with open(filename,'rb') as f:
+    #     out = dill.load(f)
 
-    sol = out['solution']
+    ds = Dill(filename)
+    sol = ds.get_solution()
 
     mesh_size = len(sol[0][0].x)
     # Testing default behavior (retain mesh size)
-    p = Plot(0, 0, mesh_size)
+    p = Plot(0, 0, mesh_size, datasource=ds)
     p.line('v','h')
     p.xlabel('v (m/s)')
     p.ylabel('h (m)')
-    p.preprocess(out['solution'],out['problem_data'])
+    p.preprocess()
     npt.assert_equal(p.plot_data[0]['data'][0]['x_data'],sol[0][0].y[2,:])
     npt.assert_equal(p.plot_data[0]['data'][0]['y_data'],sol[0][0].y[0,:])
 
     # Testing behavior with line series
-    p = Plot(0, 0, mesh_size)
+    p = Plot(0, 0, mesh_size, datasource=ds)
     p.line_series('v','h', skip=9)
     p.xlabel('v (m/s)')
     p.ylabel('h (m)')
-    p.preprocess(out['solution'],out['problem_data'])
+    p.preprocess()
     npt.assert_equal(p.plot_data[0]['data'][0]['x_data'],sol[0][0].y[2,:])
     npt.assert_equal(p.plot_data[0]['data'][0]['y_data'],sol[0][0].y[0,:])
     npt.assert_equal(p.plot_data[0]['data'][1]['x_data'],sol[0][10].y[2,:])
@@ -33,7 +36,7 @@ def test_plot():
     p.line_series('v','h', start=1, skip=3)
     p.xlabel('v (m/s)')
     p.ylabel('h (m)')
-    p.preprocess(out['solution'],out['problem_data'])
+    p.preprocess()
     npt.assert_equal(len(p.plot_data[1]['data']), 3)
     npt.assert_equal(p.plot_data[1]['data'][0]['x_data'],sol[0][1].y[2,:])
     npt.assert_equal(p.plot_data[1]['data'][0]['y_data'],sol[0][1].y[0,:])
@@ -45,7 +48,7 @@ def test_plot():
     p.line_series('v','h', start=1, skip=3, end=7)
     p.xlabel('v (m/s)')
     p.ylabel('h (m)')
-    p.preprocess(out['solution'],out['problem_data'])
+    p.preprocess()
     npt.assert_equal(len(p.plot_data[2]['data']), 2)
     npt.assert_equal(p.plot_data[2]['data'][0]['x_data'],sol[0][1].y[2,:])
     npt.assert_equal(p.plot_data[2]['data'][0]['y_data'],sol[0][1].y[0,:])
@@ -53,16 +56,16 @@ def test_plot():
     npt.assert_equal(p.plot_data[2]['data'][1]['y_data'],sol[0][5].y[0,:])
 
     # Testing behavior with solution selector options
-    p = Plot(0,4, mesh_size)
+    p = Plot(0,4, mesh_size, datasource=ds)
     p.line('theta','gam')
-    p.preprocess(out['solution'],out['problem_data'])
+    p.preprocess()
     npt.assert_equal(p.plot_data[0]['data'][0]['x_data'],sol[0][4].y[1,:])
     npt.assert_equal(p.plot_data[0]['data'][0]['y_data'],sol[0][4].y[3,:])
 
     # Testing expressions with variables and constants or with multiple variables
-    p = Plot(0, 0, mesh_size)
+    p = Plot(0, 0, mesh_size, datasource=ds)
     p.line('theta+v*gam','rho0*exp(-h/H)')
-    p.preprocess(out['solution'],out['problem_data'])
+    p.preprocess()
 
     const = sol[0][0].aux['const']
     rho = const['rho0']*np.exp(-sol[0][0].y[0,:]/const['H'])
