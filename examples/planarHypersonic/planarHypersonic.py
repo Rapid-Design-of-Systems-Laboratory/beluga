@@ -25,6 +25,7 @@ def get_problem():
 
     # Rename this and/or move to optim package?
     problem = beluga.optim.Problem('planarHypersonic')
+    problem.mode='analytical'
     # problem = beluga.optim.Problem()
 
 
@@ -67,8 +68,8 @@ def get_problem():
     problem.constant('re',6378000,'m') # Radius of planet, m
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
 
-    problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2, max_error=200)
-    # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
+    #problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached = False, number_arcs=2, max_error=200)
+    problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
 
     problem.scale.unit('m','h')         \
                    .unit('s','h/v')     \
@@ -82,7 +83,7 @@ def get_problem():
     problem.steps.add_step().num_cases(11) \
                             .terminal('h', 0)
 
-    problem.steps.add_step().num_cases(41)  \
+    problem.steps.add_step().num_cases(11)  \
                             .terminal('theta', 10*pi/180)
     # #
     # problem.steps.add_step()

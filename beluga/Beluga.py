@@ -201,7 +201,8 @@ class Beluga(object):
         self.out = {};
 
         self.out['problem_data'] = bvp.problem_data;
-        self.out['solution'] = self.run_continuation_set(self.problem.steps, bvp)
+        self.out['solution'], self.out['guesses'] = self.run_continuation_set(self.problem.steps, bvp)
+
         total_time = toc();
 
         logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -209,6 +210,9 @@ class Beluga(object):
         # Save data
         output = open(self.problem.output_file, 'wb')
         # dill.settings['recurse'] = True
+        # del self.out['problem_data']['aux_list'][2]
+        self.out['problem_data']['ham_expr'] = str(self.out['problem_data']['ham_expr'])
+
         dill.dump(self.out, output) # Dill Beluga object only
         output.close()
 
@@ -222,6 +226,7 @@ class Beluga(object):
     def run_continuation_set(self,steps,bvp_start):
         # Loop through all the continuation steps
         solution_set = []
+        guess_set = []
 
         # Initialize scaling
         import sys, copy
@@ -235,6 +240,8 @@ class Beluga(object):
                 logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
                 solution_set.append(ContinuationSolution())
+                guess_set.append(ContinuationSolution())
+
                 if step_idx == 0:
                     step.set_bvp(bvp_start)
                 else:
@@ -247,6 +254,7 @@ class Beluga(object):
 
                     s.compute_scaling(bvp)
                     s.scale(bvp)
+                    guess_set[step_idx].append(copy.deepcopy(bvp.solution)) #Save a copy of the guess
 
                     # sol is just a reference to bvp.solution
                     sol = self.problem.bvp_solver.solve(bvp)
@@ -269,7 +277,7 @@ class Beluga(object):
                             for i in range(len(sol.x)):
                                 _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                                 sol.u[:,i] = _u
-                        
+
                         # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
                         # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
@@ -279,6 +287,7 @@ class Beluga(object):
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                     else:
+                        solution_set[step_idx].append(copy.deepcopy(bvp.solution)) #Append failed solution objects as well
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
         except Exception as e:
@@ -287,4 +296,4 @@ class Beluga(object):
             logging.error('Exception : '+str(e))
             logging.error('Stopping')
 
-        return solution_set
+        return solution_set, guess_set

@@ -45,5 +45,7 @@ setup(name="beluga",
         "pystache",
         "docopt",
         "multiprocessing_on_dill",
+        "toyplot",
+        "PyQt5",
       ]
       )
