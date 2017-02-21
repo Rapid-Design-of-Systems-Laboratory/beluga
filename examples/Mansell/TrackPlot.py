@@ -20,7 +20,7 @@ xsol=out['solution'][-1][-1].y[0,:]
 ysol=out['solution'][-1][-1].y[1,:]
 lamXsol=out['solution'][-1][-1].y[2,:]
 lamYsol=out['solution'][-1][-1].y[3,:]
-tf=out['solution'][-1][-1].y[4,0]
+tf=out['solution'][-1][-1].y[4,-1]
 tsol=out['solution'][-1][-1].x*tf
 
 #Load Geotiff data

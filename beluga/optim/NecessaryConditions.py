@@ -11,6 +11,8 @@ from beluga.optim.problem import *
 import dill
 import numpy as np
 
+from beluga.optim.AircraftNoiseCtrl import CtrlSols  #TEMPORARY!!!!!
+
 class NecessaryConditions(object):
     """Defines necessary conditions of optimality."""
 
@@ -135,20 +137,17 @@ class NecessaryConditions(object):
         # self.costate_rates.append(str(diff(sympify2(
         # '-1*(' + self.ham + ')'),state)))
 
-        #TODO: make this more compact
         for state in states:
             corate=self.derivative(-1*(self.ham),state,self.quantity_vars)
             custom_diff=corate.atoms(Derivative)
+            repl = [] #Replacements for custom functions
             for d in custom_diff:
                 for f in d.atoms(AppliedUndef): #Just extracts (never more than 1 f)
                     for v in f.atoms(Symbol):
                         if str(v)==str(state): #This should only happen once!
-                            repl=sympify('im('+str(f.subs(v,v+_h))+')/1e-30')
-                            repl={(d,repl)}
-                            self.costate_rates.append(corate.subs(repl))
-                break
-            else:
-                self.costate_rates.append(corate) #If there is no custom_diff
+                            replv=sympify('im('+str(f.subs(v,v+_h))+')/1e-30')
+                            repl.append((d,replv))
+            self.costate_rates.append(corate.subs(repl))
         self.costate_rates=sympify2(self.costate_rates)
 
         #h = 1e-30
@@ -166,7 +165,7 @@ class NecessaryConditions(object):
         #self.costate_rates=sympify2(self.costate_rates)
         #print(Matrix([sympify2(state.process_eqn) for state in self.problem.states()]+ self.costate_rates))
         #quit()
-        
+
     def make_costate_rate_numeric(self, states):
         """!
         \brief     Creates the symbolic differential equations for the costates.
@@ -200,16 +199,25 @@ class NecessaryConditions(object):
         """
 
         self.ham_ctrl_partial = []
+        _h = sympify2('1j*(1e-30)')
 
         for ctrl in controls:
+            repl = []
             dHdu = self.derivative(sympify2(self.ham), ctrl, self.quantity_vars)
             custom_diff = dHdu.atoms(Derivative)
-            # Substitute "Derivative" with complex step derivative
-            #TODO: Update the expression below to be more like make_costate_rate?
-            repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
-                        for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
+            for d in custom_diff:
+                for f in d.atoms(AppliedUndef):
+                    for v in f.atoms(Symbol):
+                        if str(v)==str(ctrl):
+                            replv=sympify('im('+str(f.subs(v,v+_h))+')/1e-30')
+                            repl.append((d,replv))
 
             self.ham_ctrl_partial.append(dHdu.subs(repl))
+            # Substitute "Derivative" with complex step derivative
+            #repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
+            #            for f,v in zip(d.atoms(AppliedUndef),d.atoms(Symbol))}
+
+            #self.ham_ctrl_partial.append(dHdu.subs(repl))
 
     def selective_expand(self, expr, var_select, subs_list):
         # Expands the expressions specified by subs_list if they contain the
@@ -263,7 +271,6 @@ class NecessaryConditions(object):
         \version   0.1
         \date      06/30/15
         """
-
         # Solve all controls simultaneously
         logging.info("Finding optimal control law ...")
 
@@ -288,6 +295,9 @@ class NecessaryConditions(object):
             logging.debug("dHdu = "+str(eqn_list))
 
             ctrl_sol = solve(eqn_list, var_list, dict=True)
+            #TODO: ^ uncomment once done with the aircraft noise problem
+            #ctrl_sol = CtrlSols() #I'm going to hell for this
+            #logging.info("Grabbed the control laws for the aircraft noise!")
 
             # raise ValueError() # Force mathematica
         except ValueError as e:  # FIXME: Use right exception name here
@@ -295,13 +305,13 @@ class NecessaryConditions(object):
             logging.info("No control law found")
             from beluga.utils.pythematica import mathematica_solve
             logging.info("Attempting using Mathematica ...")
-            # var_sol = mathematica_solve(lhs+self.mu_lhs,vars+self.mu_vars)
+            #var_sol = mathematica_solve(lhs+self.mu_lhs,vars+self.mu_vars)
             # TODO: Extend numerical control laws to mu's
             ctrl_sol = var_sol
             if ctrl_sol == []:
                 logging.info("No analytic control law found, switching to numerical method")
 
-        logging.info("Done")
+        #logging.info("Done")
         # solve() returns answer in the form
         # [ {ctrl1: expr11, ctrl2:expr22},
         #   {ctrl1: expr21, ctrl2:expr22}]
@@ -337,6 +347,7 @@ class NecessaryConditions(object):
         \version   0.1
         \date      06/30/15
         """
+
         if location is 'initial':
             sign = sympify2('-1')
         elif location is 'terminal':
@@ -760,7 +771,7 @@ class NecessaryConditions(object):
                             for f in func_list
                             if hasattr(problem.input_module,str(f.func)) and
                                 inspect.isfunction(getattr(problem.input_module,str(f.func)))}
-        
+
         problem.functions.update(new_functions)
 
         undefined_func = [f.func for f in func_list if str(f.func) not in problem.functions]
