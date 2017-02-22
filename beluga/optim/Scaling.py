@@ -91,6 +91,13 @@ class Scaling(dict):
 
             var_dict = dict(variables)
 
+            #Remove callable elements from var_dict since they will interfere with scaling
+            if callable(scale_expr) == True: raise NotImplementedError('Cannot scale by a function value')
+            rmlist = []
+            for key in var_dict:
+                if callable(var_dict[key]) == True: rmlist.append(key)
+            for key in rmlist: del var_dict[key]
+
             # Evaluate expression to get scaling factor
             return float(sympify2(scale_expr).subs(var_dict,dtype=float).evalf())
 

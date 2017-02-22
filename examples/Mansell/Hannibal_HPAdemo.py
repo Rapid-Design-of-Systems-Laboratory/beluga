@@ -71,7 +71,7 @@ def get_problem():
     problem.independent('t', 's')
 
     #~~~~~!!!
-    #problem.quantity('terrain','(-0.3*exp(-0.5*((x-2.7)^2+1.5*(y-2.1)^2))+2.6*exp(-0.55*(0.87*(x-6.7)^2+(y-2.2)^2))+2.1*exp(-0.27*(0.2*(x-5.5)^2+(y-7.2)^2))+1.6*(cos(0.8*y))^2*(sin(0.796*x))^2)')
+    #problem.quantity('terrain3','(-0.3*exp(-0.5*((x-2.7)^2+1.5*(y-2.1)^2))+2.6*exp(-0.55*(0.87*(x-6.7)^2+(y-2.2)^2))+2.1*exp(-0.27*(0.2*(x-5.5)^2+(y-7.2)^2))+1.6*(cos(0.8*y))^2*(sin(0.796*x))^2)')
 
     # Define equations of motion
     problem.state('x','V*cos(hdg)','m')   \
@@ -109,7 +109,7 @@ def get_problem():
     #problem.guess.setup('auto',start=[4.9,0.4], costate_guess=[0.1,-0.1]) #City A
 
     #Add Continuation Steps (Classic test example [7.2,8.5]) [8, 4.5]
-    problem.steps.add_step(strategy='HPA',hweight=0.9, no_diag = True) \
+    problem.steps.add_step(strategy='HPA',hweight=0.9) \
                             .terminal('x', 3.0, 10) \
                             .terminal('y', 9.5, 10) \
     #                        .const('w', 0.9, 2, confined=True)

@@ -29,7 +29,7 @@ val_lbs = [-5,1e-6] #Continuation parameter lower bounds
 val_ubs = [25,1] #Continuation parameter upper bounds
 prob_floor = 1 #Probability floor to ensure algorithm is not too biased against exploration
 max_steps = 100 #Maximum number of continuation steps (included failed attempts)
-goal_bias = 0.5 #Percentage chance of moving directly towards the goal
+goal_bias = 0.25 #Percentage chance of moving directly towards the goal
 cor_step_size = 1 #Step size in coordinate space (should be 1)
 #NOTE: lbs and ubs define the limits of the continuation (value) space
 
@@ -46,7 +46,6 @@ class node:
         self.h = None #value of the heuristic at this node
         self.m = None #quality factor of the node NOTE: kept here as a place-holder that may be useful later. In defual hRRT the quality factor of the nodes changes as new nodes are added
         self.conv = None #Whether or not this node converged
-        self.closed = False #Is the node on a solved path to the goal?
         #NOTE: in general the quality factor can be anything
 
     #Function for printing a node object
@@ -106,14 +105,9 @@ def Heuristic(n):
 #TODO: introduce k-nearest approach by introducing 'k' argument
 def nearest_neighbour(x, T):
     """Finds the nearest node in the tree to the state x"""
-    distance_sorted = sorted(T, key=lambda n: np.linalg.norm(x-n.cor)) #Sort the tree based on distances
-    for n in distance_sorted: #Loop through list until a live node is encountered
-        if n.closed == False:
-            return n
-
-    #Did not find any live nodes in the tree
-    raise ValueError('Could not find any active (non-closed) nodes in the tree.')
-    return None
+    distances = [np.linalg.norm(x-n.cor) for n in T]
+    #TODO: ignore nodes that are also in the closed_tree
+    return T[distances.index(min(distances))]
 
 def max_cost(T):
     """Finds the cost of the maximum cost node in the tree"""
@@ -125,16 +119,6 @@ def detect_collision(n):
     #IDEA: Better shapes to use?
     return any([np.linalg.norm(n.cor-obs) < cor_step_size for obs in obstacles])
 
-def backtrack(n, T):
-    """Traces the ancestry of a node to its origin and closes all nodes along
-    the way; preventing them from spawing further nodes"""
-    n.closed = True
-    while n.par is not None:
-        distance_sorted = sorted(T, key=lambda p: np.linalg.norm(n.par.cor-p.cor))
-        if np.linalg.norm(distance_sorted[0].cor - n.par.cor) > 0: print('Warning: parent coordinates inconsistent with tree, using closest instead')
-        distance_sorted[0].closed = True
-        n = distance_sorted[0]
-    return
 
 def select_node(T):
     while True:
@@ -171,16 +155,19 @@ def extend(T,x_rand,nearest):
     """Extends a new node from nearest in the direction of x_rand.
     Alternatively, if the nearest node is within a step length of the
     goal, x_rand is neglected and the step is made to the goal"""
-    if np.linalg.norm(nearest.cor-target.cor) < cor_step_size: #TODO: search the whole tree
-        #target.par = copy.deepcopy(nearest)
-        new_node = node(target.cor)
-        new_node.par = nearest
-        new_node.g = new_node.par.g + np.linalg.norm(nearest.cor-target.cor)
-        return new_node
+    if np.linalg.norm(nearest.cor-target.cor) < cor_step_size: #TODO: search the entire tree to see if anything is in range of the goal
+    #dist_test = [np.linalg.norm(n.cor-target.cor) for n in T] #Check distances from the goal
+    #if any([dist < cor_step_size for dist in dist_test]): #If anything is in range, make the next step there
+        target.par = copy.deepcopy(nearest)
+        #BUG: If one node is in range, every new node up to n_processors will be set to the target and the program will hit an infinite loop because of the too_close fcn.
+        #[i for i,n in enumerate(T) if np.linalg.norm(n.cor-target.cor) < cor_step_size]
+        #print(len([dist for dist in dist_test if dist < cor_step_size]),' nodes are adjacent to the target.')
+        #target.par = copy.deepcopy(T[dist_test.index(min(dist_test))]) #Move to the goal from the closest node
+        return target
     else:
         new_node = node(nearest.cor + cor_step_size*(x_rand-nearest.cor)/ \
                                   np.linalg.norm(x_rand-nearest.cor))
-        new_node.par = nearest
+        new_node.par = copy.deepcopy(nearest)
         new_node.g = new_node.par.g + cor_step_size
         return new_node
 
@@ -219,6 +206,8 @@ for ii in range(0,max_steps):
     elif ii==max_steps-1:
         print('Continuation could not complete within allotted steps')
 
+
+
 #STATIC Plot
 fig_static = plt.figure(1)
 x_pts = []
@@ -244,7 +233,7 @@ for n in T: #Plot arrows between closed nodes
 fig_anim = plt.figure(2)
 def init():
     """Refreshes the plot and problem"""
-    global T, fails, obstacles, ax1, successful_branches
+    global T, fails, obstacles, ax1, done, closed_tree
     fig_anim.clf()
     plt.cla()
     ax1 = plt.axes(xlim=(cor_lbs[0],cor_ubs[0]),ylim=(cor_lbs[1],cor_ubs[1]))
@@ -255,39 +244,25 @@ def init():
     target.par = None
     fails = []
     obstacles = []
+    closed_tree = []
     rd.seed()
-    successful_branches = 0
+    done = False
     return
 
 def animate(i):
-    global goal_bias
     """Draws a single frame of the animation"""
-    global T, fails, obstacles, ax1, successful_branches
-    if successful_branches < n_processors:
-        T, fails = update_hRRT(T, fails)
-    else:
-        print('Continuation process finished')
-
-    for n in [t for t in T if all(t.cor == target.cor)]:
-        goal_bias = 0.95 #Increase the goal bias to finish off the problem
-        if n.closed == False:
-            print('Closed a branch')
-            backtrack(n, T)
-            successful_branches += 1
-
+    global T, fails, obstacles, ax1, done, closed_tree
+    if done is False: T, fails = update_hRRT(T, fails)
+    #else: return
+    if any([all(n.cor == target.cor) for n in T]):
+        print('Solution found!')
+        done = True
     x_pts = []
     y_pts = []
-    x_ptsc = [] #List of closed x pts
-    y_ptsc = [] #List of closed y pts
     for n in T:
-        if n.closed == True:
-            x_ptsc.append(n.cor[0])
-            y_ptsc.append(n.cor[1])
-        else:
-            x_pts.append(n.cor[0])
-            y_pts.append(n.cor[1])
+        x_pts.append(n.cor[0])
+        y_pts.append(n.cor[1])
     plt.plot(x_pts,y_pts,'bo')
-    plt.plot(x_ptsc,y_ptsc,'ro')
     plt.scatter([n.cor[0] for n in fails],[n.cor[1] for n in fails],s=60,facecolors='none',edgecolors='k',marker='o') #Plot fails
     circles = [plt.Circle(obs, 1, color='r',fill=False, hatch='//') for obs in obstacles]
     for circle in circles: ax1.add_artist(circle) #Plot obstacles
@@ -301,7 +276,3 @@ def animate(i):
 anim = animation.FuncAnimation(fig_anim, animate, frames=50, init_func = init, interval=300, repeat=False)
 anim.save('hRRTSearch.gif', dpi=200, writer = 'imagemagick')
 #End
-
-
-#PROBLEMS:
-#--> Secondary branches do not grow towards the goal
