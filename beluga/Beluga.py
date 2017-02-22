@@ -166,6 +166,7 @@ class Beluga(object):
         # Initialize necessary conditions of optimality object
         # print("Computing the necessary conditions of optimality")
         logging.info("Computing the necessary conditions of optimality")
+
         self.nec_cond = NecessaryConditions()
 
         # Try loading cached BVP from disk
@@ -276,7 +277,7 @@ class Beluga(object):
                             sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
                             for i in range(len(sol.x)):
                                 _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
-                                sol.u[:,i] = _u
+                                sol.u[:,i] = np.real(_u) #Take real part incase control bound is saturated
 
                         # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
                         # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T

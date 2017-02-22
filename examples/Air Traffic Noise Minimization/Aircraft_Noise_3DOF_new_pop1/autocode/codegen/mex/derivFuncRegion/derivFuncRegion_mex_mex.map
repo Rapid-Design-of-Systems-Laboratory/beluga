@@ -1,0 +1,10 @@
+MEX {
+	global:
+		mexFunction;
+		emlrtMexFcnProperties;
+		derivFuncRegion;
+		derivFuncRegion_initialize;
+		derivFuncRegion_terminate;
+	local:
+		*;
+};

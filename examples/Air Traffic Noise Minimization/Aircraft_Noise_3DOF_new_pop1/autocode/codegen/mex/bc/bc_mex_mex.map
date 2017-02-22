@@ -1,0 +1,10 @@
+MEX {
+	global:
+		mexFunction;
+		emlrtMexFcnProperties;
+		bc;
+		bc_initialize;
+		bc_terminate;
+	local:
+		*;
+};

@@ -1,0 +1,1 @@
+analyzeOptimization(@inputsAnalyzeOptimization);
