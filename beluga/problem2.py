@@ -12,81 +12,28 @@ import os.path
 import dill
 import re
 
-from continuation import ContinuationList
+from beluga.continuation import ContinuationList
+
 from collections import namedtuple
-from itertools import zip_longest
+from itertools import zip_longest, ChainMap
 from beluga.optim.Scaling import Scaling  # BUG
 # from beluga.bvpsol import Solution
 from beluga.utils import ode45, sympify2  # , keyboard
 
+class OCP(object):
+    """Builder class for defining optimal control problem."""
 
-class Problem(object):
-    """Defines an optimal control problem."""
-
-    def __init__(self, name):
+    def __init__(self, name=''):
         """Initializes problem object."""
-        self.name = self._format_name(name)
+        # self.name = self._format_name(name)
+        self.name = name
 
         self._systems = {'default': {}}  # Dynamic system definitions
         self._properties = {}  # Problem properties
         self._constraints = ConstraintList()
-        self.continuation = ContinuationList()
-        self.steps = self.continuation  # Alias for continuation
 
-        self.guess = Guess()    # Initial guess builder
         self.scale = Scaling()  # Scaling class
 
-        # Aliases that add known types of dynamic elements to systems
-        # TODO: Write documentation for these aliases
-        self.state = partial(self.add_dynamic_element,
-                             element_kind='states',
-                             element_list=['name', 'eom', 'unit']
-                             )
-        self.control = partial(self.add_dynamic_element,
-                               element_kind='controls',
-                               element_list=['name', 'unit']
-                               )
-        self.constant = partial(self.add_dynamic_element,
-                                element_kind='constants',
-                                element_list=['name', 'value', 'unit']
-                                )
-        self.quantity = partial(self.add_dynamic_element,
-                                element_kind='quantities',
-                                element_list=['name', 'value']
-                                )
-
-        # Aliases for getting dynamic element lists
-        self.states = partial(self.get_dynamic_elements,
-                              element_kind='states')
-        self.controls = partial(self.get_dynamic_elements,
-                                element_kind='controls')
-        self.constants = partial(self.get_dynamic_elements,
-                                 element_kind='constants')
-        self.quantity = partial(self.get_dynamic_elements,
-                                element_kind='quantities')
-
-        # TODO: Maybe write as separate function?
-        self.independent = partial(self.set_property,
-                                   property_name='independent',
-                                   property_list=['name', 'unit']
-                                   )
-
-        # Aliases for defining properties of the problem
-        self.path_cost = partial(self.set_property,
-                                 property_name='path_cost',
-                                 property_list=['expr', 'unit']
-                                 )
-        self.initial_cost = partial(self.set_property,
-                                    property_name='terminal_cost',
-                                    property_list=['expr', 'unit']
-                                    )
-        self.terminal_cost = partial(self.set_property,
-                                     property_name='terminal_cost',
-                                     property_list=['expr', 'unit']
-                                     )
-
-        self.Lagrange = self.path_cost
-        self.Mayer = self.terminal_cost
 
     # Alias for returning cost function by type
     def costs(self, cost_type):
@@ -95,18 +42,25 @@ class Problem(object):
         except KeyError:
             return namedtuple('Cost', ['expr', 'unit'])('0', '')
 
-    def set_property(self, *args, property_name, property_list, **kwargs):
+    def set_property(self, *args, property_name, property_args, **kwargs):
         """
         Adds a property of the optimal control problem
+
+        Parameters
+        ----------
+        args
+
+        property_name
+
+        property_args
+
+        kwargs
 
         >> set_property('cost',type='path',expr='')
 
         Returns a reference to self for chaining purposes
         """
-        # self._properties[property_name] = SymbolicVariable(
-        #     _combine_args_kwargs(property_struct,
-        #                          args, kwargs), sym_key=None)
-        self._properties[property_name] = _combine_args_kwargs(property_list,
+        self._properties[property_name] = _combine_args_kwargs(property_args,
                                                                args, kwargs)
         return self
 
@@ -116,44 +70,43 @@ class Problem(object):
         """
         return self._properties[property_name]
 
-    def add_dynamic_element(self, *props, element_kind, element_list,
-                            system_name='default', **kwprops):
-        """
-        Adds an dynamic element of the problem to a specified dynamic system
+    # TODO: Write documentation for these aliases
+    state = partial(set_property, property_name='states',
+                    property_args=('name', 'eom', 'unit'))
+    control = partial(set_property, property_name='controls',
+                    property_args=('name', 'unit'))
+    constant = partial(set_property, property_name='constants',
+                    property_args=('name', 'value', 'unit'))
+    quantity = partial(set_property, property_name='quantities',
+                    property_args=('name', 'value'))
 
-        element_kind: Defines category of element such as  state, control etc.
-            and a list of keyword arguments (kwagrs) that form it's properties
+    states = partial(get_property, 'states')
+    controls = partial(get_property, 'controls')
+    constants = partial(get_property, 'constants')
+    quantity = partial(get_property, 'quantities')
 
-        element_struct: Namedtuple to represent the property
+    # TODO: Maybe write as separate function?
+    independent = partial(set_property,
+                           property_name='independent',
+                           property_args=['name', 'unit']
+                           )
 
-        Returns a reference to self
+    # Aliases for defining properties of the problem
+    path_cost = partial(set_property, property_name='path_cost',
+                         property_args=['expr', 'unit']
+                         )
 
-        >>> add_element(self, 'x','v*cos(theta)','m',
-                              element_kind='states',
-                              element_struct=namedtuple('State',['name','eom','unit']),
-                        )
-        """
+    initial_cost = partial(set_property, property_name='terminal_cost',
+                           property_args=['expr', 'unit']
+                          )
+    terminal_cost = partial(set_property, property_name='terminal_cost',
+                             property_args=['expr', 'unit']
+                             )
+    Lagrange = path_cost
+    Mayer = terminal_cost
 
-        system = self._systems.get(system_name, {})
-        prop_list = system.get(element_kind, [])  # Get prop list of given type
 
-        # Pair prop names and values and create an object using element_list
-        prop_obj = _combine_args_kwargs(element_list, props, kwprops)
-        # prop_list.append(SymbolicVariable(prop_obj))
-        prop_list.append(prop_obj)
-
-        # Add the element with its properties to the system
-        system[element_kind] = prop_list
-        self._systems[system_name] = system
-        return self
-
-    def get_dynamic_elements(self, element_kind, system_name='default'):
-        """
-        Returns the list of dynamic elements of a specific kind from a system
-        """
-        return self._systems[system_name].get(element_kind, [])
-
-    def constraints(self, *args, **kwargs):
+    def constraints(self):
         """
         Returns the ConstraintList object containing alias methods
 
@@ -162,10 +115,10 @@ class Problem(object):
         """
         return self._constraints
 
-    def sympify(self):
-        """
-        Creates symbolic versions of all
-        """
+    def scale(**scale_mappings):
+        """Defines scaling for dimensional units in the problem."""
+        for unit, scale_expr in scale_mappings.items():
+            self.scale.unit(unit, scale_expr)
 
     def __str__(self):
         """
@@ -192,47 +145,180 @@ class Problem(object):
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
 
+# class Problem(object):
+#     """Builder class for defining optimal control problem."""
+#
+#     def __init__(self, name=''):
+#         """Initializes problem object."""
+#         # self.name = self._format_name(name)
+#         self.name = name
+#
+#         self._systems = {'default': {}}  # Dynamic system definitions
+#         self._properties = {}  # Problem properties
+#         self._constraints = ConstraintList()
+#         # self.continuation = ContinuationList()
+#         # self.steps = self.continuation  # Alias for continuation
+#
+#         # self.guess = Guess()    # Initial guess builder
+#         self.scale = Scaling()  # Scaling class
+#
+#         # Aliases for getting dynamic element lists
+#
+#         self.Lagrange = self.path_cost
+#         self.Mayer = self.terminal_cost
+#
+#     # Alias for returning cost function by type
+#     def costs(self, cost_type):
+#         try:
+#             return self.get_property(property_name=cost_type + '_cost')
+#         except KeyError:
+#             return namedtuple('Cost', ['expr', 'unit'])('0', '')
+#
+#     def set_property(self, *args, property_name, property_args, **kwargs):
+#         """
+#         Adds a property of the optimal control problem
+#
+#         >> set_property('cost',type='path',expr='')
+#
+#         Returns a reference to self for chaining purposes
+#         """
+#         # self._properties[property_name] = SymbolicVariable(
+#         #     _combine_args_kwargs(property_struct,
+#         #                          args, kwargs), sym_key=None)
+#         self._properties[property_name] = _combine_args_kwargs(property_args,
+#                                                                args, kwargs)
+#         return self
+#
+#     def get_property(self, property_name):
+#         """
+#         Returns the property specified by the name
+#         """
+#         return self._properties[property_name]
+#
+#     # TODO: Maybe write as separate function?
+#     independent = partial(set_property,
+#                            property_name='independent',
+#                            property_args=['name', 'unit']
+#                            )
+#
+#     # Aliases for defining properties of the problem
+#     path_cost = partial(set_property, property_name='path_cost',
+#                          property_args=['expr', 'unit']
+#                          )
+#     initial_cost = partial(set_property, property_name='terminal_cost',
+#                            property_args=['expr', 'unit']
+#                           )
+#     terminal_cost = partial(set_property, property_name='terminal_cost',
+#                              property_args=['expr', 'unit']
+#                              )
+#
+#
+#     def add_dynamic_element(self, *props, element_kind, element_args,
+#                             system_name='default', **kwprops):
+#         """
+#         Adds an dynamic element of the problem to a specified dynamic system
+#
+#         Parameters
+#         ----------
+#         element_kind - str
+#             Defines category of element such as  state, control etc.
+#             and a list of keyword arguments (kwagrs) that form it's properties
+#
+#         element_struct - namedtuple
+#             Namedtuple to represent the property
+#
+#         Returns a reference to self
+#
+#         >>> add_element(self, 'x','v*cos(theta)','m',
+#                               element_kind='states',
+#                               element_struct=namedtuple('State',['name','eom','unit']),
+#                         )
+#         """
+#
+#         system = self._systems.get(system_name, {})
+#         prop_list = system.get(element_kind, ())  # Get prop list of given type
+#
+#         # Pair prop names and values and create an object using element_args
+#         prop_obj = _combine_args_kwargs(element_args, props, kwprops)
+#         # prop_list.append(SymbolicVariable(prop_obj))
+#         prop_list.append(prop_obj)
+#
+#         # Add the element with its properties to the system
+#         system[element_kind] = prop_list
+#         self._systems[system_name] = system
+#         return self
+#
+#     # Aliases that add known types of dynamic elements to systems
+#     # TODO: Write documentation for these aliases
+#     state = partial(self.add_dynamic_element, element_kind='states',
+#                     element_args=('name', 'eom', 'unit'))
+#     control = partial(self.add_dynamic_element,   element_kind='controls',
+#                     element_args=('name', 'unit'))
+#     constant = partial(self.add_dynamic_element, element_kind='constants',
+#                     element_args=('name', 'value', 'unit'))
+#     quantity = partial(self.add_dynamic_element, element_kind='quantities',
+#                     element_args=('name', 'value'))
+#
+#     def get_dynamic_elements(self, element_kind, system_name='default'):
+#         """
+#         Returns the list of dynamic elements of a specific kind from a system
+#
+#         Parmeters
+#         ---------
+#         element_kind - str
+#             Kind of dynamic element to return
+#         """
+#         return self._systems[system_name].get(element_kind, ())
+#
+#     # Aliases
+#     states = partial(get_dynamic_elements, 'states')
+#     controls = partial(get_dynamic_elements, 'controls')
+#     constants = partial(get_dynamic_elements, 'constants')
+#     quantity = partial(get_dynamic_elements, 'quantities')
+#
+#     def constraints(self, *args, **kwargs):
+#         """
+#         Returns the ConstraintList object containing alias methods
+#
+#         This function is purely for aesthetic purposes while method chaining
+#         in the input file
+#         """
+#         return self._constraints
+#
+#     def sympify(self):
+#         """
+#         Creates symbolic versions of all
+#         """
+#
+#     def __str__(self):
+#         """
+#         Returns a string representation of the object
+#         """
+#         return str({'name': self.name,
+#                     'systems': self._systems,
+#                     'properties': self._properties,
+#                     'constraints': self._constraints,
+#                     'continuation': str(self.continuation)})
+#
+#     def _format_name(self, name):
+#         """Validates that the name is in the right format
+#             Only alphabets, numbers and underscores allowed
+#             Should not start with a number or underscore
+#
+#             Required for the in-memory compilation of code to work
+#         """
+#
+#         if re.match(r'[a-zA-Z]\w+', name):
+#             return name
+#         else:
+#             raise ValueError("""Invalid problem name specified.
+#             Only alphabets, numbers and underscores allowed
+#             Should start with an alphabet""")
+
 
 class ConstraintList(list):
 
-    def __init__(self):
-        super(ConstraintList, self).__init__()
-
-        # Aliases for defining constraints of different types
-        constraint_struct = namedtuple('Constraint', ['type', 'expr', 'unit'])
-        setattr(self, 'initial',
-                partial(self.add_constraint,
-                        constraint_type='initial',
-                        constraint_struct=constraint_struct)
-                )
-        setattr(self, 'terminal',
-                partial(self.add_constraint,
-                        constraint_type='terminal',
-                        constraint_struct=constraint_struct)
-                )
-        setattr(self, 'equality',
-                partial(self.add_constraint,
-                        constraint_type='equality',
-                        constraint_struct=constraint_struct)
-                )
-        setattr(self, 'interior_point',
-                partial(self.add_constraint,
-                        constraint_type='interior_point',
-                        constraint_struct=constraint_struct)
-                )
-        setattr(self, 'independent',
-                partial(self.add_constraint,
-                        constraint_type='independent',
-                        constraint_struct=constraint_struct)
-                )
-        setattr(self, 'path',
-                partial(self.add_constraint,
-                        constraint_type='path',
-                        constraint_struct=namedtuple('Constraint',
-                                                     ['type', 'name', 'expr', 'direction', 'bound', 'unit']))
-                )
-
-    def add_constraint(self, *args, constraint_type='', constraint_struct=[], **kwargs):
+    def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """
         Adds constraint of the specified type
 
@@ -240,10 +326,26 @@ class ConstraintList(list):
         """
         args = list(args)
         args.insert(0, constraint_type)
-        constraint = _combine_args_kwargs(constraint_struct, args, kwargs)
+        constraint = _combine_args_kwargs(constraint_args, args, kwargs)
 
         self.append(SymbolicVariable(constraint, sym_key='expr'))
         return self
+
+    # Aliases for defining constraints of different types
+    constraint_args = ('type', 'expr', 'unit')
+    initial = partial(self.add_constraint, constraint_type='initial',
+                constraint_args=constraint_args)
+    terminal = partial(self.add_constraint, constraint_type='terminal',
+                constraint_args=constraint_args)
+    equality = partial(self.add_constraint, constraint_type='equality',
+                constraint_args=constraint_args)
+    interior_point = partial(self.add_constraint, constraint_type='interior_point',
+                constraint_args=constraint_args)
+    independent = partial(self.add_constraint, constraint_type='independent',
+                constraint_args=constraint_args)
+    path = partial(self.add_constraint, constraint_type='path',
+                constraint_args=('type', 'name', 'expr', 'direction', 'bound', 'unit')
+                )
 
     def get(self, type):
         """
@@ -251,6 +353,22 @@ class ConstraintList(list):
         """
         return [c for c in self if c.type == type]
 
+def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
+    """
+    arg_list: List of keys in order of positional arguments
+    args: List of positional arguments
+    kwargs: Dictionary of keyword arguments
+
+    Returns a dictionary merging kwargs and args with keys from
+    from args_list
+
+    >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
+    {'foo':1, 'bar':2, 'baz': 3}
+    """
+    pos_args = {key: val for (key, val) in
+                zip_longest(arg_list, args, fillvalue=fillvalue)}
+    arg_dict = ChainMap(kwargs, pos_args)
+    return (arg_dict)
 
 class SymbolicVariable(object):
     """
@@ -413,23 +531,3 @@ class Guess(object):
         bvp.solution.y = x.T
         bvp.solution.parameters = param_guess
         return bvp.solution
-
-
-def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
-    """
-    arg_list: List of keys in order of positional arguments
-    args: List of positional arguments
-    kwargs: Dictionary of keyword arguments
-
-    Returns a dictionary merging kwargs and args with keys from
-    from args_list
-
-    >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
-    {'foo':1, 'bar':2, 'baz': 3}
-    """
-    # arg_dict = {key: val for (key, val) in
-    #             zip_longest(struct._fields, args, fillvalue=fillvalue)}
-    arg_dict = {key: val for (key, val) in
-                zip_longest(arg_list, args, fillvalue=fillvalue)}
-    arg_dict.update(kwargs)
-    return (arg_dict)
