@@ -11,7 +11,7 @@ class BelugaConfig(dict):
         # Format of list items are as follows
         # 'option_name': ['default_str' or default_func(), 'Input prompt string', validation_function or None]
         # TODO: add validation function for mathematica_root option
-        'mathematica_root':[mathematica_root,'Set Mathematica installation path ',None],
+        # 'mathematica_root':[mathematica_root,'Set Mathematica installation path ',None],
         'logfile':['beluga.log','Default log file name',None]
         # 'default_solver':['SingleShooting','Select default BVP solver ']
     }
