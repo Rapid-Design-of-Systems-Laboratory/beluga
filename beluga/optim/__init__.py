@@ -1,7 +1,5 @@
-#from .BoundaryConditions import BoundaryConditions
-#from .Hamiltonian import Hamiltonian
-from .Problem import Problem
-from .NecessaryConditions import NecessaryConditions
+# from .Problem import Problem
+# from .NecessaryConditions import NecessaryConditions
 from .Scaling import Scaling
 
 # __all__ = ['BoundaryConditions','Hamiltonian','NecessaryConditions']

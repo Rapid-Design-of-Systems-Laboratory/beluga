@@ -102,7 +102,7 @@ def make_augmented_cost(cost, constraints, location):
 
     return SymbolicVariable({'expr':aug_cost, 'unit': cost.unit}, sym_key='expr')
 
-def make_hamiltonian_and_costates(states, path_cost):
+def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
     """simplepipe task for creating the hamiltonian and costates
 
     Workspace variables
@@ -114,15 +114,12 @@ def make_hamiltonian_and_costates(states, path_cost):
 
     Returns the hamiltonian and the list of costates
     """
-    costates = [SymbolicVariable({'name': 'lam'+str(s.name).upper()})
-                for s in states]
 
-    ham = path_cost.expr + sum([lam.name*s.eom
-                             for (s, lam) in zip(states, costates)])
+    costate_names = [sympify2('lam'+str(s.name).upper()) for s in states]
+    ham = path_cost.expr + sum([lam*s.eom
+                             for s, lam in zip(states, costate_names)])
 
-    yield ham
-    yield costates
-
+    costates = [SymbolicVariable({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
 
 def sanitize_constraint_expr(constraint,states):
     """
@@ -170,11 +167,24 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
 
     return bc_list
 
-def make_costate_rates(ham, states, costates, derivative_fn):
-    """Computes costate rates."""
-    return [SymbolicVariable(dict(name=costate.name, eom=derivative_fn(-1*(ham),state)))
-            for state, costate in zip(states, costates)]
+def make_dhdu(ham, controls, derivative_fn):
+    """Computes the partial of the hamiltonian w.r.t control variables."""
+    dhdu = []
+    for ctrl in controls:
+        dHdu = derivative_fn(ham, ctrl)
+        custom_diff = dHdu.atoms(sympy.Derivative)
+        # Substitute "Derivative" with complex step derivative
+        repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
+                    for f,v in zip(d.atoms(sympy.AppliedUndef),d.atoms(Symbol))}
 
+        dhdu.append(dHdu.subs(repl))
+
+    return dhdu
+
+def make_control_law(dhdu, controls):
+    """Solves control equation to get control law."""
+    ctrl_sol = sympy.solve(dhdu, controls, dict=True)
+    return ctrl_sol
 
 def init_workspace(ocp):
     """Initializes the simplepipe workspace using an OCP definition."""
@@ -191,7 +201,7 @@ BrysonHo = sp.Workflow([
                     inputs=('terminal_cost', 'constraints'),
                     outputs=('terminal_cost')),
             sp.Task(make_hamiltonian_and_costates,
-                    inputs=('states', 'path_cost'),
+                    inputs=('states', 'path_cost', 'derivative_fn'),
                     outputs=('ham', 'costates')),
             sp.Task(ft.partial(make_boundary_conditions, location='initial'),
                     inputs=('constraints', 'states', 'costates', 'derivative_fn'),
@@ -199,10 +209,12 @@ BrysonHo = sp.Workflow([
             sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
                     inputs=('constraints', 'states', 'costates', 'derivative_fn'),
                     outputs=('bc_terminal')),
-            sp.Task(make_costate_rates,
-                    inputs=('ham', 'states', 'costates', 'derivative_fn'),
-                    outputs=('costates')
-                    )
+            sp.Task(make_dhdu,
+                    inputs=('ham', 'controls', 'derivative_fn'),
+                    outputs=('dhdu')),
+            sp.Task(make_control_law,
+                    inputs=('dhdu','controls'),
+                    outputs=('control_law')),
   ], description='Tradition optimal control workflow')
 
 ## Unit tests ##################################################################
@@ -224,14 +236,16 @@ def test_process_quantities():
 
 def test_ham_and_costates():
     states = [SymbolicVariable({'name':'x','eom':'v*cos(theta)','unit':'m'}),
-              SymbolicVariable({'name':'y','eom':'v*sin(theta)','unit':'rad'})]
+              SymbolicVariable({'name':'y','eom':'-v*sin(theta)','unit':'m'}),
+              SymbolicVariable({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
     path_cost = SymbolicVariable({'expr': 1}, sym_key='expr')
 
-    expected_output = (sympify2('1 + lamX*v*cos(theta) + lamY*v*sin(theta)'),
-                       [SymbolicVariable({'name':'lamX'}),
-                       SymbolicVariable({'name':'lamY'})])
+    expected_output = (sympify2('g*lamV*sin(theta) + lamX*v*cos(theta) - lamY*v*sin(theta) + 1'),
+                       [SymbolicVariable({'name':'lamX','eom':'0'}),
+                       SymbolicVariable({'name':'lamY','eom':'0'}),
+                       SymbolicVariable({'name':'lamV','eom':'-lamX*cos(theta) - lamY*sin(theta)'})])
 
-    ham, costates = make_hamiltonian_and_costates(states, path_cost)
+    ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
 
     assert ham == expected_output[0]
     assert costates == expected_output[1]
@@ -250,7 +264,7 @@ def test_make_boundary_conditions():
     states = [SymbolicVariable({'name':'h','eom':'v*cos(theta)','unit':'m'}),
               SymbolicVariable({'name':'theta','eom':'v*sin(theta)/r','unit':'rad'})]
     path_cost = SymbolicVariable({'expr': 1}, sym_key='expr')
-    ham, costates = make_hamiltonian_and_costates(states, path_cost)
+    ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
 
     constraints = ConstraintList()
     constraints.initial('h - h_0', 'm') # doctest:+ELLIPSIS
@@ -264,12 +278,15 @@ def test_make_boundary_conditions():
     bc_terminal = make_boundary_conditions(constraints, states, costates, terminal_cost, total_derivative, 'terminal')
     assert bc_terminal == ["theta - _xf['theta']", 'lamH', 'lamTHETA + 2*theta']
 
-def test_make_costate_rates():
-    states = [SymbolicVariable({'name':'h','eom':'v*cos(theta)','unit':'m'}),
-              SymbolicVariable({'name':'theta','eom':'v*sin(theta)/r','unit':'rad'})]
+def test_make_control_law():
+    states = [SymbolicVariable({'name':'x','eom':'v*cos(theta)','unit':'m'}),
+              SymbolicVariable({'name':'y','eom':'v*sin(theta)','unit':'m'}),
+              SymbolicVariable({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
     path_cost = SymbolicVariable({'expr': 1}, sym_key='expr')
-    ham, costates = make_hamiltonian_and_costates(states, path_cost)
-    costates_1 = make_costate_rates(ham, states, costates, total_derivative)
-    costates_expected = [SymbolicVariable({'name':'lamH', 'eom':'0'}),
-                         SymbolicVariable({'name':'lamTHETA', 'eom':'lamH*v*sin(theta) - lamTHETA*v*cos(theta)/r'})]
-    assert costates_1 == costates_expected
+    controls = [SymbolicVariable({'name':'theta','unit':'rad'})]
+    ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
+    dhdu = make_dhdu(ham, controls, total_derivative)
+    assert dhdu == [sympify2('g*lamV*cos(theta) - lamX*v*sin(theta) + lamY*v*cos(theta)')]
+    control_law = make_control_law(dhdu, controls)
+    assert control_law == [{controls[0]._sym: sympify2('-2*atan((lamX*v - sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')},
+                           {controls[0]._sym: sympify2('-2*atan((lamX*v + sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')}]

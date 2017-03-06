@@ -29,7 +29,12 @@ setup(name="beluga",
       url="http://github.rcac.purdue.edu/RDSL/beluga",
       py_modules=['beluga'],
       packages=find_packages(exclude=['docs', 'tests*', 'sandbox', 'examples']),
-      scripts=['bin/beluga'],
+    #   scripts=['bin/beluga'],
+      entry_points={
+          'console_scripts': [
+              'beluga = beluga.__main__:main'
+          ]
+      },
       install_requires=[
         "dill",
         "numpy",

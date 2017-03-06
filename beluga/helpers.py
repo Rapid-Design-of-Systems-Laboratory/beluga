@@ -1,6 +1,6 @@
 import problem2
 from beluga.bvpsol import algorithms
-from problem2 import Problem
+from beluga.problem2 import Problem
 
 def initial_guess(*args, **kwargs):
     """Creates initial guess"""

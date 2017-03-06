@@ -56,3 +56,7 @@ Help:
   https://github.rcac.purdue.edu/RDSL/beluga
 
 """
+import docopt
+def main():
+    options = docopt(__doc__,version=0.1)
+    print(options)
