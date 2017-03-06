@@ -6,7 +6,7 @@ Contains class/functions related to defining the optimal control problems.
 
 import scipy.optimize
 import numpy as np
-from functools import partial
+from functools import partialmethod
 import logging
 import os.path
 import dill
@@ -14,8 +14,8 @@ import re
 
 from beluga.continuation import ContinuationList
 
-from collections import namedtuple
-from itertools import zip_longest, ChainMap
+from collections import namedtuple, ChainMap
+from itertools import zip_longest
 from beluga.optim.Scaling import Scaling  # BUG
 # from beluga.bvpsol import Solution
 from beluga.utils import ode45, sympify2  # , keyboard
@@ -36,7 +36,7 @@ class OCP(object):
 
 
     # Alias for returning cost function by type
-    def costs(self, cost_type):
+    def get_cost(self, cost_type):
         try:
             return self.get_property(property_name=cost_type + '_cost')
         except KeyError:
@@ -71,35 +71,35 @@ class OCP(object):
         return self._properties[property_name]
 
     # TODO: Write documentation for these aliases
-    state = partial(set_property, property_name='states',
+    state = partialmethod(set_property, property_name='states',
                     property_args=('name', 'eom', 'unit'))
-    control = partial(set_property, property_name='controls',
+    control = partialmethod(set_property, property_name='controls',
                     property_args=('name', 'unit'))
-    constant = partial(set_property, property_name='constants',
+    constant = partialmethod(set_property, property_name='constants',
                     property_args=('name', 'value', 'unit'))
-    quantity = partial(set_property, property_name='quantities',
+    quantity = partialmethod(set_property, property_name='quantities',
                     property_args=('name', 'value'))
 
-    states = partial(get_property, 'states')
-    controls = partial(get_property, 'controls')
-    constants = partial(get_property, 'constants')
-    quantity = partial(get_property, 'quantities')
+    states = partialmethod(get_property, 'states')
+    controls = partialmethod(get_property, 'controls')
+    constants = partialmethod(get_property, 'constants')
+    quantity = partialmethod(get_property, 'quantities')
 
     # TODO: Maybe write as separate function?
-    independent = partial(set_property,
+    independent = partialmethod(set_property,
                            property_name='independent',
                            property_args=['name', 'unit']
                            )
 
     # Aliases for defining properties of the problem
-    path_cost = partial(set_property, property_name='path_cost',
+    path_cost = partialmethod(set_property, property_name='path_cost',
                          property_args=['expr', 'unit']
                          )
 
-    initial_cost = partial(set_property, property_name='terminal_cost',
+    initial_cost = partialmethod(set_property, property_name='terminal_cost',
                            property_args=['expr', 'unit']
                           )
-    terminal_cost = partial(set_property, property_name='terminal_cost',
+    terminal_cost = partialmethod(set_property, property_name='terminal_cost',
                              property_args=['expr', 'unit']
                              )
     Lagrange = path_cost
@@ -196,19 +196,19 @@ class OCP(object):
 #         return self._properties[property_name]
 #
 #     # TODO: Maybe write as separate function?
-#     independent = partial(set_property,
+#     independent = partialmethod(set_property,
 #                            property_name='independent',
 #                            property_args=['name', 'unit']
 #                            )
 #
 #     # Aliases for defining properties of the problem
-#     path_cost = partial(set_property, property_name='path_cost',
+#     path_cost = partialmethod(set_property, property_name='path_cost',
 #                          property_args=['expr', 'unit']
 #                          )
-#     initial_cost = partial(set_property, property_name='terminal_cost',
+#     initial_cost = partialmethod(set_property, property_name='terminal_cost',
 #                            property_args=['expr', 'unit']
 #                           )
-#     terminal_cost = partial(set_property, property_name='terminal_cost',
+#     terminal_cost = partialmethod(set_property, property_name='terminal_cost',
 #                              property_args=['expr', 'unit']
 #                              )
 #
@@ -250,13 +250,13 @@ class OCP(object):
 #
 #     # Aliases that add known types of dynamic elements to systems
 #     # TODO: Write documentation for these aliases
-#     state = partial(self.add_dynamic_element, element_kind='states',
+#     state = partialmethod(self.add_dynamic_element, element_kind='states',
 #                     element_args=('name', 'eom', 'unit'))
-#     control = partial(self.add_dynamic_element,   element_kind='controls',
+#     control = partialmethod(self.add_dynamic_element,   element_kind='controls',
 #                     element_args=('name', 'unit'))
-#     constant = partial(self.add_dynamic_element, element_kind='constants',
+#     constant = partialmethod(self.add_dynamic_element, element_kind='constants',
 #                     element_args=('name', 'value', 'unit'))
-#     quantity = partial(self.add_dynamic_element, element_kind='quantities',
+#     quantity = partialmethod(self.add_dynamic_element, element_kind='quantities',
 #                     element_args=('name', 'value'))
 #
 #     def get_dynamic_elements(self, element_kind, system_name='default'):
@@ -271,10 +271,10 @@ class OCP(object):
 #         return self._systems[system_name].get(element_kind, ())
 #
 #     # Aliases
-#     states = partial(get_dynamic_elements, 'states')
-#     controls = partial(get_dynamic_elements, 'controls')
-#     constants = partial(get_dynamic_elements, 'constants')
-#     quantity = partial(get_dynamic_elements, 'quantities')
+#     states = partialmethod(get_dynamic_elements, 'states')
+#     controls = partialmethod(get_dynamic_elements, 'controls')
+#     constants = partialmethod(get_dynamic_elements, 'constants')
+#     quantity = partialmethod(get_dynamic_elements, 'quantities')
 #
 #     def constraints(self, *args, **kwargs):
 #         """
@@ -324,34 +324,33 @@ class ConstraintList(list):
 
         Returns reference to self.constraint_aliases for chaining
         """
-        args = list(args)
-        args.insert(0, constraint_type)
         constraint = _combine_args_kwargs(constraint_args, args, kwargs)
-
-        self.append(SymbolicVariable(constraint, sym_key='expr'))
+        cobj = SymbolicVariable(constraint, sym_key='expr')
+        cobj.type = constraint_type
+        self.append(cobj)
         return self
 
     # Aliases for defining constraints of different types
-    constraint_args = ('type', 'expr', 'unit')
-    initial = partial(self.add_constraint, constraint_type='initial',
+    constraint_args = ('expr', 'unit')
+    initial = partialmethod(add_constraint, constraint_type='initial',
                 constraint_args=constraint_args)
-    terminal = partial(self.add_constraint, constraint_type='terminal',
+    terminal = partialmethod(add_constraint, constraint_type='terminal',
                 constraint_args=constraint_args)
-    equality = partial(self.add_constraint, constraint_type='equality',
+    equality = partialmethod(add_constraint, constraint_type='equality',
                 constraint_args=constraint_args)
-    interior_point = partial(self.add_constraint, constraint_type='interior_point',
+    interior_point = partialmethod(add_constraint, constraint_type='interior_point',
                 constraint_args=constraint_args)
-    independent = partial(self.add_constraint, constraint_type='independent',
+    independent = partialmethod(add_constraint, constraint_type='independent',
                 constraint_args=constraint_args)
-    path = partial(self.add_constraint, constraint_type='path',
+    path = partialmethod(add_constraint, constraint_type='path',
                 constraint_args=('type', 'name', 'expr', 'direction', 'bound', 'unit')
                 )
 
-    def get(self, type):
+    def get(self, constraint_type):
         """
         Returns list of constraints of a specific type
         """
-        return [c for c in self if c.type == type]
+        return [c for c in self if c.type == constraint_type]
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """
@@ -367,7 +366,7 @@ def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """
     pos_args = {key: val for (key, val) in
                 zip_longest(arg_list, args, fillvalue=fillvalue)}
-    arg_dict = ChainMap(kwargs, pos_args)
+    arg_dict = dict(ChainMap(kwargs, pos_args))
     return (arg_dict)
 
 class SymbolicVariable(object):
@@ -376,9 +375,10 @@ class SymbolicVariable(object):
     """
 
     def __init__(self, param_dict, sym_key='name'):
-        self.__dict__ = param_dict
+        self.__dict__ = {k: sympify2(v) for k,v in param_dict.items()}
+        self.param_list = param_dict.keys()
         if sym_key is not None:
-            self._sym = sympify2(param_dict[sym_key])
+            self._sym = self.__dict__[sym_key]
         else:
             self._sym = None
 
@@ -390,6 +390,12 @@ class SymbolicVariable(object):
 
     def __repr__(self):
         return str(self._sym)
+
+    def keys(self):
+        return self.param_list
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
     def __eq__(self, other):
         return str(self._sym) == str(other)
