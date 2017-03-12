@@ -18,28 +18,6 @@ import sympy
 from beluga.utils import sympify2
 from beluga.problem2 import SymbolicVariable
 
-# def sympify_element(element, keys='all'):
-#     """
-#     Creates new element with symbolic variables in place of strings for the
-#     given keys
-#
-#     Converts all keys if keys == 'all'
-#
-#     >>> sorted(sympify_element({'name':'x', 'eom':'v*cos(theta)', 'unit':'m'},\
-#                         keys='all').items())
-#     [('eom': v*cos(theta)), ('name': x), ('unit': m)]
-#
-#     >>> sorted(sympify_element({'name':'x', 'eom':'v*cos(theta)', 'unit':'m'},\
-#                         keys=['name', 'eom']).items())
-#     [('eom': v*cos(theta)), ('name': x), ('unit': 'm')]
-#     """
-#     if keys == 'all':
-#         keys = element.keys()
-#     new_element = {k: (sympify2(v) if k in keys and v is not '' else v)
-#                    for (k, v) in element.items()
-#                    }
-#     return new_element
-
 def total_derivative(expr, var, dependent_vars=None):
     """
     Take derivative taking pre-defined quantities into consideration
@@ -120,6 +98,8 @@ def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
                              for s, lam in zip(states, costate_names)])
 
     costates = [SymbolicVariable({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
+    yield ham
+    yield costates
 
 def sanitize_constraint_expr(constraint,states):
     """
@@ -215,7 +195,7 @@ BrysonHo = sp.Workflow([
             sp.Task(make_control_law,
                     inputs=('dhdu','controls'),
                     outputs=('control_law')),
-  ], description='Tradition optimal control workflow')
+  ], description='Traditional optimal control workflow')
 
 ## Unit tests ##################################################################
 from beluga.problem2 import ConstraintList
