@@ -67,7 +67,7 @@ beluga.solve(ocp,
              steps=continuation_steps,
              initial_guess=guess)
 
-beluga.solve(problem)
+# beluga.solve(problem)
 # if __name__ == '__main__':
 #     # from timeit import timeit
 #
