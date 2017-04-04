@@ -14,8 +14,9 @@ import functools as ft
 import re as _re
 import simplepipe as sp
 import sympy
+import pystache
 
-from beluga.utils import sympify2
+from beluga.utils import sympify2, get_root
 from beluga.problem2 import SymbolicVariable
 
 def total_derivative(expr, var, dependent_vars=None):
@@ -98,6 +99,7 @@ def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
                              for s, lam in zip(states, costate_names)])
 
     costates = [SymbolicVariable({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
+                for s, lam in zip(states, costate_names)]
     yield ham
     yield costates
 
@@ -166,6 +168,55 @@ def make_control_law(dhdu, controls):
     ctrl_sol = sympy.solve(dhdu, controls, dict=True)
     return ctrl_sol
 
+def load_eqn_template(workspace, template_file,
+                        renderer = pystache.Renderer(escape=lambda u: u)):
+    """Loads pystache template and uses it to generate code.
+
+    Parameters
+    ----------
+        workspace - dict
+            Workspace defining variables for template
+
+        template_file - str
+            Path to template file to be used
+
+        renderer
+            Renderer used to convert template file to code
+
+    Returns
+    -------
+    Code generated from template
+    """
+    with open(template_file) as f:
+        tmpl = f.read()
+        # Render the template using the data
+        code = renderer.render(tmpl, workspace)
+        return code
+
+def compile_code_py(function_name, workspace):
+    """
+    Compiles a function specified by template in filename and stores it in
+    self.compiled
+
+    Parameters
+    ----------
+    function_name - str
+        Name of the funciton being compiled (this must be defined in the
+        template with the same name)
+
+    workspace - dict
+        Problem workspace
+
+    Returns:
+        Compiled function
+    """
+    code_string = workspace[function_name+'_code']
+    # For security
+    workspace['__builtin__'] = {}
+    exec(code_string, workspace)
+    return workspace[function_name]
+
+
 def init_workspace(ocp):
     """Initializes the simplepipe workspace using an OCP definition."""
 
@@ -195,7 +246,36 @@ BrysonHo = sp.Workflow([
             sp.Task(make_control_law,
                     inputs=('dhdu','controls'),
                     outputs=('control_law')),
+
+            # Load equation template files and generate code
+            sp.Task(ft.partial(load_eqn_template,
+                    template_file=get_root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
+                    inputs='*',
+                    outputs='deriv_func_code'),
+            sp.Task(ft.partial(load_eqn_template,
+                    template_file=get_root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
+                    inputs='*',
+                    outputs='bc_func_code'),
+            sp.Task(ft.partial(load_eqn_template,
+                    template_file=get_root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
+                    inputs='*',
+                    outputs='compute_control_code'),
+
+            # Compile generated code
+            sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
+                    inputs=['deriv_func_code', '*'],
+                    outputs='deriv_func_fn'),
+            sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
+                    inputs=['bc_func_code', '*'],
+                    outputs='bc_func_fn'),
+            sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
+                    inputs=['compute_control_code', '*'],
+                    outputs='compute_control_fn'),
+
   ], description='Traditional optimal control workflow')
+
+
+
 
 ## Unit tests ##################################################################
 from beluga.problem2 import ConstraintList
@@ -270,3 +350,24 @@ def test_make_control_law():
     control_law = make_control_law(dhdu, controls)
     assert control_law == [{controls[0]._sym: sympify2('-2*atan((lamX*v - sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')},
                            {controls[0]._sym: sympify2('-2*atan((lamX*v + sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')}]
+
+
+def test_compile_equations(tmpdir):
+    workspace = {'mult': 2}
+
+    # Write test template file
+    code_file = tmpdir.mkdir("templates").join('test.py.mu')
+    test_code_tmpl = """def test(foo):
+    return foo*{{mult}}"""
+    code_file.write(test_code_tmpl)
+
+    # Check if codfe generation works
+    out_code = load_eqn_template(workspace, str(code_file))
+    test_code_expected = """def test(foo):
+    return foo*2"""
+    assert out_code == test_code_expected
+
+    # Check if code compilation works
+    workspace['test_code'] = out_code
+    out_fn = compile_code_py('test', workspace)
+    assert out_fn(3) == 6
