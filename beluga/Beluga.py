@@ -59,7 +59,6 @@ Help:
 
 from math import *
 from beluga.utils import *
-from beluga.optim import *
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -295,25 +294,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_start):
         logging.error('Stopping')
 
     return solution_set
-
-def get_algorithm(algo, **kwargs):
-    """
-    Helper method to load algorithm by name
-    """
-    # Load algorithm from the package
-    for name, obj in inspect.getmembers(algorithms):
-        if inspect.isclass(obj):
-            if name.lower() == algo.lower():
-                return obj(**kwargs)
-    else:
-        # Raise exception if the loop completes without finding an algorithm
-        # by the given name
-        raise ValueError('Algorithm '+algo+' not found')
-
-def initial_guess(mode, **kwargs):
-    guess = problem.Guess()
-    return guess.setup(mode, **kwargs)
-
 
 ### Old stuff
 def build_problem(name):

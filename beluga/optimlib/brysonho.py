@@ -12,8 +12,9 @@ import sympy
 import pystache
 import imp
 
-from beluga.utils import sympify2, get_root
-from beluga.problem import SymbolicVariable
+import beluga
+from beluga.utils import sympify2
+from beluga.problem import SymVar
 from beluga.bvpsol import BVP
 
 def total_derivative(expr, var, dependent_vars=None):
@@ -83,7 +84,7 @@ def make_augmented_cost(cost, constraints, location):
 
     aug_cost_expr = cost.expr + sum(nu*c for (nu, c) in zip(lagrange_mult, filtered_list))
 
-    aug_cost = SymbolicVariable({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
+    aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
     return aug_cost
     # yield aug_cost
     # yield lagrange_mult
@@ -114,7 +115,7 @@ def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
     ham = path_cost.expr + sum([lam*s.eom
                              for s, lam in zip(states, costate_names)])
 
-    costates = [SymbolicVariable({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
+    costates = [SymVar({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
                 for s, lam in zip(states, costate_names)]
     yield ham
     yield costates
@@ -316,15 +317,15 @@ def init_workspace(ocp):
     workspace = {}
     # variable_list = ['states', 'controls', 'constraints', 'quantities', 'initial_cost', 'terminal_cost', 'path_cost']
     workspace['problem_name'] = ocp.name
-    workspace['indep_var'] = SymbolicVariable(ocp._properties['independent'])
-    workspace['states'] = [SymbolicVariable(s) for s in ocp.states()]
-    workspace['controls'] = [SymbolicVariable(u) for u in ocp.controls()]
-    workspace['constants'] = [SymbolicVariable(k) for k in ocp.constants()]
+    workspace['indep_var'] = SymVar(ocp._properties['independent'])
+    workspace['states'] = [SymVar(s) for s in ocp.states()]
+    workspace['controls'] = [SymVar(u) for u in ocp.controls()]
+    workspace['constants'] = [SymVar(k) for k in ocp.constants()]
     workspace['constraints'] = ocp.constraints()
-    workspace['quantities'] = [SymbolicVariable(q) for q in ocp.quantities()]
-    workspace['initial_cost'] = SymbolicVariable(ocp.get_cost('initial'), sym_key='expr')
-    workspace['terminal_cost'] = SymbolicVariable(ocp.get_cost('terminal'), sym_key='expr')
-    workspace['path_cost'] = SymbolicVariable(ocp.get_cost('path'), sym_key='expr')
+    workspace['quantities'] = [SymVar(q) for q in ocp.quantities()]
+    workspace['initial_cost'] = SymVar(ocp.get_cost('initial'), sym_key='expr')
+    workspace['terminal_cost'] = SymVar(ocp.get_cost('terminal'), sym_key='expr')
+    workspace['path_cost'] = SymVar(ocp.get_cost('path'), sym_key='expr')
     return workspace
 
 
@@ -372,15 +373,15 @@ BrysonHo = sp.Workflow([
 
     # Load equation template files and generate code
     sp.Task(ft.partial(load_eqn_template,
-                template_file=get_root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
+                template_file=beluga.root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
             inputs='problem_data',
             outputs='deriv_func_code'),
     sp.Task(ft.partial(load_eqn_template,
-                template_file=get_root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
+                template_file=beluga.root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
             inputs='problem_data',
             outputs='bc_func_code'),
     sp.Task(ft.partial(load_eqn_template,
-                template_file=get_root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
+                template_file=beluga.root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
             inputs='problem_data',
             outputs='compute_control_code'),
 
@@ -404,11 +405,11 @@ traditional = BrysonHo
 
 ## Unit tests ##################################################################
 from beluga.problem import ConstraintList
-from beluga.problem import SymbolicVariable
+from beluga.problem import SymVar
 
 def test_process_quantities():
-    quantities = [SymbolicVariable(dict(name='rho', val='rho0*exp(-h/H)')),
-                  SymbolicVariable(dict(name='D', val='0.5*rho*v^2*Cd*Aref'))]
+    quantities = [SymVar(dict(name='rho', val='rho0*exp(-h/H)')),
+                  SymVar(dict(name='D', val='0.5*rho*v^2*Cd*Aref'))]
     qvars, qlist, _ = process_quantities(quantities)
 
     qvars_expected = dict(rho= sympify2('rho0*exp(-h/H)'),
@@ -420,15 +421,15 @@ def test_process_quantities():
     assert qlist == qlist_expected
 
 def test_ham_and_costates():
-    states = [SymbolicVariable({'name':'x','eom':'v*cos(theta)','unit':'m'}),
-              SymbolicVariable({'name':'y','eom':'-v*sin(theta)','unit':'m'}),
-              SymbolicVariable({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
-    path_cost = SymbolicVariable({'expr': 1}, sym_key='expr')
+    states = [SymVar({'name':'x','eom':'v*cos(theta)','unit':'m'}),
+              SymVar({'name':'y','eom':'-v*sin(theta)','unit':'m'}),
+              SymVar({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
+    path_cost = SymVar({'expr': 1}, sym_key='expr')
 
     expected_output = (sympify2('g*lamV*sin(theta) + lamX*v*cos(theta) - lamY*v*sin(theta) + 1'),
-                       [SymbolicVariable({'name':'lamX','eom':'0'}),
-                       SymbolicVariable({'name':'lamY','eom':'0'}),
-                       SymbolicVariable({'name':'lamV','eom':'-lamX*cos(theta) - lamY*sin(theta)'})])
+                       [SymVar({'name':'lamX','eom':'0'}),
+                       SymVar({'name':'lamY','eom':'0'}),
+                       SymVar({'name':'lamV','eom':'-lamX*cos(theta) - lamY*sin(theta)'})])
 
     ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
 
@@ -439,9 +440,9 @@ def test_augmented_cost():
     constraints = ConstraintList()
     constraints.initial('h - h_0', 'm') # doctest:+ELLIPSIS
     constraints.terminal('h - h_f', 'm')
-    terminal_cost = SymbolicVariable({'expr': '-v^2', 'unit': 'm^2/s^2'}, sym_key='expr')
+    terminal_cost = SymVar({'expr': '-v^2', 'unit': 'm^2/s^2'}, sym_key='expr')
 
-    expected_output = SymbolicVariable({'expr': 'lagrange_terminal_1*(h - h_f) - v**2',
+    expected_output = SymVar({'expr': 'lagrange_terminal_1*(h - h_f) - v**2',
                        'unit': 'm**2/s**2'}, sym_key='expr')
     expected_params = [sympify2('lagrange_terminal_1')]
     aug_cost = make_augmented_cost(terminal_cost, constraints, 'terminal')
@@ -451,9 +452,9 @@ def test_augmented_cost():
 
 
 def test_make_boundary_conditions():
-    states = [SymbolicVariable({'name':'h','eom':'v*cos(theta)','unit':'m'}),
-              SymbolicVariable({'name':'theta','eom':'v*sin(theta)/r','unit':'rad'})]
-    path_cost = SymbolicVariable({'expr': 1}, sym_key='expr')
+    states = [SymVar({'name':'h','eom':'v*cos(theta)','unit':'m'}),
+              SymVar({'name':'theta','eom':'v*sin(theta)/r','unit':'rad'})]
+    path_cost = SymVar({'expr': 1}, sym_key='expr')
     ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
 
     constraints = ConstraintList()
@@ -469,11 +470,11 @@ def test_make_boundary_conditions():
     assert bc_terminal == ["theta - _xf['theta']", 'lamH', 'lamTHETA + 2*theta']
 
 def test_make_control_law():
-    states = [SymbolicVariable({'name':'x','eom':'v*cos(theta)','unit':'m'}),
-              SymbolicVariable({'name':'y','eom':'v*sin(theta)','unit':'m'}),
-              SymbolicVariable({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
-    path_cost = SymbolicVariable({'expr': 1}, sym_key='expr')
-    controls = [SymbolicVariable({'name':'theta','unit':'rad'})]
+    states = [SymVar({'name':'x','eom':'v*cos(theta)','unit':'m'}),
+              SymVar({'name':'y','eom':'v*sin(theta)','unit':'m'}),
+              SymVar({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
+    path_cost = SymVar({'expr': 1}, sym_key='expr')
+    controls = [SymVar({'name':'theta','unit':'rad'})]
     ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
     dhdu = make_dhdu(ham, controls, total_derivative)
     assert dhdu == [sympify2('g*lamV*cos(theta) - lamX*v*sin(theta) + lamY*v*cos(theta)')]

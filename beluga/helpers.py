@@ -1,10 +1,12 @@
-import problem2
 from beluga.bvpsol import algorithms
-from beluga.problem2 import Problem
+from beluga import problem
+
+import os
+import inspect
 
 def initial_guess(*args, **kwargs):
     """Creates initial guess"""
-    guess = problem2.Guess()
+    guess = problem.Guess()
     guess.setup(*args,**kwargs)
     return guess
 
@@ -25,3 +27,7 @@ def bvp_algorithm(algo, **kwargs):
 def solve(ocp, **kwargs):
     """Runs the solver on the given problem package."""
     problem = dict(ocp=ocp, **kwargs)
+
+def root():
+    """Get the installation path for beluga."""
+    return os.path.dirname(__file__)

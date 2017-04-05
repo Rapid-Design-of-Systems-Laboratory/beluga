@@ -16,7 +16,7 @@ from beluga.continuation import ContinuationList
 
 from collections import namedtuple, ChainMap
 from itertools import zip_longest
-from beluga.optim.Scaling import Scaling  # BUG
+from beluga.bvpsol import Scaling  # BUG
 # from beluga.bvpsol import Solution
 from beluga.utils import ode45, sympify2  # , keyboard
 
@@ -145,7 +145,7 @@ class ConstraintList(list):
         Returns reference to self.constraint_aliases for chaining
         """
         constraint = _combine_args_kwargs(constraint_args, args, kwargs)
-        cobj = SymbolicVariable(constraint, sym_key='expr')
+        cobj = SymVar(constraint, sym_key='expr')
         cobj.type = constraint_type
         self.append(cobj)
         return self
@@ -189,7 +189,7 @@ def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     arg_dict = dict(ChainMap(kwargs, pos_args))
     return (arg_dict)
 
-class SymbolicVariable(object):
+class SymVar(object):
     """
     Represents an object that can be used in SymPy and is created from a dict
     """
