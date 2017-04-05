@@ -28,30 +28,30 @@ ocp.constraints() \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m')
 
-ocp.scale(m=1, s=1, kg=1, rad=1)
+ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        derivative_method='fd',
-                        tolerance=1e-4,
-                        max_iterations=1000,
-                        verbose = True,
-                        cached=False,
-                        number_arcs=4,
-                        max_error=100
-             )
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+#                         derivative_method='fd',
+#                         tolerance=1e-4,
+#                         max_iterations=1000,
+#                         verbose = True,
+#                         cached=False,
+#                         number_arcs=4,
+#                         max_error=100
+#              )
 
-# bvp_solver = beluga.bvp_algorithm('SingleShooting',
-#                     derivative_method='fd',
-#                     tolerance=1e-4,
-#                     max_iterations=50,
-#                     verbose = True,
-# )
+bvp_solver = beluga.bvp_algorithm('SingleShooting',
+                    derivative_method='fd',
+                    tolerance=1e-4,
+                    max_iterations=50,
+                    verbose = True,
+)
 
-# guess = beluga.initial_guess('auto',
-#                 start=[0,0,1],          # Starting values for states in order
-#                 direction='forward',
-#                 costate_guess = -0.1
-# )
+guess = beluga.initial_guess('auto',
+                start=[0,0,1],          # Starting values for states in order
+                direction='forward',
+                costate_guess = -0.1
+)
 
 continuation_steps = beluga.init_continuation()
 
@@ -65,7 +65,7 @@ beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             initial_guess=None)
+             initial_guess=guess)
 
 # beluga.solve(problem)
 # if __name__ == '__main__':
