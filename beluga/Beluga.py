@@ -68,12 +68,12 @@ import scipy.optimize
 
 from beluga.continuation import *
 from beluga.bvpsol import algorithms
-from beluga.problem2 import Problem
+# from beluga.problem2 import Problem
 import dill, logging
 
 
 config = dict(logfile='beluga.log', default_bvp_solver='SingleShooting')
-problem = Problem()
+# problem = Problem()
 
 def init_logging(logging_level, display_level):
     """Initializes the logging system"""
@@ -171,7 +171,7 @@ def run_solver(problem, logging_level=logging.INFO, display_level=logging.INFO, 
     solve(problem)
     return
 
-def solve(problem):
+def solve(problem, method, bvp_algorithm, steps, initial_guess):
     """
     Solves the OCP
     """
@@ -179,7 +179,11 @@ def solve(problem):
     # Initialize necessary conditions of optimality object
     # print("Computing the necessary conditions of optimality")
     logging.info("Computing the necessary conditions of optimality")
-    nec_cond = NecessaryConditions()
+    from beluga.optimlib import brysonho
+
+    wf = brysonho.BrysonHo
+    workspace = brysonho.init_workspace(problem)
+    output = wf(workspace)
 
     # Try loading cached BVP from disk
     # bvp = self.nec_cond.load_bvp(self.problem)
@@ -187,7 +191,8 @@ def solve(problem):
     #     # Create corresponding boundary value problem
     #     bvp = self.nec_cond.get_bvp(self.problem)
     #     self.nec_cond.cache_bvp(self.problem)
-    bvp = nec_cond.get_bvp(problem)
+
+    # bvp = nec_cond.get_bvp(problem)
 
     # TODO: Implement other types of initial guess depending on data type
     #       Array: Automatic?
@@ -197,32 +202,33 @@ def solve(problem):
 
     # The initial guess is automatically stored in the bvp object
     # solinit is just a reference to it
-    solinit = problem.guess.generate(bvp)
 
-    # includes costates
-    state_names = bvp.problem_data['state_list']
-    initial_states = solinit.y[:,0] # First column
-    terminal_states = solinit.y[:,-1] # Last column
-    initial_bc = dict(zip(state_names,initial_states))
-    terminal_bc = dict(zip(state_names,terminal_states))
-    bvp.solution.aux['initial'] = initial_bc
-    bvp.solution.aux['terminal'] = terminal_bc
+    # solinit = problem.guess.generate(bvp)
 
-    tic()
-    # TODO: Start from specific step for restart capability
-    # TODO: Make class to store result from continuation set?
-    out = {};
-
-    out['problem_data'] = bvp.problem_data;
-    out['solution'] = run_continuation_set(problem.steps, bvp)
-    total_time = toc();
-
-    logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
-
-    # Save data
-    with open(problem.output_file, 'wb') as outfile:
-    # dill.settings['recurse'] = True
-        dill.dump(out, outfile) # Dill Beluga object only
+    # # includes costates
+    # state_names = bvp.problem_data['state_list']
+    # initial_states = solinit.y[:,0] # First column
+    # terminal_states = solinit.y[:,-1] # Last column
+    # initial_bc = dict(zip(state_names,initial_states))
+    # terminal_bc = dict(zip(state_names,terminal_states))
+    # bvp.solution.aux['initial'] = initial_bc
+    # bvp.solution.aux['terminal'] = terminal_bc
+    #
+    # tic()
+    # # TODO: Start from specific step for restart capability
+    # # TODO: Make class to store result from continuation set?
+    # out = {};
+    #
+    # out['problem_data'] = bvp.problem_data;
+    # out['solution'] = run_continuation_set(problem.steps, bvp)
+    # total_time = toc();
+    #
+    # logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
+    #
+    # # Save data
+    # with open(problem.output_file, 'wb') as outfile:
+    # # dill.settings['recurse'] = True
+    #     dill.dump(out, outfile) # Dill Beluga object only
 
 
     # plt.title('Solution for Brachistochrone problem')

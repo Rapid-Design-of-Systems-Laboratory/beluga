@@ -7,7 +7,7 @@ ocp = beluga.OCP('brachisto')
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v*cos(theta)')   \
+ocp.state('x', 'v*cos(theta)', 'm')   \
    .state('y', '-v*sin(theta)','m')   \
    .state('v', 'g*sin(theta)','m/s')
 
@@ -47,11 +47,11 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 #                     verbose = True,
 # )
 
-guess = beluga.initial_guess('auto',
-                start=[0,0,1],          # Starting values for states in order
-                direction='forward',
-                costate_guess = -0.1
-)
+# guess = beluga.initial_guess('auto',
+#                 start=[0,0,1],          # Starting values for states in order
+#                 direction='forward',
+#                 costate_guess = -0.1
+# )
 
 continuation_steps = beluga.init_continuation()
 
@@ -65,7 +65,7 @@ beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             initial_guess=guess)
+             initial_guess=None)
 
 # beluga.solve(problem)
 # if __name__ == '__main__':
