@@ -20,6 +20,7 @@ from beluga.optim.Scaling import Scaling  # BUG
 # from beluga.bvpsol import Solution
 from beluga.utils import ode45, sympify2  # , keyboard
 
+Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
     """Builder class for defining optimal control problem."""
 
@@ -32,15 +33,14 @@ class OCP(object):
         self._properties = {}  # Problem properties
         self._constraints = ConstraintList()
 
-        self.scale = Scaling()  # Scaling class
-
+        self._scaling = Scaling()
 
     # Alias for returning cost function by type
     def get_cost(self, cost_type):
-        try:
-            return self.get_property(property_name=cost_type + '_cost')
-        except KeyError:
-            return namedtuple('Cost', ['expr', 'unit'])('0', '')
+        return self._properties.get(cost_type + '_cost', {'expr':'0','unit':'0'})
+
+    def set_cost(self, expr, unit, cost_type):
+        self._properties[cost_type+'_cost'] = {'expr':expr, 'unit':unit}
 
     def set_property(self, *args, property_name, property_args, **kwargs):
         """
@@ -56,19 +56,18 @@ class OCP(object):
 
         kwargs
 
-        >> set_property('cost',type='path',expr='')
-
         Returns a reference to self for chaining purposes
         """
-        self._properties[property_name] = _combine_args_kwargs(property_args,
-                                                               args, kwargs)
+        prop = self._properties.get(property_name, [])
+        prop.append(_combine_args_kwargs(property_args, args, kwargs))
+        self._properties[property_name] = prop
         return self
 
     def get_property(self, property_name):
         """
         Returns the property specified by the name
         """
-        return self._properties[property_name]
+        return self._properties.get(property_name, [])
 
     # TODO: Write documentation for these aliases
     state = partialmethod(set_property, property_name='states',
@@ -80,28 +79,20 @@ class OCP(object):
     quantity = partialmethod(set_property, property_name='quantities',
                     property_args=('name', 'value'))
 
-    states = partialmethod(get_property, 'states')
-    controls = partialmethod(get_property, 'controls')
-    constants = partialmethod(get_property, 'constants')
-    quantity = partialmethod(get_property, 'quantities')
+    states = partialmethod(get_property, property_name='states')
+    controls = partialmethod(get_property, property_name='controls')
+    constants = partialmethod(get_property, property_name='constants')
+    quantities = partialmethod(get_property, property_name='quantities')
 
     # TODO: Maybe write as separate function?
-    independent = partialmethod(set_property,
-                           property_name='independent',
-                           property_args=['name', 'unit']
-                           )
+    def independent(self, name, unit):
+        self._properties['independent'] = {'name': name, 'unit':'unit'}
 
     # Aliases for defining properties of the problem
-    path_cost = partialmethod(set_property, property_name='path_cost',
-                         property_args=['expr', 'unit']
-                         )
+    path_cost = partialmethod(set_cost, cost_type='path_cost')
+    initial_cost = partialmethod(set_cost, cost_type='path_cost')
+    terminal_cost = partialmethod(set_cost, cost_type='terminal_cost')
 
-    initial_cost = partialmethod(set_property, property_name='terminal_cost',
-                           property_args=['expr', 'unit']
-                          )
-    terminal_cost = partialmethod(set_property, property_name='terminal_cost',
-                             property_args=['expr', 'unit']
-                             )
     Lagrange = path_cost
     Mayer = terminal_cost
 
@@ -115,17 +106,16 @@ class OCP(object):
         """
         return self._constraints
 
-    def scale(**scale_mappings):
+    def scale(self, **scale_mappings):
         """Defines scaling for dimensional units in the problem."""
         for unit, scale_expr in scale_mappings.items():
-            self.scale.unit(unit, scale_expr)
+            self._scaling.unit(unit, scale_expr)
 
     def __str__(self):
         """
         Returns a string representation of the object
         """
         return str({'name': self.name,
-                    'systems': self._systems,
                     'properties': self._properties,
                     'constraints': self._constraints,
                     'continuation': str(self.continuation)})
@@ -144,176 +134,6 @@ class OCP(object):
             raise ValueError("""Invalid problem name specified.
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
-
-# class Problem(object):
-#     """Builder class for defining optimal control problem."""
-#
-#     def __init__(self, name=''):
-#         """Initializes problem object."""
-#         # self.name = self._format_name(name)
-#         self.name = name
-#
-#         self._systems = {'default': {}}  # Dynamic system definitions
-#         self._properties = {}  # Problem properties
-#         self._constraints = ConstraintList()
-#         # self.continuation = ContinuationList()
-#         # self.steps = self.continuation  # Alias for continuation
-#
-#         # self.guess = Guess()    # Initial guess builder
-#         self.scale = Scaling()  # Scaling class
-#
-#         # Aliases for getting dynamic element lists
-#
-#         self.Lagrange = self.path_cost
-#         self.Mayer = self.terminal_cost
-#
-#     # Alias for returning cost function by type
-#     def costs(self, cost_type):
-#         try:
-#             return self.get_property(property_name=cost_type + '_cost')
-#         except KeyError:
-#             return namedtuple('Cost', ['expr', 'unit'])('0', '')
-#
-#     def set_property(self, *args, property_name, property_args, **kwargs):
-#         """
-#         Adds a property of the optimal control problem
-#
-#         >> set_property('cost',type='path',expr='')
-#
-#         Returns a reference to self for chaining purposes
-#         """
-#         # self._properties[property_name] = SymbolicVariable(
-#         #     _combine_args_kwargs(property_struct,
-#         #                          args, kwargs), sym_key=None)
-#         self._properties[property_name] = _combine_args_kwargs(property_args,
-#                                                                args, kwargs)
-#         return self
-#
-#     def get_property(self, property_name):
-#         """
-#         Returns the property specified by the name
-#         """
-#         return self._properties[property_name]
-#
-#     # TODO: Maybe write as separate function?
-#     independent = partialmethod(set_property,
-#                            property_name='independent',
-#                            property_args=['name', 'unit']
-#                            )
-#
-#     # Aliases for defining properties of the problem
-#     path_cost = partialmethod(set_property, property_name='path_cost',
-#                          property_args=['expr', 'unit']
-#                          )
-#     initial_cost = partialmethod(set_property, property_name='terminal_cost',
-#                            property_args=['expr', 'unit']
-#                           )
-#     terminal_cost = partialmethod(set_property, property_name='terminal_cost',
-#                              property_args=['expr', 'unit']
-#                              )
-#
-#
-#     def add_dynamic_element(self, *props, element_kind, element_args,
-#                             system_name='default', **kwprops):
-#         """
-#         Adds an dynamic element of the problem to a specified dynamic system
-#
-#         Parameters
-#         ----------
-#         element_kind - str
-#             Defines category of element such as  state, control etc.
-#             and a list of keyword arguments (kwagrs) that form it's properties
-#
-#         element_struct - namedtuple
-#             Namedtuple to represent the property
-#
-#         Returns a reference to self
-#
-#         >>> add_element(self, 'x','v*cos(theta)','m',
-#                               element_kind='states',
-#                               element_struct=namedtuple('State',['name','eom','unit']),
-#                         )
-#         """
-#
-#         system = self._systems.get(system_name, {})
-#         prop_list = system.get(element_kind, ())  # Get prop list of given type
-#
-#         # Pair prop names and values and create an object using element_args
-#         prop_obj = _combine_args_kwargs(element_args, props, kwprops)
-#         # prop_list.append(SymbolicVariable(prop_obj))
-#         prop_list.append(prop_obj)
-#
-#         # Add the element with its properties to the system
-#         system[element_kind] = prop_list
-#         self._systems[system_name] = system
-#         return self
-#
-#     # Aliases that add known types of dynamic elements to systems
-#     # TODO: Write documentation for these aliases
-#     state = partialmethod(self.add_dynamic_element, element_kind='states',
-#                     element_args=('name', 'eom', 'unit'))
-#     control = partialmethod(self.add_dynamic_element,   element_kind='controls',
-#                     element_args=('name', 'unit'))
-#     constant = partialmethod(self.add_dynamic_element, element_kind='constants',
-#                     element_args=('name', 'value', 'unit'))
-#     quantity = partialmethod(self.add_dynamic_element, element_kind='quantities',
-#                     element_args=('name', 'value'))
-#
-#     def get_dynamic_elements(self, element_kind, system_name='default'):
-#         """
-#         Returns the list of dynamic elements of a specific kind from a system
-#
-#         Parmeters
-#         ---------
-#         element_kind - str
-#             Kind of dynamic element to return
-#         """
-#         return self._systems[system_name].get(element_kind, ())
-#
-#     # Aliases
-#     states = partialmethod(get_dynamic_elements, 'states')
-#     controls = partialmethod(get_dynamic_elements, 'controls')
-#     constants = partialmethod(get_dynamic_elements, 'constants')
-#     quantity = partialmethod(get_dynamic_elements, 'quantities')
-#
-#     def constraints(self, *args, **kwargs):
-#         """
-#         Returns the ConstraintList object containing alias methods
-#
-#         This function is purely for aesthetic purposes while method chaining
-#         in the input file
-#         """
-#         return self._constraints
-#
-#     def sympify(self):
-#         """
-#         Creates symbolic versions of all
-#         """
-#
-#     def __str__(self):
-#         """
-#         Returns a string representation of the object
-#         """
-#         return str({'name': self.name,
-#                     'systems': self._systems,
-#                     'properties': self._properties,
-#                     'constraints': self._constraints,
-#                     'continuation': str(self.continuation)})
-#
-#     def _format_name(self, name):
-#         """Validates that the name is in the right format
-#             Only alphabets, numbers and underscores allowed
-#             Should not start with a number or underscore
-#
-#             Required for the in-memory compilation of code to work
-#         """
-#
-#         if re.match(r'[a-zA-Z]\w+', name):
-#             return name
-#         else:
-#             raise ValueError("""Invalid problem name specified.
-#             Only alphabets, numbers and underscores allowed
-#             Should start with an alphabet""")
 
 
 class ConstraintList(list):

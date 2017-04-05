@@ -688,10 +688,10 @@ class NecessaryConditions(object):
                 'type' : 'const',
                 'vars': [const.name for const in problem.constants()]
                 },
-                {
-                'type' : 'constraint',
-                'vars': []
-                },
+                # {
+                # 'type' : 'constraint',
+                # 'vars': []
+                # },
                 # {
                 # 'type' : 'function',
                 # 'vars' : [func_name for func_name in problem.functions]

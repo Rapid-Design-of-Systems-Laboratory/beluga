@@ -49,6 +49,7 @@ setup(name="beluga",
         "numexpr",
         "pystache",
         "docopt",
+	"simplepipe",
         "multiprocessing_on_dill",
       ]
       )
