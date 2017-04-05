@@ -10,11 +10,7 @@ from math import *
 # from joblib import Memory
 import logging
 
-from klepto.archives import file_archive, dir_archive
-from klepto import inf_cache as memoized
-from klepto.keymaps import picklemap
-
-dumps = picklemap(typed=True, flat=False, serializer='dill')
+# dumps = picklemap(typed=True, flat=False, serializer='dill')
 #TODO: Save time steps from ode45 and use for fixed step RK4
 class SingleShooting(Algorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True):
@@ -37,13 +33,6 @@ class SingleShooting(Algorithm):
 
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
-        # if self.cached and cache_dir is not None:
-        #     # memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
-        #     #
-        #     # self.solve = memory.cache(self.solve)
-        #     dumps = picklemap(flat=False, serializer='dill')
-        #     # dircache = file_archive()
-        #     # self.solve = memoized(cache=dircache, keymap=dumps, ignore='self')(self.solve)
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-16):
         ya = np.array(ya, dtype=complex)
@@ -229,8 +218,8 @@ class SingleShooting(Algorithm):
                 phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
                 # Evaluate the boundary conditions
                 res = bc_func(y0g, yb, paramGuess, aux)
-
                 r1 = np.linalg.norm(res)
+
                 if r1 > self.max_error:
                     logging.warn('Error exceeded max_error')
                     raise RuntimeError('Error exceeded max_error')

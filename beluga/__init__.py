@@ -1,13 +1,7 @@
-# Must be defined first!
-#from .BelugaConfig import BelugaConfig
-# from .Beluga import Beluga
-
-# __all__ = ['BoundaryConditions','Hamiltonian','NecessaryConditions']
-# __all__ = ['Beluga']
-
-from .problem2 import OCP
+from .problem import OCP
 from .Beluga import get_algorithm as bvp_algorithm
-from .problem2 import Guess as initial_guess
+from .Beluga import initial_guess
+
 from .continuation import ContinuationList as init_continuation
 from .Beluga import solve
 

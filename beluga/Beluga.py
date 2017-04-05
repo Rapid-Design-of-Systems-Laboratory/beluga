@@ -68,7 +68,7 @@ import scipy.optimize
 
 from beluga.continuation import *
 from beluga.bvpsol import algorithms
-# from beluga.problem2 import Problem
+from beluga import problem
 import dill, logging
 
 
@@ -171,7 +171,7 @@ def run_solver(problem, logging_level=logging.INFO, display_level=logging.INFO, 
     solve(problem)
     return
 
-def solve(problem, method, bvp_algorithm, steps, initial_guess):
+def solve(ocp, method, bvp_algorithm, steps, initial_guess):
     """
     Solves the OCP
     """
@@ -182,8 +182,9 @@ def solve(problem, method, bvp_algorithm, steps, initial_guess):
     from beluga.optimlib import brysonho
 
     wf = brysonho.BrysonHo
-    workspace = brysonho.init_workspace(problem)
-    output = wf(workspace)
+    workspace = brysonho.init_workspace(ocp)
+    ocp_ws = wf(workspace)
+    bvp = ocp_ws['bvp']
 
     # Try loading cached BVP from disk
     # bvp = self.nec_cond.load_bvp(self.problem)
@@ -192,61 +193,49 @@ def solve(problem, method, bvp_algorithm, steps, initial_guess):
     #     bvp = self.nec_cond.get_bvp(self.problem)
     #     self.nec_cond.cache_bvp(self.problem)
 
-    # bvp = nec_cond.get_bvp(problem)
-
-    # TODO: Implement other types of initial guess depending on data type
-    #       Array: Automatic?
-    #       Guess object: Directly use
-    #       Function handle: Call function
-    #       String: Load file?
-
     # The initial guess is automatically stored in the bvp object
     # solinit is just a reference to it
-
-    # solinit = problem.guess.generate(bvp)
+    solinit = initial_guess.generate(bvp)
 
     # # includes costates
-    # state_names = bvp.problem_data['state_list']
-    # initial_states = solinit.y[:,0] # First column
-    # terminal_states = solinit.y[:,-1] # Last column
-    # initial_bc = dict(zip(state_names,initial_states))
-    # terminal_bc = dict(zip(state_names,terminal_states))
-    # bvp.solution.aux['initial'] = initial_bc
-    # bvp.solution.aux['terminal'] = terminal_bc
-    #
-    # tic()
-    # # TODO: Start from specific step for restart capability
-    # # TODO: Make class to store result from continuation set?
-    # out = {};
-    #
-    # out['problem_data'] = bvp.problem_data;
-    # out['solution'] = run_continuation_set(problem.steps, bvp)
-    # total_time = toc();
-    #
-    # logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
-    #
-    # # Save data
-    # with open(problem.output_file, 'wb') as outfile:
-    # # dill.settings['recurse'] = True
-    #     dill.dump(out, outfile) # Dill Beluga object only
+    state_names = bvp.problem_data['state_list']
+    initial_states = solinit.y[:,0] # First column
+    terminal_states = solinit.y[:,-1] # Last column
+    initial_bc = dict(zip(state_names,initial_states))
+    terminal_bc = dict(zip(state_names,terminal_states))
+    bvp.solution.aux['initial'] = initial_bc
+    bvp.solution.aux['terminal'] = terminal_bc
 
+    tic()
+    # TODO: Start from specific step for restart capability
+    # TODO: Make class to store result from continuation set?
+    out = {};
 
-    # plt.title('Solution for Brachistochrone problem')
-    # plt.plot(self.out['solution'][-1][1,:]*180/pi,self.out['solution'][-1][0,:]/1000)
-    # plt.xlabel('theta')
-    # plt.ylabel('h')
-    # plt.show()
+    out['problem_data'] = bvp.problem_data;
+
+    ocp._scaling.initialize(ocp_ws)
+    ocp_ws['scaling'] = ocp._scaling
+
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp)
+    total_time = toc();
+
+    logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
+
+    # Save data
+    output_file = 'data.dill'
+    with open(output_file, 'wb') as outfile:
+    # dill.settings['recurse'] = True
+        dill.dump(out, outfile) # Dill Beluga object only
+
 
 # TODO: Refactor how code deals with initial guess
-def run_continuation_set(problem, bvp_start):
+def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_start):
     # Loop through all the continuation steps
     solution_set = []
 
     # Initialize scaling
-    s = problem.scale
-    steps = problem.steps
-
-    s.initialize(problem,nec_cond.problem_data)
+    s = ocp_ws['scaling']
+    problem_data = ocp_ws['problem_data']
     try:
         for step_idx,step in enumerate(steps):
             # Assign BVP from last continuation set
@@ -268,7 +257,7 @@ def run_continuation_set(problem, bvp_start):
                 s.scale(bvp)
 
                 # sol is just a reference to bvp.solution
-                sol = problem.bvp_solver.solve(bvp)
+                sol = bvp_algo.solve(bvp)
 
                 s.unscale(bvp)
                 if sol.converged:
@@ -277,17 +266,19 @@ def run_continuation_set(problem, bvp_start):
                     # sol.u = np.zeros((len(self.nec_cond.problem_data['control_list']),len(sol.x)))
 
                     # Required for plotting to work with control variables
-                    sol.ctrl_expr = self.nec_cond.problem_data['control_options']
-                    sol.ctrl_vars = self.nec_cond.problem_data['control_list']
+                    sol.ctrl_expr = problem_data['control_options']
+                    sol.ctrl_vars = problem_data['control_list']
 
                     #TODO: Make control computation more efficient
                     # for i in range(len(sol.x)):
                     #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                     #     sol.u[:,i] = _u
                     ## DAE mode
-                    sol.u = sol.y[self.nec_cond.problem_data['num_states']:,:]
-                    # f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
-                    # sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
+                    # sol.u = sol.y[problem_data['num_states']:,:]
+
+                    # Non Dae:
+                    f = lambda _t, _X: bvp.control_func(_t,_X,sol.parameters,sol.aux)
+                    sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
                     # Update solution for next iteration
                     solution_set[step_idx].append(copy.deepcopy(bvp.solution))
@@ -298,8 +289,8 @@ def run_continuation_set(problem, bvp_start):
                     elapsed_time = toc()
                     logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
     except Exception as e:
-        # import traceback
-        # traceback.print_exc()
+        import traceback
+        traceback.print_exc()
         logging.error('Exception : '+str(e))
         logging.error('Stopping')
 
@@ -319,7 +310,12 @@ def get_algorithm(algo, **kwargs):
         # by the given name
         raise ValueError('Algorithm '+algo+' not found')
 
+def initial_guess(mode, **kwargs):
+    guess = problem.Guess()
+    return guess.setup(mode, **kwargs)
 
+
+### Old stuff
 def build_problem(name):
     """
     Helper method to create new problem object

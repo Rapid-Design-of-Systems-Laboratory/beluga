@@ -16,6 +16,6 @@ def deriv_func(_t,_X,_p,_aux):
 {{#quantity_list}}
     {{name}} = {{expr}}
 {{/quantity_list}}
-
+    
     return np.array([{{#deriv_list}}{{.}},
         {{/deriv_list}}])

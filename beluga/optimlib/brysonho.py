@@ -3,12 +3,6 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 
 [1] Bryson, Arthur Earl. Applied optimal control: optimization, estimation and control. CRC Press, 1975.
 """
-# Make chain-rule differentiation a utility function
-#
-#   1. Process quantities
-#   2. Process path constraints
-#   3. Create hamiltonian and costates with rates
-# **Create pure functions where possible**
 
 import functools as ft
 import itertools
@@ -16,9 +10,11 @@ import re as _re
 import simplepipe as sp
 import sympy
 import pystache
+import imp
 
 from beluga.utils import sympify2, get_root
-from beluga.problem2 import SymbolicVariable
+from beluga.problem import SymbolicVariable
+from beluga.bvpsol import BVP
 
 def total_derivative(expr, var, dependent_vars=None):
     """
@@ -41,6 +37,9 @@ def total_derivative(expr, var, dependent_vars=None):
     return out
 
 def process_quantities(quantities):
+    """Performs preprocessing on quantity definitions. Creates a new total
+    derivative operator that takes considers these definitions.
+    """
     # logging.info('Processing quantity expressions')
 
     # TODO: Sanitize quantity expressions
@@ -166,6 +165,17 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
 
     return bc_list
 
+def make_time_bc(constraints, bc_terminal):
+    """Makes free or fixed final time boundary conditions."""
+    time_constraints = constraints.get('independent')
+    if len(time_constraints) > 0:
+        return bc_terminal+['tf - 1']
+    else:
+        # Add free final time boundary condition
+        return bc_terminal+['_H - 0']
+
+
+
 def make_dhdu(ham, controls, derivative_fn):
     """Computes the partial of the hamiltonian w.r.t control variables."""
     dhdu = []
@@ -247,7 +257,21 @@ def load_eqn_template(problem_data, template_file,
         code = renderer.render(tmpl, problem_data)
         return code
 
-def compile_code_py(code_string, workspace, function_name):
+def create_module(problem_name):
+    """Creates a new module for storing compiled code.
+
+    Parameters
+    ----------
+    problem_name - str
+        Unique name for the module
+
+    Returns
+    -------
+    New module for holding compiled code
+    """
+    return imp.new_module('_beluga_'+problem_name)
+
+def compile_code_py(code_string, module, function_name):
     """
     Compiles a function specified by template in filename and stores it in
     self.compiled
@@ -257,27 +281,42 @@ def compile_code_py(code_string, workspace, function_name):
     code_string - str
         String containing the python code to be compiled
 
-    workspace - dict
-        Problem workspace
+    module - dict
+        Module in which the new functions will be defined
 
     function_name - str
         Name of the function being compiled (this must be defined in the
         template with the same name)
 
     Returns:
+        Module for compiled function
         Compiled function
     """
     # For security
-    workspace['__builtin__'] = {}
-    exec(code_string, workspace)
-    return workspace[function_name]
+    module.__dict__.update({'__builtin__':{}})
+    exec(code_string, module.__dict__)
+    return getattr(module,function_name)
+
+
+def make_bvp(workspace):
+    """Makes the BVP object for passing into numerical solver."""
+    bvp = BVP(workspace['deriv_func_fn'],workspace['bc_func_fn'])
+
+    bvp.solution.aux['const'] = dict((str(const.name),float(const.value)) for const in workspace['constants'])
+    bvp.solution.aux['parameters'] = workspace['problem_data']['parameter_list']
+    # self.bvp.solution.aux['function']  = problem.functions
+
+    bvp.control_func = workspace['compute_control_fn']
+    bvp.problem_data = workspace['problem_data']
+    return bvp
 
 
 def init_workspace(ocp):
     """Initializes the simplepipe workspace using an OCP definition."""
     workspace = {}
     # variable_list = ['states', 'controls', 'constraints', 'quantities', 'initial_cost', 'terminal_cost', 'path_cost']
-
+    workspace['problem_name'] = ocp.name
+    workspace['indep_var'] = SymbolicVariable(ocp._properties['independent'])
     workspace['states'] = [SymbolicVariable(s) for s in ocp.states()]
     workspace['controls'] = [SymbolicVariable(u) for u in ocp.controls()]
     workspace['constants'] = [SymbolicVariable(k) for k in ocp.constants()]
@@ -286,81 +325,86 @@ def init_workspace(ocp):
     workspace['initial_cost'] = SymbolicVariable(ocp.get_cost('initial'), sym_key='expr')
     workspace['terminal_cost'] = SymbolicVariable(ocp.get_cost('terminal'), sym_key='expr')
     workspace['path_cost'] = SymbolicVariable(ocp.get_cost('path'), sym_key='expr')
-
     return workspace
 
 
 # Implement workflow using simplepipe and functions defined above
 BrysonHo = sp.Workflow([
-            sp.Task(process_quantities,
-                    inputs=('quantities'),
-                    outputs=('quantity_vars', 'quantity_list', 'derivative_fn')),
-            sp.Task(ft.partial(make_augmented_cost, location='initial'),
-                    inputs=('initial_cost', 'constraints'),
-                    outputs=('initial_cost')),
-            sp.Task(ft.partial(make_aug_params, location='initial'),
-                    inputs=('constraints'),
-                    outputs=('initial_lm_params')),
-            sp.Task(ft.partial(make_augmented_cost, location='terminal'),
-                    inputs=('terminal_cost', 'constraints'),
-                    outputs=('terminal_cost')),
-            sp.Task(ft.partial(make_aug_params, location='terminal'),
-                    inputs=('constraints'),
-                    outputs=('terminal_lm_params')),
-            sp.Task(make_hamiltonian_and_costates,
-                    inputs=('states', 'path_cost', 'derivative_fn'),
-                    outputs=('ham', 'costates')),
-            sp.Task(ft.partial(make_boundary_conditions, location='initial'),
-                    inputs=('constraints', 'states', 'costates', 'initial_cost', 'derivative_fn'),
-                    outputs=('bc_initial')),
-            sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
-                    inputs=('constraints', 'states', 'costates', 'terminal_cost', 'derivative_fn'),
-                    outputs=('bc_terminal')),
-            sp.Task(make_dhdu,
-                    inputs=('ham', 'controls', 'derivative_fn'),
-                    outputs=('dhdu')),
-            sp.Task(make_control_law,
-                    inputs=('dhdu','controls'),
-                    outputs=('control_law')),
+    sp.Task(process_quantities,
+            inputs=('quantities'),
+            outputs=('quantity_vars', 'quantity_list', 'derivative_fn')),
+    sp.Task(ft.partial(make_augmented_cost, location='initial'),
+            inputs=('initial_cost', 'constraints'),
+            outputs=('aug_initial_cost')),
+    sp.Task(ft.partial(make_aug_params, location='initial'),
+            inputs=('constraints'),
+            outputs=('initial_lm_params')),
+    sp.Task(ft.partial(make_augmented_cost, location='terminal'),
+            inputs=('terminal_cost', 'constraints'),
+            outputs=('aug_terminal_cost')),
+    sp.Task(ft.partial(make_aug_params, location='terminal'),
+            inputs=('constraints'),
+            outputs=('terminal_lm_params')),
+    sp.Task(make_hamiltonian_and_costates,
+            inputs=('states', 'path_cost', 'derivative_fn'),
+            outputs=('ham', 'costates')),
+    sp.Task(ft.partial(make_boundary_conditions, location='initial'),
+            inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
+            outputs=('bc_initial')),
+    sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
+            inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
+            outputs=('bc_terminal')),
+    sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
+    sp.Task(make_dhdu,
+            inputs=('ham', 'controls', 'derivative_fn'),
+            outputs=('dhdu')),
+    sp.Task(make_control_law,
+            inputs=('dhdu','controls'),
+            outputs=('control_law')),
 
-            sp.Task(generate_problem_data,
-                    inputs='*',
-                    outputs=('problem_data')),
+    sp.Task(generate_problem_data,
+            inputs='*',
+            outputs=('problem_data')),
 
-            # Load equation template files and generate code
-            sp.Task(ft.partial(load_eqn_template,
-                        template_file=get_root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
-                    inputs='problem_data',
-                    outputs='deriv_func_code'),
-            sp.Task(ft.partial(load_eqn_template,
-                        template_file=get_root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
-                    inputs='problem_data',
-                    outputs='bc_func_code'),
-            sp.Task(ft.partial(load_eqn_template,
-                        template_file=get_root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
-                    inputs='problem_data',
-                    outputs='compute_control_code'),
+    # TODO: Move this part into numerical algorithm?
+    # Create module for holding compiled code
+    sp.Task(ft.partial(create_module), inputs='problem_name', outputs=('code_module')),
 
-            # Compile generated code
-            sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
-                    inputs=['deriv_func_code', '*'],
-                    outputs='deriv_func_fn'),
-            sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
-                    inputs=['bc_func_code', '*'],
-                    outputs='bc_func_fn'),
-            sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
-                    inputs=['compute_control_code', '*'],
-                    outputs='compute_control_fn'),
+    # Load equation template files and generate code
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=get_root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
+            inputs='problem_data',
+            outputs='deriv_func_code'),
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=get_root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
+            inputs='problem_data',
+            outputs='bc_func_code'),
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=get_root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
+            inputs='problem_data',
+            outputs='compute_control_code'),
 
-  ], description='Traditional optimal control workflow')
+    # Compile generated code
+    sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
+            inputs=['deriv_func_code', 'code_module'],
+            outputs='deriv_func_fn'),
+    sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
+            inputs=['bc_func_code', 'code_module'],
+            outputs='bc_func_fn'),
+    sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
+            inputs=['compute_control_code', 'code_module'],
+            outputs='compute_control_fn'),
+
+    sp.Task(make_bvp, inputs='*', outputs=['bvp'])
+], description='Traditional optimal control workflow')
 
 traditional = BrysonHo
 
 
 
 ## Unit tests ##################################################################
-from beluga.problem2 import ConstraintList
-from beluga.problem2 import SymbolicVariable
+from beluga.problem import ConstraintList
+from beluga.problem import SymbolicVariable
 
 def test_process_quantities():
     quantities = [SymbolicVariable(dict(name='rho', val='rho0*exp(-h/H)')),
@@ -440,18 +484,20 @@ def test_make_control_law():
 def test_compile_equations(tmpdir):
     workspace = {'mult': 2}
 
+    code_mod = create_module('test_problem')
+
     # Write test template file
     code_file = tmpdir.mkdir("templates").join('test.py.mu')
     test_code_tmpl = """def test(foo):
     return foo*{{mult}}"""
     code_file.write(test_code_tmpl)
 
-    # Check if codfe generation works
+    # Check if codee generation works
     out_code = load_eqn_template(workspace, str(code_file))
+
     test_code_expected = """def test(foo):
     return foo*2"""
     assert out_code == test_code_expected
-
     # Check if code compilation works
-    out_fn = compile_code_py(out_code, workspace, 'test')
+    out_fn = compile_code_py(out_code, code_mod, 'test')
     assert out_fn(3) == 6

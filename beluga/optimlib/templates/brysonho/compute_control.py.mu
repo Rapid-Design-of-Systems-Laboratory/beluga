@@ -64,6 +64,7 @@ def compute_control(_t,_X,_p,_aux):
         {{#.}}
         {{name}} = 0
         {{/.}}
+        print('fooabbbaaar')
         logging.error('Error : '+str(e))
         raise
     _ham = compute_hamiltonian(_t,_X,_p,_aux,[{{#control_list}}{{.}},{{/control_list}}])
