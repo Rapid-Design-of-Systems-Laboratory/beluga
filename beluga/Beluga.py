@@ -60,77 +60,30 @@ Help:
 from math import *
 from beluga.utils import *
 
+import sys
+import os
+import inspect
+import warnings
+import copy
+import logging
+import importlib
+
+import dill
+import docopt
 import matplotlib.pyplot as plt
 import numpy as np
-import sys,os,imp,inspect,warnings,copy
 import scipy.optimize
 
 from beluga.continuation import *
 from beluga.bvpsol import algorithms
-from beluga import problem
-import dill, logging
+from beluga import problem, helpers
 
+config = dict(logfile='beluga.log',
+              default_bvp_solver='SingleShooting',
+              output_file='data.dill')
 
-config = dict(logfile='beluga.log', default_bvp_solver='SingleShooting')
-# problem = Problem()
-
-def init_logging(logging_level, display_level):
-    """Initializes the logging system"""
-    # Define custom formatter class that formats messages based on level
-    # Ref: http://stackoverflow.com/a/8349076/538379
-    class InfoFormatter(logging.Formatter):
-        """Custom logging formatter to output info messages by themselves"""
-        info_fmt = '%(message)s'
-        def format(self, record):
-            # Save the original format configured by the user
-            # when the logger formatter was instantiated
-            format_orig = self._fmt
-
-            # Replace the original format with one customized by logging level
-            if record.levelno == logging.INFO:
-                self._fmt = self.info_fmt
-                # For Python>3.2
-                self._style = logging.PercentStyle(self._fmt)
-
-            # Call the original formatter class to do the grunt work
-            result = logging.Formatter.format(self, record)
-
-            # Restore the original format configured by the user
-            self._fmt = format_orig
-            # For Python>3.2
-            self._style = logging.PercentStyle(self._fmt)
-
-            return result
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    fh = logging.FileHandler(config['logfile'])
-    fh.setLevel(logging_level)
-
-    # Set default format string based on logging level
-    # TODO: Change this to use logging configuration file?
-    if logging_level == logging.DEBUG:
-        formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(module)s#%(lineno)d-%(funcName)s(): %(message)s')
-    else:
-        formatter = logging.Formatter('[%(levelname)s] %(asctime)s-%(filename)s:%(lineno)d: %(message)s')
-
-    # Create logging handler for console output
-    ch = logging.StreamHandler(sys.stdout)
-    # Set console logging level and formatter
-    ch.setLevel(display_level)
-    formatter = InfoFormatter('%(filename)s:%(lineno)d: %(message)s')
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-def run_solver(problem, logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
-    """!
-    \brief     Returns Beluga object.
-    \details   Takes a problem statement, instantiates a solver object and begins
-                the solution process.
-    """
+def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
+    """Performs initial configuration on beluga."""
 
     # Get reference to the input file module
     frm = inspect.stack()[1]
@@ -145,11 +98,10 @@ def run_solver(problem, logging_level=logging.INFO, display_level=logging.INFO, 
     # Include configuration file path
     # sys.path.append(cls.config.getroot())
 
-    # TODO: Get default solver options from configuration or a defaults file
-    if problem.bvp_solver is None:
-        # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
-        problem.bvp_solver = get_algorithm(config['default_bvp_solver'])
-        # problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = True, cached=False, number_arcs=2)
+    # # TODO: Get default solver options from configuration or a defaults file
+    # if problem.bvp_solver is None:
+    #     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
+    #     problem.bvp_solver = get_algorithm(config['default_bvp_solver'])
 
     # # Set the cache directory to be in the current folder
     # cache_dir = os.getcwd()+'/_cache'
@@ -161,18 +113,18 @@ def run_solver(problem, logging_level=logging.INFO, display_level=logging.INFO, 
     # problem.bvp_solver.set_cache_dir(cache_dir)
 
     # Initialize logging system
-    init_logging(logging_level,display_level)
+    helpers.init_logging(logging_level,display_level, config['logfile'])
 
     # Set the output file name
     if output_file is not None:
-        problem.output_file = output_file
+        config['output_file'] = output_file
 
-    solve(problem)
+    # solve(problem)
     return
 
 def solve(ocp, method, bvp_algorithm, steps, initial_guess):
     """
-    Solves the OCP
+    Solves the OCP using specified method
     """
 
     # Initialize necessary conditions of optimality object
@@ -185,12 +137,7 @@ def solve(ocp, method, bvp_algorithm, steps, initial_guess):
     ocp_ws = wf(workspace)
     bvp = ocp_ws['bvp']
 
-    # Try loading cached BVP from disk
-    # bvp = self.nec_cond.load_bvp(self.problem)
-    # if bvp is None:
-    #     # Create corresponding boundary value problem
-    #     bvp = self.nec_cond.get_bvp(self.problem)
-    #     self.nec_cond.cache_bvp(self.problem)
+    # TODO: Try loading cached BVP from disk
 
     # The initial guess is automatically stored in the bvp object
     # solinit is just a reference to it
@@ -295,107 +242,12 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_start):
 
     return solution_set
 
-### Old stuff
-def build_problem(name):
+def OCP(name):
     """
     Helper method to create new problem object
     """
-    global problem
-    problem.name = name
-    return problem
-
-def load_scenario(scenario_name):
-    """Loads a scenario from python module name or file name/path"""
-    # TODO: Log error messages on failure
-
-    # Check if a python filename was given
-    if scenario_name.endswith('.py') and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
-        module_dir, module_file = os.path.split(scenario_name)
-        module_name, module_ext = os.path.splitext(module_file)
-        sys.path.append(module_dir)
-    # elif (scenario_name.endswith('.yml') or scenario_name.endswith('.json'))and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
-    #     # print('Loading from YAML scenario ..')
-    #     return load_yaml(scenario_name)
-    else:
-        if scenario_name.isidentifier():
-            module_name = scenario_name
-        else:
-            print('Invalid scenario filename or module name')
-            return None
-    try:
-        scenario = importlib.import_module(module_name)
-         # Check if module has a get_problem() function
-        if hasattr(scenario,'get_problem') and callable(scenario.get_problem):
-            # Module loaded successfully
-            # print('Module loaded successfully. 😂')
-            return scenario.get_problem()
-        else:
-            print('Unable to find get_problem function in scenario module')
-            return None
-
-    except ImportError:
-        print('Scenario module not found')
-        return None
-
-def main():
-    global problem
-    options = docopt(__doc__,version=0.1)
-
-    # if options['--config']:
-    #     import beluga.BelugaConfig as BelugaConfig
-    #     BelugaConfig(run_tool=True)
-    #     return
-
-    scenario = load_scenario(options['SCENARIO'].strip())
-    if scenario is None:
-        return
-
-    levels = {  'ALL': logging.DEBUG,
-                'DEBUG': logging.DEBUG,
-                '0': logging.DEBUG,
-                'INFO': logging.INFO,
-                '1': logging.INFO,
-                'WARNING': logging.WARN,
-                'WARN': logging.WARN,
-                '2': logging.WARN,
-                'ERROR': logging.ERROR,
-                '3': logging.ERROR,
-                'CRITICAL': logging.CRITICAL,
-                '4': logging.CRITICAL,
-                'OFF': logging.CRITICAL + 1}
-
-    # Process logging options
-    if options['--nolog']:
-        # Suppress all logging
-        options['--log'][0] = 'off'
-
-    if options['--log'][0].upper() not in levels:
-        print('Invalid value specified for logging level')
-        return
-    logging_lvl = levels[options['--log'][0].upper()]
-
-    # Process console output options
-    if options['-q']:
-        # Suppress all console output
-        options['--display'][0] = 'off'
-
-    if options['--display'][0].upper() not in levels:
-        print('Invalid value specified for display level')
-        return
-    display_lvl = levels[options['--display'][0].upper()]
-
-    if len(options['--output']) > 0:
-        output = os.path.abspath(options['--output'][0].strip())
-        # Check if the file locaton is writeable
-        if not os.access(os.path.dirname(output), os.W_OK):
-            print('Unable to access output file location or invalid filename 😭 😭')
-            return
-    else:
-        output = None
-
-    run(scenario, logging_level=logging_lvl, display_level=display_lvl, output_file=output)
-    # print(options)
-
+    ocp = problem.OCP(name)
+    return ocp
 
 if __name__ == '__main__':
     main()

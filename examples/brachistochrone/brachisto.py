@@ -1,6 +1,4 @@
 """Brachistochrone example."""
-import beluga
-
 ocp = beluga.OCP('brachisto')
 
 # Define independent variables
@@ -60,7 +58,6 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 5) \
                 .terminal('y',-5)
 
-
 beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
@@ -68,7 +65,6 @@ beluga.solve(ocp,
              initial_guess=guess)
 
 # beluga.solve(problem)
-# if __name__ == '__main__':
 #     # from timeit import timeit
 #
 #     # print(timeit("get_problem()","from __main__ import get_problem",number=10))
