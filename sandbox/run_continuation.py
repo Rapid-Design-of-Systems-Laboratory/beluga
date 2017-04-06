@@ -32,8 +32,8 @@ solinit = bvpsol.bvpinit(np.linspace(0,math.pi,2), guess)
 bvp = bvpsol.BVP(function,boundary_conditions,
                                 states = ['y1','y2'],
                                 initial_bc = {'y1':1.0, 'y2':0.0},
-                                terminal_bc = {'y2':0.0}, 
-                                const = [], 
+                                terminal_bc = {'y2':0.0},
+                                const = [],
                                 constraint = []
                                 )
 
@@ -68,23 +68,23 @@ def run_continuation(step1,bvp):
     total_time = 0.0;
     while not step1.complete():
         print('Starting iteration '+str(step1.ctr+1)+'/'+str(step1.num_cases))
-    
+
         tic()
-    
+
         bvp = step1.next()
         sol = solver.solve(bvp,sol_last)
-    
+
         # Update solution for next iteration
         sol_last = sol
         elapsed_time = toc()
         total_time  += elapsed_time
         print('Iteration %d/%d converged in %0.4f seconds\n' % (step1.ctr+1, step1.num_cases, elapsed_time))
-    
+
         pylab.plot(sol.x, sol.y[0,:],'-')
 
     print('Continuation process completed in %0.4f seconds.\n' % total_time)
-    
-    
+
+
     ################################################################
 
     pylab.title('Solution for MAT4BVP example (Mathieu\'s equation)')
