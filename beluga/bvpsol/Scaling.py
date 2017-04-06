@@ -1,7 +1,7 @@
 import numbers as num# Avoid clashing with Number in sympy
 
 from sympy import *
-from beluga.utils import fix_carets, sympify2, keyboard
+from beluga.utils import sympify, keyboard
 class Scaling(dict):
     excluded_aux = ['function']
 
@@ -41,7 +41,7 @@ class Scaling(dict):
         # Scaling functions for constants
         self.scale_func['const'] = {str(const): self.create_scale_fn(const.unit)
                                     for const in ws['constants']}
-        # self.scale_func['const'] = {str(const): lambdify(self.units_sym,sympify2(const.unit))
+        # self.scale_func['const'] = {str(const): lambdify(self.units_sym,sympify(const.unit))
         #                             for const in ws['constants']}
 
         # Cost function used for scaling costates
@@ -79,7 +79,7 @@ class Scaling(dict):
             indices[c.type] += 1 # increment multiplier index
 
     def create_scale_fn(self,unit_expr):
-        return lambdify(self.units_sym,sympify2(unit_expr))
+        return lambdify(self.units_sym,sympify(unit_expr))
 
     def compute_base_scaling(self,sol,scale_expr):
         if isinstance(scale_expr,num.Number):
@@ -98,7 +98,7 @@ class Scaling(dict):
             var_dict = dict(variables)
 
             # Evaluate expression to get scaling factor
-            return float(sympify2(scale_expr).subs(var_dict,dtype=float).evalf())
+            return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
 
     def compute_scaling(self,bvp):
         from collections import OrderedDict

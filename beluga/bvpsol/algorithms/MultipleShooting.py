@@ -1,14 +1,14 @@
 # from autodiff import Function, Gradient
 import numpy as np
+from math import *
 
 from .. import Solution
 from ..Algorithm import Algorithm
-from math import *
-from beluga.utils import *
+
+# from beluga.utils import *
 from beluga.utils import keyboard
-from beluga.utils.joblib import Memory
-from beluga.utils import Propagator
-from beluga.utils.Worker import Worker
+from .Propagator import Propagator
+from .Worker import Worker
 import logging, sys, os
 
 try:
@@ -32,9 +32,9 @@ class MultipleShooting(Algorithm):
             self.bc_jac_func  = self.__bcjac_fd
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
-        self.cached = cached
-        if cached and cache_dir is not None:
-            self.set_cache_dir(cache_dir)
+        # self.cached = cached
+        # if cached and cache_dir is not None:
+        #     self.set_cache_dir(cache_dir)
         self.number_arcs = number_arcs
 
         # TODO: Implement the host worker in a nicer way
@@ -44,11 +44,11 @@ class MultipleShooting(Algorithm):
         # self.worker.Propagator.setSolver(solver='ode45')
         self.worker = None
 
-    def set_cache_dir(self,cache_dir):
-        self.cache_dir = cache_dir
-        if self.cached and cache_dir is not None:
-            memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
-            self.solve = memory.cache(self.solve)
+    # def set_cache_dir(self,cache_dir):
+        # self.cache_dir = cache_dir
+        # if self.cached and cache_dir is not None:
+        #     memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
+        #     self.solve = memory.cache(self.solve)
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-15):
         ya = np.array(ya, dtype=complex)

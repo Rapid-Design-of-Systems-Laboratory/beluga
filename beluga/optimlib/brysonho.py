@@ -13,7 +13,7 @@ import pystache
 import imp
 
 import beluga
-from beluga.utils import sympify2
+from beluga.utils import sympify
 from beluga.problem import SymVar
 from beluga.bvpsol import BVP
 
@@ -79,7 +79,7 @@ def make_augmented_cost(cost, constraints, location):
     filtered_list = constraints.get(location)
 
     def make_lagrange_mult(c, ind = 1):
-        return sympify2('lagrange_' + c.type + '_' + str(ind))
+        return sympify('lagrange_' + c.type + '_' + str(ind))
     lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(filtered_list,1)]
 
     aug_cost_expr = cost.expr + sum(nu*c for (nu, c) in zip(lagrange_mult, filtered_list))
@@ -93,7 +93,7 @@ def make_aug_params(constraints, location):
     """Make the lagrange multiplier terms for boundary conditions."""
     filtered_list = constraints.get(location)
     def make_lagrange_mult(c, ind = 1):
-        return sympify2('lagrange_' + c.type + '_' + str(ind))
+        return sympify('lagrange_' + c.type + '_' + str(ind))
     lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(filtered_list,1)]
     return lagrange_mult
 
@@ -111,7 +111,7 @@ def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
     Returns the hamiltonian and the list of costates
     """
 
-    costate_names = [sympify2('lam'+str(s.name).upper()) for s in states]
+    costate_names = [sympify('lam'+str(s.name).upper()) for s in states]
     ham = path_cost.expr + sum([lam*s.eom
                              for s, lam in zip(states, costate_names)])
 
@@ -153,9 +153,9 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     #                 for x in constraints.get('terminal')]
 
     if location == 'initial':
-        sign = sympify2('-1')
+        sign = sympify('-1')
     elif location == 'terminal':
-        sign = sympify2('1')
+        sign = sympify('1')
 
     cost_expr = sign * cost
 
@@ -202,7 +202,7 @@ def make_control_law(dhdu, controls):
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
-    tf_var = sympify2('tf') #TODO: Change to independent var?
+    tf_var = sympify('tf') #TODO: Change to independent var?
     problem_data = {
     'aux_list': [
             {
@@ -341,7 +341,7 @@ BrysonHo = sp.Workflow([
     sp.Task(ft.partial(make_aug_params, location='initial'),
             inputs=('constraints'),
             outputs=('initial_lm_params')),
-            
+
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
             inputs=('terminal_cost', 'constraints'),
             outputs=('aug_terminal_cost')),
@@ -414,8 +414,8 @@ def test_process_quantities():
                   SymVar(dict(name='D', val='0.5*rho*v^2*Cd*Aref'))]
     qvars, qlist, _ = process_quantities(quantities)
 
-    qvars_expected = dict(rho= sympify2('rho0*exp(-h/H)'),
-                          D= sympify2('0.5*Aref*Cd*rho0*v**2*exp(-h/H)'))
+    qvars_expected = dict(rho= sympify('rho0*exp(-h/H)'),
+                          D= sympify('0.5*Aref*Cd*rho0*v**2*exp(-h/H)'))
     qlist_expected = [{'expr': 'rho0*exp(-h/H)', 'name': 'rho'},
                       {'expr': '0.5*Aref*Cd*rho0*v**2*exp(-h/H)', 'name': 'D'}]
 
@@ -428,7 +428,7 @@ def test_ham_and_costates():
               SymVar({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
     path_cost = SymVar({'expr': 1}, sym_key='expr')
 
-    expected_output = (sympify2('g*lamV*sin(theta) + lamX*v*cos(theta) - lamY*v*sin(theta) + 1'),
+    expected_output = (sympify('g*lamV*sin(theta) + lamX*v*cos(theta) - lamY*v*sin(theta) + 1'),
                        [SymVar({'name':'lamX','eom':'0'}),
                        SymVar({'name':'lamY','eom':'0'}),
                        SymVar({'name':'lamV','eom':'-lamX*cos(theta) - lamY*sin(theta)'})])
@@ -446,7 +446,7 @@ def test_augmented_cost():
 
     expected_output = SymVar({'expr': 'lagrange_terminal_1*(h - h_f) - v**2',
                        'unit': 'm**2/s**2'}, sym_key='expr')
-    expected_params = [sympify2('lagrange_terminal_1')]
+    expected_params = [sympify('lagrange_terminal_1')]
     aug_cost = make_augmented_cost(terminal_cost, constraints, 'terminal')
     params = make_aug_params(constraints, 'terminal')
     assert aug_cost == expected_output
@@ -463,11 +463,11 @@ def test_make_boundary_conditions():
     constraints.initial('h - h_0', 'm') # doctest:+ELLIPSIS
     constraints.terminal('theta - theta_f', 'rad') # doctest:+ELLIPSIS
 
-    initial_cost = sympify2('0')
+    initial_cost = sympify('0')
     bc_initial = make_boundary_conditions(constraints, states, costates, initial_cost, total_derivative, 'initial')
     assert bc_initial == ["h - _x0['h']", 'lamH', 'lamTHETA']
 
-    terminal_cost = sympify2('-theta^2')
+    terminal_cost = sympify('-theta^2')
     bc_terminal = make_boundary_conditions(constraints, states, costates, terminal_cost, total_derivative, 'terminal')
     assert bc_terminal == ["theta - _xf['theta']", 'lamH', 'lamTHETA + 2*theta']
 
@@ -479,10 +479,10 @@ def test_make_control_law():
     controls = [SymVar({'name':'theta','unit':'rad'})]
     ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
     dhdu = make_dhdu(ham, controls, total_derivative)
-    assert dhdu == [sympify2('g*lamV*cos(theta) - lamX*v*sin(theta) + lamY*v*cos(theta)')]
+    assert dhdu == [sympify('g*lamV*cos(theta) - lamX*v*sin(theta) + lamY*v*cos(theta)')]
     control_law = make_control_law(dhdu, controls)
-    assert control_law == [{controls[0]._sym: sympify2('-2*atan((lamX*v - sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')},
-                           {controls[0]._sym: sympify2('-2*atan((lamX*v + sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')}]
+    assert control_law == [{controls[0]._sym: sympify('-2*atan((lamX*v - sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')},
+                           {controls[0]._sym: sympify('-2*atan((lamX*v + sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')}]
 
 def test_compile_equations(tmpdir):
     workspace = {'mult': 2}

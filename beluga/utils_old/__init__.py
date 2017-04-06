@@ -3,7 +3,7 @@ from .keyboard import keyboard
 from .Timer import Timer
 from .tictoc import tic, toc
 from .fix_carets import fix_carets
-from .sympify2 import sympify2
+from .sympify import sympify
 from .ode45_old import ode45_old
 from .ode45 import ode45_multi
 from .Propagator import Propagator

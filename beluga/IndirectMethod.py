@@ -7,7 +7,7 @@ import re as _re
 
 import beluga.bvpsol.BVP as BVP
 
-from beluga.utils import sympify2, keyboard, ipsh
+from beluga.utils import sympify, keyboard, ipsh
 from beluga.optim.problem import *
 import dill
 import numpy as np
@@ -52,7 +52,7 @@ class OCDAENumerical(object):
         self.aug_cost = {}
         self.costates = []
         self.costate_rates = []
-        self.ham = sympify2('0')
+        self.ham = sympify('0')
         self.ham_ctrl_partial = []
         self.ctrl_free = []
         self.parameter_list = []
@@ -140,11 +140,11 @@ class OCDAENumerical(object):
 
         # TODO: Automate partial derivatives of numerical functions
         # for state in states:
-        #     rate = diff(sympify2('-1*(' + self.ham + ')'),state)
+        #     rate = diff(sympify('-1*(' + self.ham + ')'),state)
         #     # numerical_diff = rate.atoms(Derivative)
         #     self.costate_rates.append(str(rate))
         self.costate_rates = [self.derivative(-1*(self.ham),state, self.quantity_vars) for state in states]
-        # self.costate_rates.append(str(diff(sympify2(
+        # self.costate_rates.append(str(diff(sympify(
         # '-1*(' + self.ham + ')'),state)))
 
     def make_ctrl_partial(self, controls):
@@ -159,7 +159,7 @@ class OCDAENumerical(object):
         self.ham_ctrl_partial = []
         # keyboard()
         for ctrl in controls:
-            dHdu = self.derivative(sympify2(self.ham), ctrl, self.quantity_vars)
+            dHdu = self.derivative(sympify(self.ham), ctrl, self.quantity_vars)
             custom_diff = dHdu.atoms(Derivative)
             # Substitute "Derivative" with complex step derivative
             repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
@@ -189,8 +189,8 @@ class OCDAENumerical(object):
         \date      04/10/16
         """
         if len(self.equality_constraints) > 0:
-            self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
-            self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
+            self.mu_vars = [sympify('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
+            self.mu_lhs = [sympify(c.expr) for c in self.equality_constraints]
         else:
             self.mu_vars = self.mu_lhs = []
 
@@ -198,7 +198,7 @@ class OCDAENumerical(object):
         X = [state.sym for state in problem.states()] + [Symbol(costate) for costate in self.costates]
         U = [c.sym for c in problem.controls()] + self.mu_vars
 
-        xdot = Matrix([sympify2(state.process_eqn) for state in problem.states()] + self.costate_rates)
+        xdot = Matrix([sympify(state.process_eqn) for state in problem.states()] + self.costate_rates)
         # Compute Jacobian
         dgdX = Matrix([[self.derivative(g_i, x_i, self.quantity_vars) for x_i in X] for g_i in g])
         dgdU = Matrix([[self.derivative(g_i, u_i, self.quantity_vars) for u_i in U] for g_i in g])
@@ -230,9 +230,9 @@ class OCDAENumerical(object):
         self.mu_lhs = []
 
         if len(self.equality_constraints) > 0:
-            self.mu_vars = [sympify2('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
+            self.mu_vars = [sympify('mu'+str(i+1)) for i in range(len(self.equality_constraints))]
 
-            self.mu_lhs = [sympify2(c.expr) for c in self.equality_constraints]
+            self.mu_lhs = [sympify(c.expr) for c in self.equality_constraints]
         try:
             var_list = list(vars + self.mu_vars)
             # var_list = vars
@@ -306,9 +306,9 @@ class OCDAENumerical(object):
         \date      06/30/15
         """
         if location is 'initial':
-            sign = sympify2('-1')
+            sign = sympify('-1')
         elif location is 'terminal':
-            sign = sympify2('1')
+            sign = sympify('1')
 
         cost_expr = sign * (self.aug_cost[location])
 
@@ -317,11 +317,11 @@ class OCDAENumerical(object):
         if location == 'initial':
             # Using list comprehension instead of loops
             # lagrange_ changed to l. Removed hardcoded prefix
-            self.bc_initial += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym, self.quantity_vars))
+            self.bc_initial += [str(sympify(state.make_costate()) - self.derivative(sympify(cost_expr),state.sym, self.quantity_vars))
                                     for state in states]
         else:
             # Using list comprehension instead of loops
-            self.bc_terminal += [str(sympify2(state.make_costate()) - self.derivative(sympify2(cost_expr),state.sym,self.quantity_vars))
+            self.bc_terminal += [str(sympify(state.make_costate()) - self.derivative(sympify(cost_expr),state.sym,self.quantity_vars))
                                     for state in states]
 
     def make_ham(self, problem):
@@ -333,13 +333,13 @@ class OCDAENumerical(object):
         \date      06/30/15
         """
         #TODO: Make symbolic
-        self.ham = sympify2(problem.cost['path'].expr)
+        self.ham = sympify(problem.cost['path'].expr)
         for i in range(len(problem.states())):
-            self.ham += sympify2(self.costates[i]) * (sympify2(problem.states()[i].process_eqn))
+            self.ham += sympify(self.costates[i]) * (sympify(problem.states()[i].process_eqn))
 
         # Adjoin equality constraints
         for i in range(len(self.equality_constraints)):
-            self.ham += sympify2('mu'+str(i+1)) * (sympify2(self.equality_constraints[i].expr))
+            self.ham += sympify('mu'+str(i+1)) * (sympify(self.equality_constraints[i].expr))
 
     # Compiles a function template file into a function object
     # using the given data
@@ -440,12 +440,12 @@ class OCDAENumerical(object):
         constraints = problem.constraints().get('path')
         quantity_subs = self.quantity_vars.items()
 
-        path_cost_expr = sympify2(problem.cost['path'].expr)
-        path_cost_unit = sympify2(problem.cost['path'].unit)
+        path_cost_expr = sympify(problem.cost['path'].expr)
+        path_cost_unit = sympify(problem.cost['path'].unit)
         if path_cost_expr == 0:
             logging.debug('No path cost specified, using unit from terminal cost function')
             problem.cost['path'].unit = problem.cost['terminal'].unit
-            path_cost_unit = sympify2(problem.cost['terminal'].unit)
+            path_cost_unit = sympify(problem.cost['terminal'].unit)
 
         logging.debug('Path cost is of unit: '+str(path_cost_unit))
         time_unit = Symbol('s')
@@ -454,8 +454,8 @@ class OCDAENumerical(object):
             # Determine order of constraint
             logging.debug('Processing path constraint: '+c.label)
             order = 0
-            cq = [sympify2(c.expr)]
-            dxdt = [sympify2(state.process_eqn) for state in problem.states()]
+            cq = [sympify(c.expr)]
+            dxdt = [sympify(state.process_eqn) for state in problem.states()]
 
             # Zeroth order constraints have no 'xi' state
             xi_vars = []
@@ -484,11 +484,11 @@ class OCDAENumerical(object):
             xi_vars.append(Symbol('ue'+str(ind+1)))
 
             # TODO: Fix constraint object to accept two limits
-            c_limit = sympify2(c.limit)
+            c_limit = sympify(c.limit)
             if c_limit.is_Number:
                 # TODO: Allow continuation on constraints
                 # Define new hidden constant
-                c_limit = sympify2('_'+c.label)
+                c_limit = sympify('_'+c.label)
                 print(c.limit)
                 problem.constant(str(c_limit),float(c.limit),c.unit)
                 logging.debug('Added constant '+str(c_limit))
@@ -546,7 +546,7 @@ class OCDAENumerical(object):
                 h.append(dhdt)
 
             # Add the smoothing control with the right unit
-            ue_unit = sympify2('('+c.unit+')/(s^('+str(order)+'))')
+            ue_unit = sympify('('+c.unit+')/(s^('+str(order)+'))')
             problem.control(str(xi_vars[-1]), str(ue_unit))
             logging.debug('Adding control '+str(xi_vars[-1])+' with unit '+str(ue_unit))
 
@@ -569,14 +569,14 @@ class OCDAENumerical(object):
         u_constraints = problem.constraints().get('control')
 
         for (ind,c) in enumerate(u_constraints):
-            w_i = sympify2('uw'+str(ind+1))
-            psi = self.get_satfn(w_i, ubound=sympify2(c.ubound), lbound = sympify2(c.lbound))
+            w_i = sympify('uw'+str(ind+1))
+            psi = self.get_satfn(w_i, ubound=sympify(c.ubound), lbound = sympify(c.lbound))
 
             # Add the smoothing control
             problem.control(str(w_i), c.unit)
 
             # Add equality constraint
-            csym = sympify2(c.expr)
+            csym = sympify(c.expr)
             problem.constraints().equality(str(csym - psi),c.unit)
 
             uw_unit = symipfy2(c.unit)
@@ -624,7 +624,7 @@ class OCDAENumerical(object):
         # Regularize path constraints using saturation functions
         self.process_path_constraints(problem)
 
-        # self.state_subs = [(state.sym, sympify2(state.process_eqn)) for state in problem.states()]
+        # self.state_subs = [(state.sym, sympify(state.process_eqn)) for state in problem.states()]
         ## Create costate list
         # self.costates = [state.make_costate() for state in problem.states()]
         self.make_costates(problem)
@@ -633,11 +633,11 @@ class OCDAENumerical(object):
         #     self.costates.append(self.problem.states()[i].make_costate())
 
         # Build augmented cost strings
-        # aug_cost_init = sympify2(problem.cost['initial'].expr)
+        # aug_cost_init = sympify(problem.cost['initial'].expr)
         self.make_aug_cost('initial')
         # self.make_aug_cost(aug_cost_init, problem.constraints(), 'initial')
 
-        # aug_cost_term = sympify2(problem.cost['terminal'].expr)
+        # aug_cost_term = sympify(problem.cost['terminal'].expr)
         self.make_aug_cost('terminal')
         # self.make_aug_cost(aug_cost_term, problem.constraints(), 'terminal')
 
@@ -656,7 +656,7 @@ class OCDAENumerical(object):
         # Get list of all custom functions in the problem
         # TODO: Check in places other than the Hamiltonian?
         # TODO: Move to separate method?
-        func_list = sympify2(self.ham).atoms(AppliedUndef)
+        func_list = sympify(self.ham).atoms(AppliedUndef)
 
         # Load required functions from the input file
         new_functions = {(str(f.func),getattr(problem.input_module,str(f.func)))
@@ -696,8 +696,8 @@ class OCDAENumerical(object):
         # # Add new states to hamiltonian
         # h1_3 = '(psi12*xi12^2 + psi11*ue1)';  # xi12dot = ue1
         # c1_2 = 'u'
-        # self.ham += sympify2('eta11*xi12 + eta12*ue1')  #
-        # self.ham += sympify2('mu1 * ('+c1_2+' - '+h1_3')')
+        # self.ham += sympify('eta11*xi12 + eta12*ue1')  #
+        # self.ham += sympify('mu1 * ('+c1_2+' - '+h1_3')')
         #
         # # TODO: Compute these automatically
         # self.costate_rates += ['mu1*(xi12**2*psi1_3 + psi12*ue1)',
@@ -735,7 +735,7 @@ class OCDAENumerical(object):
          ,
          'parameter_list': [str(param) for param in self.parameter_list],
          'deriv_list':
-             ['(tf)*(' + str(sympify2(state.process_eqn)) + ')' for state in problem.states()] +
+             ['(tf)*(' + str(sympify(state.process_eqn)) + ')' for state in problem.states()] +
              ['(tf)*(' + str(costate_rate) + ')' for costate_rate in self.costate_rates] +
              ['tf*0']   # TODO: Hardcoded 'tf'
          ,

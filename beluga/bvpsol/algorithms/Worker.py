@@ -1,16 +1,16 @@
-from beluga.utils.propagators import *
-from beluga.utils.joblib import Parallel, delayed
-from beluga.utils.joblib import pool
-import os
-from beluga.utils import Propagator
-import signal
+from .joblib import Parallel, delayed
+from .joblib import pool
+from .Propagator import Propagator
+from .propagators import *
 from beluga.utils import keyboard
 
-import numpy as np
-
+import os
+import signal
 import time
 import socket
 import logging
+
+import numpy as np
 
 try:
     from mpi4py import MPI

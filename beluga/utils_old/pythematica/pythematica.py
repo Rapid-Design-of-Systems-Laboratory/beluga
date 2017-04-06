@@ -1,7 +1,7 @@
 ## NOTE: ONLY WORKS ON MAC
 import subprocess, re, sys
 from sympy import mathematica_code as mcode
-from beluga.utils import sympify2
+from beluga.utils import sympify
 # Credits: http://sapiensgarou.blogspot.com.br/2012/06/how-to-run-mathematica-functions-on.html
 def mathematica_run(command):
     """Call the shell script which in turn calls mathematica"""
@@ -24,7 +24,7 @@ def mathematica_parse(expr):
     for rule,replacement in rules:
         expr,n = re.subn(rule,replacement,expr)
 
-    return sympify2(expr)
+    return sympify(expr)
 
 def mathematica_solve(expr,vars):
     if isinstance(expr,list):
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     out = [dict([varsol.split(' -> ') for varsol in s.split(', ')])
         for s in sol_str[2:-2].split('}, {')]
-    out = [dict([(var,sympify2(mathematica_parse(expr))) for (var,expr) in sol.items()]) for sol in out]
+    out = [dict([(var,sympify(mathematica_parse(expr))) for (var,expr) in sol.items()]) for sol in out]
     print(out)
 
     # print(pythematica.mathematica_solve(sympify('a - 5'),sympify('a')))
@@ -82,11 +82,11 @@ if __name__ == '__main__':
     # print(pythematica.mathematica_solve(sympify('x^2 - 2*x + 3'),sympify('x')))
 
     # Nonlinear equation
-    # expr = [sympify2('g*lamV*cos(theta) - lamX*v*sin(theta) - lamY*v*cos(theta)')]
+    # expr = [sympify('g*lamV*cos(theta) - lamX*v*sin(theta) - lamY*v*cos(theta)')]
     # print(pythematica.mathematica_solve(expr,sympify('theta')))
 
     # Nonlinear system of equations
-    # expr = [sympify2('-0.7829*Aref*alfa*lamGAM*rho0*v*exp(-h/H)*sin(bank)/mass + 0.7829*Aref*alfa*lamPSI*rho0*v*exp(-h/H)*cos(bank)/(mass*cos(gam))'),
-    # sympify2('-1.6537*Aref*alfa*lamV*rho0*v**2*exp(-h/H)/mass + 0.7829*Aref*lamGAM*rho0*v*exp(-h/H)*cos(bank)/mass + 0.7829*Aref*lamPSI*rho0*v*exp(-h/H)*sin(bank)/(mass*cos(gam))')]
-    # v = [sympify2('alfa'),sympify2('bank')]
+    # expr = [sympify('-0.7829*Aref*alfa*lamGAM*rho0*v*exp(-h/H)*sin(bank)/mass + 0.7829*Aref*alfa*lamPSI*rho0*v*exp(-h/H)*cos(bank)/(mass*cos(gam))'),
+    # sympify('-1.6537*Aref*alfa*lamV*rho0*v**2*exp(-h/H)/mass + 0.7829*Aref*lamGAM*rho0*v*exp(-h/H)*cos(bank)/mass + 0.7829*Aref*lamPSI*rho0*v*exp(-h/H)*sin(bank)/(mass*cos(gam))')]
+    # v = [sympify('alfa'),sympify('bank')]
     # print(pythematica.mathematica_solve(expr,v))

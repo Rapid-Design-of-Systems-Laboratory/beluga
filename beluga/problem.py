@@ -18,7 +18,8 @@ from collections import namedtuple, ChainMap
 from itertools import zip_longest
 from beluga.bvpsol import Scaling  # BUG
 # from beluga.bvpsol import Solution
-from beluga.utils import ode45, sympify2  # , keyboard
+from beluga.bvpsol import ode45
+from beluga.utils import sympify  # , keyboard
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
@@ -201,7 +202,7 @@ class SymVar(object):
     """
 
     def __init__(self, param_dict, sym_key='name'):
-        self.__dict__ = {k: sympify2(v) for k,v in param_dict.items()}
+        self.__dict__ = {k: sympify(v) for k,v in param_dict.items()}
         self.param_list = param_dict.keys()
         if sym_key is not None:
             self._sym = self.__dict__[sym_key]

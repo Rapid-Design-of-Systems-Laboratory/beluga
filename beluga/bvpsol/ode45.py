@@ -1,7 +1,7 @@
 import scipy.integrate
 import numpy as np
 
-from beluga.utils.ode45_old import ode45_old
+from .ode45_old import ode45_old
 
 def ode_wrap(func,*args):   # Required for odeint
     def func_wrapper(t,y):
