@@ -334,12 +334,14 @@ BrysonHo = sp.Workflow([
     sp.Task(process_quantities,
             inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn')),
+
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),
             outputs=('aug_initial_cost')),
     sp.Task(ft.partial(make_aug_params, location='initial'),
             inputs=('constraints'),
             outputs=('initial_lm_params')),
+            
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
             inputs=('terminal_cost', 'constraints'),
             outputs=('aug_terminal_cost')),

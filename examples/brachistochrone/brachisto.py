@@ -1,4 +1,5 @@
 """Brachistochrone example."""
+
 ocp = beluga.OCP('brachisto')
 
 # Define independent variables

@@ -135,6 +135,12 @@ class OCP(object):
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
 
+class OCPVariable(dict):
+    def __init__(self, _fields, sym_key, *args):
+        for name, arg in zip(_fields, args):
+            setattr(self, name, arg)
+            self[name] = arg
+
 
 class ConstraintList(list):
 
