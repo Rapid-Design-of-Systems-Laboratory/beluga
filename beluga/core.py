@@ -58,7 +58,7 @@ Help:
 """
 
 from math import *
-from beluga.utils import *
+# from beluga.utils import *
 
 import sys
 import os
@@ -66,17 +66,14 @@ import inspect
 import warnings
 import copy
 import logging
-import importlib
 
 import dill
 import docopt
-import matplotlib.pyplot as plt
 import numpy as np
-import scipy.optimize
 
-from beluga.continuation import *
-from beluga.bvpsol import algorithms
+# from beluga.continuation import *
 from beluga import problem, helpers
+from beluga.utils import tic, toc
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='SingleShooting',
@@ -241,13 +238,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_start):
         logging.error('Stopping')
 
     return solution_set
-
-def OCP(name):
-    """
-    Helper method to create new problem object
-    """
-    ocp = problem.OCP(name)
-    return ocp
 
 if __name__ == '__main__':
     main()

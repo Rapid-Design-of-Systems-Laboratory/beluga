@@ -1,6 +1,6 @@
 from .propagators import *
-from beluga.utils.joblib import Parallel, delayed
-from beluga.utils.joblib import pool
+from .joblib import Parallel, delayed
+from .joblib import pool
 import os
 from beluga.utils import keyboard
 

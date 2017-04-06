@@ -1,4 +1,5 @@
 import time
+
 # Source: http://stackoverflow.com/questions/5849800/tic-toc-functions-analog-in-python
 class Timer(object):
     def __init__(self, name=None):

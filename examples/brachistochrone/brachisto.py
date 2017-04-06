@@ -29,22 +29,22 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-#                         derivative_method='fd',
-#                         tolerance=1e-4,
-#                         max_iterations=1000,
-#                         verbose = True,
-#                         cached=False,
-#                         number_arcs=4,
-#                         max_error=100
-#              )
+bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+                        derivative_method='fd',
+                        tolerance=1e-4,
+                        max_iterations=1000,
+                        verbose = True,
+                        cached=False,
+                        number_arcs=4,
+                        max_error=100
+             )
 
-bvp_solver = beluga.bvp_algorithm('SingleShooting',
-                    derivative_method='fd',
-                    tolerance=1e-4,
-                    max_iterations=50,
-                    verbose = True,
-)
+# bvp_solver = beluga.bvp_algorithm('SingleShooting',
+#                     derivative_method='fd',
+#                     tolerance=1e-4,
+#                     max_iterations=50,
+#                     verbose = True,
+# )
 
 guess = beluga.initial_guess('auto',
                 start=[0,0,1],          # Starting values for states in order

@@ -3,11 +3,9 @@ import numpy as np
 
 from .. import Solution
 from beluga.utils import keyboard
-from beluga.utils.ode45 import ode45
+from beluga.bvpsol.ode45 import ode45
 from ..Algorithm import Algorithm
 from math import *
-# from beluga.utils.joblib import Memory
-# from joblib import Memory
 import logging
 
 # dumps = picklemap(typed=True, flat=False, serializer='dill')

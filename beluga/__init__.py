@@ -1,7 +1,8 @@
 from .helpers import initial_guess, bvp_algorithm, root
 
 from .continuation import ContinuationList as init_continuation
-from .core import setup_beluga, solve, OCP
+from .core import setup_beluga, solve
+from .problem import OCP
 
 import os
 import glob
