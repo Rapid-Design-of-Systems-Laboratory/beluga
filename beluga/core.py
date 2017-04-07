@@ -218,9 +218,8 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 s.unscale(sol)
                 if sol.converged:
                     # Post-processing phase
-                    # Compute control history
-                    # sol.u = np.zeros((len(problem_data['control_list']),len(sol.x)))
 
+                    # Compute control history
                     # Required for plotting to work with control variables
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['control_list']
@@ -229,10 +228,10 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                     # for i in range(len(sol.x)):
                     #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                     #     sol.u[:,i] = _u
+
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
-
-                    # Non Dae:
+                    # Non-DAE:
                     f = lambda _t, _X: bvp_fn.compute_control(_t,_X,sol.parameters,sol.aux)
                     sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
