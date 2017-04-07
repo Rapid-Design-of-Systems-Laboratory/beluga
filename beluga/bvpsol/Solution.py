@@ -21,7 +21,10 @@ class Solution(object):
 
         self.y_splines = self.u_splines = None
 
-        self.aux = aux
+        if aux is None:
+            self.aux = {"initial": [], "terminal": [], "const": [], "parameters":[]}
+        else:
+            self.aux = aux
         self.state_list = state_list
         self.var_dict = None
         self.converged = False

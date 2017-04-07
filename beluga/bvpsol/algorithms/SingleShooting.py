@@ -1,17 +1,122 @@
 # from autodiff import Function, Gradient
 import numpy as np
 
+import beluga
 from .. import Solution
 from beluga.utils import keyboard
 from beluga.bvpsol.ode45 import ode45
 from .BaseAlgorithm import BaseAlgorithm
+from beluga.problem import BVP
+
 from math import *
 import logging
+import imp
+import functools as ft
 
-# dumps = picklemap(typed=True, flat=False, serializer='dill')
-#TODO: Save time steps from ode45 and use for fixed step RK4
+import pystache
+
+import simplepipe as sp
+
+def load_eqn_template(problem_data, template_file,
+                        renderer = pystache.Renderer(escape=lambda u: u)):
+    """Loads pystache template and uses it to generate code.
+
+    Parameters
+    ----------
+        problem_data - dict
+            Workspace defining variables for template
+
+        template_file - str
+            Path to template file to be used
+
+        renderer
+            Renderer used to convert template file to code
+
+    Returns
+    -------
+    Code generated from template
+    """
+    with open(template_file) as f:
+        tmpl = f.read()
+        # Render the template using the data
+        code = renderer.render(tmpl, problem_data)
+        return code
+
+def create_module(problem_data):
+    """Creates a new module for storing compiled code.
+
+    Parameters
+    ----------
+    problem_data - dict
+        Problem data dictionary
+
+    Returns
+    -------
+    New module for holding compiled code
+    """
+    problem_name = problem_data['problem_name']
+    return imp.new_module('_beluga_'+problem_name)
+
+def compile_code_py(code_string, module, function_name):
+    """
+    Compiles a function specified by template in filename and stores it in
+    self.compiled
+
+    Parameters
+    ----------
+    code_string - str
+        String containing the python code to be compiled
+
+    module - dict
+        Module in which the new functions will be defined
+
+    function_name - str
+        Name of the function being compiled (this must be defined in the
+        template with the same name)
+
+    Returns:
+        Module for compiled function
+        Compiled function
+    """
+    # For security
+    module.__dict__.update({'__builtin__':{}})
+    exec(code_string, module.__dict__)
+    return getattr(module,function_name)
+
+PythonCodeGen = sp.Workflow([
+    # Create module for holding compiled code
+    sp.Task(ft.partial(create_module), inputs='problem_data', outputs=('code_module')),
+
+    # Load equation template files and generate code
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=beluga.root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
+            inputs='problem_data',
+            outputs='deriv_func_code'),
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=beluga.root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
+            inputs='problem_data',
+            outputs='bc_func_code'),
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=beluga.root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
+            inputs='problem_data',
+            outputs='compute_control_code'),
+
+    # Compile generated code
+    sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
+            inputs=['deriv_func_code', 'code_module'],
+            outputs='deriv_func_fn'),
+    sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
+            inputs=['bc_func_code', 'code_module'],
+            outputs='bc_func_fn'),
+    sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
+            inputs=['compute_control_code', 'code_module'],
+            outputs='compute_control_fn'),
+
+    # sp.Task(make_bvp, inputs='*', outputs=['bvp'])
+], description='Generates and compiles the required BVP functions from problem data')
+
 class SingleShooting(BaseAlgorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
@@ -25,12 +130,14 @@ class SingleShooting(BaseAlgorithm):
             self.bc_jac_func  = self.__bcjac_fd
         else:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
-        self.cached = cached
-        if cached and cache_dir is not None:
-            self.set_cache_dir(cache_dir)
 
-    def set_cache_dir(self,cache_dir):
-        self.cache_dir = cache_dir
+    def preprocess(self, problem_data):
+        """Code generation and compilation before running solver."""
+        out_ws = PythonCodeGen({'problem_data': problem_data})
+        self.bvp = BVP(out_ws['deriv_func_fn'],
+                       out_ws['bc_func_fn'],
+                       out_ws['compute_control_fn'])
+        return self.bvp
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-16):
         ya = np.array(ya, dtype=complex)
@@ -146,12 +253,9 @@ class SingleShooting(BaseAlgorithm):
 
         # Phidot = F*Phi (matrix product)
         phiDot = np.real(np.dot(F,phi))
-        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
         return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-        # return np.concatenate( f(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) ))
 
-    # @memoized(cache=file_archive(serialized=True, cached=False), ignore='self')
-    def solve(self,bvp):
+    def solve(self,solinit):
         """Solve a two-point boundary value problem
             using the single shooting method
 
@@ -163,16 +267,15 @@ class SingleShooting(BaseAlgorithm):
             solution of TPBVP
         Raises:
         """
-        solinit = bvp.solution
         x  = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
         paramGuess = solinit.parameters
 
-        deriv_func = bvp.deriv_func
-        bc_func = bvp.bc_func
+        deriv_func = self.bvp.deriv_func
+        bc_func = self.bvp.bc_func
 
-        aux = bvp.solution.aux
+        aux = solinit.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]
@@ -281,18 +384,20 @@ class SingleShooting(BaseAlgorithm):
             logging.warn(e)
             import traceback
             traceback.print_exc()
-        # If problem converged, propagate solution to get full trajectory
-        # Possibly reuse 'yy' from above?
+
+        # Return initial guess if it failed to converge
+        sol = solinit
         if converged:
-            # keyboard()
+            # If problem converged, propagate solution to get full trajectory
             x1, y1 = t, yy[:,:nOdes]
             # x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=self.tolerance, reltol=1e-3)
-            sol = Solution(x1,y1.T,paramGuess,aux)
-        else:
-            # Return initial guess if it failed to converge
-            sol = solinit
+            sol.x = x1
+            sol.y = y1.T
+            sol.parameters = paramGuess
+            # sol = Solution(x1,y1.T,paramGuess,aux)
+
+
         sol.converged = converged
-        bvp.solution = sol
         sol.aux = aux
         # logging.debug(sol.y[:,0])
         return sol

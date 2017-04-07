@@ -29,24 +29,24 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        derivative_method='fd',
-                        tolerance=1e-4,
-                        max_iterations=1000,
-                        verbose = True,
-                        cached=False,
-                        number_arcs=4,
-                        max_error=100
-             )
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+#                         derivative_method='fd',
+#                         tolerance=1e-4,
+#                         max_iterations=1000,
+#                         verbose = True,
+#                         cached=False,
+#                         number_arcs=4,
+#                         max_error=100
+#              )
 
-# bvp_solver = beluga.bvp_algorithm('SingleShooting',
-#                     derivative_method='fd',
-#                     tolerance=1e-4,
-#                     max_iterations=50,
-#                     verbose = True,
-# )
+bvp_solver = beluga.bvp_algorithm('SingleShooting',
+                    derivative_method='fd',
+                    tolerance=1e-4,
+                    max_iterations=50,
+                    verbose = True,
+)
 
-guess = beluga.initial_guess('auto',
+guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1
@@ -55,7 +55,7 @@ guess = beluga.initial_guess('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(51) \
+                .num_cases(11) \
                 .terminal('x', 5) \
                 .terminal('y',-5)
 
@@ -63,7 +63,7 @@ beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             initial_guess=guess)
+             guess_generator=guess_maker)
 
 # beluga.solve(problem)
 #     # from timeit import timeit

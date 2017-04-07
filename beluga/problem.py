@@ -227,8 +227,9 @@ class SymVar(object):
     def __eq__(self, other):
         return str(self._sym) == str(other)
 
+BVP = namedtuple('BVP', 'deriv_func bc_func compute_control')
 
-class Guess(object):
+class GuessGenerator(object):
     """Generates the initial guess from a variety of sources."""
 
     def __init__(self, **kwargs):
@@ -263,9 +264,8 @@ class Guess(object):
     def setup_static(self, solinit=None):
         self.solinit = solinit
 
-    def static(self, bvp):
+    def static(self, bvp_fn, solinit):
         """Directly specify initial guess structure"""
-        bvp.solution = self.solinit
         return self.solinit
 
     def setup_file(self, filename='', step=0, iteration=0):
@@ -276,8 +276,15 @@ class Guess(object):
             logging.error('Data file ' + self.filename + ' not found.')
             raise ValueError('Data file not found!')
 
-    def file(self, bvp):
-        """Generates initial guess by loading an existing data file"""
+    def file(self, bvp_fn, solinit):
+        """Generates initial guess by loading an existing data file.
+
+        bvp_fn : BVP
+            BVP object containing functions
+
+        solinit : Solution
+            Solution object with some starting information (such as aux vars)
+        """
         logging.info('Loading initial guess from ' + self.filename)
         fp = open(self.filename, 'rb')
         out = dill.load(fp)
@@ -295,7 +302,7 @@ class Guess(object):
 
         sol = out['solution'][self.step][self.iteration]
         fp.close()
-        bvp.solution = sol
+
         logging.info('Initial guess loaded')
         return sol
 
@@ -320,7 +327,7 @@ class Guess(object):
         self.costate_guess = costate_guess
         self.param_guess = param_guess
 
-    def auto(self, bvp, param_guess=None):
+    def auto(self, bvp_fn, solinit, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
         # Assume normalized time from 0 to 1
@@ -340,17 +347,17 @@ class Guess(object):
         # TODO: Automatically generate parameter guess values
 
         if param_guess is None:
-            param_guess = np.zeros(len(bvp.solution.aux['parameters']))
-        elif len(param_guess) < len(bvp.solution.aux['parameters']):
-            param_guess += np.zeros(len(bvp.solution.aux['parameters']) - len(param_guess))
-        elif len(param_guess) > len(bvp.solution.aux['parameters']):
+            param_guess = np.zeros(len(solinit.aux['parameters']))
+        elif len(param_guess) < len(solinit.aux['parameters']):
+            param_guess += np.zeros(len(solinit.aux['parameters']) - len(param_guess))
+        elif len(param_guess) > len(solinit.aux['parameters']):
             # TODO: Write a better error message
             raise ValueError('param_guess too big. Maximum length allowed is ' +
-                             len(bvp.solution.aux['parameters']))
+                             len(solinit.aux['parameters']))
 
         # dae_num_states = bvp.dae_num_states
         # dae_guess = np.ones(dae_num_states) * 0.1
-        # dhdu_fn = bvp.dae_func_gen(0, x0, param_guess, bvp.solution.aux)
+        # dhdu_fn = bvp.dae_func_gen(0, x0, param_guess, solinit.aux)
         #
         # dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
         # # dae_x0 = dae_guess
@@ -359,9 +366,9 @@ class Guess(object):
 
         logging.debug('Generating initial guess by propagating: ')
         # logging.debug(str(x0))
-        [t, x] = ode45(bvp.deriv_func, tspan, x0, param_guess, bvp.solution.aux)
+        [t, x] = ode45(bvp_fn.deriv_func, tspan, x0, param_guess, solinit.aux)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
-        bvp.solution.x = t
-        bvp.solution.y = x.T
-        bvp.solution.parameters = param_guess
-        return bvp.solution
+        solinit.x = t
+        solinit.y = x.T
+        solinit.parameters = param_guess
+        return solinit

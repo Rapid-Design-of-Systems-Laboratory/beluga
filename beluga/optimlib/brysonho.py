@@ -204,6 +204,7 @@ def generate_problem_data(workspace):
 
     tf_var = sympify('tf') #TODO: Change to independent var?
     problem_data = {
+    'problem_name': workspace['problem_name'],
     'aux_list': [
             {
             'type' : 'const',
@@ -232,84 +233,6 @@ def generate_problem_data(workspace):
      'quantity_list': workspace['quantity_list'],
     }
     return problem_data
-
-def load_eqn_template(problem_data, template_file,
-                        renderer = pystache.Renderer(escape=lambda u: u)):
-    """Loads pystache template and uses it to generate code.
-
-    Parameters
-    ----------
-        problem_data - dict
-            Workspace defining variables for template
-
-        template_file - str
-            Path to template file to be used
-
-        renderer
-            Renderer used to convert template file to code
-
-    Returns
-    -------
-    Code generated from template
-    """
-    with open(template_file) as f:
-        tmpl = f.read()
-        # Render the template using the data
-        code = renderer.render(tmpl, problem_data)
-        return code
-
-def create_module(problem_name):
-    """Creates a new module for storing compiled code.
-
-    Parameters
-    ----------
-    problem_name - str
-        Unique name for the module
-
-    Returns
-    -------
-    New module for holding compiled code
-    """
-    return imp.new_module('_beluga_'+problem_name)
-
-def compile_code_py(code_string, module, function_name):
-    """
-    Compiles a function specified by template in filename and stores it in
-    self.compiled
-
-    Parameters
-    ----------
-    code_string - str
-        String containing the python code to be compiled
-
-    module - dict
-        Module in which the new functions will be defined
-
-    function_name - str
-        Name of the function being compiled (this must be defined in the
-        template with the same name)
-
-    Returns:
-        Module for compiled function
-        Compiled function
-    """
-    # For security
-    module.__dict__.update({'__builtin__':{}})
-    exec(code_string, module.__dict__)
-    return getattr(module,function_name)
-
-
-def make_bvp(workspace):
-    """Makes the BVP object for passing into numerical solver."""
-    bvp = BVP(workspace['deriv_func_fn'],workspace['bc_func_fn'])
-
-    bvp.solution.aux['const'] = dict((str(const.name),float(const.value)) for const in workspace['constants'])
-    bvp.solution.aux['parameters'] = workspace['problem_data']['parameter_list']
-    # self.bvp.solution.aux['function']  = problem.functions
-
-    bvp.control_func = workspace['compute_control_fn']
-    bvp.problem_data = workspace['problem_data']
-    return bvp
 
 
 def init_workspace(ocp):
@@ -368,37 +291,6 @@ BrysonHo = sp.Workflow([
     sp.Task(generate_problem_data,
             inputs='*',
             outputs=('problem_data')),
-
-    # TODO: Move this part into numerical algorithm?
-    # Create module for holding compiled code
-    sp.Task(ft.partial(create_module), inputs='problem_name', outputs=('code_module')),
-
-    # Load equation template files and generate code
-    sp.Task(ft.partial(load_eqn_template,
-                template_file=beluga.root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
-            inputs='problem_data',
-            outputs='deriv_func_code'),
-    sp.Task(ft.partial(load_eqn_template,
-                template_file=beluga.root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
-            inputs='problem_data',
-            outputs='bc_func_code'),
-    sp.Task(ft.partial(load_eqn_template,
-                template_file=beluga.root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
-            inputs='problem_data',
-            outputs='compute_control_code'),
-
-    # Compile generated code
-    sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
-            inputs=['deriv_func_code', 'code_module'],
-            outputs='deriv_func_fn'),
-    sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
-            inputs=['bc_func_code', 'code_module'],
-            outputs='bc_func_fn'),
-    sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
-            inputs=['compute_control_code', 'code_module'],
-            outputs='compute_control_fn'),
-
-    sp.Task(make_bvp, inputs='*', outputs=['bvp'])
 ], description='Traditional optimal control workflow')
 
 traditional = BrysonHo
