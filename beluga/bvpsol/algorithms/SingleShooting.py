@@ -122,13 +122,7 @@ class SingleShooting(BaseAlgorithm):
         self.verbose = verbose
         self.max_error = max_error
         self.derivative_method = derivative_method
-        if derivative_method == 'csd':
-            self.stm_ode_func = self.__stmode_csd
-            self.bc_jac_func  = self.__bcjac_csd
-        elif derivative_method == 'fd':
-            self.stm_ode_func = self.__stmode_fd
-            self.bc_jac_func  = self.__bcjac_fd
-        else:
+        if derivative_method not in ['csd', 'fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
     def preprocess(self, problem_data):
@@ -137,9 +131,15 @@ class SingleShooting(BaseAlgorithm):
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'],
                        out_ws['compute_control_fn'])
+        if self.derivative_method == 'csd':
+            self.stm_ode_func = ft.partial(self.__stmode_csd, odefn=self.bvp.deriv_func)
+            self.bc_jac_func  = ft.partial(self.__bcjac_csd, bc_func=self.bvp.bc_func)
+        elif self.derivative_method == 'fd':
+            self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
+            self.bc_jac_func  = ft.partial(self.__bcjac_fd, bc_func=self.bvp.bc_func)
         return self.bvp
 
-    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-16):
+    def __bcjac_csd(self, ya, yb, phi, parameters, aux, bc_func, StepSize=1e-16):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
         # if parameters is not None:
@@ -176,7 +176,7 @@ class SingleShooting(BaseAlgorithm):
             J = M+np.dot(N,phi)
         return J
 
-    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-6):
+    def __bcjac_fd(self, ya, yb, phi, parameters, aux, bc_func, StepSize=1e-6):
 
         ya = np.array(ya, ndmin=1)
         yb = np.array(yb, ndmin=1)
@@ -217,7 +217,7 @@ class SingleShooting(BaseAlgorithm):
             J = M+np.dot(N,phi)
         return J
 
-    def __stmode_fd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-6):
+    def __stmode_fd(self, x, y, parameters, aux, odefn, nOdes = 0, StepSize=1e-6):
         "Finite difference version of state transition matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
@@ -237,7 +237,7 @@ class SingleShooting(BaseAlgorithm):
         phiDot = np.real(np.dot(F,phi))
         return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-50):
+    def __stmode_csd(self, x, y, parameters, aux, odefn, StepSize=1e-50):
         "Complex step version of State Transition Matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
@@ -308,10 +308,8 @@ class SingleShooting(BaseAlgorithm):
                 y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
                 # Propagate STM and original system together
-                # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-
                 # t,yy = ode45(stm_ode45, tspan, y0)
-                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                t,yy = ode45(self.stm_ode_func, tspan, y0, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
                 # Obtain just last timestep for use with correction
                 yf = yy[-1]
                 # Extract states and STM from ode45 output
@@ -337,7 +335,7 @@ class SingleShooting(BaseAlgorithm):
                     break
 
                 # Compute Jacobian of boundary conditions using numerical derviatives
-                J   = self.bc_jac_func(bc_func, y0g, yb, phi, paramGuess, aux)
+                J   = self.bc_jac_func(y0g, yb, phi, paramGuess, aux)
                 # Compute correction vector
 
                 if r0 is not None:
@@ -373,10 +371,10 @@ class SingleShooting(BaseAlgorithm):
                 if nParams > 0:
                     dp = dy0[nOdes:]
                     dy0 = dy0[:nOdes]
-                    paramGuess = paramGuess + dp
-                    y0g = y0g + dy0
+                    paramGuess += dp
+                    y0g += dy0
                 else:
-                    y0g = y0g + dy0
+                    y0g += dy0
 
                 iter = iter+1
                 logging.debug('Iteration #'+str(iter))
