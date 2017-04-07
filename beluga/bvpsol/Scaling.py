@@ -100,13 +100,13 @@ class Scaling(dict):
             # Evaluate expression to get scaling factor
             return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
 
-    def compute_scaling(self,bvp):
+    def compute_scaling(self, sol):
         from collections import OrderedDict
         # Units should be stored in order to be used as function arguments
         self.scale_factors = OrderedDict()
         # Evaluate scaling factors for each base unit
         for (unit,scale_expr) in self.units.items():
-            self.scale_factors[unit] = self.compute_base_scaling(bvp.solution,scale_expr)
+            self.scale_factors[unit] = self.compute_base_scaling(sol, scale_expr)
 
         # Ordered list of unit scaling factors for use as function parameters
         scale_factor_list = [v for (k,v) in self.scale_factors.items()]
@@ -133,10 +133,9 @@ class Scaling(dict):
                     self.scale_vals[var_type][var_name] = var_func(*scale_factor_list)
 
 
-    def scale(self,bvp):
-        """Scales a boundary value problem"""
+    def scale(self, sol):
+        """Scales a BVP solution"""
 
-        sol = bvp.solution
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
                   {'type':'terminal','vars':self.problem_data['state_list']}]
@@ -155,9 +154,9 @@ class Scaling(dict):
         for idx, param in enumerate(self.problem_data['parameter_list']):
             sol.parameters[idx] /= self.scale_vals['parameters'][param]
 
-    def unscale(self,bvp):
+    def unscale(self, sol):
         """Unscales a solution object"""
-        sol = bvp.solution
+
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
                   {'type':'terminal','vars':self.problem_data['state_list']}]

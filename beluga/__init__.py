@@ -1,5 +1,5 @@
-from .helpers import initial_guess, bvp_algorithm, root
-
+from .helpers import root
+from .core import bvp_algorithm, guess_generator
 from .continuation import ContinuationList as init_continuation
 from .core import setup_beluga, solve
 from .problem import OCP

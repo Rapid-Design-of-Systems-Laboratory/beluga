@@ -50,13 +50,13 @@ class ManualStrategy(object):
     # A unique short name to select this class
     strategy_name = 'manual'
 
-    def __init__(self, num_cases = 1,vars=[], bvp=None):
-        self.bvp = bvp
+    def __init__(self, num_cases = 1,vars=[], sol=None):
+        self.sol = sol
         self._num_cases = num_cases
         self._spacing = 'linear'
         self.vars = {}  # dictionary of values
         self.ctr  = 0   # iteration counter
-        self.last_bvp = None
+        self.last_sol = None
 
         self.terminal = functools.partial(self.set, param_type='terminal')
         self.initial = functools.partial(self.set, param_type='initial')
@@ -66,7 +66,7 @@ class ManualStrategy(object):
     def reset(self):
         """Resets the internal step counter to zero"""
         self.ctr = 0
-        self.last_bvp = None
+        self.last_sol = None
 
     def clear(self):
         """Clears all the previously set continuation variables"""
@@ -74,17 +74,17 @@ class ManualStrategy(object):
         self.reset()
 
     # TODO: Change to store only stepsize and use yield
-    def set_bvp(self, bvp):
-        self.bvp = bvp
+    def init(self, sol):
+        self.sol = sol
         # Iterate through all types of variables
         for var_type in self.vars.keys():
             for var_name in self.vars[var_type].keys():
                 # Look for the variable name from continuation in the BVP
-                if var_name not in bvp.solution.aux[var_type].keys():
+                if var_name not in sol.aux[var_type].keys():
                     raise ValueError('Variable '+var_name+' not found in boundary value problem')
 
                 # Set current value of each continuation variable
-                self.vars[var_type][var_name].value = bvp.solution.aux[var_type][var_name]
+                self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
                 # Calculate update steps for continuation process
                 if self._spacing == 'linear':
                     self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
@@ -132,13 +132,13 @@ class ManualStrategy(object):
 
     def next(self, ignore_last_step = False):
         """Generator class to create BVPs for the continuation step iterations
-        ignore_last_bvp: Should the non-convergence of previous step be ignored?
+        ignore_last_step: Should the non-convergence of previous step be ignored?
         """
 
-        if self.bvp is None:
+        if self.sol is None:
             raise ValueError('No boundary value problem associated with this object')
 
-        if not ignore_last_step and self.last_bvp is not None and not self.last_bvp.solution.converged:
+        if not ignore_last_step and self.last_sol is not None and not self.last_sol.converged:
             logging.error('The last step did not converge!')
             raise RuntimeError('Solution diverged! Stopping.')
 
@@ -148,20 +148,20 @@ class ManualStrategy(object):
         # Update auxiliary variables using previously calculated step sizes
         for var_type in self.vars:
             for var_name in self.vars[var_type]:
-                self.bvp.solution.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
+                self.sol.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
 
         self.ctr += 1
-        self.last_bvp = self.bvp
-        return self.bvp
+        self.last_sol = self.sol
+        return self.sol.aux
 
 class BisectionStrategy(ManualStrategy):
     """Defines one continuation step in continuation set"""
     # A unique short name to select this class
     strategy_name = 'bisection'
 
-    def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2, vars=[], bvp=None):
+    def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2, vars=[], aux=None):
         super(BisectionStrategy, self).__init__(num_cases=initial_num_cases)
-        self.last_bvp = None
+        self.last_sol = None
         self.num_divisions = num_divisions
         self.max_divisions = max_divisions
         self.division_ctr = 0
@@ -176,7 +176,7 @@ class BisectionStrategy(ManualStrategy):
         """
         # If it is the first step or if previous step converged
         # continue with usual behavior
-        if self.ctr == 0 or self.last_bvp.solution.converged:
+        if self.ctr == 0 or self.last_sol.converged:
             # Reset division counter
             self.division_ctr = 0
             return super(BisectionStrategy, self).next()
@@ -185,7 +185,7 @@ class BisectionStrategy(ManualStrategy):
         if self.ctr == 1:
             logging.error('Initial guess should converge for automated continuation to work!!')
             raise RuntimeError('Initial guess does not converge.')
-            return self.last_bvp
+            return self.last_sol
 
         if self.division_ctr > self.max_divisions:
             logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
@@ -195,7 +195,7 @@ class BisectionStrategy(ManualStrategy):
         for var_type in self.vars.keys():
             for var_name in self.vars[var_type].keys():
                 # Set current value of each continuation variable
-                # self.vars[var_type][var_name].value = bvp.solution.aux[var_type][var_name]
+                # self.vars[var_type][var_name].value = aux[var_type][var_name]
                 # insert new steps
                 old_steps = self.vars[var_type][var_name].steps
                 if self._spacing == 'linear':
