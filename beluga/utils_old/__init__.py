@@ -10,7 +10,6 @@ from .Propagator import Propagator
 from .ipsh import ipsh
 
 from .static_var import static_var
-from .SingletonMetaClass import SingletonMetaClass
 
 __all__ = ['tic','toc']
 

@@ -92,23 +92,6 @@ def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_
     # Suppress warnings
     warnings.filterwarnings("ignore")
 
-    # Include configuration file path
-    # sys.path.append(cls.config.getroot())
-
-    # # TODO: Get default solver options from configuration or a defaults file
-    # if problem.bvp_solver is None:
-    #     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=1000, verbose = False)
-    #     problem.bvp_solver = get_algorithm(config['default_bvp_solver'])
-
-    # # Set the cache directory to be in the current folder
-    # cache_dir = os.getcwd()+'/_cache'
-    # # cache_dir = os.path.dirname(info.filename)+'/_cache'
-    # try:
-    #     os.mkdir(cache_dir)
-    # except:
-    #     pass
-    # problem.bvp_solver.set_cache_dir(cache_dir)
-
     # Initialize logging system
     helpers.init_logging(logging_level,display_level, config['logfile'])
 

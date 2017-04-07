@@ -4,13 +4,13 @@ import numpy as np
 from .. import Solution
 from beluga.utils import keyboard
 from beluga.bvpsol.ode45 import ode45
-from ..Algorithm import Algorithm
+from .BaseAlgorithm import BaseAlgorithm
 from math import *
 import logging
 
 # dumps = picklemap(typed=True, flat=False, serializer='dill')
 #TODO: Save time steps from ode45 and use for fixed step RK4
-class SingleShooting(Algorithm):
+class SingleShooting(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
