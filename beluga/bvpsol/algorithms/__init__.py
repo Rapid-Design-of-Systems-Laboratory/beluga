@@ -1,3 +1,4 @@
+from .BaseAlgorithm import BaseAlgorithm
 from .SingleShooting import SingleShooting
 from .MultipleShooting import MultipleShooting
 

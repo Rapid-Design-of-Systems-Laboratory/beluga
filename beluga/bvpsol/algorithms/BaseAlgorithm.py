@@ -1,5 +1,5 @@
 import abc
-class Algorithm(object):
+class BaseAlgorithm(object):
     # Define class as abstract class
     __metaclass__ = abc.ABCMeta
 
@@ -7,3 +7,4 @@ class Algorithm(object):
     @abc.abstractmethod
     def solve(self,bvp):
         """Method to solve the bvp with given arguments"""
+        raise NotImplementedError()
