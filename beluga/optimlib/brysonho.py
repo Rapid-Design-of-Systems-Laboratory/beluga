@@ -6,16 +6,13 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 
 import functools as ft
 import itertools
-import re as _re
 import simplepipe as sp
 import sympy
-import pystache
-import imp
+import re as _re
 
 import beluga
 from beluga.utils import sympify
 from beluga.problem import SymVar
-from beluga.bvpsol import BVP
 
 def total_derivative(expr, var, dependent_vars=None):
     """
@@ -76,13 +73,15 @@ def make_augmented_cost(cost, constraints, location):
 
     Returns the augmented cost function
     """
-    filtered_list = constraints.get(location)
 
     def make_lagrange_mult(c, ind = 1):
-        return sympify('lagrange_' + c.type + '_' + str(ind))
-    lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(filtered_list,1)]
+        return sympify('lagrange_' + location + '_' + str(ind))
+    lagrange_mult = [make_lagrange_mult(c, ind)
+                     for (ind,c) in enumerate(constraints[location],1)]
 
-    aug_cost_expr = cost.expr + sum(nu*c for (nu, c) in zip(lagrange_mult, filtered_list))
+    aug_cost_expr = cost.expr + sum(nu * c
+                                    for (nu, c) in
+                                    zip(lagrange_mult, constraints[location]))
 
     aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
     return aug_cost
@@ -91,10 +90,11 @@ def make_augmented_cost(cost, constraints, location):
 
 def make_aug_params(constraints, location):
     """Make the lagrange multiplier terms for boundary conditions."""
-    filtered_list = constraints.get(location)
+
     def make_lagrange_mult(c, ind = 1):
-        return sympify('lagrange_' + c.type + '_' + str(ind))
-    lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(filtered_list,1)]
+        return sympify('lagrange_' + location + '_' + str(ind))
+    lagrange_mult = [make_lagrange_mult(c, ind)
+                     for (ind,c) in enumerate(constraints[location],1)]
     return lagrange_mult
 
 
@@ -120,15 +120,15 @@ def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
     yield ham
     yield costates
 
-def sanitize_constraint_expr(constraint, states):
+def sanitize_constraint_expr(constraint, states, location):
     """
     Checks the initial/terminal constraint expression for invalid symbols
     Also updates the constraint expression to reflect what would be in code
     """
-    if constraint.type == 'initial':
+    if location == 'initial':
         pattern = r'([\w\d\_]+)_0'
         prefix = '_x0'
-    elif constraint.type == 'terminal':
+    elif location == 'terminal':
         pattern = r'([\w\d\_]+)_f'
         prefix = '_xf'
     else:
@@ -147,10 +147,10 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     """simplepipe task for creating boundary conditions for initial and terminal
     constraints."""
 
-    bc_list = [sanitize_constraint_expr(x, states)
-                    for x in constraints.get(location)]
+    bc_list = [sanitize_constraint_expr(x, states, location)
+                    for x in constraints[location]]
     # bc_terminal = [sanitize_constraint_expr(x, states)
-    #                 for x in constraints.get('terminal')]
+    #                 for x in constraints['terminal']]
 
     if location == 'initial':
         sign = sympify('-1')
@@ -168,7 +168,7 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
 
 def make_time_bc(constraints, bc_terminal):
     """Makes free or fixed final time boundary conditions."""
-    time_constraints = constraints.get('independent')
+    time_constraints = constraints.get('independent', [])
     if len(time_constraints) > 0:
         return bc_terminal+['tf - 1']
     else:
@@ -236,7 +236,11 @@ def generate_problem_data(workspace):
 
 
 def init_workspace(ocp):
-    """Initializes the simplepipe workspace using an OCP definition."""
+    """Initializes the simplepipe workspace using an OCP definition.
+
+    All the strings in the original definition are converted into symbolic
+    expressions for computation.
+    """
     workspace = {}
     # variable_list = ['states', 'controls', 'constraints', 'quantities', 'initial_cost', 'terminal_cost', 'path_cost']
     workspace['problem_name'] = ocp.name
@@ -244,7 +248,11 @@ def init_workspace(ocp):
     workspace['states'] = [SymVar(s) for s in ocp.states()]
     workspace['controls'] = [SymVar(u) for u in ocp.controls()]
     workspace['constants'] = [SymVar(k) for k in ocp.constants()]
-    workspace['constraints'] = ocp.constraints()
+
+    constraints = ocp.constraints()
+    workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
+                                for c_type, c_list in constraints.items()}
+
     workspace['quantities'] = [SymVar(q) for q in ocp.quantities()]
     workspace['initial_cost'] = SymVar(ocp.get_cost('initial'), sym_key='expr')
     workspace['terminal_cost'] = SymVar(ocp.get_cost('terminal'), sym_key='expr')

@@ -69,14 +69,10 @@ class Scaling(dict):
         # Scaling functions for constraint multipliers and other parameters
         self.scale_func['parameters'] = {}
         indices = {}
-        for c in ws['constraints']:
-            if c.type not in indices:
-                indices[c.type] = 1 # initialize multiplier index
-
-            mul_var  = str(ws[c.type+'_lm_params'][indices[c.type]-1])
-            mul_unit = '('+cost_unit+')/('+str(c.unit)+')'
-            self.scale_func['parameters'][mul_var] = self.create_scale_fn(mul_unit)
-            indices[c.type] += 1 # increment multiplier index
+        for c_type, c_list in ws['constraints'].items():
+            for c, mul_var in zip(c_list, ws[c_type+'_lm_params']):
+                mul_unit = '('+cost_unit+')/('+str(c.unit)+')'
+                self.scale_func['parameters'][str(mul_var)] = self.create_scale_fn(mul_unit)
 
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify(unit_expr))

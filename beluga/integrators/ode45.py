@@ -1,6 +1,68 @@
-# Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
-# TODO: Add to SingleShooting class
+import scipy.integrate
+import numpy as np
 
+def ode_wrap(func,*args):   # Required for odeint
+    def func_wrapper(t,y):
+        return func(y,t,*args)
+    return func_wrapper
+
+def split_tspan(tspan):
+# def split_tspan(tspan, y0):
+    # Detect duplicates in time array to find arc junctions
+    [arc_end_idx] = np.where(np.diff(tspan) == 0)
+    # np.add() required because of how np.split works
+    arc_end_idx = np.add(arc_end_idx,1)
+
+    if len(arc_end_idx) > 0:
+        return np.split(tspan,arc_end_idx)
+    else:
+        return tspan
+
+    # if len(arc_end_idx) > 0:
+    #     return (np.split(tspan,arc_end_idx),
+    #             np.split(y0,arc_end_idx,axis=1))
+    # else:
+    #     return ([tspan],[y0])
+
+def ode45(f,tspan,y0,*args,**kwargs):
+    """Implements interface similar to MATLAB's ode45 using scipy"""
+
+    # return ode45_old(f,tspan,y0,*args,**kwargs)
+
+    if len(tspan) == 2:
+        # TODO: Change hardcoding?
+        tspan = np.linspace(tspan[0],tspan[1],200)
+    t0 = tspan[0]
+    t1 = tspan[1]
+    yy = scipy.integrate.odeint(ode_wrap(f,*args),y0,tspan)
+    return (tspan,yy)
+
+    tt = tspan[0]
+    yy = np.array([y0])
+
+    from beluga.utils import keyboard
+
+    r = scipy.integrate.ode(f).set_integrator('lsoda')
+    r.set_f_params(*args)   # Add extra arguments to be passed in
+    r.set_initial_value(y0,tspan[0])
+
+    if 'num_steps' in kwargs:
+        num_steps = kwargs['num_steps']
+    else:
+        num_steps = 100 # HARDCODED num_steps
+
+    tt = np.linspace(tspan[0],tspan[-1],num_steps)
+    dt = tt[1]-tt[0]
+
+    while r.successful() and r.t < tspan[-1]:
+        r.integrate(r.t+dt)
+        yy = np.vstack((yy,r.y))  # Add new timestep as row
+
+
+    return (tt,yy)
+
+
+# Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
 from numpy import double, sign, finfo, array, zeros, dot, mod, size, inf, all, max, min, abs, mat
 from numpy.linalg import norm
 import logging

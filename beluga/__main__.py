@@ -93,8 +93,10 @@ def load_scenario(scenario_name):
         #     print('Unable to find get_problem function in scenario module')
         #     return None
 
-    except ImportError:
-        print('Scenario module not found')
+    except ImportError as e:
+        print('Error loading scenario: ')
+        import traceback
+        traceback.print_exc(e)
         return None
 
 
