@@ -6,29 +6,35 @@ Contains class/functions related to defining the optimal control problems.
 
 import scipy.optimize
 import numpy as np
-from functools import partialmethod
+import dill
+
+import json
 import logging
 import os.path
-import dill
 import re
-
-from beluga.continuation import ContinuationList
-
+from functools import partialmethod
 from collections import namedtuple, ChainMap
 from itertools import zip_longest
-from beluga.bvpsol import Scaling  # BUG
-# from beluga.bvpsol import Solution
-from beluga.bvpsol import ode45
-from beluga.utils import sympify  # , keyboard
+
+from beluga.bvpsol import Scaling
+from beluga.integrators import ode45
+from beluga.utils import sympify
+from beluga.continuation import ContinuationList
+
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
     """Builder class for defining optimal control problem."""
 
     def __init__(self, name=''):
-        """Initializes problem object."""
-        # self.name = self._format_name(name)
-        self.name = name
+        """Initializes problem object.
+
+        Parameters
+        ----------
+        name - str
+            Unique name for the problem
+        """
+        self.name = self._format_name(name)
 
         self._systems = {'default': {}}  # Dynamic system definitions
         self._properties = {}  # Problem properties
@@ -38,9 +44,29 @@ class OCP(object):
 
     # Alias for returning cost function by type
     def get_cost(self, cost_type):
+        """Retrieves the cost function for the problem.
+
+        Parameters
+        ----------
+        cost_type - str
+            Type of cost function - path, initial or terminal
+        """
         return self._properties.get(cost_type + '_cost', {'expr':'0','unit':'0'})
 
     def set_cost(self, expr, unit, cost_type):
+        """Sets cost function for problem.
+
+        Parameters
+        ----------
+        expr - str
+            Expression for cost function
+
+        unit - str
+            Unit of cost function
+
+        cost_type - str
+            Type of cost function - path, initial or terminal
+        """
         self._properties[cost_type+'_cost'] = {'expr':expr, 'unit':unit}
 
     def set_property(self, *args, property_name, property_args, **kwargs):
@@ -136,14 +162,15 @@ class OCP(object):
             Only alphabets, numbers and underscores allowed
             Should start with an alphabet""")
 
-class OCPVariable(dict):
-    def __init__(self, _fields, sym_key, *args):
-        for name, arg in zip(_fields, args):
-            setattr(self, name, arg)
-            self[name] = arg
+    def as_json(self):
+        """Converts the problem definition into a pure dictionary."""
+        output = self._properties
+        output['problem_name'] = self.name
+        output['constraints'] = self._constraints
+        return json.dumps(output)
 
 
-class ConstraintList(list):
+class ConstraintList(dict):
 
     def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """
@@ -151,10 +178,15 @@ class ConstraintList(list):
 
         Returns reference to self.constraint_aliases for chaining
         """
+        c_list = self.get(constraint_type, [])
+
         constraint = _combine_args_kwargs(constraint_args, args, kwargs)
-        cobj = SymVar(constraint, sym_key='expr')
-        cobj.type = constraint_type
-        self.append(cobj)
+        # cobj = SymVar(constraint, sym_key='expr')
+        # cobj.type = constraint_type
+        # self.append(constraint)
+        # self.append(cobj)
+        c_list.append(constraint)
+        self[constraint_type] = c_list
         return self
 
     # Aliases for defining constraints of different types
@@ -173,21 +205,33 @@ class ConstraintList(list):
                 constraint_args=('type', 'name', 'expr', 'direction', 'bound', 'unit')
                 )
 
-    def get(self, constraint_type):
-        """
-        Returns list of constraints of a specific type
-        """
-        return [c for c in self if c.type == constraint_type]
+    # def get(self, constraint_type):
+    #     """
+    #     Returns list of constraints of a specific type
+    #     """
+    #     return [c for c in self if c.type == constraint_type]
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
-    """
-    arg_list: List of keys in order of positional arguments
-    args: List of positional arguments
-    kwargs: Dictionary of keyword arguments
+    """Combines positional and keyword arguments
 
-    Returns a dictionary merging kwargs and args with keys from
+    Parameters
+    ----------
+    arg_list - list of str
+        List of keys in order of positional arguments
+
+    args - list of str
+        List of positional arguments
+
+    kwargs: dict
+        Dictionary of keyword arguments
+
+    Returns
+    -------
+    A dictionary merging kwargs and args with keys from
     from args_list
 
+    Example
+    -------
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
     {'foo':1, 'bar':2, 'baz': 3}
     """

@@ -4,7 +4,7 @@ import numpy as np
 import beluga
 from .. import Solution
 from beluga.utils import keyboard
-from beluga.bvpsol.ode45 import ode45
+from beluga.integrators import ode45
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 
