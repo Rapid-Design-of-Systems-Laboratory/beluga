@@ -5,8 +5,6 @@ from .. import Solution
 from ..Algorithm import Algorithm
 from math import *
 from beluga.utils import *
-from beluga.utils import keyboard
-from beluga.utils.joblib import Memory
 from beluga.utils import Propagator
 from beluga.utils.Worker import Worker
 import logging, sys, os
@@ -48,7 +46,9 @@ class MultipleShooting(Algorithm):
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
         if self.cached and cache_dir is not None:
-            memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
+            raise NotImplementedError
+            # TODO: Fix this cache function. It used an old outdated package that no longer works.
+            # memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
             self.solve = memory.cache(self.solve)
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
@@ -239,7 +239,7 @@ class MultipleShooting(Algorithm):
         solinit = guess
         x = solinit.x
         # Get initial states from the guess structure
-        y0g = [solinit.y[:,np.floor(i/self.number_arcs*x.shape[0])] for i in range(self.number_arcs)]
+        y0g = [solinit.y[:,int(np.floor(i/self.number_arcs*x.shape[0]))] for i in range(self.number_arcs)]
         paramGuess = solinit.parameters
 
         deriv_func = bvp.deriv_func
@@ -279,12 +279,12 @@ class MultipleShooting(Algorithm):
                 if iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")
                     break
-                # keyboard
+
                 y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
 
                 for i in range(self.number_arcs):
-                    left = np.floor(i/self.number_arcs*t.shape[0])
-                    right = np.floor((i+1)/self.number_arcs*t.shape[0])
+                    left = int(np.floor(i/self.number_arcs*t.shape[0]))
+                    right = int(np.floor((i+1)/self.number_arcs*t.shape[0]))
                     if i == self.number_arcs-1:
                         right = t.shape[0] - 1
                     tspanset[i] = [t[left],t[right]]

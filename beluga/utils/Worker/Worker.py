@@ -1,6 +1,6 @@
 from beluga.utils.propagators import *
-from beluga.utils.joblib import Parallel, delayed
-from beluga.utils.joblib import pool
+# from beluga.utils.joblib import Parallel, delayed
+# from beluga.utils.joblib import pool
 import os
 from beluga.utils import Propagator
 import signal
