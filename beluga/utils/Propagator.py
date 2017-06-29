@@ -1,6 +1,4 @@
 from .propagators import *
-from beluga.utils.joblib import Parallel, delayed
-from beluga.utils.joblib import pool
 import os
 from beluga.utils import keyboard
 
@@ -36,14 +34,16 @@ class Propagator(object):
         self.threads = self.process_count
 
     def startPool(self):
-        if self.poolinitialized == 0:
-            self.pool = pool.Pool(processes=self.process_count)
-            self.poolinitialized = True
+        self.poolinitialized = False
+        # if self.poolinitialized == 0:
+        #     self.pool = pool.Pool(processes=self.process_count)
+        #     self.poolinitialized = True
 
     def closePool(self):
         self.poolinitialized = False
-        self.pool.close()
-        self.pool.terminate()
+        # self.poolinitialized = False
+        # self.pool.close()
+        # self.pool.terminate()
 
     def setSolver(self,solver='ode45'):
         possibles = globals().copy()
@@ -77,8 +77,16 @@ class Propagator(object):
                 sol = list(zip(*t_and_y))
 
             else:
-                # If pool hasn't been initialized, use backend threading.
-                t_and_y = Parallel(n_jobs=self.threads,backend='threading')(delayed(ode45)(f,t,y,*args,**kwargs) for (t,y) in zip(tspan,y0))
-                sol = list(zip(*t_and_y))
+                tout = []
+                yout = []
+                for i in range(len(y0)):
+                    ttemp, ytemp = ode45(f,tspan[i], y0[i], *args, **kwargs)
+                    tout.append(ttemp)
+                    yout.append(ytemp)
 
-        return sol
+                # ys = [ode45(f,t,y,*args,**kwargs) for (t,y) in zip(tspan,y0)]
+                # If pool hasn't been initialized, use backend threading.
+                # t_and_y = Parallel(n_jobs=self.threads,backend='threading')(delayed(ode45)(f,t,y,*args,**kwargs) for (t,y) in zip(tspan,y0))
+                # sol = list(zip(*t_and_y))
+
+        return tout, yout
