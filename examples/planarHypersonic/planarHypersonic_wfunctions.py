@@ -5,15 +5,28 @@ import beluga.optim.Problem
 from beluga.optim.problem import *
 from beluga.continuation import *
 from math import *
+import numpy as np
 
 import functools
 
 
-def CLfunction(alfa):
-    return 1.5658 * alfa
+def CLfunction(alfa, np=np):
+    if np.iscomplex(alfa)==True:
+        return np.interp(np.real(alfa), [-1,-.75,-.5,-.25,0,.25,.5,.75,1],[-1.5658, -1.1744, -0.7829, -0.3915, 0, 0.3915, 0.7829, 1.1744, 1.5658])*1j*1e-30
+    else:
+        return np.interp(alfa, [-1,-.75,-.5,-.25,0,.25,.5,.75,1],[-1.5658, -1.1744, -0.7829, -0.3915, 0, 0.3915, 0.7829, 1.1744, 1.5658])
 
-def CDfunction(alfa):
-    return 1.6537 * alfa ** 2 + 0.0612
+def CDfunction(alfa, np=np):
+    if np.iscomplex(alfa)==True:
+        return np.interp(np.real(alfa),[-1,-.75,-.5,-.25,0,.25,.5,.75,1],[1.7149, 0.9914,  0.4746,  0.1646,  0.0612,  0.1646,  0.4746,  0.9914, 1.7149])*1j*1e-30
+    else:
+        return np.interp(alfa,[-1,-.75,-.5,-.25,0,.25,.5,.75,1],[1.7149, 0.9914,  0.4746,  0.1646,  0.0612,  0.1646,  0.4746,  0.9914, 1.7149])
+
+# def CLfunction(alfa):
+#     return 1.5658 * alfa
+#
+# def CDfunction(alfa):
+#     return 1.6537 * alfa ** 2 + 0.0612
 
 def get_problem():
     # Figure out way to implement caching automatically
