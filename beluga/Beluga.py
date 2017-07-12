@@ -2,7 +2,7 @@ from cmath import *
 from beluga.utils import *
 from beluga.optim import *
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import sys,os,imp,inspect,warnings
 import scipy.optimize
@@ -219,9 +219,9 @@ class Beluga(object):
 
         # plt.title('Solution for Brachistochrone problem')
         # plt.plot(self.out['solution'][-1][1,:]*180/pi,self.out['solution'][-1][0,:]/1000)
-        plt.xlabel('theta')
-        plt.ylabel('h')
-        plt.show(block=False)
+        # plt.xlabel('theta')
+        # plt.ylabel('h')
+        # plt.show(block=False)
 
     # TODO: Refactor how code deals with initial guess
     def run_continuation_set(self,steps,bvp_start):

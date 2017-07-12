@@ -3,6 +3,7 @@ import numpy as np
 
 from .. import Solution
 from ..Algorithm import Algorithm
+from .SingleShooting import SingleShooting
 from math import *
 from beluga.utils import *
 from beluga.utils import Propagator
@@ -17,6 +18,12 @@ except ImportError:
     HPCSUPPORTED = 0
 
 class MultipleShooting(Algorithm):
+    def __new__(cls, tolerance=1e-6, max_iterations=100, max_error=100, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+        obj = super(MultipleShooting, cls).__new__(cls)
+        if number_arcs == 1:
+            return SingleShooting(tolerance=tolerance, max_iterations=max_iterations, max_error=max_error, derivative_method=derivative_method, cache_dir=cache_dir, verbose=verbose, cached=cached)
+        return obj
+
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=100, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
@@ -217,11 +224,6 @@ class MultipleShooting(Algorithm):
         Raises:
         """
         guess = bvp.solution
-        if self.number_arcs == 1:
-            # Single Shooting
-            from .SingleShooting import SingleShooting
-            Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
-            return Single.solve(bvp)
 
         if self.worker is not None:
             ode45 = self.worker.Propagator
@@ -232,7 +234,7 @@ class MultipleShooting(Algorithm):
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
-            x,ynew = ode45.solve(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux, abstol=self.tolerance/10, reltol=1e-3)
+            x,ynew = ode45(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux, abstol=self.tolerance/10, reltol=1e-3)
             guess.y = np.transpose(ynew)
             guess.x = x
 
@@ -291,7 +293,7 @@ class MultipleShooting(Algorithm):
                     #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
                 # Propagate STM and original system together
-                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-5)
+                tset,yySTM = ode45(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-5)
 
                 # Obtain just last timestep for use with correction
                 yf = [yySTM[i][-1] for i in range(self.number_arcs)]
