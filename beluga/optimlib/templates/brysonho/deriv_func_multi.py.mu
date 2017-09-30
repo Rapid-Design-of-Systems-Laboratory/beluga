@@ -1,10 +1,14 @@
 import numpy as np
 from math import *
-def deriv_func(_t, _X, _p, _aux, _arcs=(0,),arc_idx=0):
+
+def compute_control(_t, _X, _p, _aux, arc_type=0):
+    return control_fns[arc_type](_t,_X,_p,_aux)
+
+def deriv_func(_t, _X, _p, _aux, _arcs=(0,), arc_idx=0):
     arc_type = _arcs[arc_idx]
 
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
-    u_ = control_fns[arc_type](_t,_X,_p,_aux)
+    u_ = compute_control(_t,_X,_p,_aux)
     [{{#control_list}}{{.}},{{/control_list}}] = u_
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
