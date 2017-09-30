@@ -59,7 +59,8 @@ def create_module(problem_data):
 
     module.control_fns = problem_data['control_fns']
     module.corner_fns = problem_data['corner_fns']
-
+    del problem_data['corner_fns']
+    del problem_data['control_fns']
         # module.costate_eoms = problem_data['costate_eoms']
 
     return module

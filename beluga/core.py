@@ -181,8 +181,10 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
 
     # Save data
     output_file = 'data.dill'
+
+    del out['problem_data']['s_list']
     with open(output_file, 'wb') as outfile:
-    # dill.settings['recurse'] = True
+        dill.settings['recurse'] = True
         dill.dump(out, outfile) # Dill Beluga object only
 
 
