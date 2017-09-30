@@ -355,30 +355,37 @@ def make_constraint_bc(s_expn,
     #
     return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions
 
+def make_parameters(workspace):
+    all_pi_names = [p['pi_list'] for p in workspace['s_list']]
+    params_list = [str(p) for p in it.chain(workspace['initial_lm_params'],
+                                            workspace['terminal_lm_params'], *all_pi_names)]
+    parameters = sym.symbols(' '.join(params_list))
+    return parameters
+
 def make_controlfn(workspace):
     control_opts = workspace['control_law']
     controls = sym.Matrix([_.name for _ in workspace['controls']])
     constants = sym.Matrix([_.name for _ in workspace['constants']])
     states = sym.Matrix([_.name for _ in workspace['states']])
     costates = sym.Matrix([_.name for _ in workspace['costates']])
+    parameters = sym.Matrix(workspace['parameters'])
     ham = workspace['ham']
 
-
     control_opt_mat = sym.Matrix([[u['expr'] for u in option] for option in control_opts])
-    control_opt_fn = sym.lambdify([*states, *costates, *constants], control_opt_mat)
+    control_opt_fn = sym.lambdify([*states, *costates, *parameters, *constants], control_opt_mat)
     # control_fns = [[make_sympy_fn([*states, *costates, *constants], u['expr'])
     #                 for u in option] for option in control_opts]
-    ham_fn = make_sympy_fn([*states, *costates, *controls, *constants], ham)
+    ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], ham)
 
     num_controls = len(controls)
     num_options = len(control_opts)
 
     # @numba.jit
-    def compute_control(t, X, C):
-        u_list = control_opt_fn(*X, *C)
+    def compute_control(t, X, p, C):
+        u_list = control_opt_fn(*X, *p, *C)
         ham_val = np.zeros(num_options)
         for i in range(num_options):
-            ham_val[i] = ham_fn(*X, *u_list[i], *C)
+            ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
 
         return u_list[np.argmin(ham_val)]
 
@@ -407,25 +414,27 @@ def make_odefn(workspace):
     constants = sym.Matrix([_.name for _ in workspace['constants']])
     states = sym.Matrix([_.name for _ in workspace['states']])
     costates = sym.Matrix([_.name for _ in workspace['costates']])
+    parameters = sym.Matrix(workspace['parameters'])
 
     state_eoms = sym.Matrix([_.eom for _ in workspace['states']]).T
     costate_eoms = sym.Matrix([_.eom for _ in workspace['costates']]).T
 
-    compute_control = make_controlfn(workspace)
+    compute_control = workspace['control_fn']
 
-    state_eom_fn = make_sympy_fn([*states, *costates, *controls, *constants], state_eoms)
-    costate_eom_fn = make_sympy_fn([*states, *costates, *controls, *constants], costate_eoms)
+    state_eom_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], state_eoms)
+    costate_eom_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], costate_eoms)
     zero_eom = np.array([0])
 
-    def eom_fn(t, X, C):
-        u = compute_control(t, X, C)
-        return np.hstack((state_eom_fn(*X,*u,*C), costate_eom_fn(*X,*u,*C), zero_eom))
-
-    x = np.array([0., 0, 1., -.1, -.1, -.1])
-    c = np.array([-9.81])
-    t = 0.0
-    # print(compute_control(t, x, c))
-    print(eom_fn(t, x, c))
+    def eom_fn(t, X, p, C):
+        u = compute_control(t, X, p, C)
+        return np.hstack((state_eom_fn(*X,*p,*C,*u), costate_eom_fn(*X,*p,*C,*u), zero_eom))
+    #
+    # x = np.array([0., 0, 1., -.1, -.1, -.1])
+    # c = np.array([-9.81])
+    # p = np.array([0.]*6)
+    # t = 0.0
+    # # print(compute_control(t, x, p, c))
+    # print(eom_fn(t, x, p, c))
 
     return eom_fn
     # def compute_control(t, X, p, C, *args):
@@ -571,8 +580,10 @@ BrysonHo = sp.Workflow([
                     'ham',
                     'jacobian_fn',
                     'derivative_fn'),
-            outputs='foo'),
-    sp.Task(make_odefn, inputs='*', outputs='odefn'),
+            outputs='s_list'),
+    sp.Task(make_parameters, inputs='*', outputs='parameters'),
+    sp.Task(make_controlfn, inputs='*', outputs='control_fn'),
+    sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
     sp.Task(generate_problem_data,
             inputs='*',
             outputs=('problem_data')),
