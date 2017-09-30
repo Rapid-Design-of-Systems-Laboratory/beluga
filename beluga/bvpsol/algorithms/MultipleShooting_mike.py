@@ -55,14 +55,7 @@ def create_module(problem_data):
     New module for holding compiled code
     """
     problem_name = problem_data['problem_name']
-    module = imp.new_module('_beluga_'+problem_name)
-
-    module.control_fns = problem_data['control_fns']
-    module.corner_fns = problem_data['corner_fns']
-
-        # module.costate_eoms = problem_data['costate_eoms']
-
-    return module
+    return imp.new_module('_beluga_'+problem_name)
 
 def compile_code_py(code_string, module, function_name):
     """
@@ -96,7 +89,7 @@ PythonCodeGen = sp.Workflow([
 
     # Load equation template files and generate code
     sp.Task(ft.partial(load_eqn_template,
-                template_file=beluga.root()+'/optimlib/templates/brysonho/deriv_func_multi.py.mu'),
+                template_file=beluga.root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
             inputs='problem_data',
             outputs='deriv_func_code'),
     sp.Task(ft.partial(load_eqn_template,
@@ -122,7 +115,7 @@ PythonCodeGen = sp.Workflow([
     # sp.Task(make_bvp, inputs='*', outputs=['bvp'])
 ], description='Generates and compiles the required BVP functions from problem data')
 
-class MultipleShooting(BaseAlgorithm):
+class SingleShooting(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations

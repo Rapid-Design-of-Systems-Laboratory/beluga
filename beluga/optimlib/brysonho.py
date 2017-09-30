@@ -162,27 +162,26 @@ def make_costate_rates(ham, states, costate_names, derivative_fn):
                 for s, lam in zip(states, costate_names)]
     return costates
 
-def sanitize_constraint_expr(constraint, states, location):
+def sanitize_constraint_expr(constraint,
+            states,
+            location, prefix_map
+            ):
     """
     Checks the initial/terminal constraint expression for invalid symbols
     Also updates the constraint expression to reflect what would be in code
     """
-    if location == 'initial':
-        pattern = r'([\w\d\_]+)_0'
-        prefix = '_x0'
-    elif location == 'terminal':
-        pattern = r'([\w\d\_]+)_f'
-        prefix = '_xf'
-    else:
+
+    if location not in prefix_map:
         raise ValueError('Invalid constraint type')
 
+    pattern, prefix, _ = dict(prefix_map)[location]
     m = _re.findall(pattern,str(constraint.expr))
     invalid = [x for x in m if x not in states]
 
     if not all(x is None for x in invalid):
         raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
 
-    return _re.sub(pattern,prefix+r"['\1']",str(constraint.expr))
+    return _re.sub(pattern,prefix,str(constraint.expr))
 
 
 def make_boundary_conditions(constraints,
@@ -190,19 +189,16 @@ def make_boundary_conditions(constraints,
                              costates,
                              cost,
                              derivative_fn,
-                             location):
+                             location,
+                             prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
+                                         ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
     """simplepipe task for creating boundary conditions for initial and terminal
     constraints."""
-
-    bc_list = [sanitize_constraint_expr(x, states, location)
+    prefix_map = dict(prefix_map)
+    bc_list = [sanitize_constraint_expr(x, states, location, prefix_map)
                     for x in constraints[location]]
-    # bc_terminal = [sanitize_constraint_expr(x, states)
-    #                 for x in constraints['terminal']]
 
-    if location == 'initial':
-        sign = sympify('-1')
-    elif location == 'terminal':
-        sign = sympify('1')
+    *_, sign = dict(prefix_map)[location]
 
     cost_expr = sign * cost
 
@@ -246,6 +242,30 @@ def make_control_law(dhdu, controls):
                             for option in ctrl_sol]
     return control_options
 
+def process_path_constraints(path_constraints,
+                             states,
+                             costates,
+                             constants,
+                             controls,
+                             ham,
+                             jacobian_fn,
+                             derivative_fn):
+
+    s_list = []
+    for i, s in enumerate(path_constraints):
+        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
+                make_constraint_bc(s.expr, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+
+        s_list.append({'control_law': u_aug,
+                       'lamdot': lamdot,
+                       'ham': ham_aug,
+                       'order': order,
+                       'mu': mu_i,
+                       'pi_list': pi_list,
+                       'corner': corner_conditions})
+
+    return s_list
+
 def make_constraint_bc(s_expn,
                        s_idx,
                        states,
@@ -259,6 +279,7 @@ def make_constraint_bc(s_expn,
     constrained arc bc function"""
     s_q = sympy.Matrix([s_expn])
     control_found = False
+
 
     order = 0
     found = False
@@ -335,41 +356,21 @@ def make_constraint_bc(s_expn,
 
     bc_list = [str(_) for _ in bc_arc]
 
-    # num_states = len(states)
-    # costates = slice(num_states, 2*num_states)
-    #
-    # def bcfn(y1m, y1p, y2m, y2p, C, mu_list):
-    #     """
-    #     y1m - end of previous arc at entry point
-    #     y1p - start of constrained arc
-    #     y2m - end of constrained arc
-    #     y2p - start of next arc
-    #     """
-    #
-    #     return np.vstack((y1m[:num_states] - y1p[:num_states],
-    #                       y1m[costates] - y1p[costates] - mu_list[:num_states] @ N_x,
-    #                       y2m - y2p,
-    #                     #   ham_fn(y1m, C) - ham_fn(y1p, C),
-    #                     #   ham_fn(y2m, C) - ham_fn(y2p, C)
-    #                       ))
-    #
     return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions
 
-def make_parameters(workspace):
-    all_pi_names = [p['pi_list'] for p in workspace['s_list']]
-    params_list = [str(p) for p in it.chain(workspace['initial_lm_params'],
-                                            workspace['terminal_lm_params'], *all_pi_names)]
+def make_parameters(initial_lm_params, terminal_lm_params, s_list):
+    all_pi_names = [p['pi_list'] for p in s_list]
+    params_list = [str(p) for p in it.chain(initial_lm_params,
+                                            terminal_lm_params, *all_pi_names)]
     parameters = sym.symbols(' '.join(params_list))
     return parameters
 
-def make_controlfn(workspace):
-    control_opts = workspace['control_law']
-    controls = sym.Matrix([_.name for _ in workspace['controls']])
-    constants = sym.Matrix([_.name for _ in workspace['constants']])
-    states = sym.Matrix([_.name for _ in workspace['states']])
-    costates = sym.Matrix([_.name for _ in workspace['costates']])
-    parameters = sym.Matrix(workspace['parameters'])
-    ham = workspace['ham']
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, ham):
+    controls = sym.Matrix([_.name for _ in controls])
+    constants = sym.Matrix([_.name for _ in constants])
+    states = sym.Matrix([_.name for _ in states])
+    costates = sym.Matrix([_.name for _ in costates])
+    parameters = sym.Matrix(parameters)
 
     control_opt_mat = sym.Matrix([[u['expr'] for u in option] for option in control_opts])
     control_opt_fn = sym.lambdify([*states, *costates, *parameters, *constants], control_opt_mat)
@@ -379,9 +380,11 @@ def make_controlfn(workspace):
 
     num_controls = len(controls)
     num_options = len(control_opts)
-
+    num_states = len(states)
     # @numba.jit
-    def compute_control(t, X, p, C):
+    def compute_control(t, X, p, aux):
+        X = X[:(2*num_states+1)]
+        C = [v for k,v in aux['const'].items()]
         u_list = control_opt_fn(*X, *p, *C)
         ham_val = np.zeros(num_options)
         for i in range(num_options):
@@ -404,70 +407,105 @@ def make_controlfn(workspace):
     #     u = u_list[np.argmin(ham_val)]
     #     return u
 
-    return compute_control
+    yield compute_control
+    yield ham_fn
 
-
-def make_odefn(workspace):
-
-    control_opts = workspace['control_law']
+def make_constrained_arc_fns(workspace):
+    """Creates constrained arc control functions."""
     controls = sym.Matrix([_.name for _ in workspace['controls']])
     constants = sym.Matrix([_.name for _ in workspace['constants']])
     states = sym.Matrix([_.name for _ in workspace['states']])
     costates = sym.Matrix([_.name for _ in workspace['costates']])
     parameters = sym.Matrix(workspace['parameters'])
 
-    state_eoms = sym.Matrix([_.eom for _ in workspace['states']]).T
-    costate_eoms = sym.Matrix([_.eom for _ in workspace['costates']]).T
-
-    compute_control = workspace['control_fn']
-
-    state_eom_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], state_eoms)
-    costate_eom_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], costate_eoms)
-    zero_eom = np.array([0])
-
-    def eom_fn(t, X, p, C):
-        u = compute_control(t, X, p, C)
-        return np.hstack((state_eom_fn(*X,*p,*C,*u), costate_eom_fn(*X,*p,*C,*u), zero_eom))
-    #
-    # x = np.array([0., 0, 1., -.1, -.1, -.1])
-    # c = np.array([-9.81])
-    # p = np.array([0.]*6)
-    # t = 0.0
-    # # print(compute_control(t, x, p, c))
-    # print(eom_fn(t, x, p, c))
-
-    return eom_fn
-    # def compute_control(t, X, p, C, *args):
-    #     pass
-    #
-    # def odefn(t, X, p, C, *args):
-    #
-    #     u = compute_control(t, X, p, C, *args)
-    #     pass
+    fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
+    control_fns = [workspace['control_fn']]
+    costate_eoms = [ {'eom':[str(_.eom) for _ in workspace['costates']], 'arcid':0} ]
+    corner_fns = []
 
 
-def process_path_constraints(path_constraints,
-                             states,
-                             costates,
-                             controls,
-                             ham,
-                             jacobian_fn,
-                             derivative_fn):
+    for arc_id, s in enumerate(workspace['s_list'],1):
+        # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
+        u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
+        corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
+        costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']], 'arcid':arc_id}
+        control_fns.append(u_fn)
+        corner_fns.append(corner_fn)
+        costate_eoms.append(costate_eom)
 
-    s_list = []
-    for i, s in enumerate(path_constraints):
-        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
-                make_constraint_bc(s.expr, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+    yield control_fns
+    yield costate_eoms
+    yield corner_fns
 
-        s_list.append({'control_law': u_aug,
-                       'lamdot': {str(_):str(_.eom) for _ in lamdot},
-                       'ham': ham_aug,
-                       'order': order,
-                       'mu': mu_i,
-                       'pi_list': pi_list,
-                       'corner': corner_conditions})
+#
+# def make_odefn(workspace):
+#
+#     control_opts = workspace['control_law']
+#     controls = sym.Matrix([_.name for _ in workspace['controls']])
+#     constants = sym.Matrix([_.name for _ in workspace['constants']])
+#     states = sym.Matrix([_.name for _ in workspace['states']])
+#     costates = sym.Matrix([_.name for _ in workspace['costates']])
+#     parameters = sym.Matrix(workspace['parameters'])
+#
+#     state_eoms = sym.Matrix([_.eom for _ in workspace['states']]).T
+#     costate_eoms = sym.Matrix([_.eom for _ in workspace['costates']]).T
+#
+#     compute_control = workspace['control_fn']
+#
+#     state_eom_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], state_eoms)
+#     costate_eom_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], costate_eoms)
+#     zero_eom = np.array([0])
+#
+#     def eom_fn(t, X, p, C):
+#         u = compute_control(t, X, p, C)
+#         return np.hstack((state_eom_fn(*X,*p,*C,*u), costate_eom_fn(*X,*p,*C,*u), zero_eom))
+#
+#     return eom_fn
+#
+# def make_bcfn(workspace):
+#     controls = sym.Matrix([_.name for _ in workspace['controls']])
+#     constants = sym.Matrix([_.name for _ in workspace['constants']])
+#     states = sym.Matrix([_.name for _ in workspace['states']])
+#     costates = sym.Matrix([_.name for _ in workspace['costates']])
+#     parameters = workspace['parameters']
+#     constraints = workspace['constraints']
+#     derivative_fn = workspace['derivative_fn']
+#
+#     compute_control = workspace['control_fn']
+#     ham_fn = workspace['ham_fn']
+#
+#     prefix_map = (('initial',(r'([\w\d\_]+)_0', r"_ic_\1", sympify('-1'))),
+#                   ('terminal',(r'([\w\d\_]+)_f', r"_fc_\1", sympify('1'))))
+#
+#     xAndLamSyms = set(it.chain(states, costates, parameters, constants))
+#     bc_map = {}
+#     bc_param_map = {}
+#     for location in ('initial', 'terminal'):
+#         cost = workspace['aug_'+location+'_cost']
+#         bc = make_boundary_conditions(constraints,
+#                              workspace['states'],
+#                              workspace['costates'],
+#                              cost,
+#                              derivative_fn,
+#                              location,
+#                              prefix_map)
+#         bc_map[location] = sym.Matrix([bc])
+#         new_syms = bc_map[location].free_symbols - xAndLamSyms
+#         bc_param_map[location] = new_syms
+#
+#
+#     xic = bc_param_map['initial']
+#     xfc = bc_param_map['terminal']
+#
+#     bc0_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *xic, *xfc], bc_map['initial'])
+#     bcf_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *xic, *xfc], bc_map['terminal'])
+#
+#     def bc_fn(y0, yf, p, C, xic, xfc):
+#         return np.hstack((bc0_fn(y0, p, C, xic, xfc),
+#                           bcf_fn(yf, p, C, xic, xfc)))
+#
+#     return bc_fn, xic, xfc
 
-    return s_list
 
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
@@ -487,11 +525,17 @@ def generate_problem_data(workspace):
      ,
      'parameter_list': [str(p) for p in it.chain(workspace['initial_lm_params'],
                                                         workspace['terminal_lm_params'])],
+     'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
+     'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
      'deriv_list':
          [str(tf_var*state.eom) for state in workspace['states']] +
          [str(tf_var*costate.eom) for costate in workspace['costates']] +
          [0]   # TODO: Hardcoded 'tf'
      ,
+     'control_fns': workspace['control_fns'],
+     'costate_eoms': workspace['costate_eoms'],
+     'corner_fns': workspace['corner_fns'],
+     's_list': workspace['s_list'],
      'num_states': 2*len(workspace['states']) + 1,
      'dHdu': workspace['dhdu'],
      'bc_initial': [str(_) for _ in workspace['bc_initial']],
@@ -502,6 +546,7 @@ def generate_problem_data(workspace):
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
     }
+
     return problem_data
 
 
@@ -576,14 +621,22 @@ BrysonHo = sp.Workflow([
             inputs=('path_constraints',
                     'states',
                     'costates',
+                    'constants',
                     'controls',
                     'ham',
                     'jacobian_fn',
                     'derivative_fn'),
             outputs='s_list'),
-    sp.Task(make_parameters, inputs='*', outputs='parameters'),
-    sp.Task(make_controlfn, inputs='*', outputs='control_fn'),
-    sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
+
+    sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
+        outputs='parameters'),
+
+    sp.Task(make_control_and_ham_fn,
+            inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'ham'),
+            outputs=['control_fn', 'ham_fn']),
+    sp.Task(make_constrained_arc_fns, inputs='*', outputs=['control_fns', 'costate_eoms', 'corner_fns']),
+    # sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
+    # sp.Task(make_bcfn, inputs='*', outputs='bc_fn'),
     sp.Task(generate_problem_data,
             inputs='*',
             outputs=('problem_data')),
