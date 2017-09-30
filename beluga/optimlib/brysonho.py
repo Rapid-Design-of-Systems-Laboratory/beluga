@@ -9,6 +9,11 @@ import itertools as it
 import simplepipe as sp
 import sympy
 import re as _re
+import numpy
+np = numpy
+
+from math import *
+import numba
 
 import beluga
 from beluga.utils import sympify
@@ -18,23 +23,22 @@ import sympy as sym
 from sympy.utilities.lambdify import lambdastr
 
 def make_sympy_fn(args, fn_expr):
-    # fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
-    #                                               .replace('(*list(__flatten_args__([_0,_1])))', '') \
-    #                                               .replace('lambda _0,_1: ', '')\
-    #                                               .replace('(([[', '[') \
-    #                                               .replace(']])))', ']') \
-    #                                               .replace('(lambda', 'lambda')
+    fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
+                                                  .replace('(*list(__flatten_args__([_0,_1])))', '') \
+                                                  .replace('lambda _0,_1: ', '')\
+                                                  .replace('(([[', '[') \
+                                                  .replace(']]))', ']') \
+                                                  .replace('(lambda', 'lambda')
 #     jit_fn = eval(fn_str)
-    sym.lambdify(args, fn_expr)
     jit_fn = numba.njit(parallel=True)(eval(fn_str))
+    unpacked_args = []
+    # for a in args:
+    #     try:
+    #         unpacked_args.append(*a)
+    #     except:
+    #         unpacked_args.append(a)
 
-    @numba.njit
-    def wrapfn(_, X, params, C, *args):
-        if(len(X) == 4):
-            print(X)
-        return jit_fn(*X, *C)
-
-    return wrapfn
+    return jit_fn
 
 def total_derivative(expr, var, dependent_vars=None):
     """
@@ -349,11 +353,64 @@ def make_constraint_bc(s_expn,
     #
     return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions
 
-def make_odefn(workspace):
+def make_controlfn(workspace):
     control_opts = workspace['control_law']
-    controls = workspace['controls']
-    states =
-    def compute_control(t, X, p, C, *args):
+    controls = sym.Matrix([_.name for _ in workspace['controls']])
+    constants = sym.Matrix([_.name for _ in workspace['constants']])
+    states = sym.Matrix([_.name for _ in workspace['states']])
+    costates = sym.Matrix([_.name for _ in workspace['costates']])
+    ham = workspace['ham']
+
+    control_fns = [[(u['name'], make_sympy_fn([*states, *costates, *constants], u['expr']))
+                    for u in option] for option in control_opts]
+    ham_fn = make_sympy_fn([*states, *costates, *controls, *constants], ham)
+
+    def compute_control(t, X, C):
+        u_list = np.zeros((len(control_fns), len(controls)))
+        for i, opt in enumerate(control_fns):
+            for j, (_,u_fn) in enumerate(opt):
+                u_list[i, j] = u_fn(*X, *C)
+
+        return min(u_list, key=lambda u_: ham_fn(*X, *u_, *C))
+
+    return compute_control
+
+
+def make_odefn(workspace):
+
+    control_opts = workspace['control_law']
+    controls = sym.Matrix([_.name for _ in workspace['controls']])
+    constants = sym.Matrix([_.name for _ in workspace['constants']])
+    states = sym.Matrix([_.name for _ in workspace['states']])
+    costates = sym.Matrix([_.name for _ in workspace['costates']])
+
+    state_eoms = sym.Matrix([_.eom for _ in workspace['states']]).T
+    costate_eoms = sym.Matrix([_.eom for _ in workspace['costates']]).T
+
+    state_eom_fn = make_sympy_fn([*states, *costates, *controls, *constants], state_eoms)
+    costate_eom_fn = make_sympy_fn([*states, *costates, *controls, *constants], costate_eoms)
+    zero_eom = np.array([0])
+
+    compute_control = make_controlfn(workspace)
+    def eom_fn(t, X, C):
+        u = compute_control(t, X, C)
+        return np.hstack((state_eom_fn(*X,*u,*C), costate_eom_fn(*X,*u,*C), zero_eom))
+
+    # costate_eom_fn.inspect_types()
+    x = np.array([0., 0, 1., -.1, -.1, -.1])
+    c = np.array([-9.81])
+    t = 0.0
+
+    print(eom_fn(t, x, c))
+    foo
+    # def compute_control(t, X, p, C, *args):
+    #     pass
+    #
+    # def odefn(t, X, p, C, *args):
+    #
+    #     u = compute_control(t, X, p, C, *args)
+    #     pass
+
 
 def process_path_constraints(path_constraints,
                              states,
@@ -490,6 +547,7 @@ BrysonHo = sp.Workflow([
                     'jacobian_fn',
                     'derivative_fn'),
             outputs='foo'),
+    sp.Task(make_odefn, inputs='*', outputs='odefn'),
     sp.Task(generate_problem_data,
             inputs='*',
             outputs=('problem_data')),
