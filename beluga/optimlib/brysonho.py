@@ -391,13 +391,13 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     num_states = len(states)
 
     def compute_hamiltonian(t, X, p, aux, u):
-        C = [v for k,v in aux['const'].items()]
-        return ham_fn(*X, *p, *C, *u)
+        # C = [v for k,v in aux['const'].items()]
+        return ham_fn(*X, *p, *aux['const'].values(), *u)
 
     # @numba.jit
     def compute_control_unc(t, X, p, aux):
         X = X[:(2*num_states+1)]
-        C = [v for k,v in aux['const'].items()]
+        C = aux['const'].values() # [v for k,v in aux['const'].items()]
         u_list = control_opt_fn(*X, *p, *C)
         ham_val = np.zeros(num_options)
         for i in range(num_options):
