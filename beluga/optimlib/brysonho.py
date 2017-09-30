@@ -240,31 +240,8 @@ def make_control_law(dhdu, controls):
     control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
                             for (ctrl,expr) in option.items()]
                             for option in ctrl_sol]
+    control_options = ctrl_sol
     return control_options
-
-def process_path_constraints(path_constraints,
-                             states,
-                             costates,
-                             constants,
-                             controls,
-                             ham,
-                             jacobian_fn,
-                             derivative_fn):
-
-    s_list = []
-    for i, s in enumerate(path_constraints):
-        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
-                make_constraint_bc(s.expr, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
-
-        s_list.append({'control_law': u_aug,
-                       'lamdot': lamdot,
-                       'ham': ham_aug,
-                       'order': order,
-                       'mu': mu_i,
-                       'pi_list': pi_list,
-                       'corner': corner_conditions})
-
-    return s_list
 
 def make_constraint_bc(s_expn,
                        s_idx,
@@ -358,6 +335,35 @@ def make_constraint_bc(s_expn,
 
     return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions
 
+
+def process_path_constraints(path_constraints,
+                             states,
+                             costates,
+                             constants,
+                             controls,
+                             ham,
+                             jacobian_fn,
+                             derivative_fn):
+
+    s_list = []
+    mu_vars = []
+    for i, s in enumerate(path_constraints):
+        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
+                make_constraint_bc(s.expr, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+
+        s_list.append({'control_law': u_aug,
+                       'lamdot': lamdot,
+                       'ham': ham_aug,
+                       'order': order,
+                       'mu': mu_i,
+                       'pi_list': pi_list,
+                       'corner': corner_conditions})
+        mu_vars.append(mu_i)
+
+    yield s_list
+    yield mu_vars
+
+
 def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     all_pi_names = [p['pi_list'] for p in s_list]
     params_list = [str(p) for p in it.chain(initial_lm_params,
@@ -365,24 +371,31 @@ def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     parameters = sym.symbols(' '.join(params_list))
     return parameters
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, ham):
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, ham):
     controls = sym.Matrix([_.name for _ in controls])
     constants = sym.Matrix([_.name for _ in constants])
     states = sym.Matrix([_.name for _ in states])
     costates = sym.Matrix([_.name for _ in costates])
     parameters = sym.Matrix(parameters)
 
-    control_opt_mat = sym.Matrix([[u['expr'] for u in option] for option in control_opts])
+    unknowns = list(it.chain(controls, mu_vars))
+    control_opt_mat = sym.Matrix([[str(option.get(u,0)) for u in unknowns]
+                                    for option in control_opts])
     control_opt_fn = sym.lambdify([*states, *costates, *parameters, *constants], control_opt_mat)
     # control_fns = [[make_sympy_fn([*states, *costates, *constants], u['expr'])
     #                 for u in option] for option in control_opts]
-    ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *controls], ham)
+    ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *unknowns], ham)
 
-    num_controls = len(controls)
+    num_unknowns = len(unknowns)
     num_options = len(control_opts)
     num_states = len(states)
+
+    def compute_hamiltonian(t, X, p, aux, u):
+        C = [v for k,v in aux['const'].items()]
+        return ham_fn(*X, *p, *C, *u)
+
     # @numba.jit
-    def compute_control(t, X, p, aux):
+    def compute_control_unc(t, X, p, aux):
         X = X[:(2*num_states+1)]
         C = [v for k,v in aux['const'].items()]
         u_list = control_opt_fn(*X, *p, *C)
@@ -407,8 +420,8 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     #     u = u_list[np.argmin(ham_val)]
     #     return u
 
-    yield compute_control
-    yield ham_fn
+    yield compute_control_unc
+    yield compute_hamiltonian
 
 def make_constrained_arc_fns(workspace):
     """Creates constrained arc control functions."""
@@ -423,10 +436,12 @@ def make_constrained_arc_fns(workspace):
     costate_eoms = [ {'eom':[str(_.eom) for _ in workspace['costates']], 'arcid':0} ]
     corner_fns = []
 
+    mu_vars = workspace['mu_vars']
 
     for arc_id, s in enumerate(workspace['s_list'],1):
         # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
-        u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
+        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, s['ham'])
+        # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
         corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']], 'arcid':arc_id}
         control_fns.append(u_fn)
@@ -535,13 +550,15 @@ def generate_problem_data(workspace):
      'control_fns': workspace['control_fns'],
      'costate_eoms': workspace['costate_eoms'],
      'corner_fns': workspace['corner_fns'],
+     'ham_fn': workspace['ham_fn'],
+
      's_list': workspace['s_list'],
      'num_states': 2*len(workspace['states']) + 1,
      'dHdu': workspace['dhdu'],
      'bc_initial': [str(_) for _ in workspace['bc_initial']],
      'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
      'control_options': workspace['control_law'],
-     'control_list': [str(u) for u in workspace['controls']],
+     'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
      'num_controls': len(workspace['controls']),
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
@@ -613,9 +630,6 @@ BrysonHo = sp.Workflow([
     sp.Task(make_dhdu,
             inputs=('ham', 'controls', 'derivative_fn'),
             outputs=('dhdu')),
-    sp.Task(make_control_law,
-            inputs=('dhdu','controls'),
-            outputs=('control_law')),
 
     sp.Task(process_path_constraints,
             inputs=('path_constraints',
@@ -626,13 +640,17 @@ BrysonHo = sp.Workflow([
                     'ham',
                     'jacobian_fn',
                     'derivative_fn'),
-            outputs='s_list'),
+            outputs=['s_list', 'mu_vars']),
+
+    sp.Task(make_control_law,
+            inputs=('dhdu','controls'),
+            outputs=('control_law')),
 
     sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
         outputs='parameters'),
 
     sp.Task(make_control_and_ham_fn,
-            inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'ham'),
+            inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'mu_vars', 'ham'),
             outputs=['control_fn', 'ham_fn']),
     sp.Task(make_constrained_arc_fns, inputs='*', outputs=['control_fns', 'costate_eoms', 'corner_fns']),
     # sp.Task(make_odefn, inputs='*', outputs='ode_fn'),

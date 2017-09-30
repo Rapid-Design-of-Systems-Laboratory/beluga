@@ -57,10 +57,10 @@ def create_module(problem_data):
     problem_name = problem_data['problem_name']
     module = imp.new_module('_beluga_'+problem_name)
 
+
     module.control_fns = problem_data['control_fns']
     module.corner_fns = problem_data['corner_fns']
-    del problem_data['corner_fns']
-    del problem_data['control_fns']
+    module.compute_hamiltonian = problem_data['ham_fn']
         # module.costate_eoms = problem_data['costate_eoms']
 
     return module
@@ -104,10 +104,10 @@ PythonCodeGen = sp.Workflow([
                 template_file=beluga.root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
             inputs='problem_data',
             outputs='bc_func_code'),
-    sp.Task(ft.partial(load_eqn_template,
-                template_file=beluga.root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
-            inputs='problem_data',
-            outputs='compute_control_code'),
+    # sp.Task(ft.partial(load_eqn_template,
+    #             template_file=beluga.root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
+    #         inputs='problem_data',
+    #         outputs='compute_control_code'),
 
     # Compile generated code
     sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
@@ -116,9 +116,12 @@ PythonCodeGen = sp.Workflow([
     sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
             inputs=['bc_func_code', 'code_module'],
             outputs='bc_func_fn'),
-    sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
-            inputs=['compute_control_code', 'code_module'],
+    sp.Task(lambda module: getattr(module, 'compute_control'),
+            inputs=['code_module'],
             outputs='compute_control_fn'),
+    # sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
+    #         inputs=['compute_control_code', 'code_module'],
+    #         outputs='compute_control_fn'),
 
     # sp.Task(make_bvp, inputs='*', outputs=['bvp'])
 ], description='Generates and compiles the required BVP functions from problem data')
@@ -137,8 +140,7 @@ class MultipleShooting(BaseAlgorithm):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
         self.bvp = BVP(out_ws['deriv_func_fn'],
-                       out_ws['bc_func_fn'],
-                       out_ws['compute_control_fn'])
+                       out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
         if self.derivative_method == 'csd':
             self.stm_ode_func = ft.partial(self.__stmode_csd, odefn=self.bvp.deriv_func)
             self.bc_jac_func  = ft.partial(self.__bcjac_csd, bc_func=self.bvp.bc_func)

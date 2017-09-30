@@ -183,6 +183,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     output_file = 'data.dill'
 
     del out['problem_data']['s_list']
+    del out['problem_data']['corner_fns']
+    del out['problem_data']['control_fns']
+    del out['problem_data']['ham_fn']
     with open(output_file, 'wb') as outfile:
         dill.settings['recurse'] = True
         dill.dump(out, outfile) # Dill Beluga object only
