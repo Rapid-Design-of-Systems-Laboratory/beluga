@@ -1,6 +1,6 @@
 from .BaseAlgorithm import BaseAlgorithm
 from .SingleShooting import SingleShooting
-from .MultipleShooting import MultipleShooting
+# from .MultipleShooting import MultipleShooting
 
 # from ScikitsBVPSolver import ScikitsBVPSolver
 # __all__ = ['SingleShooting']

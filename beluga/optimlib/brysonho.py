@@ -5,7 +5,7 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 """
 
 import functools as ft
-import itertools
+import itertools as it
 import simplepipe as sp
 import sympy
 import re as _re
@@ -13,6 +13,28 @@ import re as _re
 import beluga
 from beluga.utils import sympify
 from beluga.problem import SymVar
+
+import sympy as sym
+from sympy.utilities.lambdify import lambdastr
+
+def make_sympy_fn(args, fn_expr):
+    # fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
+    #                                               .replace('(*list(__flatten_args__([_0,_1])))', '') \
+    #                                               .replace('lambda _0,_1: ', '')\
+    #                                               .replace('(([[', '[') \
+    #                                               .replace(']])))', ']') \
+    #                                               .replace('(lambda', 'lambda')
+#     jit_fn = eval(fn_str)
+    sym.lambdify(args, fn_expr)
+    jit_fn = numba.njit(parallel=True)(eval(fn_str))
+
+    @numba.njit
+    def wrapfn(_, X, params, C, *args):
+        if(len(X) == 4):
+            print(X)
+        return jit_fn(*X, *C)
+
+    return wrapfn
 
 def total_derivative(expr, var, dependent_vars=None):
     """
@@ -34,6 +56,13 @@ def total_derivative(expr, var, dependent_vars=None):
     out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
     return out
 
+def jacobian(expr_list, var_list, derivative_fn):
+    jac = sympy.zeros(len(expr_list), len(var_list))
+    for i, expr in enumerate(expr_list):
+        for j, var in enumerate(var_list):
+            jac[i, j] = derivative_fn(expr, var)
+    return jac
+
 def process_quantities(quantities):
     """Performs preprocessing on quantity definitions. Creates a new total
     derivative operator that takes considers these definitions.
@@ -48,6 +77,7 @@ def process_quantities(quantities):
         yield []
         yield []
         yield total_derivative
+        yield ft.partial(jacobian, derivative_fn=total_derivative)
 
     quantity_subs = [(q.name, q.val) for q in quantities]
     quantity_sym, quantity_expr = zip(*quantity_subs)
@@ -63,10 +93,12 @@ def process_quantities(quantities):
 
     # Function partial that takes derivative while considering quantities
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
+    jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
 
     yield quantity_vars
     yield quantity_list
     yield derivative_fn
+    yield jacobian_fn
 
 def make_augmented_cost(cost, constraints, location):
     """Augments the cost function with the given list of constraints.
@@ -98,7 +130,7 @@ def make_aug_params(constraints, location):
     return lagrange_mult
 
 
-def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
+def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivative_fn):
     """simplepipe task for creating the hamiltonian and costates
 
     Workspace variables
@@ -110,15 +142,19 @@ def make_hamiltonian_and_costates(states, path_cost, derivative_fn):
 
     Returns the hamiltonian and the list of costates
     """
-
-    costate_names = [sympify('lam'+str(s.name).upper()) for s in states]
     ham = path_cost.expr + sum([lam*s.eom
                              for s, lam in zip(states, costate_names)])
+    yield ham
+    yield make_costate_rates(ham, states, costate_names, derivative_fn)
 
+def make_costate_names(states):
+    return [sympify('lam'+str(s.name).upper()) for s in states]
+
+def make_costate_rates(ham, states, costate_names, derivative_fn):
+    """Make costates."""
     costates = [SymVar({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
                 for s, lam in zip(states, costate_names)]
-    yield ham
-    yield costates
+    return costates
 
 def sanitize_constraint_expr(constraint, states, location):
     """
@@ -143,7 +179,12 @@ def sanitize_constraint_expr(constraint, states, location):
     return _re.sub(pattern,prefix+r"['\1']",str(constraint.expr))
 
 
-def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location):
+def make_boundary_conditions(constraints,
+                             states,
+                             costates,
+                             cost,
+                             derivative_fn,
+                             location):
     """simplepipe task for creating boundary conditions for initial and terminal
     constraints."""
 
@@ -199,6 +240,144 @@ def make_control_law(dhdu, controls):
                             for option in ctrl_sol]
     return control_options
 
+def make_constraint_bc(s_expn,
+                       s_idx,
+                       states,
+                       costates,
+                       controls,
+                       ham,
+                       jacobian_fn,
+                       derivative_fn,
+                       max_iter=5):
+    """Processes one constraint expression to create constrained control eqn,
+    constrained arc bc function"""
+    s_q = sympy.Matrix([s_expn])
+    control_found = False
+
+    order = 0
+    found = False
+
+    num_states = len(states)
+    stateAndLam = [*states, *costates]
+    stateAndLamDot = [s.eom for s in it.chain(states, costates)]
+    costate_names = make_costate_names(states)
+
+    ham_mat = sympy.Matrix([ham])
+    mult = sympy.symbols('mu'+str(s_idx))
+
+    tangency = []
+    for i in range(max_iter):
+        control_found = any(u in s_q.free_symbols for u in controls)
+        if control_found:
+            found = True
+            ham_aug = ham_mat + mult*s_q  # Augmented hamiltonian
+            lamdot_aug = - mult * jacobian_fn(s_q, states)  # Augmented costate equations in constrained arc
+            dhdu = jacobian_fn(ham_aug, [*controls, mult])
+            constrained_control_law = make_control_law(dhdu, [*controls, mult])
+            constrained_costate_rates = make_costate_rates(ham_aug[0], states, costate_names, derivative_fn)
+            break
+
+        tangency.append(s_q[0])
+        s_q = jacobian_fn(s_q, stateAndLam)*sympy.Matrix([stateAndLamDot]).T
+        order += 1
+
+    N_x = jacobian_fn(sympy.Matrix(tangency), states)
+    # print(sympy.Matrix(N_x))
+    if order > 0:
+        pi_list = sympy.symbols('pi'+str(s_idx)+':'+str(len(tangency)))
+        corner_conditions = sympy.Matrix([pi_list]) * N_x
+    else:
+        pi_list = []
+        corner_conditions = sympy.Matrix([])
+
+    if not found:
+        raise Exception("Invalid path constrant")
+
+    costate_slice = slice(num_states, 2*num_states)
+
+    y1m = sympy.symbols('y1m:'+str(num_states*2))
+    y1m_x = sympy.Matrix([y1m[:num_states]])
+    y1m_l = sympy.Matrix([y1m[costate_slice]])
+
+    y1p = sympy.symbols('y1p:'+str(num_states*2))
+    y1p_x = sympy.Matrix([y1p[:num_states]])
+    y1p_l = sympy.Matrix([y1p[costate_slice]])
+
+    y2m = sympy.Matrix([sympy.symbols('y2m:'+str(num_states*2))])
+    y2p = sympy.Matrix([sympy.symbols('y2p:'+str(num_states*2))])
+
+    def make_subs(in_vars, out_vars):
+        return {k: v for k,v in zip(in_vars, out_vars)}
+
+    subs_1m = make_subs(it.chain(states, costates), y1m)
+    subs_1p = make_subs(it.chain(states, costates), y1p)
+    subs_2m = make_subs(it.chain(states, costates), y2m)
+    subs_2p = make_subs(it.chain(states, costates), y2p)
+
+    ham1m = ham.subs(subs_1m)
+    ham1p = ham_aug[0].subs(subs_1p)
+    ham2m = ham_aug[0].subs(subs_2m)
+    ham2p = ham.subs(subs_2p)
+    tangency_1m = sympy.Matrix(tangency).subs(subs_1m)
+
+    bc_arc = [*tangency_1m,  # Tangency conditions, N(x,t) = 0
+              *(y1m_x - y1p_x), # Continuity in states at entry
+              *(y1m_l - y1p_l - corner_conditions), # Corner condns on costates
+              *(y2m - y2p), # Continuity in states and costates at exit
+              ham1m - ham1p,
+              ham2m - ham2p]
+
+    bc_list = [str(_) for _ in bc_arc]
+
+    # num_states = len(states)
+    # costates = slice(num_states, 2*num_states)
+    #
+    # def bcfn(y1m, y1p, y2m, y2p, C, mu_list):
+    #     """
+    #     y1m - end of previous arc at entry point
+    #     y1p - start of constrained arc
+    #     y2m - end of constrained arc
+    #     y2p - start of next arc
+    #     """
+    #
+    #     return np.vstack((y1m[:num_states] - y1p[:num_states],
+    #                       y1m[costates] - y1p[costates] - mu_list[:num_states] @ N_x,
+    #                       y2m - y2p,
+    #                     #   ham_fn(y1m, C) - ham_fn(y1p, C),
+    #                     #   ham_fn(y2m, C) - ham_fn(y2p, C)
+    #                       ))
+    #
+    return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions
+
+def make_odefn(workspace):
+    control_opts = workspace['control_law']
+    controls = workspace['controls']
+    states =
+    def compute_control(t, X, p, C, *args):
+
+def process_path_constraints(path_constraints,
+                             states,
+                             costates,
+                             controls,
+                             ham,
+                             jacobian_fn,
+                             derivative_fn):
+
+    s_list = []
+    for i, s in enumerate(path_constraints):
+        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
+                make_constraint_bc(s.expr, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+
+        s_list.append({'control_law': u_aug,
+                       'lamdot': {str(_):str(_.eom) for _ in lamdot},
+                       'ham': ham_aug,
+                       'order': order,
+                       'mu': mu_i,
+                       'pi_list': pi_list,
+                       'corner': corner_conditions})
+
+    return s_list
+
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
@@ -212,10 +391,10 @@ def generate_problem_data(workspace):
             }
      ],
      'state_list':
-         [str(x) for x in itertools.chain(workspace['states'], workspace['costates'])]
+         [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
          + ['tf']
      ,
-     'parameter_list': [str(p) for p in itertools.chain(workspace['initial_lm_params'],
+     'parameter_list': [str(p) for p in it.chain(workspace['initial_lm_params'],
                                                         workspace['terminal_lm_params'])],
      'deriv_list':
          [str(tf_var*state.eom) for state in workspace['states']] +
@@ -251,7 +430,10 @@ def init_workspace(ocp):
 
     constraints = ocp.constraints()
     workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
-                                for c_type, c_list in constraints.items()}
+                                for c_type, c_list in constraints.items()
+                                if c_type != 'path'}
+    workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction'))
+                                     for c_obj in constraints['path']]
 
     workspace['quantities'] = [SymVar(q) for q in ocp.quantities()]
     workspace['initial_cost'] = SymVar(ocp.get_cost('initial'), sym_key='expr')
@@ -264,7 +446,7 @@ def init_workspace(ocp):
 BrysonHo = sp.Workflow([
     sp.Task(process_quantities,
             inputs=('quantities'),
-            outputs=('quantity_vars', 'quantity_list', 'derivative_fn')),
+            outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
 
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),
@@ -279,8 +461,11 @@ BrysonHo = sp.Workflow([
     sp.Task(ft.partial(make_aug_params, location='terminal'),
             inputs=('constraints'),
             outputs=('terminal_lm_params')),
-    sp.Task(make_hamiltonian_and_costates,
-            inputs=('states', 'path_cost', 'derivative_fn'),
+    sp.Task(make_costate_names,
+            inputs=('states'),
+            outputs=('costate_names')),
+    sp.Task(make_hamiltonian_and_costate_rates,
+            inputs=('states', 'costate_names', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
     sp.Task(ft.partial(make_boundary_conditions, location='initial'),
             inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
@@ -296,6 +481,15 @@ BrysonHo = sp.Workflow([
             inputs=('dhdu','controls'),
             outputs=('control_law')),
 
+    sp.Task(process_path_constraints,
+            inputs=('path_constraints',
+                    'states',
+                    'costates',
+                    'controls',
+                    'ham',
+                    'jacobian_fn',
+                    'derivative_fn'),
+            outputs='foo'),
     sp.Task(generate_problem_data,
             inputs='*',
             outputs=('problem_data')),
@@ -333,7 +527,8 @@ def test_ham_and_costates():
                        SymVar({'name':'lamY','eom':'0'}),
                        SymVar({'name':'lamV','eom':'-lamX*cos(theta) - lamY*sin(theta)'})])
 
-    ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
+    costate_names = make_costate_names(states)
+    ham, costates = make_hamiltonian_and_costate_rates(states, costate_names, path_cost, total_derivative)
 
     assert ham == expected_output[0]
     assert costates == expected_output[1]
@@ -357,7 +552,8 @@ def test_make_boundary_conditions():
     states = [SymVar({'name':'h','eom':'v*cos(theta)','unit':'m'}),
               SymVar({'name':'theta','eom':'v*sin(theta)/r','unit':'rad'})]
     path_cost = SymVar({'expr': 1}, sym_key='expr')
-    ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
+    costate_names = make_costate_names(states)
+    ham, costates = make_hamiltonian_and_costate_rates(states, costate_names, path_cost, total_derivative)
 
     constraints = ConstraintList()
     constraints.initial('h - h_0', 'm') # doctest:+ELLIPSIS
@@ -377,7 +573,9 @@ def test_make_control_law():
               SymVar({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
     path_cost = SymVar({'expr': 1}, sym_key='expr')
     controls = [SymVar({'name':'theta','unit':'rad'})]
-    ham, costates = make_hamiltonian_and_costates(states, path_cost, total_derivative)
+    costate_names = make_costate_names(states)
+    ham, costates = make_hamiltonian_and_costate_rates(states, costate_names, path_cost, total_derivative)
+
     dhdu = make_dhdu(ham, controls, total_derivative)
     assert dhdu == [sympify('g*lamV*cos(theta) - lamX*v*sin(theta) + lamY*v*cos(theta)')]
     control_law = make_control_law(dhdu, controls)
