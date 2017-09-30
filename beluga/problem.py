@@ -202,7 +202,7 @@ class ConstraintList(dict):
     independent = partialmethod(add_constraint, constraint_type='independent',
                 constraint_args=constraint_args)
     path = partialmethod(add_constraint, constraint_type='path',
-                constraint_args=('type', 'name', 'expr', 'direction', 'bound', 'unit')
+                constraint_args=('name', 'expr', 'direction', 'bound', 'unit')
                 )
 
     # def get(self, constraint_type):
@@ -245,8 +245,9 @@ class SymVar(object):
     Represents an object that can be used in SymPy and is created from a dict
     """
 
-    def __init__(self, param_dict, sym_key='name'):
-        self.__dict__ = {k: sympify(v) for k,v in param_dict.items()}
+    def __init__(self, param_dict, sym_key='name', excluded=()):
+        self.__dict__ = {k: sympify(v) if k not in excluded else v
+                         for k,v in param_dict.items()}
         self.param_list = param_dict.keys()
         if sym_key is not None:
             self._sym = self.__dict__[sym_key]
@@ -258,6 +259,12 @@ class SymVar(object):
         Makes the object usable in sympy expressions directly
         """
         return self._sym
+
+    def __hash__(self):
+        return hash(self._sym)
+
+    def __eq__(self, other):
+        return self._sym == other._sym
 
     def __repr__(self):
         return str(self._sym)
