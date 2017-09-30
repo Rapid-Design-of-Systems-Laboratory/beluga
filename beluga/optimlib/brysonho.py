@@ -23,15 +23,17 @@ import sympy as sym
 from sympy.utilities.lambdify import lambdastr
 
 def make_sympy_fn(args, fn_expr):
+    #   .replace('(*list(__flatten_args__([_0,_1])))', '') \
+    #   .replace('lambda _0,_1: ', '')\
+
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
-                                                  .replace('(*list(__flatten_args__([_0,_1])))', '') \
-                                                  .replace('lambda _0,_1: ', '')\
                                                   .replace('(([[', '[') \
                                                   .replace(']]))', ']') \
-                                                  .replace('(lambda', 'lambda')
-#     jit_fn = eval(fn_str)
+                                                #   .replace('(lambda', 'lambda')
+    # print(fn_str)
     jit_fn = numba.njit(parallel=True)(eval(fn_str))
-    unpacked_args = []
+
+    # unpacked_args = []
     # for a in args:
     #     try:
     #         unpacked_args.append(*a)
@@ -361,17 +363,39 @@ def make_controlfn(workspace):
     costates = sym.Matrix([_.name for _ in workspace['costates']])
     ham = workspace['ham']
 
-    control_fns = [[(u['name'], make_sympy_fn([*states, *costates, *constants], u['expr']))
-                    for u in option] for option in control_opts]
+
+    control_opt_mat = sym.Matrix([[u['expr'] for u in option] for option in control_opts])
+    control_opt_fn = sym.lambdify([*states, *costates, *constants], control_opt_mat)
+    # control_fns = [[make_sympy_fn([*states, *costates, *constants], u['expr'])
+    #                 for u in option] for option in control_opts]
     ham_fn = make_sympy_fn([*states, *costates, *controls, *constants], ham)
 
-    def compute_control(t, X, C):
-        u_list = np.zeros((len(control_fns), len(controls)))
-        for i, opt in enumerate(control_fns):
-            for j, (_,u_fn) in enumerate(opt):
-                u_list[i, j] = u_fn(*X, *C)
+    num_controls = len(controls)
+    num_options = len(control_opts)
 
-        return min(u_list, key=lambda u_: ham_fn(*X, *u_, *C))
+    # @numba.jit
+    def compute_control(t, X, C):
+        u_list = control_opt_fn(*X, *C)
+        ham_val = np.zeros(num_options)
+        for i in range(num_options):
+            ham_val[i] = ham_fn(*X, *u_list[i], *C)
+
+        return u_list[np.argmin(ham_val)]
+
+    # def compute_control(t, X, C):
+    #     u_list = np.zeros((num_options, num_controls), dtype=np.float32)
+    #     ham_val = np.zeros(num_options, dtype=np.float32)
+    #     for i in range(num_options):
+    #         opt = control_fns[i]
+    #         # for j in numba.prange(num_controls):
+    #         for j in range(num_controls):
+    #         # # for j, (_,u_fn) in enumerate(opt):
+    #             u_fn = opt[j]
+    #             u_list[i, j] = u_fn(*X, *C)
+    #         ham_val[i] = ham_fn(*X, *u_list[i], *C)
+    #
+    #     u = u_list[np.argmin(ham_val)]
+    #     return u
 
     return compute_control
 
@@ -387,22 +411,23 @@ def make_odefn(workspace):
     state_eoms = sym.Matrix([_.eom for _ in workspace['states']]).T
     costate_eoms = sym.Matrix([_.eom for _ in workspace['costates']]).T
 
+    compute_control = make_controlfn(workspace)
+
     state_eom_fn = make_sympy_fn([*states, *costates, *controls, *constants], state_eoms)
     costate_eom_fn = make_sympy_fn([*states, *costates, *controls, *constants], costate_eoms)
     zero_eom = np.array([0])
 
-    compute_control = make_controlfn(workspace)
     def eom_fn(t, X, C):
         u = compute_control(t, X, C)
         return np.hstack((state_eom_fn(*X,*u,*C), costate_eom_fn(*X,*u,*C), zero_eom))
 
-    # costate_eom_fn.inspect_types()
     x = np.array([0., 0, 1., -.1, -.1, -.1])
     c = np.array([-9.81])
     t = 0.0
-
+    # print(compute_control(t, x, c))
     print(eom_fn(t, x, c))
-    foo
+
+    return eom_fn
     # def compute_control(t, X, p, C, *args):
     #     pass
     #
