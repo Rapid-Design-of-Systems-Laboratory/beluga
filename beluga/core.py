@@ -142,6 +142,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp_ws = wf(workspace)
 
     solinit = Solution()
+    
     solinit.aux['const'] = dict((str(const.name),float(const.value))
                                 for const in ocp_ws['constants'])
     solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']

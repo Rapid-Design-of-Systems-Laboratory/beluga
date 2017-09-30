@@ -26,7 +26,6 @@ def deriv_func(_t, _X, _p, _aux, _arcs=(0,), arc_idx=0):
 
     state_eom = [{{#x_deriv_list}}{{.}},
                  {{/x_deriv_list}}]
-    constants = [val for key,val in _aux['const'].items()]
 {{#costate_eoms}}
     if arc_type == {{arcid}}:
         lam_eom = [{{#eom}}{{.}},
