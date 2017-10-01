@@ -26,7 +26,7 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + 1.5*x','>',-0.5,'m')
+    .path('constraint1','y + x + 1.0','>',0.0,'m')
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
@@ -44,9 +44,10 @@ ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
-                    tolerance=1e-4,
+                    tolerance=1e-6,
                     max_iterations=50,
                     verbose = True,
+                    max_error=10
 )
 
 guess_maker = beluga.guess_generator('auto',
@@ -59,8 +60,11 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .terminal('x', 5) \
-                .terminal('y',-5)
+                .terminal('x', 10) \
+                .terminal('y',-10)
+
+continuation_steps.add_step('activate_constraint', name='constraint1',
+                                                 var='constraint1_lim1')
 
 beluga.solve(ocp,
              method='traditional',
