@@ -142,12 +142,16 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp_ws = wf(workspace)
 
     solinit = Solution()
-    
+
     solinit.aux['const'] = dict((str(const.name),float(const.value))
                                 for const in ocp_ws['constants'])
     solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']
 
-    # TODO: Try loading cached BVP from disk
+    # For path constraints
+    solinit.aux['constraints'] = dict((s['name'], {'arc_bounds':{},
+                                                   'expr':str(s['expr']),
+                                                   'direction': s['direction']})
+                                      for s in ocp_ws['problem_data']['s_list'])
 
     bvp_fn = bvp_algorithm.preprocess(ocp_ws['problem_data'])
     # The initial guess is automatically stored in the bvp object
@@ -208,7 +212,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
-            step.init(sol_guess)
+            step.init(sol_guess, problem_data)
 
             for aux in step:  # Continuation step returns 'aux' dictionary
                 sol_guess.aux = aux

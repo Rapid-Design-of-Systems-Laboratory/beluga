@@ -278,7 +278,8 @@ class SymVar(object):
     def __eq__(self, other):
         return str(self._sym) == str(other)
 
-BVP = namedtuple('BVP', 'deriv_func bc_func compute_control')
+BVP = namedtuple('BVP', 'deriv_func bc_func compute_control path_constraints')
+BVP.__new__.__defaults__ = (None,) # path constraints optional
 
 class GuessGenerator(object):
     """Generates the initial guess from a variety of sources."""

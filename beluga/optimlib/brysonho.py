@@ -243,7 +243,7 @@ def make_control_law(dhdu, controls):
     control_options = ctrl_sol
     return control_options
 
-def make_constraint_bc(s_expn,
+def make_constraint_bc(s,
                        s_idx,
                        states,
                        costates,
@@ -254,9 +254,9 @@ def make_constraint_bc(s_expn,
                        max_iter=5):
     """Processes one constraint expression to create constrained control eqn,
     constrained arc bc function"""
-    s_q = sympy.Matrix([s_expn])
+    # s_bound = sympy.sympify(s.name)
+    s_q = sympy.Matrix([s.expr])
     control_found = False
-
 
     order = 0
     found = False
@@ -349,15 +349,20 @@ def process_path_constraints(path_constraints,
     mu_vars = []
     for i, s in enumerate(path_constraints):
         u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
-                make_constraint_bc(s.expr, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+                make_constraint_bc(s, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
 
-        s_list.append({'control_law': u_aug,
+        s_list.append({'name': str(s['name']),
+                       'expr': str(s['expr']),
+                       'direction': s['direction'],
+                       'control_law': u_aug,
                        'lamdot': lamdot,
                        'ham': ham_aug,
                        'order': order,
                        'mu': mu_i,
                        'pi_list': pi_list,
-                       'corner': corner_conditions})
+                       'corner': corner_conditions,
+                    #    'bound_var': s_bound,
+                       'bound_val': s['bound']})
         mu_vars.append(mu_i)
 
     yield s_list
@@ -397,7 +402,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     # @numba.jit
     def compute_control_unc(t, X, p, aux):
         X = X[:(2*num_states+1)]
-        C = aux['const'].values() # [v for k,v in aux['const'].items()]
+        C = aux['const'].values()
         u_list = control_opt_fn(*X, *p, *C)
         ham_val = np.zeros(num_options)
         for i in range(num_options):

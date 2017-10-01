@@ -287,7 +287,9 @@ class MultipleShooting(BaseAlgorithm):
 
         aux = solinit.aux
         # Only the start and end times are required for ode45
+        num_arcs = len(x)-1
         t0 = x[0]
+        ti = x[1:-1]
         tf = x[-1]
 
         # Extract number of ODEs in the system to be solved

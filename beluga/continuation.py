@@ -37,12 +37,88 @@ class ContinuationList(list):
         self.append(strategy_obj)
         return strategy_obj
 
+
 class ContinuationVariable(object):
     def __init__(self,name,target):
         self.name = name
         self.target = target
         self.value = np.nan
         self.steps = []
+
+class ActivateConstraint(object):
+    strategy_name = 'activate_constraint'
+    def __init__(self, name, var):
+        self.name = name
+        self.var = var
+        self.solved = False
+        self.ctr  = 0
+
+    def num_cases(self):
+        return 1
+
+    def reset(self):
+        self.solved = False
+
+    def clear(self):
+        self.solved = False
+
+    def init(self, sol, problem_data):
+        """Split the solution into arcs to introduce constraint."""
+        # Get expr corresponding to name
+        expr = sol.aux['constraints'][self.name]['expr']
+
+        sol.prepare(problem_data, mesh_size=512, overwrite=True)
+        # Evaluate expr on sol
+        s_vals = sol.evaluate(expr)
+
+        # Find zero crossing
+        # TODO: add check to see if constraint active
+        smax_i = np.argmin(s_vals)
+
+        # Introduce  small arc
+        sol.x = np.hstack((sol.x[:smax_i],
+                            sol.x[smax_i], # t1-
+                            sol.x[smax_i], # t1+
+                            sol.x[(smax_i+1)], # t2-
+                            sol.x[(smax_i+1)], # t2+
+                            sol.x[(smax_i+2):]
+                           ))
+
+        sol.y = np.column_stack(( sol.y[:,:smax_i],
+                            sol.y[:,smax_i], # t1-
+                            sol.y[:,smax_i], # t1+
+                            sol.y[:,(smax_i+1)], # t2-
+                            sol.y[:,(smax_i+1)], # t2+
+                            sol.y[:,(smax_i+2):]
+                           ))
+
+        t_before = smax_i/511.
+        t_after = (511-smax_i)/511.
+        sol.y[-1,:(smax_i+1)] = t_before
+        sol.y[-1,smax_i+1:smax_i+3] = 0.1 # "tf" for constrained arc
+        sol.y[-1,smax_i+3:] = t_after
+
+        sol.u = np.column_stack(( sol.u[:,:smax_i],
+                            sol.u[:,smax_i], # t1-
+                            sol.u[:,smax_i], # t1+
+                            sol.u[:,(smax_i+1)], # t2-
+                            sol.u[:,(smax_i+1)], # t2+
+                            sol.u[:,(smax_i+2):]
+                           ))
+        self.sol = sol
+
+    def __iter__(self):
+        """Define class as being iterable"""
+        return self
+
+    def __next__(self):
+        if self.solved:
+            raise StopIteration
+        else:
+            self.solved = True
+            self.ctr += 1
+            return self.sol.aux
+
 
 # Can be subclassed to allow automated stepping
 class ManualStrategy(object):
@@ -61,6 +137,7 @@ class ManualStrategy(object):
         self.terminal = functools.partial(self.set, param_type='terminal')
         self.initial = functools.partial(self.set, param_type='initial')
         self.const = functools.partial(self.set, param_type='const')
+        self.constraint = functools.partial(self.set, param_type='constraint')
         self.constant = self.const
 
     def reset(self):
@@ -74,7 +151,7 @@ class ManualStrategy(object):
         self.reset()
 
     # TODO: Change to store only stepsize and use yield
-    def init(self, sol):
+    def init(self, sol, problem_data):
         self.sol = sol
         # Iterate through all types of variables
         for var_type in self.vars.keys():
