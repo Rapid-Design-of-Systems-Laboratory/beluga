@@ -306,7 +306,7 @@ class SingleShooting(BaseAlgorithm):
                     logging.warn("Maximum iterations exceeded!")
                     break
                 y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
-
+                
                 # Propagate STM and original system together
                 # t,yy = ode45(stm_ode45, tspan, y0)
                 t,yy = ode45(self.stm_ode_func, tspan, y0, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)

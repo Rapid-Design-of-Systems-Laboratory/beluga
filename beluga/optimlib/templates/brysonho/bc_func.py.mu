@@ -2,7 +2,7 @@
 import numpy as np
 from math import *
 def bc_func_left(_ya, _p, _aux, _arcs):
-    arc_type = _arcs[0]
+    arc_type = _arc_seq[0]
     # Declare all auxiliary variables
 {{#aux_list}}
 {{#vars}}
@@ -31,7 +31,7 @@ def bc_func_left(_ya, _p, _aux, _arcs):
     return res_left
 
 def bc_func_right(_yb, _p, _aux, _arcs):
-    arc_type = _arcs[0]
+    arc_type = _arc_seq[0]
     # Declare all auxiliary variables
 {{#aux_list}}
 {{#vars}}
@@ -56,7 +56,7 @@ def bc_func_right(_yb, _p, _aux, _arcs):
                 {{/bc_terminal}}])
     return res_right
 
-def bc_func(_ya, _yb, _p, _aux, _arcs=(0,)):
+def bc_func(_ya, _yb, _p, _aux, _arc_seq=(0,)):
     res_left = bc_func_left(_ya, _p, _aux, _arcs)
     res_right = bc_func_right(_yb, _p, _aux, _arcs)
 
