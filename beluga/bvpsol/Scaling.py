@@ -69,6 +69,11 @@ class Scaling(dict):
         # Scaling functions for constraint multipliers and other parameters
         self.scale_func['parameters'] = {}
         indices = {}
+        for s in ws['s_list']:
+            for pi_var in s['pi_list']:
+                pi_unit = '('+cost_unit+')/('+str(s['unit'])+')'
+                self.scale_func['parameters'][str(pi_var)] = self.create_scale_fn(pi_unit)
+
         for c_type, c_list in ws['constraints'].items():
             for c, mul_var in zip(c_list, ws[c_type+'_lm_params']):
                 mul_unit = '('+cost_unit+')/('+str(c.unit)+')'

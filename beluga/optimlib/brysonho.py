@@ -243,7 +243,7 @@ def make_control_law(dhdu, controls):
     control_options = ctrl_sol
     return control_options
 
-def make_constraint_bc(s,
+def process_constraint(s,
                        s_idx,
                        states,
                        costates,
@@ -297,43 +297,7 @@ def make_constraint_bc(s,
     if not found:
         raise Exception("Invalid path constrant")
 
-    costate_slice = slice(num_states, 2*num_states)
-
-    y1m = sympy.symbols('y1m:'+str(num_states*2))
-    y1m_x = sympy.Matrix([y1m[:num_states]])
-    y1m_l = sympy.Matrix([y1m[costate_slice]])
-
-    y1p = sympy.symbols('y1p:'+str(num_states*2))
-    y1p_x = sympy.Matrix([y1p[:num_states]])
-    y1p_l = sympy.Matrix([y1p[costate_slice]])
-
-    y2m = sympy.Matrix([sympy.symbols('y2m:'+str(num_states*2))])
-    y2p = sympy.Matrix([sympy.symbols('y2p:'+str(num_states*2))])
-
-    def make_subs(in_vars, out_vars):
-        return {k: v for k,v in zip(in_vars, out_vars)}
-
-    subs_1m = make_subs(it.chain(states, costates), y1m)
-    subs_1p = make_subs(it.chain(states, costates), y1p)
-    subs_2m = make_subs(it.chain(states, costates), y2m)
-    subs_2p = make_subs(it.chain(states, costates), y2p)
-
-    ham1m = ham.subs(subs_1m)
-    ham1p = ham_aug[0].subs(subs_1p)
-    ham2m = ham_aug[0].subs(subs_2m)
-    ham2p = ham.subs(subs_2p)
-    tangency_1m = sympy.Matrix(tangency).subs(subs_1m)
-
-    bc_arc = [*tangency_1m,  # Tangency conditions, N(x,t) = 0
-              *(y1m_x - y1p_x), # Continuity in states at entry
-              *(y1m_l - y1p_l - corner_conditions), # Corner condns on costates
-              *(y2m - y2p), # Continuity in states and costates at exit
-              ham1m - ham1p,
-              ham2m - ham2p]
-
-    bc_list = [str(_) for _ in bc_arc]
-
-    return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions
+    return constrained_control_law, constrained_costate_rates, ham_aug[0], order, mult, pi_list, corner_conditions, tangency
 
 
 def process_path_constraints(path_constraints,
@@ -348,11 +312,12 @@ def process_path_constraints(path_constraints,
     s_list = []
     mu_vars = []
     for i, s in enumerate(path_constraints):
-        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions = \
-                make_constraint_bc(s, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+        u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions, tangency = \
+                process_constraint(s, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
 
         s_list.append({'name': str(s['name']),
                        'expr': str(s['expr']),
+                       'unit': str(s['unit']),
                        'direction': s['direction'],
                        'control_law': u_aug,
                        'lamdot': lamdot,
@@ -361,6 +326,7 @@ def process_path_constraints(path_constraints,
                        'mu': mu_i,
                        'pi_list': pi_list,
                        'corner': corner_conditions,
+                       'tangency': tangency,
                     #    'bound_var': s_bound,
                        'bound_val': s['bound']})
         mu_vars.append(mu_i)
@@ -372,7 +338,7 @@ def process_path_constraints(path_constraints,
 def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     all_pi_names = [p['pi_list'] for p in s_list]
     params_list = [str(p) for p in it.chain(initial_lm_params,
-                                            terminal_lm_params, *all_pi_names)]
+                                            terminal_lm_params)] #, *all_pi_names)]
     parameters = sym.symbols(' '.join(params_list))
     return parameters
 
@@ -395,9 +361,6 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     num_options = len(control_opts)
     num_states = len(states)
 
-    def compute_hamiltonian(t, X, p, aux, u):
-        # C = [v for k,v in aux['const'].items()]
-        return ham_fn(*X, *p, *aux['const'].values(), *u)
 
     # @numba.jit
     def compute_control_unc(t, X, p, aux):
@@ -426,7 +389,70 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     #     return u
 
     yield compute_control_unc
-    yield compute_hamiltonian
+    yield ham_fn
+
+
+def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, ham):
+
+    num_states = len(states)
+    costate_slice = slice(num_states, 2*num_states)
+    ham_aug = s['ham']
+    corner_conditions = s['corner']
+    tangency = s['tangency']
+
+    y1m = sympy.symbols(' '.join('_'+str(_.name)+'_1m' for _ in it.chain(states, costates)))
+    y1m_x = sympy.Matrix([y1m[:num_states]])
+    y1m_l = sympy.Matrix([y1m[costate_slice]])
+
+    y1p = sympy.symbols(' '.join('_'+str(_.name)+'_1p' for _ in it.chain(states, costates)))
+    y1p_x = sympy.Matrix([y1p[:num_states]])
+    y1p_l = sympy.Matrix([y1p[costate_slice]])
+
+    y2m = sympy.symbols(' '.join('_'+str(_.name)+'_2m' for _ in it.chain(states, costates)))
+    y2p = sympy.symbols(' '.join('_'+str(_.name)+'_2p' for _ in it.chain(states, costates)))
+    y2m = sympy.Matrix([y2m])
+    y2p = sympy.Matrix([y2p])
+
+    u_m = sympy.symbols(' '.join('_'+str(_.name)+'_m' for _ in it.chain(controls, mu_vars)))
+    u_p = sympy.symbols(' '.join('_'+str(_.name)+'_p' for _ in it.chain(controls, mu_vars)))
+    if not hasattr(u_m, '__len__'):
+        u_m = (u_m,)
+    if not hasattr(u_p, '__len__'):
+        u_m = (u_p,)
+    def make_subs(in_vars, out_vars):
+        return {k: v for k,v in zip(in_vars, out_vars)}
+
+    subs_1m = make_subs(it.chain(states, costates, controls), it.chain(y1m, u_m))
+    subs_1p = make_subs(it.chain(states, costates, controls), it.chain(y1p, u_p))
+    subs_2m = make_subs(it.chain(states, costates, controls), it.chain(y2m, u_m))
+    subs_2p = make_subs(it.chain(states, costates, controls), it.chain(y2p, u_p))
+
+    ham1m = ham.subs(subs_1m)
+    ham1p = ham_aug.subs(subs_1p)
+    ham2m = ham_aug.subs(subs_2m)
+    ham2p = ham.subs(subs_2p)
+    tangency_1m = sympy.Matrix(tangency).subs(subs_1m)
+
+    entry_bc = [
+        *tangency_1m,  # Tangency conditions, N(x,t) = 0
+        *(y1m_x - y1p_x), # Continuity in states at entry
+        *(y1m_l - y1p_l - corner_conditions), # Corner condns on costates
+        ham1m - ham1p
+    ]
+    exit_bc = [
+        *(y2m - y2p), # Continuity in states and costates at exit
+        ham2m - ham2p
+    ]
+    # bc_arc = [*tangency_1m,  # Tangency conditions, N(x,t) = 0
+    #           *(y1m_x - y1p_x), # Continuity in states at entry
+    #           *(y1m_l - y1p_l - corner_conditions), # Corner condns on costates
+    #
+    #           ham1m - ham1p,
+    #           ham2m - ham2p]
+
+    entry_bc = [str(_) for _ in entry_bc]
+    exit_bc = [str(_) for _ in exit_bc]
+    return entry_bc, exit_bc
 
 def make_constrained_arc_fns(workspace):
     """Creates constrained arc control functions."""
@@ -438,24 +464,35 @@ def make_constrained_arc_fns(workspace):
 
     fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
     control_fns = [workspace['control_fn']]
-    costate_eoms = [ {'eom':[str(_.eom) for _ in workspace['costates']], 'arcid':0} ]
-    corner_fns = []
+    costate_eoms = [ {'eom':[str(_.eom) for _ in workspace['costates']], 'arctype':0} ]
+    bc_list = [] # Unconstrained arc placeholder
 
     mu_vars = workspace['mu_vars']
 
-    for arc_id, s in enumerate(workspace['s_list'],1):
+
+    for arc_type, s in enumerate(workspace['s_list'],1):
         # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
         u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, s['ham'])
         # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
-        corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
-        costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']], 'arcid':arc_id}
+        # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
+        pi_list = [str(_) for _ in s['pi_list']]
+        costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']], 'arctype':arc_type, 'pi_list': pi_list}
+
+        entry_bc, exit_bc = make_constraint_bc(s,
+                                workspace['states'],
+                                workspace['costates'],
+                                workspace['parameters'],
+                                workspace['constants'],
+                                workspace['controls'], mu_vars, workspace['ham'])
+        bc = {'entry_bc': entry_bc, 'exit_bc': exit_bc, 'arctype':arc_type, 'pi_list': pi_list}
+        bc_list.append(bc)
+
         control_fns.append(u_fn)
-        corner_fns.append(corner_fn)
         costate_eoms.append(costate_eom)
 
     yield control_fns
     yield costate_eoms
-    yield corner_fns
+    yield bc_list
 
 #
 # def make_odefn(workspace):
@@ -543,8 +580,7 @@ def generate_problem_data(workspace):
          [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
          + ['tf']
      ,
-     'parameter_list': [str(p) for p in it.chain(workspace['initial_lm_params'],
-                                                        workspace['terminal_lm_params'])],
+     'parameter_list': [str(p) for p in workspace['parameters']],
      'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
      'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
      'deriv_list':
@@ -554,11 +590,13 @@ def generate_problem_data(workspace):
      ,
      'control_fns': workspace['control_fns'],
      'costate_eoms': workspace['costate_eoms'],
-     'corner_fns': workspace['corner_fns'],
+     'bc_list': workspace['bc_list'],
      'ham_fn': workspace['ham_fn'],
 
      's_list': workspace['s_list'],
+     'bc_list': workspace['bc_list'],
      'num_states': 2*len(workspace['states']) + 1,
+     'num_params': len(workspace['parameters']),
      'dHdu': workspace['dhdu'],
      'bc_initial': [str(_) for _ in workspace['bc_initial']],
      'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
@@ -657,7 +695,7 @@ BrysonHo = sp.Workflow([
     sp.Task(make_control_and_ham_fn,
             inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'mu_vars', 'ham'),
             outputs=['control_fn', 'ham_fn']),
-    sp.Task(make_constrained_arc_fns, inputs='*', outputs=['control_fns', 'costate_eoms', 'corner_fns']),
+    sp.Task(make_constrained_arc_fns, inputs='*', outputs=['control_fns', 'costate_eoms', 'bc_list']),
     # sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
     # sp.Task(make_bcfn, inputs='*', outputs='bc_fn'),
     sp.Task(generate_problem_data,

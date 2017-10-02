@@ -65,7 +65,16 @@ class ActivateConstraint(object):
     def init(self, sol, problem_data):
         """Split the solution into arcs to introduce constraint."""
         # Get expr corresponding to name
-        expr = sol.aux['constraints'][self.name]['expr']
+        s = sol.aux['constraints'][self.name]
+        expr = s['expr']
+        arc_type = s['arc_type']
+        pi_list = s['pi_list']
+        num_params = problem_data['num_params']
+
+        current_arcs = sol.arcs
+        current_arcseq = sol.arc_seq
+        if current_arcs is None:
+            current_arcs = [(0, 511)]
 
         sol.prepare(problem_data, mesh_size=512, overwrite=True)
         # Evaluate expr on sol
@@ -74,6 +83,8 @@ class ActivateConstraint(object):
         # Find zero crossing
         # TODO: add check to see if constraint active
         smax_i = np.argmin(s_vals)
+
+        current_arcs = [(0, smax_i-1), (smax_i, smax_i+1), (smax_i+2, 512)]
 
         # Introduce  small arc
         sol.x = np.hstack((sol.x[:smax_i],
@@ -105,6 +116,16 @@ class ActivateConstraint(object):
                             sol.u[:,(smax_i+1)], # t2+
                             sol.u[:,(smax_i+2):]
                            ))
+
+        sol.arcs = current_arcs
+        sol.arc_seq = (0, arc_type, 0)
+
+        pi_idx_start = len(sol.parameters)-num_params
+        pi_idx = range(pi_idx_start, pi_idx_start+len(pi_list))
+        sol.parameters = np.append(sol.parameters, np.zeros(len(pi_list)))
+
+        sol.pi_seq = ((), pi_idx, ())
+
         self.sol = sol
 
     def __iter__(self):

@@ -150,8 +150,10 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     # For path constraints
     solinit.aux['constraints'] = dict((s['name'], {'arc_bounds':{},
                                                    'expr':str(s['expr']),
-                                                   'direction': s['direction']})
-                                      for s in ocp_ws['problem_data']['s_list'])
+                                                   'direction': s['direction'],
+                                                   'arc_type': i,
+                                                   'pi_list':[str(_) for _ in s['pi_list']]})
+                                      for i, s in enumerate(ocp_ws['problem_data']['s_list']))
 
     bvp_fn = bvp_algorithm.preprocess(ocp_ws['problem_data'])
     # The initial guess is automatically stored in the bvp object
@@ -188,7 +190,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     output_file = 'data.dill'
 
     del out['problem_data']['s_list']
-    del out['problem_data']['corner_fns']
+    # del out['problem_data']['corner_fns']
     del out['problem_data']['control_fns']
     del out['problem_data']['ham_fn']
     with open(output_file, 'wb') as outfile:
