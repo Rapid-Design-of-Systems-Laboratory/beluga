@@ -296,24 +296,18 @@ class MultipleShooting(BaseAlgorithm):
         if len(arcs) % 2 == 0:
             raise Exception('Number of arcs must be odd!')
 
-        left_idx, right_idx = zip(*arcs)
+        left_idx, right_idx = map(np.array, zip(*arcs))
         ya = solinit.y[:,left_idx]
         yb = solinit.y[:,right_idx]
 
-        # delta_x = np.diff(x)
-        # zero_pos, = np.where(delta_x == 0)
-        # if len(zero_pos)%2 != 0:
-        #     raise Exception('Must have even number of junctions!')
-        #
-        # zero_pos = np.insert(zero_pos, 0, 0)
-        # zero_pos = np.append(zero_pos, len(x)-1)
-        # arcs = list(zip(zero_pos[:-1], zero_pos[1:]))
-        #
-        if arcs is not None and len(arcs) > 1:
-            print(arcs)
-        t0 = x[0]
-        ti = x[1:-1]
-        tf = x[-1]
+        # Use repeating x values to figure out time at jn points
+        delta_x = np.diff(x)
+        zero_pos, = np.where(delta_x == 0)
+        if len(zero_pos)%2 != 0:
+            raise Exception('Must have even number of junctions!')
+        zero_pos = np.insert(zero_pos, 0, 0)
+        zero_pos = np.append(zero_pos, len(x)-1)
+        tspan_list = list((x[a], x[b]) for a,b in zip(zero_pos[:-1], zero_pos[1:]))
 
         # Extract number of ODEs in the system to be solved
         nOdes = y0g.shape[0]
@@ -333,7 +327,7 @@ class MultipleShooting(BaseAlgorithm):
         beta = 1
         r0 = None
 
-        tspan = [t0,tf]
+        tspan = tspan_list[0]
         # tspan = np.linspace(0,1,200)
         y0 = np.zeros((len(stm0)+nOdes))
 

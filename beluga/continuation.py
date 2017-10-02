@@ -121,10 +121,10 @@ class ActivateConstraint(object):
         sol.arc_seq = (0, arc_type, 0)
 
         pi_idx_start = len(sol.parameters)-num_params
-        pi_idx = range(pi_idx_start, pi_idx_start+len(pi_list))
+        pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
         sol.parameters = np.append(sol.parameters, np.zeros(len(pi_list)))
 
-        sol.pi_seq = ((), pi_idx, ())
+        sol.pi_seq = (None, pi_idx, None)
 
         self.sol = sol
 

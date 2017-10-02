@@ -153,7 +153,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
                                                    'direction': s['direction'],
                                                    'arc_type': i,
                                                    'pi_list':[str(_) for _ in s['pi_list']]})
-                                      for i, s in enumerate(ocp_ws['problem_data']['s_list']))
+                                      for i, s in enumerate(ocp_ws['problem_data']['s_list'],1))
 
     bvp_fn = bvp_algorithm.preprocess(ocp_ws['problem_data'])
     # The initial guess is automatically stored in the bvp object
