@@ -304,7 +304,7 @@ class MultipleShooting(BaseAlgorithm):
                 for arc_idx, tspan in enumerate(tspan_list):
                     y0stm[:nOdes] = ya[:,arc_idx]
                     y0stm[nOdes:] = stm0
-                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-4)
+                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-3)
                     yb[:,arc_idx] = yy[-1,:nOdes]
                     phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
                     phi_list.append(np.copy(phi))
@@ -371,8 +371,6 @@ class MultipleShooting(BaseAlgorithm):
 
                 # Apply corrections to states and parameters (if any)
                 d_ya = np.reshape(dy0[:nOdes*num_arcs], (nOdes, num_arcs), order='F')
-                # if(num_arcs > 1):
-                    # keyboard()
                 if nParams > 0:
                     dp = dy0[nOdes*num_arcs:]
                     paramGuess += dp
@@ -390,14 +388,29 @@ class MultipleShooting(BaseAlgorithm):
         # Return initial guess if it failed to converge
         sol = solinit
         if converged:
+            y_list = []
+            x_list = []
+            sol.arcs = []
+            y0 = np.zeros(ya.shape[0])
+            timestep_ctr = 0
+            for arc_idx, tspan in enumerate(tspan_list):
+                y0[:] = ya[:,arc_idx]
+                tt,yy = ode45(self.bvp.deriv_func, tspan, y0, paramGuess, aux, sol.arc_seq, sol.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                y_list.append(yy.T)
+                x_list.append(tt)
+                sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
+                timestep_ctr += len(tt)
             # If problem converged, propagate solution to get full trajectory
-            x1, y1 = t, yy[:,:nOdes]
-            # x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=self.tolerance, reltol=1e-3)
-            sol.x = x1
-            sol.y = y1.T
-            sol.parameters = paramGuess
-            # sol = Solution(x1,y1.T,paramGuess,aux)
+            sol.x = np.hstack(x_list)
+            sol.y = np.column_stack(y_list)
 
+            # if num_arcs > 1:
+            #     keyboard()
+            # x1, y1 = t, yy[:,:nOdes]
+            # x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=self.tolerance, reltol=1e-3)
+            # sol.x = x
+            # sol.y = y1.T
+            sol.parameters = paramGuess
 
         sol.converged = converged
         sol.aux = aux

@@ -98,6 +98,7 @@ class ActivateConstraint(object):
 
         # Store constraint limit in aux
         # sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
+        logging.info('Added constrained arc with max violation : %.4lf %s' % (s_lim_val, s['unit']))
         sol.aux['constraint'][(self.name, 1)] = s_lim_val
 
         # Introduce  small arc
