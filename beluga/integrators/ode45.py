@@ -31,7 +31,7 @@ def ode45(f,tspan,y0,*args,**kwargs):
 
     if len(tspan) == 2:
         # TODO: Change hardcoding?
-        tspan = np.linspace(tspan[0],tspan[1],200)
+        tspan = np.linspace(tspan[0],tspan[1],100)
     t0 = tspan[0]
     t1 = tspan[1]
     yy = scipy.integrate.odeint(ode_wrap(f,*args),y0,tspan)

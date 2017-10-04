@@ -82,47 +82,69 @@ class ActivateConstraint(object):
 
         # Find zero crossing
         # TODO: add check to see if constraint active
-        smax_i = np.argmin(s_vals)
 
-        current_arcs = [(0, smax_i-1), (smax_i, smax_i+1), (smax_i+2, 512)]
+        if s['direction'] == '>':
+            # Find min value (most away from zero)
+            s_lim_i = np.argmin(s_vals)
+            s_lim_val = s_vals[s_lim_i]
+            # print('Max_violation : ', s_lim_val)
+        else:
+            # Find max value
+            s_lim_i = np.argmax(s_vals)
+            s_lim_val = s_vals[s_lim_i]
+            # print('Max_violation : ', s_lim_val)
+
+        # Store constraint limit in aux
+        sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
+
+        current_arcs = [(0, s_lim_i-1), (s_lim_i, s_lim_i+1), (s_lim_i+2, 512)]
 
         # Introduce  small arc
-        sol.x = np.hstack((sol.x[:smax_i],
-                            sol.x[smax_i], # t1-
-                            sol.x[smax_i], # t1+
-                            sol.x[(smax_i+1)], # t2-
-                            sol.x[(smax_i+1)], # t2+
-                            sol.x[(smax_i+2):]
+        n_before = s_lim_i
+        n_after = 512 - s_lim_i
+        sol.x = np.hstack((np.linspace(0.0, 1.0, n_before),
+                          np.linspace(1.0, 2.0, 2), # Extra
+                          np.linspace(2.0, 3.0, n_after))),
+        # sol.x = np.hstack((sol.x[:s_lim_i],
+        #                     sol.x[s_lim_i], # t1-
+        #                     sol.x[s_lim_i], # t1+
+        #                     sol.x[(s_lim_i+1)], # t2-
+        #                     sol.x[(s_lim_i+1)], # t2+
+        #                     sol.x[(s_lim_i+2):]
+        #                    ))
+
+        sol.y = np.column_stack(( sol.y[:,:s_lim_i],
+                            sol.y[:,s_lim_i], # t1-
+                            sol.y[:,s_lim_i], # t1+
+                            sol.y[:,(s_lim_i+1)], # t2-
+                            sol.y[:,(s_lim_i+1)], # t2+
+                            sol.y[:,(s_lim_i+2):]
                            ))
 
-        sol.y = np.column_stack(( sol.y[:,:smax_i],
-                            sol.y[:,smax_i], # t1-
-                            sol.y[:,smax_i], # t1+
-                            sol.y[:,(smax_i+1)], # t2-
-                            sol.y[:,(smax_i+1)], # t2+
-                            sol.y[:,(smax_i+2):]
-                           ))
 
-        t_before = smax_i/511.
-        t_after = (511-smax_i)/511.
-        sol.y[-1,:(smax_i+1)] = t_before
-        sol.y[-1,smax_i+1:smax_i+3] = 0.1 # "tf" for constrained arc
-        sol.y[-1,smax_i+3:] = t_after
+        new_arc_tf = 0.01
+        original_tf = sol.y[-1, 0]
+        t_before = s_lim_i/511.*original_tf
+        t_after = (511-s_lim_i)/511.*original_tf - new_arc_tf
+        sol.y[-1,:(s_lim_i)] = t_before
+        sol.y[-1,s_lim_i:s_lim_i+2] = new_arc_tf # "tf" for constrained arc
+        sol.y[-1,s_lim_i+2:] = t_after
 
-        sol.u = np.column_stack(( sol.u[:,:smax_i],
-                            sol.u[:,smax_i], # t1-
-                            sol.u[:,smax_i], # t1+
-                            sol.u[:,(smax_i+1)], # t2-
-                            sol.u[:,(smax_i+1)], # t2+
-                            sol.u[:,(smax_i+2):]
+        sol.u = np.column_stack(( sol.u[:,:s_lim_i],
+                            sol.u[:,s_lim_i], # t1-
+                            sol.u[:,s_lim_i], # t1+
+                            sol.u[:,(s_lim_i+1)], # t2-
+                            sol.u[:,(s_lim_i+1)], # t2+
+                            sol.u[:,(s_lim_i+2):]
                            ))
 
         sol.arcs = current_arcs
+
         sol.arc_seq = (0, arc_type, 0)
 
         pi_idx_start = len(sol.parameters)-num_params
         pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
-        sol.parameters = np.append(sol.parameters, np.zeros(len(pi_list)))
+        sol.parameters = np.append(sol.parameters, np.ones(len(pi_list))*0.01)
 
         sol.pi_seq = (None, pi_idx, None)
 

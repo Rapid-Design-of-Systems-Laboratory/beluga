@@ -141,7 +141,8 @@ class MultipleShooting(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
-        print(out_ws['bc_func_code'])
+        # print(out_ws['bc_func_code'])
+        print(out_ws['deriv_func_code'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
@@ -271,15 +272,8 @@ class MultipleShooting(BaseAlgorithm):
         ya = solinit.y[:,left_idx]
         yb = solinit.y[:,right_idx]
 
-        # Use repeating x values to figure out time at jn points
-        delta_x = np.diff(x)
-        zero_pos, = np.where(delta_x == 0)
-        if len(zero_pos)%2 != 0:
-            raise Exception('Must have even number of junctions!')
-        zero_pos = np.insert(zero_pos, 0, 0)
-        zero_pos = np.append(zero_pos, len(x)-1)
-        tspan_list = list((x[a], x[b]) for a,b in zip(zero_pos[:-1], zero_pos[1:]))
-
+        tmp = np.arange(num_arcs+1, dtype=np.float32)
+        tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
         # Extract number of ODEs in the system to be solved
         nOdes = y0g.shape[0]
         if solinit.parameters is None:
@@ -307,6 +301,7 @@ class MultipleShooting(BaseAlgorithm):
                 yb = np.zeros_like(ya)
                 phi_list = []
                 for arc_idx, tspan in enumerate(tspan_list):
+                    print('Integrating on',tspan,'tf=',ya[-1,arc_idx])
                     y0stm[:nOdes] = ya[:,arc_idx]
                     y0stm[nOdes:] = stm0
                     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)

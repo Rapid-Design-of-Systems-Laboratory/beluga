@@ -48,7 +48,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     tolerance=1e-6,
                     max_iterations=50,
                     verbose = True,
-                    max_error=10
+                    max_error=100
 )
 
 guess_maker = beluga.guess_generator('auto',

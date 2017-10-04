@@ -12,7 +12,10 @@ def deriv_func(_t, _X, _p, _aux, _arc_seq=(0,), _pi_seq=(None,), arc_idx=0):
     arc_type = _arc_seq[arc_idx]
 
     {{#state_list}}{{.}},{{/state_list}} = _X[:{{num_states}}]
-    u_ = compute_control(_t,_X,_p,_aux)
+    tf = abs(tf)
+    _X[{{num_states}}-1] = tf
+
+    u_ = compute_control(_t,_X,_p,_aux,arc_type)
     {{#control_list}}{{.}},{{/control_list}} = u_
     {{#parameter_list}}{{.}},{{/parameter_list}} = _p[:{{num_params}}]
 
@@ -32,9 +35,9 @@ def deriv_func(_t, _X, _p, _aux, _arc_seq=(0,), _pi_seq=(None,), arc_idx=0):
                  {{/x_deriv_list}}]
 {{#costate_eoms}}
     if arc_type == {{arctype}}:
-        pi_idx = _pi_seq[arc_idx]
-        if pi_idx is not None:
-            [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
+        # pi_idx = _pi_seq[arc_idx]
+        # if pi_idx is not None:
+        #    [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
         lam_eom = [{{#eom}}{{.}},
                    {{/eom}}]
 {{/costate_eoms}}
