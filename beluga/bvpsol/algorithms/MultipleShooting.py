@@ -202,7 +202,7 @@ class MultipleShooting(BaseAlgorithm):
                 N[:,i] = (f-fx)/h
                 yb[i, arc_idx] = yb[i, arc_idx] - h
 
-            J_i = M+np.dot(N,phi)
+            J_i = M+N @ phi
             J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
             J[:,J_slice] = J_i
 
@@ -302,17 +302,13 @@ class MultipleShooting(BaseAlgorithm):
                 yb = np.zeros_like(ya)
                 phi_list = []
                 for arc_idx, tspan in enumerate(tspan_list):
-                    print('Integrating on',tspan,'tf=',ya[-1,arc_idx])
                     y0stm[:nOdes] = ya[:,arc_idx]
                     y0stm[nOdes:] = stm0
-                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-4)
-                    yf = yy[-1]
-                    yb[:,arc_idx] = yf[:nOdes]
-                    phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
+                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-4)
+                    yb[:,arc_idx] = yy[-1,:nOdes]
+                    phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
                     phi_list.append(np.copy(phi))
 
-                if(len(solinit.arc_seq) > 1):
-                    print(np.column_stack((yb[:,0],ya[:,1])))
                 # Iterate through arcs
                 if n_iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")
@@ -320,6 +316,8 @@ class MultipleShooting(BaseAlgorithm):
 
                 res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
 
+                if any(np.isnan(res)):
+                    raise RuntimeError("Nan in residue")
                 r1 = np.linalg.norm(res)
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
@@ -347,7 +345,7 @@ class MultipleShooting(BaseAlgorithm):
                     if beta < 0:
                         beta = 1
                 if r1>1:
-                    alpha = 1/(2*r1)
+                    alpha = 1/(20*r1)
                 else:
                     alpha = 1
                 r0 = r1
@@ -364,7 +362,7 @@ class MultipleShooting(BaseAlgorithm):
                     rank2 = np.linalg.matrix_rank(np.c_[J,-res])
                     if rank1 == rank2:
                         # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
-                        dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
+                        dy0 = -alpha*beta*(np.linalg.inv(J @ J.T) @ J).T @ res
                         # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
                     else:
                         # Re-raise exception if system is infeasible
@@ -372,13 +370,15 @@ class MultipleShooting(BaseAlgorithm):
                 # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
 
                 # Apply corrections to states and parameters (if any)
-                d_ya = np.reshape(dy0[:nOdes*num_arcs], (nOdes, num_arcs))
+                d_ya = np.reshape(dy0[:nOdes*num_arcs], (nOdes, num_arcs), order='F')
+                # if(num_arcs > 1):
+                    # keyboard()
                 if nParams > 0:
                     dp = dy0[nOdes*num_arcs:]
                     paramGuess += dp
-                    ya += d_ya
+                    ya = ya + d_ya
                 else:
-                    ya += d_ya
+                    ya = ya + d_ya
 
                 n_iter += 1
                 logging.debug('Iteration #'+str(n_iter))

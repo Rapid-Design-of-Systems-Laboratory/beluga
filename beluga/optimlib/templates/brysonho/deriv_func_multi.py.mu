@@ -12,7 +12,7 @@ def deriv_func(_t, _X, _p, _aux, _arc_seq=(0,), _pi_seq=(None,), arc_idx=0):
     arc_type = _arc_seq[arc_idx]
 
     {{#state_list}}{{.}},{{/state_list}} = _X[:{{num_states}}]
-    # tf = abs(tf)
+    tf = abs(tf)
     _X[{{num_states}}-1] = tf
 
     u_ = compute_control(_t,_X,_p,_aux,arc_type)
