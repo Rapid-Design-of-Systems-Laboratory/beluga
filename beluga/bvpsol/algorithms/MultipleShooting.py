@@ -12,6 +12,7 @@ from math import *
 import logging
 import imp
 import functools as ft
+import itertools as it
 
 import pystache
 
@@ -134,7 +135,7 @@ class MultipleShooting(BaseAlgorithm):
         self.verbose = verbose
         self.max_error = max_error
         self.derivative_method = derivative_method
-        if derivative_method not in ['csd', 'fd']:
+        if derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
     def preprocess(self, problem_data):
@@ -143,53 +144,13 @@ class MultipleShooting(BaseAlgorithm):
         print(out_ws['bc_func_code'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
-        if self.derivative_method == 'csd':
-            self.stm_ode_func = ft.partial(self.__stmode_csd, odefn=self.bvp.deriv_func)
-            self.bc_jac_func  = ft.partial(self.__bcjac_csd, bc_func=self.bvp.bc_func)
-        elif self.derivative_method == 'fd':
-            self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
-            self.bc_jac_func  = ft.partial(self.__bcjac_fd, bc_func=self.bvp.bc_func)
+
+        self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
+        self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
         return self.bvp
 
-    def __bcjac_csd(self, ya, yb, phi, parameters, aux, arc_seq, pi_seq, bc_func, StepSize=1e-16):
-        ya = np.array(ya, dtype=complex)
-        yb = np.array(yb, dtype=complex)
-        # if parameters is not None:
-        p  = np.array(parameters, dtype=complex)
-        h = StepSize
-
-        nOdes = ya.shape[0]
-        nBCs = nOdes
-        if parameters is not None:
-            nBCs += parameters.size
-        M = np.zeros((nBCs, nOdes))
-        N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
-            ya[i] = ya[i] + h*1.j
-            f = bc_func(ya,yb,p,aux)
-            M[:,i] = np.imag(f)/h
-            ya[i] = ya[i] - h*1.j
-
-            yb[i] = yb[i] + h*1.j
-
-            f = bc_func(ya,yb,p,aux)
-            N[:,i] = np.imag(f)/h
-            yb[i] = yb[i] - h*1.j
-
-        if parameters is not None:
-            P = np.zeros((nBCs, p.size))
-            for i in range(p.size):
-                p[i] = p[i] + h*1.j
-                f = bc_func(ya,yb,p,aux)
-                P[:,i] = np.imag(f)/h
-                p[i] = p[i] - h*1.j
-            J = np.hstack((M+np.dot(N,phi),P))
-        else:
-            J = M+np.dot(N,phi)
-        return J
-
-    def __bcjac_fd(self, ya, yb, phi, parameters, aux, arc_seq, pi_seq, bc_func, StepSize=1e-6):
-
+    def bc_jac_params():
+        P = np.zeros((nBCs, p.size))
         ya = np.array(ya, ndmin=1)
         yb = np.array(yb, ndmin=1)
 
@@ -199,35 +160,63 @@ class MultipleShooting(BaseAlgorithm):
 
         nOdes = ya.shape[0]
 
-        fx = bc_func(ya,yb,p,aux,arc_seq)
+        fx = bc_func(ya,yb,p,aux,arc_seq,pi_seq)
+        nBCs = len(fx)
+        for i in range(p.size):
+            p[i] = p[i] + h
+            f = bc_func(ya,yb,p,aux,arc_seq,pi_seq)
+            P[:,i] = (f-fx)/h
+            p[i] = p[i] - h
+        J = np.hstack((M+np.dot(N,phi),P))
+
+    def __bc_jac_multi(self, nBCs, phi_list, ya, yb, parameters, aux, arc_seq, pi_seq, bc_func, StepSize=1e-6):
+
+        # if parameters is not None:
+        p  = np.array(parameters)
+        h = StepSize
+
+        nOdes = ya.shape[0]
+        num_arcs = len(phi_list)
+
+        fx = bc_func(ya,yb,p,aux,arc_seq,pi_seq)
         nBCs = len(fx)
 
         M = np.zeros((nBCs, nOdes))
         N = np.zeros((nBCs, nOdes))
-        for i in range(nOdes):
-            ya[i] = ya[i] + h
-            f = bc_func(ya,yb,p,aux,arc_seq)
-            M[:,i] = (f-fx)/h
-            ya[i] = ya[i] - h
+        P = np.zeros((nBCs, p.size))
 
-            yb[i] = yb[i] + h
-            f = bc_func(ya,yb,p,aux,arc_seq)
-            N[:,i] = (f-fx)/h
-            yb[i] = yb[i] - h
+        J = np.zeros((nBCs, (nOdes)*num_arcs+p.size))
+        J_num_cols = nOdes
 
-        if parameters is not None:
-            P = np.zeros((nBCs, p.size))
-            for i in range(p.size):
-                p[i] = p[i] + h
-                f = bc_func(ya,yb,p,aux,arc_seq)
-                P[:,i] = (f-fx)/h
-                p[i] = p[i] - h
-            J = np.hstack((M+np.dot(N,phi),P))
-        else:
-            J = M+np.dot(N,phi)
+        print(J.shape)
+        for arc_idx, phi in zip(it.count(), phi_list):
+            # Evaluate for all arcs
+            for i in range(nOdes):
+                ya[i, arc_idx] = ya[i, arc_idx] + h
+                f = bc_func(ya,yb,p,aux,arc_seq,pi_seq)
+                M[:,i] = (f-fx)/h
+                ya[i, arc_idx] = ya[i, arc_idx] - h
+
+                yb[i, arc_idx] = yb[i, arc_idx] + h
+                f = bc_func(ya,yb,p,aux,arc_seq,pi_seq)
+                N[:,i] = (f-fx)/h
+                yb[i, arc_idx] = yb[i, arc_idx] - h
+
+            J_i = M+np.dot(N,phi)
+            J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
+            J[:,J_slice] = J_i
+
+        for i in range(p.size):
+            p[i] = p[i] + h
+            f = bc_func(ya,yb,p,aux,arc_seq,pi_seq)
+            P[:,i] = (f-fx)/h
+            p[i] = p[i] - h
+
+        J[:,nOdes*num_arcs:] = P
         return J
 
-    def __stmode_fd(self, x, y, parameters, aux, arc_seq, pi_seq, odefn, nOdes = 0, StepSize=1e-6):
+
+    def __stmode_fd(self, x, y, parameters, aux, arc_seq, pi_seq, arc_idx, odefn, nOdes = 0, StepSize=1e-6):
         "Finite difference version of state transition matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
@@ -237,33 +226,15 @@ class MultipleShooting(BaseAlgorithm):
         F = np.zeros((nOdes,nOdes))
 
         # Compute Jacobian matrix, F using finite difference
-        fx = odefn(x,Y,parameters,aux,arc_seq)
+        fx = odefn(x,Y,parameters,aux, arc_seq, pi_seq, arc_idx)
         for i in range(nOdes):
             Y[i] = Y[i] + StepSize
-            F[:,i] = (odefn(x, Y, parameters,aux,arc_seq)-fx)/StepSize
+            F[:,i] = (odefn(x, Y, parameters,aux,arc_seq, pi_seq, arc_idx)-fx)/StepSize
             Y[i] = Y[i] - StepSize
 
         # Phidot = F*Phi (matrix product)
         phiDot = np.real(np.dot(F,phi))
         return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
-
-    def __stmode_csd(self, x, y, parameters, aux, arc_seq, pi_seq, odefn, StepSize=1e-50):
-        "Complex step version of State Transition Matrix"
-        N = y.shape[0]
-        nOdes = int(0.5*(sqrt(4*N+1)-1))
-
-        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-        Y = np.array(y[0:nOdes],dtype=complex)  # Just states
-        F = np.zeros((nOdes,nOdes))
-        # Compute Jacobian matrix using complex step derivative
-        for i in range(nOdes):
-            Y[i] = Y[i] + StepSize*1.j
-            F[:,i] = np.imag(odefn(x, Y, parameters, aux, arc_seq))/StepSize
-            Y[i] = Y[i] - StepSize*1.j
-
-        # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        return np.concatenate( (odefn(x,y, parameters, aux, arc_seq), np.reshape(phiDot, (nOdes*nOdes) )) )
 
     def solve(self,solinit):
         """Solve a two-point boundary value problem
@@ -293,6 +264,7 @@ class MultipleShooting(BaseAlgorithm):
             arcs = [(0, len(solinit.x)-1)]
             solinit.arcs = arcs
 
+        num_arcs = len(solinit.arc_seq)
         if len(arcs) % 2 == 0:
             raise Exception('Number of arcs must be odd!')
 
@@ -329,42 +301,43 @@ class MultipleShooting(BaseAlgorithm):
 
         tspan = tspan_list[0]
         # tspan = np.linspace(0,1,200)
-        y0 = np.zeros((len(stm0)+nOdes))
-
+        y0stm = np.zeros((len(stm0)+nOdes))
         try:
             while True:
+                # if len(solinit.arc_seq) > 1:
+                yb = np.zeros_like(ya)
+                phi_list = []
+                for arc_idx, tspan in enumerate(tspan_list):
+                    y0stm[:nOdes] = ya[:,arc_idx]
+                    y0stm[nOdes:] = stm0
+                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                    yf = yy[-1]
+                    yb[:,arc_idx] = yf[:nOdes]
+                    phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
+                    phi_list.append(phi)
                 # Iterate through arcs
                 if n_iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")
                     break
-                y0[:nOdes] = y0g
-                y0[nOdes:] = stm0
-                #  = np.concatenate( (y0g, stm0) )  # Add STM states to system
 
-                # Propagate STM and original system together
-                # t,yy = ode45(stm_ode45, tspan, y0)
-                t,yy = ode45(self.stm_ode_func, tspan, y0, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
-                # Obtain just last timestep for use with correction
-                yf = yy[-1]
-                # Extract states and STM from ode45 output
-                yb = yf[:nOdes]  # States
-                phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
-                # Evaluate the boundary conditions
-                # res = bc_func(y0g, yb, paramGuess, aux, solinit.arc_seq)
-                res = bc_func(y0g[:,np.newaxis], yb[:,np.newaxis], paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
-                # phi_list = []
-                # for arc_l, arc_r in arcs:
-                #     y0[:nOdes] = y0g[:,arc_l]
-                #     y0[nOdes:] = stm0
-                #     tspan = [x[arc_l], x[arc_r]]
-                #     t,yy = ode45(self.stm_ode_func, tspan, y0, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
+
+                # print(J)
+                    # J = self.bc_jac_func(y0g, yb, phi_list, paramGuess, aux)
+                # else:
+                #     y0stm[:nOdes] = y0g
+                #     y0stm[nOdes:] = stm0
+                #
+                #     # Propagate STM and original system together
+                #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, 0, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                #     # Obtain just last timestep for use with correction
                 #     yf = yy[-1]
+                #     # Extract states and STM from ode45 output
                 #     yb = yf[:nOdes]  # States
                 #     phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
-                #     phi_list.append(phi)
-                #     J = self.bc_jac_func(y0g, yb, phi, paramGuess, aux)
-                # Evaluate the boundary conditions
-                # res = bc_func(y0g[:,np.newaxis], yb[:,np.newaxis], paramGuess, aux, solinit.arc_seq)
+                #     # Evaluate the boundary conditions
+                #     res = bc_func(y0g[:,np.newaxis], yb[:,np.newaxis], paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
+
                 r1 = np.linalg.norm(res)
 
                 if r1 > self.max_error:
@@ -383,7 +356,9 @@ class MultipleShooting(BaseAlgorithm):
                     break
 
                 # Compute Jacobian of boundary conditions using numerical derviatives
-                J   = self.bc_jac_func(y0g[:,np.newaxis], yb[:,np.newaxis], phi, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
+                nBCs = len(res)
+                J = self.bc_jac_multi(nBCs, phi_list, ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
+                # J   = self.bc_jac_func(y0g[:,np.newaxis], yb[:,np.newaxis], phi, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
                 # Compute correction vector
 
                 if r0 is not None:
@@ -416,13 +391,13 @@ class MultipleShooting(BaseAlgorithm):
                 # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
 
                 # Apply corrections to states and parameters (if any)
+                d_ya = np.reshape(dy0[:nOdes*num_arcs], (nOdes, num_arcs))
                 if nParams > 0:
-                    dp = dy0[nOdes:]
-                    dy0 = dy0[:nOdes]
+                    dp = dy0[nOdes*num_arcs:]
                     paramGuess += dp
-                    y0g += dy0
+                    ya += d_ya
                 else:
-                    y0g += dy0
+                    ya += d_ya
 
                 n_iter += 1
                 logging.debug('Iteration #'+str(n_iter))

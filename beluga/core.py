@@ -208,6 +208,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
     problem_data = ocp_ws['problem_data']
     try:
         sol_guess = solinit
+        sol = None
         for step_idx, step in enumerate(steps):
             logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
@@ -218,6 +219,10 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
 
             for aux in step:  # Continuation step returns 'aux' dictionary
                 sol_guess.aux = aux
+                if sol is not None:
+                    sol_guess.pi_seq = sol.pi_seq
+                    sol_guess.arc_seq = sol.arc_seq
+                    
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
@@ -226,6 +231,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
 
                 # Note: sol is the same object as sol_guess
                 sol = bvp_algo.solve(sol_guess)
+
 
                 s.unscale(sol)
                 if sol.converged:
