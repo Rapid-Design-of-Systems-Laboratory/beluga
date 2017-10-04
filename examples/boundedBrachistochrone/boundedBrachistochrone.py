@@ -59,6 +59,11 @@ continuation_steps.add_step('bisection') \
 continuation_steps.add_step('activate_constraint', name='constraint1',
                                                  var='constraint1_lim1')
 
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .constraint('constraint1', 0.0, index=1)
+
+
 beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,

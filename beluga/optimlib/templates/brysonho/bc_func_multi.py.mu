@@ -82,7 +82,7 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#control_list}}_{{.}}_p,{{/control_list}} = _u1p
 
             {{#bc_list}}
-            {{name}} = _aux['constraints']['{{name}}']['limit'][arc_idx+1]
+            {{name}} = _aux['constraint'][('{{name}}', arc_idx+1)]
             {{/bc_list}}
 
             {{#bc_list}}
@@ -106,9 +106,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#state_list}}_{{.}}_2p,{{/state_list}} = _y2p
             {{#control_list}}_{{.}}_m,{{/control_list}} = _u2m
             {{#control_list}}_{{.}}_p,{{/control_list}} = _u2p
-            {{#bc_list}}
-            {{name}} = _aux['constraints']['{{name}}']['limit'][arc_idx+1]
-            {{/bc_list}}
 
             {{#bc_list}}
             if arc_left_type == {{arctype}}:

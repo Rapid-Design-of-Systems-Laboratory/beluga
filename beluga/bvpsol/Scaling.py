@@ -161,11 +161,16 @@ class Scaling(dict):
             sol.parameters[idx] /= self.scale_vals['parameters'][param]
 
         # Scale constraint limits
-        for s in self.problem_data['s_list']:
-            s_name = s['name']
+        # for s in self.problem_data['s_list']:
+        #     s_name = s['name']
+        #     scale_val = self.scale_vals['constraints'][s_name]
+        #     for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
+        #         sol.aux['constraints'][s_name]['limit'][arc_idx] /= scale_val
+
+        for (s_name, arc_idx), s_val in sol.aux['constraint'].items():
             scale_val = self.scale_vals['constraints'][s_name]
-            for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
-                sol.aux['constraints'][s_name]['limit'][arc_idx] /= scale_val
+            sol.aux['constraint'][(s_name, arc_idx)] /= scale_val
+
 
     def unscale(self, sol):
         """Unscales a solution object"""
@@ -189,8 +194,12 @@ class Scaling(dict):
             sol.parameters[idx] *= self.scale_vals['parameters'][param]
 
         # Scale constraint limits
-        for s in self.problem_data['s_list']:
-            s_name = s['name']
+        # for s in self.problem_data['s_list']:
+        #     s_name = s['name']
+        #     scale_val = self.scale_vals['constraints'][s_name]
+        #     for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
+        #         sol.aux['constraints'][s_name]['limit'][arc_idx] *= scale_val
+
+        for (s_name, arc_idx), s_val in sol.aux['constraint'].items():
             scale_val = self.scale_vals['constraints'][s_name]
-            for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
-                sol.aux['constraints'][s_name]['limit'][arc_idx] *= scale_val
+            sol.aux['constraint'][(s_name, arc_idx)] *= scale_val
