@@ -15,6 +15,7 @@ ocp.control('theta','rad')
 
 # Define constants
 ocp.constant('g',9.81,'m/s^2')
+ocp.constant('xlim',1.0,'m')
 
 # Define costs
 ocp.path_cost('1','s')
@@ -26,7 +27,7 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + x + 1.0','>',0.0,'m')
+    .path('constraint1','y + x + xlim','>',0.0,'m')
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 

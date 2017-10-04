@@ -188,7 +188,6 @@ class MultipleShooting(BaseAlgorithm):
         J = np.zeros((nBCs, (nOdes)*num_arcs+p.size))
         J_num_cols = nOdes
 
-        print(J.shape)
         for arc_idx, phi in zip(it.count(), phi_list):
             # Evaluate for all arcs
             for i in range(nOdes):
@@ -339,13 +338,12 @@ class MultipleShooting(BaseAlgorithm):
                 #     res = bc_func(y0g[:,np.newaxis], yb[:,np.newaxis], paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
 
                 r1 = np.linalg.norm(res)
-
-                if r1 > self.max_error:
-                    logging.warn('Error exceeded max_error')
-                    raise RuntimeError('Error exceeded max_error')
-
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
+
+                if r1 > self.max_error:
+                    raise RuntimeError('Error exceeded max_error')
+
 
                 # self.bc_jac_func = self.__bcjac_csd
                 # Solution converged if BCs are satisfied to tolerance
