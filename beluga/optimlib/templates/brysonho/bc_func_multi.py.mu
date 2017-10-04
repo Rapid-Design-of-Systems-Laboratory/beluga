@@ -128,9 +128,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
 
 
 def bc_func(_ya, _yb, _p, _aux, _arc_seq=(0,), _pi_seq=(None,)):
-    #if len(_arc_seq) > 1:
-    #    print(_yb)
-    #    print(_yb[:,0])
     res_left = bc_func_left(_ya[:,0], _p, _aux, _arc_seq, _pi_seq)
     res_right = bc_func_right(_yb[:,-1], _p, _aux, _arc_seq, _pi_seq)
     if len(_arc_seq) > 1:
