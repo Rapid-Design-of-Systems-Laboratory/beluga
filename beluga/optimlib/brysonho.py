@@ -369,7 +369,11 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
         u_list = control_opt_fn(*X, *p, *C)
         ham_val = np.zeros(num_options)
         for i in range(num_options):
-            ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
+            try:
+                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
+            except:
+                print(X, p, C, u_list[i])
+                raise
 
         return u_list[np.argmin(ham_val)]
 
@@ -422,10 +426,10 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     def make_subs(in_vars, out_vars):
         return {k: v for k,v in zip(in_vars, out_vars)}
 
-    subs_1m = make_subs(it.chain(states, costates, controls), it.chain(y1m, u_m))
-    subs_1p = make_subs(it.chain(states, costates, controls), it.chain(y1p, u_p))
-    subs_2m = make_subs(it.chain(states, costates, controls), it.chain(y2m, u_m))
-    subs_2p = make_subs(it.chain(states, costates, controls), it.chain(y2p, u_p))
+    subs_1m = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y1m, u_m))
+    subs_1p = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y1p, u_p))
+    subs_2m = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y2m, u_m))
+    subs_2p = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y2p, u_p))
 
     ham1m = ham.subs(subs_1m)
     ham1p = ham_aug.subs(subs_1p)

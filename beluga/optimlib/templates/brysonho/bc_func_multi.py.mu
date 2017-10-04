@@ -60,8 +60,13 @@ def bc_func_right(_yb, _p, _aux, _arc_seq, _pi_seq):
 def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
     full_res = []
 
-    for arc_idx, arc_left_type, arc_right_type in zip(it.count(), _arc_seq[:-1], _arc_seq[1:]):
+{{#aux_list}}
+{{#vars}}
+    {{.}} = _aux['{{type}}']['{{.}}']
+{{/vars}}
+{{/aux_list}}
 
+    for arc_idx, arc_left_type, arc_right_type in zip(it.count(), _arc_seq[:-1], _arc_seq[1:]):
         # Entry jn of a constraint
         if arc_left_type == 0 and arc_right_type > 0:
             _y1m = _yb[:{{num_states}},arc_idx] # End of previous arc
@@ -77,7 +82,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#bc_list}}
             if arc_right_type == {{arctype}}:
                 pi_idx = _pi_seq[arc_idx+1]
-                print(arc_idx,'foobar')
                 if pi_idx is not None:
                     [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
                 res = np.array([{{#entry_bc}}{{.}},
@@ -98,7 +102,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
 
             {{#bc_list}}
             if arc_left_type == {{arctype}}:
-                print(arc_idx,'foo')
                 pi_idx = _pi_seq[arc_idx+1]
                 if pi_idx is not None:
                     [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
@@ -115,11 +118,13 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
 
 
 def bc_func(_ya, _yb, _p, _aux, _arc_seq=(0,), _pi_seq=(None,)):
+    #if len(_arc_seq) > 1:
+    #    print(_yb)
+    #    print(_yb[:,0])
     res_left = bc_func_left(_ya[:,0], _p, _aux, _arc_seq, _pi_seq)
     res_right = bc_func_right(_yb[:,-1], _p, _aux, _arc_seq, _pi_seq)
     if len(_arc_seq) > 1:
         res_int = bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq)
         return np.hstack((res_left,res_int,res_right)) # Concatenate
     else:
-        #res_int = bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq)
         return np.hstack((res_left,res_right)) # Concatenate
