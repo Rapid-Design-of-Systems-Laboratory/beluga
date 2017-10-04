@@ -343,8 +343,8 @@ def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     return parameters
 
 def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, ham):
-    controls = sym.Matrix([_.name for _ in controls])
-    constants = sym.Matrix([_.name for _ in constants])
+    controls = sym.Matrix([_._sym for _ in controls])
+    constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
     costates = sym.Matrix([_.name for _ in costates])
     parameters = sym.Matrix(parameters)
@@ -460,11 +460,11 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
 
 def make_constrained_arc_fns(workspace):
     """Creates constrained arc control functions."""
-    controls = sym.Matrix([_.name for _ in workspace['controls']])
-    constants = sym.Matrix([_.name for _ in workspace['constants']])
-    states = sym.Matrix([_.name for _ in workspace['states']])
-    costates = sym.Matrix([_.name for _ in workspace['costates']])
-    parameters = sym.Matrix(workspace['parameters'])
+    controls = workspace['controls']
+    constants = workspace['constants']
+    states = workspace['states']
+    costates = workspace['costates']
+    parameters = workspace['parameters']
 
     fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
     control_fns = [workspace['control_fn']]
