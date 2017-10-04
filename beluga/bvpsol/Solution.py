@@ -84,7 +84,8 @@ class Solution(object):
             # Update solution to use new mesh if needed
             new_x = np.linspace(self.x[0],self.x[-1],mesh_size)
             (new_y, new_u) = self.interpolate(new_x, overwrite=overwrite)
-
+        else:
+            new_x, new_y, new_u = self.x, self.y, self.u
         x,y,u = self.x, self.y, self.u
         if not overwrite:
             x,y,u = new_x, new_y, new_u

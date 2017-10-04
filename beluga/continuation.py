@@ -76,7 +76,7 @@ class ActivateConstraint(object):
         if current_arcs is None:
             current_arcs = [(0, 511)]
 
-        sol.prepare(problem_data, mesh_size=512, overwrite=True)
+        sol.prepare(problem_data)
         # Evaluate expr on sol
         s_vals = sol.evaluate(expr)
 
@@ -97,14 +97,13 @@ class ActivateConstraint(object):
         # Store constraint limit in aux
         sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
 
-        current_arcs = [(0, s_lim_i-1), (s_lim_i, s_lim_i+1), (s_lim_i+2, 512)]
 
         # Introduce  small arc
-        n_before = s_lim_i
-        n_after = 512 - s_lim_i
-        sol.x = np.hstack((np.linspace(0.0, 1.0, n_before),
-                          np.linspace(1.0, 2.0, 2), # Extra
-                          np.linspace(2.0, 3.0, n_after))),
+        # n_before = s_lim_i
+        # n_after = 512 - s_lim_i
+        # sol.x = np.hstack((np.linspace(0.0, 1.0, n_before),
+        #                   np.linspace(1.0, 2.0, 2), # Extra
+        #                   np.linspace(2.0, 3.0, n_after)))
         # sol.x = np.hstack((sol.x[:s_lim_i],
         #                     sol.x[s_lim_i], # t1-
         #                     sol.x[s_lim_i], # t1+
@@ -113,38 +112,43 @@ class ActivateConstraint(object):
         #                     sol.x[(s_lim_i+2):]
         #                    ))
 
-        sol.y = np.column_stack(( sol.y[:,:s_lim_i],
-                            sol.y[:,s_lim_i], # t1-
-                            sol.y[:,s_lim_i], # t1+
-                            sol.y[:,(s_lim_i+1)], # t2-
-                            sol.y[:,(s_lim_i+1)], # t2+
-                            sol.y[:,(s_lim_i+2):]
-                           ))
+        arc_num = 0 # 0, 1, 2 etc.
+        idx_arc_start = s_lim_i
+        idx_arc_end = s_lim_i+1
+        # idx_old_arc_end = -1 # TODO: Fix for multiple arcs
 
-
-        new_arc_tf = 0.01
         original_tf = sol.y[-1, 0]
-        t_before = s_lim_i/511.*original_tf
-        t_after = (511-s_lim_i)/511.*original_tf - new_arc_tf
-        sol.y[-1,:(s_lim_i)] = t_before
-        sol.y[-1,s_lim_i:s_lim_i+2] = new_arc_tf # "tf" for constrained arc
-        sol.y[-1,s_lim_i+2:] = t_after
+        t_before = sol.x[idx_arc_start]*original_tf
+        t_during = (sol.x[idx_arc_end] - sol.x[idx_arc_start])*original_tf
+        t_after = (sol.x[-1] - sol.x[idx_arc_end])*original_tf
 
-        sol.u = np.column_stack(( sol.u[:,:s_lim_i],
-                            sol.u[:,s_lim_i], # t1-
-                            sol.u[:,s_lim_i], # t1+
-                            sol.u[:,(s_lim_i+1)], # t2-
-                            sol.u[:,(s_lim_i+1)], # t2+
-                            sol.u[:,(s_lim_i+2):]
-                           ))
+        print(t_before+t_during+t_after, original_tf)
+
+        sol.x[0:idx_arc_start+1] = (sol.x[0:idx_arc_start+1] - sol.x[0])/(sol.x[idx_arc_start] - sol.x[0]) + arc_num # TODO: Fix for multi arc
+        sol.x[idx_arc_end:] = (sol.x[idx_arc_end:] - sol.x[idx_arc_end])/(sol.x[-1] - sol.x[idx_arc_end]) + arc_num + 2
+
+        sol.x = np.hstack((sol.x[:idx_arc_start+1], sol.x[idx_arc_start:idx_arc_end+1], sol.x[idx_arc_end:]))
+        sol.y = np.hstack((sol.y[:,:idx_arc_start+1], sol.y[:,idx_arc_start:idx_arc_end+1], sol.y[:,idx_arc_end:]))
+        sol.u = np.hstack((sol.u[:,:idx_arc_start+1], sol.u[:,idx_arc_start:idx_arc_end+1], sol.u[:,idx_arc_end:]))
+
+        current_arcs = [(0, idx_arc_start), (idx_arc_start+1, idx_arc_end+1), (idx_arc_end+2, len(sol.x)-1)]
+
+        sol.y[-1,:idx_arc_start+1] = t_before
+        sol.y[-1,idx_arc_start+1] = t_during # "tf" for constrained arc
+        sol.y[-1,idx_arc_end+1] = t_during
+        sol.y[-1,idx_arc_end+2:] = t_after
 
         sol.arcs = current_arcs
+
+        left_idx, right_idx = map(np.array, zip(*current_arcs))
+        ya = sol.y[:,left_idx]
+        yb = sol.y[:,right_idx]
 
         sol.arc_seq = (0, arc_type, 0)
 
         pi_idx_start = len(sol.parameters)-num_params
         pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
-        sol.parameters = np.append(sol.parameters, np.ones(len(pi_list))*0.01)
+        sol.parameters = np.append(sol.parameters, np.ones(len(pi_list))*0.0)
 
         sol.pi_seq = (None, pi_idx, None)
 

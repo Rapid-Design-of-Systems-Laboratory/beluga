@@ -2,6 +2,8 @@ import numpy as np
 from math import *
 import itertools as it
 
+np.set_printoptions(suppress=True, precision=4)
+
 def bc_func_left(_ya, _p, _aux, _arc_seq, _pi_seq):
     arc_type = _arc_seq[0]
     # Declare all auxiliary variables
@@ -90,7 +92,9 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
                     [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
                 res = np.array([{{#entry_bc}}{{.}},
                     {{/entry_bc}}])
+                # print(res)
             {{/bc_list}}
+
             else:
                 print('arc_left_type', arc_left_type)
         elif arc_right_type == 0 and arc_left_type > 0: # Exit jn

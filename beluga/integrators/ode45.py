@@ -31,7 +31,7 @@ def ode45(f,tspan,y0,*args,**kwargs):
 
     if len(tspan) == 2:
         # TODO: Change hardcoding?
-        tspan = np.linspace(tspan[0],tspan[1],100)
+        tspan = np.linspace(tspan[0],tspan[1],200)
     t0 = tspan[0]
     t1 = tspan[1]
     yy = scipy.integrate.odeint(ode_wrap(f,*args),y0,tspan)
@@ -49,7 +49,7 @@ def ode45(f,tspan,y0,*args,**kwargs):
     if 'num_steps' in kwargs:
         num_steps = kwargs['num_steps']
     else:
-        num_steps = 100 # HARDCODED num_steps
+        num_steps = 200 # HARDCODED num_steps
 
     tt = np.linspace(tspan[0],tspan[-1],num_steps)
     dt = tt[1]-tt[0]
