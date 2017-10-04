@@ -68,16 +68,21 @@ class Scaling(dict):
 
         # Scaling functions for constraint multipliers and other parameters
         self.scale_func['parameters'] = {}
+        self.scale_func['constraints'] = {}
         indices = {}
-        for s in ws['s_list']:
-            for pi_var in s['pi_list']:
-                pi_unit = '('+cost_unit+')/('+str(s['unit'])+')'
-                self.scale_func['parameters'][str(pi_var)] = self.create_scale_fn(pi_unit)
 
         for c_type, c_list in ws['constraints'].items():
             for c, mul_var in zip(c_list, ws[c_type+'_lm_params']):
                 mul_unit = '('+cost_unit+')/('+str(c.unit)+')'
                 self.scale_func['parameters'][str(mul_var)] = self.create_scale_fn(mul_unit)
+
+        # Scale factors for path constraint-related stuff
+        for s in ws['s_list']:
+            for pi_var in s['pi_list']:
+                pi_unit = '('+cost_unit+')/('+str(s['unit'])+')'
+                self.scale_func['parameters'][str(pi_var)] = self.create_scale_fn(pi_unit)
+            self.scale_func['constraints'][str(s['name'])] = self.create_scale_fn(s['unit'])
+
 
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify(unit_expr))
@@ -155,6 +160,13 @@ class Scaling(dict):
         for idx, param in enumerate(self.problem_data['parameter_list']):
             sol.parameters[idx] /= self.scale_vals['parameters'][param]
 
+        # Scale constraint limits
+        for s in self.problem_data['s_list']:
+            s_name = s['name']
+            scale_val = self.scale_vals['constraints'][s_name]
+            for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
+                sol.aux['constraints'][s_name]['limit'][arc_idx] /= scale_val
+
     def unscale(self, sol):
         """Unscales a solution object"""
 
@@ -175,3 +187,10 @@ class Scaling(dict):
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
             sol.parameters[idx] *= self.scale_vals['parameters'][param]
+
+        # Scale constraint limits
+        for s in self.problem_data['s_list']:
+            s_name = s['name']
+            scale_val = self.scale_vals['constraints'][s_name]
+            for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
+                sol.aux['constraints'][s_name]['limit'][arc_idx] *= scale_val

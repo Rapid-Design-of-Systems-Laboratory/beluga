@@ -70,7 +70,7 @@ import logging
 import dill
 import docopt
 import numpy as np
-import collections
+import collections as cl
 
 # from beluga.continuation import *
 from beluga import problem, helpers
@@ -81,7 +81,7 @@ config = dict(logfile='beluga.log',
               default_bvp_solver='SingleShooting',
               output_file='data.dill')
 
-BVP = collections.namedtuple('BVP', 'deriv_func bc_func compute_control')
+BVP = cl.namedtuple('BVP', 'deriv_func bc_func compute_control')
 def bvp_algorithm(algo, **kwargs):
     """
     Helper method to load algorithm by name
@@ -148,7 +148,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']
 
     # For path constraints
-    solinit.aux['constraints'] = dict((s['name'], {'arc_bounds':{},
+    solinit.aux['constraints'] = dict((s['name'], {'limit':cl.defaultdict(float),
                                                    'expr':str(s['expr']),
                                                    'direction': s['direction'],
                                                    'arc_type': i,
@@ -222,7 +222,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 if sol is not None:
                     sol_guess.pi_seq = sol.pi_seq
                     sol_guess.arc_seq = sol.arc_seq
-                    
+
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 

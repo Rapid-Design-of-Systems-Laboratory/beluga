@@ -254,8 +254,8 @@ def process_constraint(s,
                        max_iter=5):
     """Processes one constraint expression to create constrained control eqn,
     constrained arc bc function"""
-    # s_bound = sympy.sympify(s.name)
-    s_q = sympy.Matrix([s.expr])
+    s_bound = sympy.sympify(s.name)
+    s_q = sympy.Matrix([s.expr - s_bound])
     control_found = False
 
     order = 0
@@ -435,7 +435,7 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     ham1p = ham_aug.subs(subs_1p)
     ham2m = ham_aug.subs(subs_2m)
     ham2p = ham.subs(subs_2p)
-    tangency_1m = sympy.Matrix(tangency).subs(subs_1m)
+    tangency_1m = sympy.Matrix(tangency).subs(subs_1p)
 
     entry_bc = [
         *tangency_1m,  # Tangency conditions, N(x,t) = 0
@@ -480,7 +480,9 @@ def make_constrained_arc_fns(workspace):
         # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
         # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         pi_list = [str(_) for _ in s['pi_list']]
-        costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']], 'arctype':arc_type, 'pi_list': pi_list}
+        costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']],
+                       'arctype':arc_type,
+                       'pi_list': pi_list}
 
         entry_bc, exit_bc = make_constraint_bc(s,
                                 workspace['states'],
@@ -488,7 +490,11 @@ def make_constrained_arc_fns(workspace):
                                 workspace['parameters'],
                                 workspace['constants'],
                                 workspace['controls'], mu_vars, workspace['ham'])
-        bc = {'entry_bc': entry_bc, 'exit_bc': exit_bc, 'arctype':arc_type, 'pi_list': pi_list}
+        bc = {'entry_bc': entry_bc,
+              'exit_bc': exit_bc,
+              'arctype':arc_type,
+              'pi_list': pi_list,
+              'name': s['name']}
         bc_list.append(bc)
 
         control_fns.append(u_fn)

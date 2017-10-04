@@ -16,7 +16,7 @@ def bc_func_left(_ya, _p, _aux, _arc_seq, _pi_seq):
     # Generalize to multipoint later
     # Left BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _ya[:{{num_states}}]
-    u_ = compute_control(0,_ya,_p,_aux)
+    u_ = compute_control(0,_ya,_p,_aux,0)
     [{{#control_list}}{{.}},{{/control_list}}] = u_
 
     # Declare all predefined expressions
@@ -43,7 +43,7 @@ def bc_func_right(_yb, _p, _aux, _arc_seq, _pi_seq):
 
     # Right BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _yb[:{{num_states}}]
-    u_ = compute_control(1,_yb,_p,_aux)
+    u_ = compute_control(1,_yb,_p,_aux,0)
     [{{#control_list}}{{.}},{{/control_list}}] = u_
     # Declare all predefined expressions
 {{#quantity_list}}
@@ -80,6 +80,10 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#control_list}}_{{.}}_p,{{/control_list}} = _u1p
 
             {{#bc_list}}
+            {{name}} = _aux['constraints']['{{name}}']['limit'][arc_idx+1]
+            {{/bc_list}}
+
+            {{#bc_list}}
             if arc_right_type == {{arctype}}:
                 pi_idx = _pi_seq[arc_idx+1]
                 if pi_idx is not None:
@@ -99,6 +103,9 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#state_list}}_{{.}}_2p,{{/state_list}} = _y2p
             {{#control_list}}_{{.}}_m,{{/control_list}} = _u2m
             {{#control_list}}_{{.}}_p,{{/control_list}} = _u2p
+            {{#bc_list}}
+            {{name}} = _aux['constraints']['{{name}}']['limit'][arc_idx+1]
+            {{/bc_list}}
 
             {{#bc_list}}
             if arc_left_type == {{arctype}}:
