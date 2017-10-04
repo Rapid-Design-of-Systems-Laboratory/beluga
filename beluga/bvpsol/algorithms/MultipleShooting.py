@@ -270,6 +270,7 @@ class MultipleShooting(BaseAlgorithm):
 
         left_idx, right_idx = map(np.array, zip(*arcs))
         ya = solinit.y[:,left_idx]
+
         yb = solinit.y[:,right_idx]
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)
@@ -304,11 +305,12 @@ class MultipleShooting(BaseAlgorithm):
                     print('Integrating on',tspan,'tf=',ya[-1,arc_idx])
                     y0stm[:nOdes] = ya[:,arc_idx]
                     y0stm[nOdes:] = stm0
-                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-4)
                     yf = yy[-1]
                     yb[:,arc_idx] = yf[:nOdes]
                     phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
-                    phi_list.append(phi)
+                    phi_list.append(np.copy(phi))
+
                 # Iterate through arcs
                 if n_iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")

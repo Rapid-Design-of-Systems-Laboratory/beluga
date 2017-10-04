@@ -468,7 +468,8 @@ def make_constrained_arc_fns(workspace):
 
     fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
     control_fns = [workspace['control_fn']]
-    costate_eoms = [ {'eom':[str(_.eom) for _ in workspace['costates']], 'arctype':0} ]
+    tf_var = sympify('tf')
+    costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ]
     bc_list = [] # Unconstrained arc placeholder
 
     mu_vars = workspace['mu_vars']
@@ -480,7 +481,9 @@ def make_constrained_arc_fns(workspace):
         # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
         # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         pi_list = [str(_) for _ in s['pi_list']]
-        costate_eom = {'eom':[str(_.eom) for _ in s['lamdot']],
+
+
+        costate_eom = {'eom':[str(_.eom*tf_var) for _ in s['lamdot']],
                        'arctype':arc_type,
                        'pi_list': pi_list}
 
