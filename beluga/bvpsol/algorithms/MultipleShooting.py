@@ -141,8 +141,8 @@ class MultipleShooting(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
-        # print(out_ws['bc_func_code'])
-        print(out_ws['deriv_func_code'])
+        print(out_ws['bc_func_code'])
+        # print(out_ws['deriv_func_code'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
@@ -311,28 +311,14 @@ class MultipleShooting(BaseAlgorithm):
                     phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
                     phi_list.append(np.copy(phi))
 
+                if(len(solinit.arc_seq) > 1):
+                    print(np.column_stack((yb[:,0],ya[:,1])))
                 # Iterate through arcs
                 if n_iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")
                     break
 
                 res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
-
-                # print(J)
-                    # J = self.bc_jac_func(y0g, yb, phi_list, paramGuess, aux)
-                # else:
-                #     y0stm[:nOdes] = y0g
-                #     y0stm[nOdes:] = stm0
-                #
-                #     # Propagate STM and original system together
-                #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, 0, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
-                #     # Obtain just last timestep for use with correction
-                #     yf = yy[-1]
-                #     # Extract states and STM from ode45 output
-                #     yb = yf[:nOdes]  # States
-                #     phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
-                #     # Evaluate the boundary conditions
-                #     res = bc_func(y0g[:,np.newaxis], yb[:,np.newaxis], paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
 
                 r1 = np.linalg.norm(res)
                 if self.verbose:

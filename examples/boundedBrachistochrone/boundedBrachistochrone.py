@@ -38,7 +38,7 @@ ocp.scale(m='y', s='y/v', kg=1, rad=1)
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
                     tolerance=1e-6,
-                    max_iterations=50,
+                    max_iterations=500,
                     verbose = True,
                     max_error=100
 )

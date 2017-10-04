@@ -92,7 +92,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
                     [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
                 res = np.array([{{#entry_bc}}{{.}},
                     {{/entry_bc}}])
-                # print(res)
             {{/bc_list}}
 
             else:
@@ -113,7 +112,7 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
 
             {{#bc_list}}
             if arc_left_type == {{arctype}}:
-                pi_idx = _pi_seq[arc_idx+1]
+                pi_idx = _pi_seq[arc_idx]
                 if pi_idx is not None:
                     [{{#pi_list}}{{.}},{{/pi_list}}] = _p[pi_idx]
                 res = np.array([{{#exit_bc}}{{.}},
