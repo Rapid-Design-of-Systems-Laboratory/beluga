@@ -9,6 +9,8 @@ import inspect
 import functools
 import sys
 
+import operator as op
+
 class ContinuationList(list):
     def __init__(self):
         # Create list of available strategies
@@ -95,8 +97,8 @@ class ActivateConstraint(object):
             # print('Max_violation : ', s_lim_val)
 
         # Store constraint limit in aux
-        sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
-
+        # sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
+        sol.aux['constraint'][(self.name, 1)] = s_lim_val
 
         # Introduce  small arc
         # n_before = s_lim_i
@@ -182,7 +184,7 @@ class ManualStrategy(object):
         self.terminal = functools.partial(self.set, param_type='terminal')
         self.initial = functools.partial(self.set, param_type='initial')
         self.const = functools.partial(self.set, param_type='const')
-        self.constraint = functools.partial(self.set, param_type='constraint')
+
         self.constant = self.const
 
     def reset(self):
@@ -195,27 +197,41 @@ class ManualStrategy(object):
         self.vars = {}
         self.reset()
 
+    def constraint(self, name, target, index):
+        """Continuation on constraint limit.
+
+        index : Specify which constraint arc to use."""
+        # sol.aux['constraints'][self.name]['limit'][1]
+        self.set((name,index), target, param_type='constraint')
+
+    def var_iterator(self):
+        for var_type in self.vars.keys():
+            for var_name in self.vars[var_type].keys():
+                yield var_type, var_name
+
     # TODO: Change to store only stepsize and use yield
     def init(self, sol, problem_data):
         self.sol = sol
-        # Iterate through all types of variables
-        for var_type in self.vars.keys():
-            for var_name in self.vars[var_type].keys():
-                # Look for the variable name from continuation in the BVP
-                if var_name not in sol.aux[var_type].keys():
-                    raise ValueError('Variable '+var_name+' not found in boundary value problem')
 
-                # Set current value of each continuation variable
-                self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
-                # Calculate update steps for continuation process
-                if self._spacing == 'linear':
-                    self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
-                                                                      self.vars[var_type][var_name].target,
-                                                                      self._num_cases)
-                elif self._spacing == 'log':
-                    self.vars[var_type][var_name].steps = np.logspace(np.log10(self.vars[var_type][var_name].value),
-                                                                      np.log10(self.vars[var_type][var_name].target),
-                                                                      self._num_cases)
+        # Iterate through all types of variables
+        for var_type, var_name in self.var_iterator():
+        # for var_type in self.vars.keys():
+        #     for var_name in self.vars[var_type].keys():
+            # Look for the variable name from continuation in the BVP
+            if var_name not in sol.aux[var_type].keys():
+                raise ValueError('Variable '+var_name+' not found in boundary value problem')
+
+            # Set current value of each continuation variable
+            self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
+            # Calculate update steps for continuation process
+            if self._spacing == 'linear':
+                self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
+                                                                  self.vars[var_type][var_name].target,
+                                                                  self._num_cases)
+            elif self._spacing == 'log':
+                self.vars[var_type][var_name].steps = np.logspace(np.log10(self.vars[var_type][var_name].value),
+                                                                  np.log10(self.vars[var_type][var_name].target),
+                                                                  self._num_cases)
 
     def set(self,name,target,param_type):
         """
@@ -314,25 +330,24 @@ class BisectionStrategy(ManualStrategy):
             raise RuntimeError('Exceeded max_divisions')
 
         # If previous step did not converge, move back a half step
-        for var_type in self.vars.keys():
-            for var_name in self.vars[var_type].keys():
-                # Set current value of each continuation variable
-                # self.vars[var_type][var_name].value = aux[var_type][var_name]
-                # insert new steps
-                old_steps = self.vars[var_type][var_name].steps
-                if self._spacing == 'linear':
-                    new_steps = np.linspace(old_steps[self.ctr-2],old_steps[self.ctr-1],self.num_divisions+1)
-                elif self._spacing == 'log':
-                    new_steps = np.logspace(np.log10(old_steps[self.ctr-2]),np.log10(old_steps[self.ctr-1]),self.num_divisions+1)
-                else:
-                    raise ValueError('Invalid spacing type')
+        for var_type, var_name in self.var_iterator():
+            # Set current value of each continuation variable
+            # self.vars[var_type][var_name].value = aux[var_type][var_name]
+            # insert new steps
+            old_steps = self.vars[var_type][var_name].steps
+            if self._spacing == 'linear':
+                new_steps = np.linspace(old_steps[self.ctr-2],old_steps[self.ctr-1],self.num_divisions+1)
+            elif self._spacing == 'log':
+                new_steps = np.logspace(np.log10(old_steps[self.ctr-2]),np.log10(old_steps[self.ctr-1]),self.num_divisions+1)
+            else:
+                raise ValueError('Invalid spacing type')
 
-                # Insert new steps
-                self.vars[var_type][var_name].steps = np.insert(
-                        self.vars[var_type][var_name].steps,
-                        self.ctr-1,
-                        new_steps[1:-1] # Ignore first element as it is repeated
-                    )
+            # Insert new steps
+            self.vars[var_type][var_name].steps = np.insert(
+                    self.vars[var_type][var_name].steps,
+                    self.ctr-1,
+                    new_steps[1:-1] # Ignore first element as it is repeated
+                )
         # Move the counter back
         self.ctr = self.ctr - 1
         # Increment total number of steps

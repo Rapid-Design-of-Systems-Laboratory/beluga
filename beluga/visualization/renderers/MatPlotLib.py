@@ -53,7 +53,6 @@ class MatPlotLib(BaseRenderer):
         Adds a line plot using the given data to the specified figure
         """
         fh = self._get_figure(f);
-        fh.hold(True)
         has_legend = False
         for line in p.plot_data:
             has_legend = has_legend or (line['label'] is not None)
