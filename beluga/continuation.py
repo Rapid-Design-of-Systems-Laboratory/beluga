@@ -122,8 +122,6 @@ class ActivateConstraint(object):
         t_during = (sol.x[idx_arc_end] - sol.x[idx_arc_start])*original_tf
         t_after = (sol.x[-1] - sol.x[idx_arc_end])*original_tf
 
-        print(t_before+t_during+t_after, original_tf)
-
         sol.x[0:idx_arc_start+1] = (sol.x[0:idx_arc_start+1] - sol.x[0])/(sol.x[idx_arc_start] - sol.x[0]) + arc_num # TODO: Fix for multi arc
         sol.x[idx_arc_end:] = (sol.x[idx_arc_end:] - sol.x[idx_arc_end])/(sol.x[-1] - sol.x[idx_arc_end]) + arc_num + 2
 
@@ -146,7 +144,7 @@ class ActivateConstraint(object):
 
         sol.arc_seq = (0, arc_type, 0)
 
-        pi_idx_start = len(sol.parameters)-num_params
+        pi_idx_start = len(sol.parameters)
         pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
         sol.parameters = np.append(sol.parameters, np.ones(len(pi_list))*0.0)
 
