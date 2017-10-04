@@ -345,7 +345,7 @@ class MultipleShooting(BaseAlgorithm):
                     if beta < 0:
                         beta = 1
                 if r1>1:
-                    alpha = 1/(20*r1)
+                    alpha = 1/(2*r1)
                 else:
                     alpha = 1
                 r0 = r1
