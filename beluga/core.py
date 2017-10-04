@@ -149,7 +149,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
 
     # For path constraints
     solinit.aux['constraint'] = cl.defaultdict(float)
-    solinit.aux['constraints'] = dict((s['name'], {#'limit':cl.defaultdict(float),
+    solinit.aux['constraints'] = dict((s['name'], {'unit':str(s['unit']),
                                                    'expr':str(s['expr']),
                                                    'direction': s['direction'],
                                                    'arc_type': i,
