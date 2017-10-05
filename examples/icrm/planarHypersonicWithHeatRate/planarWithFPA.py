@@ -57,7 +57,7 @@ def get_problem():
     problem.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
     problem.constant('rn',1/12*0.3048,'m') # Nose radius, m
     problem.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
-    problem.constant('g0',9.80665,'m/s^2')   # Sutton-Graves constant
+    problem.constant('g0',9.80665,'m/s^2') 
     problem.constant('alfaRateMax',20*pi/180,'rad/s')
     problem.bvp_solver = algorithms.MultipleShooting(derivative_method='fd',tolerance=1e-5, max_iterations=10000, verbose = True, cached = False, number_arcs=2)
     # problem.bvp_solver = algorithms.SingleShooting(derivative_method='fd',tolerance=1e-4, max_iterations=100000, verbose = True, cached = False)
