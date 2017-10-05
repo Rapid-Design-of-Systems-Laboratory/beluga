@@ -56,8 +56,7 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-continuation_steps.add_step('activate_constraint', name='constraint1',
-                                                 var='constraint1_lim1')
+continuation_steps.add_step('activate_constraint', name='constraint1')
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
