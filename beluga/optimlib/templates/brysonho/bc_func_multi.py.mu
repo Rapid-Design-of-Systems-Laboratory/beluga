@@ -18,7 +18,7 @@ def bc_func_left(_ya, _p, _aux, _arc_seq, _pi_seq):
     # Generalize to multipoint later
     # Left BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _ya[:{{num_states}}]
-    u_ = compute_control(0,_ya,_p,_aux,0)
+    u_ = compute_control(0,_ya,_p,_aux,_arc_seq,_pi_seq)
     [{{#control_list}}{{.}},{{/control_list}}] = u_
 
     # Declare all predefined expressions
@@ -45,7 +45,7 @@ def bc_func_right(_yb, _p, _aux, _arc_seq, _pi_seq):
 
     # Right BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _yb[:{{num_states}}]
-    u_ = compute_control(1,_yb,_p,_aux,0)
+    u_ = compute_control(1,_yb,_p,_aux,_arc_seq,_pi_seq)
     [{{#control_list}}{{.}},{{/control_list}}] = u_
     # Declare all predefined expressions
 {{#quantity_list}}
@@ -73,8 +73,8 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
         if arc_left_type == 0 and arc_right_type > 0:
             _y1m = _yb[:{{num_states}},arc_idx] # End of previous arc
             _y1p = _ya[:{{num_states}},arc_idx+1] # Start of current arc
-            _u1m = compute_control(arc_idx, _y1m, _p, _aux, arc_left_type)
-            _u1p = compute_control(arc_idx, _y1p, _p, _aux, arc_right_type)
+            _u1m = compute_control(arc_idx, _y1m, _p, _aux, _arc_seq, _pi_seq, arc_idx)
+            _u1p = compute_control(arc_idx+1, _y1p, _p, _aux, _arc_seq, _pi_seq, arc_idx+1)
 
             {{#state_list}}_{{.}}_1m,{{/state_list}} = _y1m
             {{#state_list}}_{{.}}_1p,{{/state_list}} = _y1p
@@ -99,8 +99,8 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
         elif arc_right_type == 0 and arc_left_type > 0: # Exit jn
             _y2m = _yb[:{{num_states}},arc_idx] # End of previous arc
             _y2p = _ya[:{{num_states}},arc_idx+1] # Start of current arc
-            _u2m = compute_control(arc_idx, _y2m, _p, _aux, arc_left_type)
-            _u2p = compute_control(arc_idx, _y2p, _p, _aux, arc_right_type)
+            _u2m = compute_control(arc_idx, _y2m, _p, _aux, _arc_seq, _pi_seq, arc_idx)
+            _u2p = compute_control(arc_idx+1, _y2p, _p, _aux, _arc_seq, _pi_seq, arc_idx+1)
 
             {{#state_list}}_{{.}}_2m,{{/state_list}} = _y2m
             {{#state_list}}_{{.}}_2p,{{/state_list}} = _y2p
