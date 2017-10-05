@@ -75,7 +75,7 @@ import collections as cl
 # from beluga.continuation import *
 from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
-from .utils import tic, toc
+from .utils import tic, toc, keyboard
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='SingleShooting',
@@ -262,7 +262,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 else:
                     elapsed_time = toc()
                     logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
-
 
     except Exception as e:
         import traceback

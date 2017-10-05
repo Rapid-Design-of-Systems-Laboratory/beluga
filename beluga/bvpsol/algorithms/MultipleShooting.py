@@ -142,7 +142,7 @@ class MultipleShooting(BaseAlgorithm):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
-        # print(out_ws['deriv_func_code'])
+        print(out_ws['deriv_func_code'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
@@ -234,7 +234,7 @@ class MultipleShooting(BaseAlgorithm):
 
         # Phidot = F*Phi (matrix product)
         phiDot = np.real(np.dot(F,phi))
-        return np.concatenate( (odefn(x,y,parameters,aux), np.reshape(phiDot, (nOdes*nOdes) )) )
+        return np.concatenate( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
 
     def solve(self,solinit):
         """Solve a two-point boundary value problem
@@ -270,7 +270,6 @@ class MultipleShooting(BaseAlgorithm):
 
         left_idx, right_idx = map(np.array, zip(*arcs))
         ya = solinit.y[:,left_idx]
-
         yb = solinit.y[:,right_idx]
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)
@@ -293,13 +292,10 @@ class MultipleShooting(BaseAlgorithm):
         beta = 1
         r0 = None
 
-        tspan = tspan_list[0]
-        # tspan = np.linspace(0,1,200)
         y0stm = np.zeros((len(stm0)+nOdes))
+        yb = np.zeros_like(ya)
         try:
             while True:
-                # if len(solinit.arc_seq) > 1:
-                yb = np.zeros_like(ya)
                 phi_list = []
                 for arc_idx, tspan in enumerate(tspan_list):
                     y0stm[:nOdes] = ya[:,arc_idx]
@@ -314,8 +310,7 @@ class MultipleShooting(BaseAlgorithm):
                     logging.warn("Maximum iterations exceeded!")
                     break
 
-                res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
-
+                res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq
                 if any(np.isnan(res)):
                     raise RuntimeError("Nan in residue")
                 r1 = np.linalg.norm(res)
@@ -325,8 +320,6 @@ class MultipleShooting(BaseAlgorithm):
                 if r1 > self.max_error:
                     raise RuntimeError('Error exceeded max_error')
 
-
-                # self.bc_jac_func = self.__bcjac_csd
                 # Solution converged if BCs are satisfied to tolerance
                 if max(abs(res)) < self.tolerance:
                     if self.verbose:
@@ -394,25 +387,17 @@ class MultipleShooting(BaseAlgorithm):
             y0 = np.zeros(ya.shape[0])
             timestep_ctr = 0
             for arc_idx, tspan in enumerate(tspan_list):
-                y0[:] = ya[:,arc_idx]
-                tt,yy = ode45(self.bvp.deriv_func, tspan, y0, paramGuess, aux, sol.arc_seq, sol.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
+                tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, sol.arc_seq, sol.pi_seq, arc_idx, abstol=self.tolerance/100, reltol=1e-3)
                 y_list.append(yy.T)
                 x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
                 timestep_ctr += len(tt)
+
             # If problem converged, propagate solution to get full trajectory
             sol.x = np.hstack(x_list)
             sol.y = np.column_stack(y_list)
-
-            # if num_arcs > 1:
-            #     keyboard()
-            # x1, y1 = t, yy[:,:nOdes]
-            # x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=self.tolerance, reltol=1e-3)
-            # sol.x = x
-            # sol.y = y1.T
             sol.parameters = paramGuess
 
         sol.converged = converged
         sol.aux = aux
-        # logging.debug(sol.y[:,0])
         return sol
