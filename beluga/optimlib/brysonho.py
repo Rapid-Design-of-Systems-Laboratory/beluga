@@ -85,7 +85,6 @@ def process_quantities(quantities):
         yield total_derivative
         yield ft.partial(jacobian, derivative_fn=total_derivative)
 
-    print(quantities)
     quantity_subs = [(q.name, q.value) for q in quantities]
     quantity_sym, quantity_expr = zip(*quantity_subs)
     quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
@@ -250,11 +249,14 @@ def process_constraint(s,
                        costates,
                        controls,
                        ham,
+                       quantity_vars,
                        jacobian_fn,
                        derivative_fn,
                        max_iter=5):
     """Processes one constraint expression to create constrained control eqn,
     constrained arc bc function"""
+
+    print('Processing constraint: ',s.name)
     s_bound = sympy.sympify(s.name)
     s_q = sympy.Matrix([s.expr - s_bound])
     control_found = False
@@ -268,22 +270,28 @@ def process_constraint(s,
     costate_names = make_costate_names(states)
 
     ham_mat = sympy.Matrix([ham])
-    mult = sympy.symbols('mu'+str(s_idx))
+    mult = sympy.symbols('_mu'+str(s_idx))
 
     tangency = []
     for i in range(max_iter):
-        control_found = any(u in s_q.free_symbols for u in controls)
+        control_found = any(u in s_q.subs(quantity_vars).free_symbols for u in controls)
         if control_found:
+            print('Constraint',s.name,'is of order',order)
             found = True
             ham_aug = ham_mat + mult*s_q  # Augmented hamiltonian
             lamdot_aug = - mult * jacobian_fn(s_q, states)  # Augmented costate equations in constrained arc
             dhdu = jacobian_fn(ham_aug, [*controls, mult])
+            # from beluga.utils import keyboard
+            # keyboard()
+            print('Solving',dhdu,' = 0 for variables ',[*controls, mult])
             constrained_control_law = make_control_law(dhdu, [*controls, mult])
+            print('Control law found')
             constrained_costate_rates = make_costate_rates(ham_aug[0], states, costate_names, derivative_fn)
             break
 
         tangency.append(s_q[0])
         s_q = jacobian_fn(s_q, stateAndLam)*sympy.Matrix([stateAndLamDot]).T
+
         order += 1
 
     N_x = jacobian_fn(sympy.Matrix(tangency), states)
@@ -307,6 +315,7 @@ def process_path_constraints(path_constraints,
                              constants,
                              controls,
                              ham,
+                             quantity_vars,
                              jacobian_fn,
                              derivative_fn):
 
@@ -314,7 +323,7 @@ def process_path_constraints(path_constraints,
     mu_vars = []
     for i, s in enumerate(path_constraints):
         u_aug, lamdot, ham_aug, order, mu_i, pi_list, corner_conditions, tangency = \
-                process_constraint(s, i, states, costates, controls, ham, jacobian_fn, derivative_fn)
+                process_constraint(s, i, states, costates, controls, ham, quantity_vars, jacobian_fn, derivative_fn)
 
         s_list.append({'name': str(s['name']),
                        'expr': str(s['expr']),
@@ -695,6 +704,7 @@ BrysonHo = sp.Workflow([
                     'constants',
                     'controls',
                     'ham',
+                    'quantity_vars',
                     'jacobian_fn',
                     'derivative_fn'),
             outputs=['s_list', 'mu_vars']),

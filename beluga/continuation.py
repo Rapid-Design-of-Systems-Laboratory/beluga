@@ -49,9 +49,8 @@ class ContinuationVariable(object):
 
 class ActivateConstraint(object):
     strategy_name = 'activate_constraint'
-    def __init__(self, name, var):
+    def __init__(self, name):
         self.name = name
-        self.var = var
         self.solved = False
         self.ctr  = 0
 
