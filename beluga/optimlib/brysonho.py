@@ -85,7 +85,8 @@ def process_quantities(quantities):
         yield total_derivative
         yield ft.partial(jacobian, derivative_fn=total_derivative)
 
-    quantity_subs = [(q.name, q.val) for q in quantities]
+    print(quantities)
+    quantity_subs = [(q.name, q.value) for q in quantities]
     quantity_sym, quantity_expr = zip(*quantity_subs)
     quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
 
@@ -342,7 +343,7 @@ def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     parameters = sym.symbols(' '.join(params_list))
     return parameters
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, ham):
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
@@ -355,7 +356,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     control_opt_fn = sym.lambdify([*states, *costates, *parameters, *constants], control_opt_mat)
     # control_fns = [[make_sympy_fn([*states, *costates, *constants], u['expr'])
     #                 for u in option] for option in control_opts]
-    ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *unknowns], ham)
+    ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *unknowns], ham.subs(quantity_vars))
 
     num_unknowns = len(unknowns)
     num_options = len(control_opts)
@@ -465,7 +466,7 @@ def make_constrained_arc_fns(workspace):
     states = workspace['states']
     costates = workspace['costates']
     parameters = workspace['parameters']
-
+    quantity_vars = workspace['quantity_vars']
     fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
     control_fns = [workspace['control_fn']]
     tf_var = sympify('tf')
@@ -477,7 +478,7 @@ def make_constrained_arc_fns(workspace):
 
     for arc_type, s in enumerate(workspace['s_list'],1):
         # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
-        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, s['ham'])
+        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'])
         # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
         # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         pi_list = [str(_) for _ in s['pi_list']]
@@ -706,7 +707,7 @@ BrysonHo = sp.Workflow([
         outputs='parameters'),
 
     sp.Task(make_control_and_ham_fn,
-            inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'mu_vars', 'ham'),
+            inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'mu_vars', 'quantity_vars', 'ham'),
             outputs=['control_fn', 'ham_fn']),
     sp.Task(make_constrained_arc_fns, inputs='*', outputs=['control_fns', 'costate_eoms', 'bc_list']),
     # sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
