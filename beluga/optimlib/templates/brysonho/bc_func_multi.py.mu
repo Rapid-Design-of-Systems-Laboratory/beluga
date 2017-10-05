@@ -93,9 +93,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
                 res = np.array([{{#entry_bc}}{{.}},
                     {{/entry_bc}}])
             {{/bc_list}}
-
-            else:
-                print('arc_left_type', arc_left_type)
         elif arc_right_type == 0 and arc_left_type > 0: # Exit jn
             _y2m = _yb[:{{num_states}},arc_idx] # End of previous arc
             _y2p = _ya[:{{num_states}},arc_idx+1] # Start of current arc
@@ -114,9 +111,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
                 # print('arcidx, x2m, x2p', arc_idx, _x_2m, _x_2p, _y_2m, _y_2p)
                 # print(np.hstack((_yb[:{{num_states}},arc_idx], _ya[:{{num_states}},arc_idx+1])))
             {{/bc_list}}
-
-            else:
-                print('arc_right_type', arc_right_type)
         else:
             raise Exception('Not impl for unconstrained arc jns')
 
