@@ -5,19 +5,23 @@ def compute_hamiltonian(t, X, p, aux, u):
     # C = [v for k,v in aux['const'].items()]
     return ham_fn(*X[:-1], *p[:{{num_params}}], *aux['const'].values(), *u)
 
-def compute_control(_t, _X, _p, _aux, arc_type=0):
+def compute_control(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
+    if arc_idx is None:
+        arc_idx = min(floor(_t), len(_arc_seq)-1)
+    arc_type = _arc_seq[arc_idx]
     return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
 
-def deriv_func(_t, _X, _p, _aux, _arc_seq=(0,), _pi_seq=(None,), arc_idx=0):
+def deriv_func(_t, _X, _p, _aux, _arc_seq=(0,), _pi_seq=(None,), arc_idx=None):
+    if arc_idx is None:
+        arc_idx = min(floor(_t), len(_arc_seq)-1)
     arc_type = _arc_seq[arc_idx]
 
     {{#state_list}}{{.}},{{/state_list}} = _X[:{{num_states}}]
     tf = abs(tf)
     _X[{{num_states}}-1] = tf
 
-    u_ = compute_control(_t,_X,_p,_aux,arc_type)
-    #if arc_idx == 0:
-    #    print('t : theta, mu_0', _t*tf, u_)
+    u_ = compute_control(_t,_X,_p,_aux,_arc_seq,_pi_seq)
+
     {{#control_list}}{{.}},{{/control_list}} = u_
     {{#parameter_list}}{{.}},{{/parameter_list}} = _p[:{{num_params}}]
 

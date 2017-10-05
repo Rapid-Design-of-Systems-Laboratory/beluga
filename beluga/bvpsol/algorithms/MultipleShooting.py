@@ -310,7 +310,7 @@ class MultipleShooting(BaseAlgorithm):
                     logging.warn("Maximum iterations exceeded!")
                     break
 
-                res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq
+                res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
                 if any(np.isnan(res)):
                     raise RuntimeError("Nan in residue")
                 r1 = np.linalg.norm(res)
