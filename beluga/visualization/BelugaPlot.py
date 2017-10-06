@@ -39,7 +39,7 @@ class BelugaPlot:
                     if (isinstance(datasource, str) and name.lower() == datasource.lower()) \
                         or file_ext in obj.valid_exts:
                         # Renderer initialized with its default settings
-                        self.datasource = obj()
+                        self.datasource = obj(filename)
             if self.datasource is None:
                 raise ValueError('Datasource "'+datasource+'" not found')
 

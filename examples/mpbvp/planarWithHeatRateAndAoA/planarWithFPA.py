@@ -42,7 +42,7 @@ ocp.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
 
 ocp.constant('Wsec3pkg',1,'W*s^3*kg^-1')
 ocp.constant('heatRateLimit', 2500e4, 'W')
-
+ocp.constant('alfaLimit', 25*pi/180, 'rad')
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
 
@@ -55,7 +55,8 @@ ocp.constraints() \
     .initial('gam-gam_0', 'rad') \
     .terminal('h-h_f','m')  \
     .terminal('theta-theta_f','rad') \
-    .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W')
+    .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W') \
+    .path('AoA','alfa - alfaLimit','<',0.0,'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, W=1e7, nd=1)
 
@@ -76,18 +77,25 @@ guess_maker = beluga.guess_generator('auto',
 
 
 continuation_steps = beluga.init_continuation()
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11) \
+#                 .terminal('h', 0)
+#
+# continuation_steps.add_step().num_cases(11) \
+#                 .initial('gam',-45*pi/180)\
+#                 .terminal('theta', 1.0*pi/180)
+
+guess_maker = beluga.guess_generator('file', filename='./data_unc.dill', step=-1, iteration=-1)
+continuation_steps.add_step('activate_constraint', name='heatRate')
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .terminal('h', 0)
+                .num_cases(21) \
+                .constraint('heatRate', 0.0, index=1)
 
-continuation_steps.add_step().num_cases(11) \
-                .initial('gam',-60*pi/180)\
-                .terminal('theta', 1.0*pi/180)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(11)  \
-                .terminal('theta', 2*pi/180)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11)  \
+#                 .terminal('theta', 2*pi/180)
 # .initial('gam',-45*pi/180)
 
 beluga.solve(ocp,
@@ -95,4 +103,4 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data_unc.dill')
+             output_file='data_HR2500.dill')
