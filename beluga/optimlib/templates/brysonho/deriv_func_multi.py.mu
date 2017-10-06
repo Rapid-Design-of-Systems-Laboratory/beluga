@@ -9,7 +9,11 @@ def compute_control(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     if arc_idx is None:
         arc_idx = min(floor(_t), len(_arc_seq)-1)
     arc_type = _arc_seq[arc_idx]
-    return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
+    try:
+        return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
+    except:
+        from beluga.utils import keyboard
+        keyboard()
 
 def deriv_func(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     if arc_idx is None:
@@ -20,7 +24,7 @@ def deriv_func(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     tf = abs(tf)
     _X[{{num_states}}-1] = tf
 
-    u_ = compute_control(_t,_X,_p,_aux,_arc_seq,_pi_seq)
+    u_ = compute_control(_t,_X,_p,_aux,_arc_seq,_pi_seq, arc_idx)
 
     {{#control_list}}{{.}},{{/control_list}} = u_
     {{#parameter_list}}{{.}},{{/parameter_list}} = _p[:{{num_params}}]

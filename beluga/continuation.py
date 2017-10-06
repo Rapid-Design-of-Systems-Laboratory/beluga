@@ -10,7 +10,7 @@ import functools
 import sys
 
 import operator as op
-
+from beluga.utils import keyboard
 class ContinuationList(list):
     def __init__(self):
         # Create list of available strategies
@@ -75,9 +75,9 @@ class ActivateConstraint(object):
         current_arcs = sol.arcs
         current_arcseq = sol.arc_seq
         if current_arcs is None:
-            current_arcs = [(0, 511)]
+            current_arcs = [(0, len(sol.x)-1)]
 
-        sol.prepare(problem_data, 600, True)
+        sol.prepare(problem_data)#, 600, True)
         # Evaluate expr on sol
         s_vals = sol.evaluate(expr)
 
@@ -101,65 +101,75 @@ class ActivateConstraint(object):
             s_lim_val = max(0, s_lim_val)
             # print('Max_violation : ', s_lim_val)
 
-        # Store constraint limit in aux
-        # sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
-        logging.info('Added constrained arc with max violation : %.4lf %s' % (s_lim_val, s['unit']))
+        arc_to_split = int(np.floor(sol.x[s_lim_i]))
+        logging.info('Added constrained arc with max violation : %.4lf %s in arc %d' % (s_lim_val, s['unit'], arc_to_split))
 
+        # Store constraint limit in aux
         sol.aux['constraint'][(self.name, 1)] = s_lim_val
 
-        # Introduce  small arc
-        # n_before = s_lim_i
-        # n_after = 512 - s_lim_i
-        # sol.x = np.hstack((np.linspace(0.0, 1.0, n_before),
-        #                   np.linspace(1.0, 2.0, 2), # Extra
-        #                   np.linspace(2.0, 3.0, n_after)))
-        # sol.x = np.hstack((sol.x[:s_lim_i],
-        #                     sol.x[s_lim_i], # t1-
-        #                     sol.x[s_lim_i], # t1+
-        #                     sol.x[(s_lim_i+1)], # t2-
-        #                     sol.x[(s_lim_i+1)], # t2+
-        #                     sol.x[(s_lim_i+2):]
-        #                    ))
+        arc_num = arc_to_split
+        old_arc_idx = sol.arcs[arc_num] # See where previous arc starts and ends
 
-        arc_num = 0 # 0, 1, 2 etc.
-        idx_arc_start = s_lim_i
-        idx_arc_end = s_lim_i+1
-        # idx_old_arc_end = -1 # TODO: Fix for multiple arcs
+        # new arc index relative to start of previous arc
+        idx_arc_start = s_lim_i - old_arc_idx[0]
+        idx_arc_end = s_lim_i+1 - old_arc_idx[0]
 
-        original_tf = sol.y[-1, 0]
-        t_before = sol.x[idx_arc_start]*original_tf
-        t_during = (sol.x[idx_arc_end] - sol.x[idx_arc_start])*original_tf
-        t_after = (sol.x[-1] - sol.x[idx_arc_end])*original_tf
+        old_arc_idx = (old_arc_idx[0], old_arc_idx[1]+1)
+        old_arc_x = sol.x[slice(*old_arc_idx)]
+        old_arc_y = sol.y[:,slice(*old_arc_idx)]
+        old_arc_u = sol.u[:,slice(*old_arc_idx)]
 
-        logging.info('Arc position : t='+str(t_before)+'s')
-        sol.x[0:idx_arc_start+1] = (sol.x[0:idx_arc_start+1] - sol.x[0])/(sol.x[idx_arc_start] - sol.x[0]) + arc_num # TODO: Fix for multi arc
-        sol.x[idx_arc_end:] = (sol.x[idx_arc_end:] - sol.x[idx_arc_end])/(sol.x[-1] - sol.x[idx_arc_end]) + arc_num + 2
+        original_tf = old_arc_y[-1,0]
 
-        sol.x = np.hstack((sol.x[:idx_arc_start+1], sol.x[idx_arc_start:idx_arc_end+1], sol.x[idx_arc_end:]))
-        sol.y = np.hstack((sol.y[:,:idx_arc_start+1], sol.y[:,idx_arc_start:idx_arc_end+1], sol.y[:,idx_arc_end:]))
-        sol.u = np.hstack((sol.u[:,:idx_arc_start+1], sol.u[:,idx_arc_start:idx_arc_end+1], sol.u[:,idx_arc_end:]))
+        t_before = old_arc_x[idx_arc_start]*original_tf
+        t_during = (old_arc_x[idx_arc_end] - old_arc_x[idx_arc_start])*original_tf
+        t_after = (old_arc_x[-1] - old_arc_x[idx_arc_end])*original_tf
 
-        current_arcs = [(0, idx_arc_start), (idx_arc_start+1, idx_arc_end+1), (idx_arc_end+2, len(sol.x)-1)]
+        logging.info('Arc position : t='+str(sol.x[s_lim_i])+'s')
 
-        sol.y[-1,:idx_arc_start+1] = t_before
-        sol.y[-1,idx_arc_start+1] = t_during # "tf" for constrained arc
-        sol.y[-1,idx_arc_end+1] = t_during
-        sol.y[-1,idx_arc_end+2:] = t_after
+        old_arc_x[0:idx_arc_start+1] = (old_arc_x[0:idx_arc_start+1] - old_arc_x[0])/(old_arc_x[idx_arc_start] - old_arc_x[0]) + arc_num # TODO: Fix for multi arc
+        old_arc_x[idx_arc_end:] = (old_arc_x[idx_arc_end:] - old_arc_x[idx_arc_end])/(old_arc_x[-1] - old_arc_x[idx_arc_end]) + arc_num + 2
 
-        sol.arcs = current_arcs
+        new_arc_x = np.hstack((old_arc_x[:idx_arc_start+1], old_arc_x[idx_arc_start:idx_arc_end+1], old_arc_x[idx_arc_end:]))
+        new_arc_y = np.hstack((old_arc_y[:,:idx_arc_start+1], old_arc_y[:,idx_arc_start:idx_arc_end+1], old_arc_y[:,idx_arc_end:]))
+        new_arc_u = np.hstack((old_arc_u[:,:idx_arc_start+1], old_arc_u[:,idx_arc_start:idx_arc_end+1], old_arc_u[:,idx_arc_end:]))
 
-        left_idx, right_idx = map(np.array, zip(*current_arcs))
-        ya = sol.y[:,left_idx]
-        yb = sol.y[:,right_idx]
+        new_arc_y[-1,:idx_arc_start+1] = t_before
+        new_arc_y[-1,idx_arc_start+1] = t_during # "tf" for constrained arc
+        new_arc_y[-1,idx_arc_end+1] = t_during
+        new_arc_y[-1,idx_arc_end+2:] = t_after
 
-        sol.arc_seq = (0, arc_type, 0)
+        if old_arc_idx[0] > 0:
+            sol.x = np.hstack((sol.x[:old_arc_idx[0]], new_arc_x, sol.x[old_arc_idx[1]:]))
+            sol.y = np.hstack((sol.y[:old_arc_idx[0]], new_arc_y, sol.y[old_arc_idx[1]:]))
+            sol.u = np.hstack((sol.u[:old_arc_idx[0]], new_arc_u, sol.u[old_arc_idx[1]:]))
+        else:
+            sol.x = new_arc_x
+            sol.y = new_arc_y
+            sol.u = new_arc_u
+
+
+
+
+        new_arcs = [(old_arc_idx[0], old_arc_idx[0]+idx_arc_start),
+                    (old_arc_idx[0]+idx_arc_start+1, old_arc_idx[0]+idx_arc_end+1),
+                    (old_arc_idx[0]+idx_arc_end+2, old_arc_idx[0]+len(new_arc_x)-1)]
+
+        sol.arcs = (*sol.arcs[:arc_num], *new_arcs, *sol.arcs[arc_num+1:])
+        sol.arc_seq = (*sol.arc_seq[:arc_num+1], arc_type, *sol.arc_seq[arc_num:])
+
+        # left_idx, right_idx = map(np.array, zip(*sol.arcs))
+        # ya = sol.y[:,left_idx]
+        # yb = sol.y[:,right_idx]
 
         pi_idx_start = len(sol.parameters)
         pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
         sol.parameters = np.append(sol.parameters, np.ones(len(pi_list))*0.0)
 
-        sol.pi_seq = (None, pi_idx, None)
+        new_pi_seq = (None, pi_idx, None)
+        sol.pi_seq = (*sol.pi_seq[:arc_num], *new_pi_seq, *sol.pi_seq[arc_num+1:])
 
+        # keyboard()
         self.sol = sol
 
     def __iter__(self):
