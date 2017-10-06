@@ -142,7 +142,7 @@ class MultipleShooting(BaseAlgorithm):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
-        # print(out_ws['deriv_func_code'])
+        print(out_ws['deriv_func_code'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
@@ -227,6 +227,10 @@ class MultipleShooting(BaseAlgorithm):
 
         # Compute Jacobian matrix, F using finite difference
         fx = odefn(x,Y,parameters,aux, arc_seq, pi_seq, arc_idx)
+        if np.any(np.isnan(fx)):
+            print('foo')
+            from beluga.utils import keyboard
+            keyboard()
         for i in range(nOdes):
             Y[i] = Y[i] + StepSize
             F[:,i] = (odefn(x, Y, parameters,aux,arc_seq, pi_seq, arc_idx)-fx)/StepSize
@@ -300,7 +304,9 @@ class MultipleShooting(BaseAlgorithm):
                 for arc_idx, tspan in enumerate(tspan_list):
                     y0stm[:nOdes] = ya[:,arc_idx]
                     y0stm[nOdes:] = stm0
+                    print(arc_idx, tspan, ya[:,arc_idx])
                     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-3)
+
                     yb[:,arc_idx] = yy[-1,:nOdes]
                     phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
                     phi_list.append(np.copy(phi))

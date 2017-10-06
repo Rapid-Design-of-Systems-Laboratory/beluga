@@ -42,8 +42,8 @@ ocp.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
 # ocp.constant('g0',9.80665,'m/s^2')
 
 ocp.constant('Wsec3pkg',1,'W*s^3*kg^-1')
-ocp.constant('heatRateLimit', 2500e4, 'W')
-
+ocp.constant('heatRateLimit', 2000e4, 'W')
+ocp.constant('alfaLimit', 25*pi/180, 'rad')
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
 
@@ -56,7 +56,8 @@ ocp.constraints() \
     .initial('gam-gam_0', 'rad') \
     .terminal('h-h_f','m')  \
     .terminal('theta-theta_f','rad') \
-    .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W')
+    .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W') \
+    .path('AoA','(alfa - alfaLimit)**2','<',0.0,'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, W=1e7, nd=1)
 
@@ -68,11 +69,6 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         max_error=100
              )
 
-guess_maker = beluga.guess_generator('auto',
-                start=[80000,0,5000,-90*pi/180],
-                direction='forward',
-                costate_guess = -0.1
-)
 
 continuation_steps = beluga.init_continuation()
 #
@@ -90,12 +86,12 @@ continuation_steps = beluga.init_continuation()
 # # .initial('gam',-45*pi/180)\
 
 
-guess_maker = beluga.guess_generator('file', filename='./data_unc.dill', step=-1, iteration=-1)
-continuation_steps.add_step('activate_constraint', name='heatRate')
+guess_maker = beluga.guess_generator('file', filename='./data_HR2000.dill', step=-1, iteration=-1)
+continuation_steps.add_step('activate_constraint', name='AoA')
 
 continuation_steps.add_step('bisection') \
                 .num_cases(101) \
-                .constraint('heatRate', 0.0, index=1)
+                .constraint('AoA', 0.0, index=1)
 
 beluga.solve(ocp,
              method='traditional',
