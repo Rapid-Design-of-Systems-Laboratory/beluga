@@ -36,7 +36,7 @@ ocp.constant('rn',1/12*0.3048,'m') # Nose radius, m
 ocp.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
 ocp.constant('g0',9.80665,'m/s^2')
 ocp.constant('Wsec3pkg',1,'W*s^3*kg^-1')
-ocp.constant('heatRateLimit', 5000e4, 'W')
+ocp.constant('heatRateLimit', 2500e4, 'W')
 
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')

@@ -45,7 +45,7 @@ def bc_func_right(_yb, _p, _aux, _arc_seq, _pi_seq):
 
     # Right BCs
     [{{#state_list}}{{.}},{{/state_list}}] = _yb[:{{num_states}}]
-    u_ = compute_control(1,_yb,_p,_aux,_arc_seq,_pi_seq)
+    u_ = compute_control(0,_yb,_p,_aux,_arc_seq,_pi_seq)
     [{{#control_list}}{{.}},{{/control_list}}] = u_
     # Declare all predefined expressions
 {{#quantity_list}}
@@ -108,8 +108,6 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             if arc_left_type == {{arctype}}:
                 res = np.array([{{#exit_bc}}{{.}},
                     {{/exit_bc}}])
-                # print('arcidx, x2m, x2p', arc_idx, _x_2m, _x_2p, _y_2m, _y_2p)
-                # print(np.hstack((_yb[:{{num_states}},arc_idx], _ya[:{{num_states}},arc_idx+1])))
             {{/bc_list}}
         else:
             raise Exception('Not impl for unconstrained arc jns')
