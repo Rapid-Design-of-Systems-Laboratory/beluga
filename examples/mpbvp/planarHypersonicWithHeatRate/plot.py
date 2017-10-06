@@ -26,6 +26,10 @@ plots.add_plot().line('t','k*sqrt(rho0*exp(-h/H)/rn)*v**3/10000') \
                 .xlabel('t (s)').ylabel('Heat-rate')      \
                 .title('Heat-rate vs. Time')
 
+plots.add_plot().line('t',f'sqrt({D}**2+{L}**2)/(mass*9.81)') \
+                .xlabel('t (s)').ylabel('G-Loading')      \
+                .title('G-Loading vs. Time')
+
 # plots.add_plot().line('theta*re/1000','h/1000',label='Foo')       \
 #                 .line('theta*re/1000','h/1000',label='Bar',step=1,sol=5)   \
 #                 .xlabel('Downrange (km)')                   \
