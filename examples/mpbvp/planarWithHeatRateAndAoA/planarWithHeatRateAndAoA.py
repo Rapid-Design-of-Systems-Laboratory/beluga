@@ -1,3 +1,4 @@
+"""Planar hypersonic problem with heat rate and angle of attack constraints."""
 from math import *
 
 ocp = beluga.OCP('planarHypersonic')
@@ -73,26 +74,31 @@ guess_maker = beluga.guess_generator('auto',
                 costate_guess = -0.1
 )
 
-
-
 continuation_steps = beluga.init_continuation()
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11) \
+#                 .terminal('h', 0)
+#
+# continuation_steps.add_step().num_cases(11) \
+#                 .initial('gam',-60*pi/180)\
+#                 .terminal('theta', 1.0*pi/180)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11)  \
+#                 .terminal('theta', 2*pi/180)
+# # .initial('gam',-45*pi/180)\
+
+
+guess_maker = beluga.guess_generator('file', filename='./data_unc.dill', step=-1, iteration=-1)
+continuation_steps.add_step('activate_constraint', name='heatRate')
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .terminal('h', 0)
-
-continuation_steps.add_step().num_cases(11) \
-                .initial('gam',-60*pi/180)\
-                .terminal('theta', 1.0*pi/180)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(11)  \
-                .terminal('theta', 2*pi/180)
-# .initial('gam',-45*pi/180)
+                .num_cases(101) \
+                .constraint('heatRate', 0.0, index=1)
 
 beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             guess_generator=guess_maker,
-             output_file='data_unc.dill')
+             guess_generator=guess_maker)

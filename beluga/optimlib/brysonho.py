@@ -311,7 +311,7 @@ def process_constraint(s,
         corner_conditions = sympy.Matrix([pi_list]) * N_x
     else:
         pi_list = []
-        corner_conditions = sympy.Matrix([])
+        corner_conditions = sympy.Matrix([0]*len(costates)).T
 
     if not found:
         raise Exception("Invalid path constrant")
