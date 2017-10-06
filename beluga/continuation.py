@@ -77,7 +77,7 @@ class ActivateConstraint(object):
         if current_arcs is None:
             current_arcs = [(0, 511)]
 
-        sol.prepare(problem_data)
+        sol.prepare(problem_data, 600, True)
         # Evaluate expr on sol
         s_vals = sol.evaluate(expr)
 
@@ -88,16 +88,23 @@ class ActivateConstraint(object):
             # Find min value (most away from zero)
             s_lim_i = np.argmin(s_vals)
             s_lim_val = s_vals[s_lim_i]
+            if s_lim_val > 0:
+                print('Constraint is not active')
+            s_lim_val = min(0, s_lim_val)
             # print('Max_violation : ', s_lim_val)
         else:
             # Find max value
             s_lim_i = np.argmax(s_vals)
             s_lim_val = s_vals[s_lim_i]
+            if s_lim_val < 0:
+                print('Constraint is not active')
+            s_lim_val = max(0, s_lim_val)
             # print('Max_violation : ', s_lim_val)
 
         # Store constraint limit in aux
         # sol.aux['constraints'][self.name]['limit'][1] = s_lim_val
         logging.info('Added constrained arc with max violation : %.4lf %s' % (s_lim_val, s['unit']))
+
         sol.aux['constraint'][(self.name, 1)] = s_lim_val
 
         # Introduce  small arc
@@ -124,6 +131,7 @@ class ActivateConstraint(object):
         t_during = (sol.x[idx_arc_end] - sol.x[idx_arc_start])*original_tf
         t_after = (sol.x[-1] - sol.x[idx_arc_end])*original_tf
 
+        logging.info('Arc position : t='+str(t_before)+'s')
         sol.x[0:idx_arc_start+1] = (sol.x[0:idx_arc_start+1] - sol.x[0])/(sol.x[idx_arc_start] - sol.x[0]) + arc_num # TODO: Fix for multi arc
         sol.x[idx_arc_end:] = (sol.x[idx_arc_end:] - sol.x[idx_arc_end])/(sol.x[-1] - sol.x[idx_arc_end]) + arc_num + 2
 

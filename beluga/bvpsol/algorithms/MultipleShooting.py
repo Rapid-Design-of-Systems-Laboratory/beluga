@@ -142,7 +142,7 @@ class MultipleShooting(BaseAlgorithm):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
-        print(out_ws['deriv_func_code'])
+        # print(out_ws['deriv_func_code'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
@@ -312,6 +312,7 @@ class MultipleShooting(BaseAlgorithm):
 
                 res = bc_func(ya, yb, paramGuess, aux, solinit.arc_seq, solinit.pi_seq)
                 if any(np.isnan(res)):
+                    print(res)
                     raise RuntimeError("Nan in residue")
                 r1 = np.linalg.norm(res)
                 if self.verbose:

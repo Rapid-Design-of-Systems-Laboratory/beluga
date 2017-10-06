@@ -237,9 +237,9 @@ def make_dhdu(ham, controls, derivative_fn):
 def make_control_law(dhdu, controls):
     """Solves control equation to get control law."""
     ctrl_sol = sympy.solve(dhdu, controls, dict=True)
-    control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
-                            for (ctrl,expr) in option.items()]
-                            for option in ctrl_sol]
+    # control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
+    #                         for (ctrl,expr) in option.items()]
+    #                         for option in ctrl_sol]
     control_options = ctrl_sol
     return control_options
 
@@ -274,18 +274,28 @@ def process_constraint(s,
 
     tangency = []
     for i in range(max_iter):
-        control_found = any(u in s_q.subs(quantity_vars).free_symbols for u in controls)
+        s_q = s_q.subs(quantity_vars)
+        control_found = any(u in s_q.free_symbols for u in controls)
         if control_found:
             print('Constraint',s.name,'is of order',order)
             found = True
             ham_aug = ham_mat + mult*s_q  # Augmented hamiltonian
             lamdot_aug = - mult * jacobian_fn(s_q, states)  # Augmented costate equations in constrained arc
-            dhdu = jacobian_fn(ham_aug, [*controls, mult])
+
+            # First solve for controls and then for mu
+            dh_du = jacobian_fn(ham_aug, [*controls, mult])
+            u_sol_list = make_control_law(dh_du[1], controls)
+            mu_sol_list = []
+            constrained_control_law = []
+            for u_sol in u_sol_list:
+                mu_sol = make_control_law(dh_du[0].subs(u_sol), mult)
+                control_law = {**u_sol, **mu_sol[0]}
+                constrained_control_law.append(control_law)
+
             # from beluga.utils import keyboard
             # keyboard()
-            print('Solving',dhdu,' = 0 for variables ',[*controls, mult])
-            constrained_control_law = make_control_law(dhdu, [*controls, mult])
-            print('Control law found')
+
+            # constrained_control_law = make_control_law(dhdu, [*controls, mult])
             constrained_costate_rates = make_costate_rates(ham_aug[0], states, costate_names, derivative_fn)
             break
 
@@ -360,11 +370,15 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     parameters = sym.Matrix(parameters)
 
     unknowns = list(it.chain(controls, mu_vars))
-    control_opt_mat = sym.Matrix([[str(option.get(u,0)) for u in unknowns]
+    # from beluga.utils import keyboard
+    # keyboard()
+    # [[str(option.get(u,0)) for u in unknowns] for option in control_opts]
+    control_opt_mat = sym.Matrix([[option.get(u,sym.S(0))
+                                    for u in unknowns]
                                     for option in control_opts])
     control_opt_fn = sym.lambdify([*states, *costates, *parameters, *constants], control_opt_mat)
-    # control_fns = [[make_sympy_fn([*states, *costates, *constants], u['expr'])
-    #                 for u in option] for option in control_opts]
+
+    print('Control law:', control_opt_mat)
     ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *unknowns], ham.subs(quantity_vars))
 
     num_unknowns = len(unknowns)
@@ -406,7 +420,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     yield ham_fn
 
 
-def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, ham):
+def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
 
     num_states = len(states)
     costate_slice = slice(num_states, 2*num_states)
@@ -441,16 +455,16 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     subs_2m = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y2m, u_m))
     subs_2p = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y2p, u_p))
 
-    ham1m = ham.subs(subs_1m)
-    ham1p = ham_aug.subs(subs_1p)
-    ham2m = ham_aug.subs(subs_2m)
-    ham2p = ham.subs(subs_2p)
+    ham1m = ham.subs(quantity_vars).subs(subs_1m)
+    ham1p = ham_aug.subs(quantity_vars).subs(subs_1p)
+    ham2m = ham_aug.subs(quantity_vars).subs(subs_2m)
+    ham2p = ham.subs(quantity_vars).subs(subs_2p)
     tangency_1m = sympy.Matrix(tangency).subs(subs_1p)
 
     entry_bc = [
         *tangency_1m,  # Tangency conditions, N(x,t) = 0
         *(y1m_x - y1p_x), # Continuity in states at entry
-        *(y1m_l - y1p_l - corner_conditions), # Corner condns on costates
+        *(y1m_l - y1p_l - corner_conditions.subs(subs_1p)), # Corner condns on costates
         ham1m - ham1p
     ]
     exit_bc = [
@@ -502,7 +516,7 @@ def make_constrained_arc_fns(workspace):
                                 workspace['costates'],
                                 workspace['parameters'],
                                 workspace['constants'],
-                                workspace['controls'], mu_vars, workspace['ham'])
+                                workspace['controls'], mu_vars, workspace['quantity_vars'], workspace['ham'])
         bc = {'entry_bc': entry_bc,
               'exit_bc': exit_bc,
               'arctype':arc_type,
