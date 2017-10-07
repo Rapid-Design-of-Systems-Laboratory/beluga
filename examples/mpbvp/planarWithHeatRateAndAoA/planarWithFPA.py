@@ -38,11 +38,13 @@ ocp.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
 
 ocp.constant('rn',1/12*0.3048,'m') # Nose radius, m
 ocp.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
-# ocp.constant('g0',9.80665,'m/s^2')
+ocp.constant('g0',9.80665,'m/s^2')
 
 ocp.constant('Wsec3pkg',1,'W*s^3*kg^-1')
 ocp.constant('heatRateLimit', 2000e4, 'W')
 ocp.constant('alfaLimit', 25*pi/180, 'rad')
+ocp.constant('gLoadLimit', 20**2, 'nd')
+# ocp.constnat('gSqLimit', 20**2, )
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
 
@@ -56,7 +58,9 @@ ocp.constraints() \
     .terminal('h-h_f','m')  \
     .terminal('theta-theta_f','rad') \
     .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W') \
-    .path('AoA','(alfa - alfaLimit)**2','<',0.0,'rad')
+    .path('gLoading','(D^2+L^2)/(mass^2*g0^2) - gLoadLimit','<',0.0,'nd')
+    # .path('AoA','alfa**2 - alfaLimit**2','<',0.0,'rad**2')
+
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, W=1e7, nd=1)
 
@@ -69,7 +73,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
              )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[80000,0,5000,-90*pi/180],
+                start=[40000,0,5000,-90*pi/180],
                 direction='forward',
                 costate_guess = -0.1
 )
@@ -78,29 +82,24 @@ guess_maker = beluga.guess_generator('auto',
 
 continuation_steps = beluga.init_continuation()
 
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .terminal('h', 0)
-#
-# continuation_steps.add_step().num_cases(11) \
-#                 .initial('gam',-60*pi/180)\
-#                 .terminal('theta', 1.0*pi/180)
-#
-# continuation_steps.add_step().num_cases(11) \
-#                 .initial('gam',-45*pi/180)\
-#                 .terminal('theta', 2.0*pi/180)
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .terminal('h', 0.0)
 
-guess_maker = beluga.guess_generator('file', filename='./data_unc.dill', step=-1, iteration=-1)
+continuation_steps.add_step('bisection').num_cases(11) \
+                .initial('gam',-60*pi/180)\
+                .terminal('theta', 1.0*pi/180)
+
+continuation_steps.add_step('bisection').num_cases(21) \
+                .initial('gam', -45*pi/180)\
+                .terminal('theta', 2.0*pi/180)
+
+# guess_maker = beluga.guess_generator('file', filename='./data_unc.dill', step=-1, iteration=-1)
 continuation_steps.add_step('activate_constraint', name='heatRate')
 
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
                 .constraint('heatRate', 0.0, index=1)
-
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11)  \
-#                 .terminal('theta', 2*pi/180)
-#                   .initial('gam',-45*pi/180)
 
 beluga.solve(ocp,
              method='traditional',

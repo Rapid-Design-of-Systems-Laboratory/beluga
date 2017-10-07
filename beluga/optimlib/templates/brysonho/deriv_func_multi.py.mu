@@ -3,7 +3,7 @@ from math import *
 
 def compute_hamiltonian(t, X, p, aux, u):
     # C = [v for k,v in aux['const'].items()]
-    return ham_fn(*X[:-1], *p[:{{num_params}}], *aux['const'].values(), *u)
+    return ham_fn(*X[:-1], *p[:{{num_params}}], *aux['const'].values(), *u, None)
 
 def compute_control(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     if arc_idx is None:
@@ -12,6 +12,8 @@ def compute_control(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     try:
         return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
     except:
+        return np.array([0]*{{num_controls}})
+        print('oh nooes')
         from beluga.utils import keyboard
         keyboard()
 
@@ -23,7 +25,6 @@ def deriv_func(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     {{#state_list}}{{.}},{{/state_list}} = _X[:{{num_states}}]
     tf = abs(tf)
     _X[{{num_states}}-1] = tf
-
     u_ = compute_control(_t,_X,_p,_aux,_arc_seq,_pi_seq, arc_idx)
 
     {{#control_list}}{{.}},{{/control_list}} = u_

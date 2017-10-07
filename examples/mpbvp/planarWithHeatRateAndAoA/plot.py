@@ -1,6 +1,7 @@
 from beluga.visualization import BelugaPlot
 
-plots = BelugaPlot(filename='./data_HR2000.dill',default_sol=-1,default_step=-1)
+# plots = BelugaPlot(filename='./data_HR2000.dill',default_sol=-1,default_step=-1)
+plots = BelugaPlot(filename='./data_unc.dill',default_sol=-1,default_step=-1)
 
 plots.add_plot().line('theta*180/3.14','h/1000')                    \
                 .xlabel('Downrange (km)').ylabel('h (km)')      \
@@ -10,10 +11,9 @@ plots.add_plot().line('t','alfa*180/3.14')                    \
                 .xlabel('t (s)').ylabel('alfa (degrees)')      \
                 .title('Angle of attack vs. Time')
 
-
-plots.add_plot().line('t','lamV')                    \
-                .xlabel('t (s)').ylabel('lamV')      \
-                .title('lamV vs. Time')
+# plots.add_plot().line('t','lamV')                    \
+#                 .xlabel('t (s)').ylabel('lamV')      \
+#                 .title('lamV vs. Time')
 
 rho = 'rho0*exp(-h/H)'
 Cl  = '(1.5658*alfa + -0.0000)'

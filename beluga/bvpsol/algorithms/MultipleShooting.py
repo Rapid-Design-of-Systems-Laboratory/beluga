@@ -304,7 +304,7 @@ class MultipleShooting(BaseAlgorithm):
                 for arc_idx, tspan in enumerate(tspan_list):
                     y0stm[:nOdes] = ya[:,arc_idx]
                     y0stm[nOdes:] = stm0
-                    print(arc_idx, tspan, ya[:,arc_idx])
+                    # print(arc_idx, tspan, ya[:,arc_idx])
                     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-3)
 
                     yb[:,arc_idx] = yy[-1,:nOdes]
