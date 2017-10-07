@@ -380,10 +380,13 @@ class MultipleShooting(BaseAlgorithm):
 
                 n_iter += 1
                 logging.debug('Iteration #'+str(n_iter))
+        # except KeyboardInterrupt as ke:
+        #     converged = False
         except Exception as e:
             logging.warn(e)
             import traceback
             traceback.print_exc()
+
 
         # Return initial guess if it failed to converge
         sol = solinit

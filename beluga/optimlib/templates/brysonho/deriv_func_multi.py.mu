@@ -13,9 +13,9 @@ def compute_control(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
         return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
     except:
         return np.array([0]*{{num_controls}})
-        print('oh nooes')
-        from beluga.utils import keyboard
-        keyboard()
+        #print('oh nooes')
+        #from beluga.utils import keyboard
+        #keyboard()
 
 def deriv_func(_t, _X, _p, _aux, _arc_seq, _pi_seq, arc_idx=None):
     if arc_idx is None:

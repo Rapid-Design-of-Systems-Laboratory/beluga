@@ -406,7 +406,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
             u_list = control_opt_fn(*X, *p, *C, s_val)
         except:
             print('nofdfodfdfoi')
-            keyboard()
+            # keyboard()
         ham_val = np.zeros(num_options)
         for i in range(num_options):
             try:
@@ -414,10 +414,10 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
             except:
                 print(X, p, C, u_list[i])
                 print('mass')
-                keyboard()
+                # keyboard()
                 raise
-        if len(ham_val) == 0:
-            keyboard()
+        # if len(ham_val) == 0:
+        #     keyboard()
         return u_list[np.argmin(ham_val)]
 
     # def compute_control(t, X, C):
