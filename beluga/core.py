@@ -169,8 +169,9 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 s.compute_scaling(sol_guess)
                 s.scale(sol_guess)
 
-                # Note: sol is the same object as sol_guess
+                # Note: sol is the same object as sol_guess    
                 sol = bvp_algo.solve(sol_guess)
+
 
 
                 s.unscale(sol)

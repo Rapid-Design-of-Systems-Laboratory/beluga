@@ -36,7 +36,7 @@ ocp.constraints() \
     # .path('gLoading','(D^2+L^2)/(mass*g0)','<',0.0,'m^2/s^2')
 
 
-ocp.scale(m='x**2+y**2', s=1, rad=1, nd=1)
+ocp.scale(m='x', s=1, rad=1, nd=1)
 
 
 guess_maker = beluga.guess_generator('auto',
@@ -54,9 +54,9 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 1.0)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(31) \
-                .terminal('y', 20.0) \
-                .terminal('x', 20.0)
+                .num_cases(21) \
+                .terminal('y', 10.0) \
+                .terminal('x', 10.0)
 
 continuation_steps.add_step().num_cases(11) \
                 .initial('theta', pi/2)
