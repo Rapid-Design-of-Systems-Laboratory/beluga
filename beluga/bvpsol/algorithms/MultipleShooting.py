@@ -3,7 +3,7 @@ import numpy as np
 
 import beluga
 from .. import Solution
-from beluga.utils import keyboard
+from beluga.utils import keyboard, timeout
 from beluga.integrators import ode45
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
@@ -301,15 +301,16 @@ class MultipleShooting(BaseAlgorithm):
         try:
             while True:
                 phi_list = []
-                for arc_idx, tspan in enumerate(tspan_list):
-                    y0stm[:nOdes] = ya[:,arc_idx]
-                    y0stm[nOdes:] = stm0
-                    # print(arc_idx, tspan, ya[:,arc_idx])
-                    t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-3)
+                with timeout(seconds=4):
+                    for arc_idx, tspan in enumerate(tspan_list):
+                        y0stm[:nOdes] = ya[:,arc_idx]
+                        y0stm[nOdes:] = stm0
+                        # print(arc_idx, tspan, ya[:,arc_idx])
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, solinit.arc_seq, solinit.pi_seq, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-3)
 
-                    yb[:,arc_idx] = yy[-1,:nOdes]
-                    phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
-                    phi_list.append(np.copy(phi))
+                        yb[:,arc_idx] = yy[-1,:nOdes]
+                        phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
+                        phi_list.append(np.copy(phi))
 
                 # Iterate through arcs
                 if n_iter>self.max_iterations:
@@ -341,6 +342,9 @@ class MultipleShooting(BaseAlgorithm):
                 # Compute correction vector
 
                 if r0 is not None:
+                    if r1/r0 > 2:
+                        logging.error('Residue increased more than 2x in one iteration!')
+                        break
                     beta = (r0-r1)/(alpha*r0)
                     if beta < 0:
                         beta = 1

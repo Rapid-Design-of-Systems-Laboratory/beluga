@@ -21,9 +21,9 @@ ocp.control('delta','rad')
 ocp.constant('L', 1.0, 'm')
 ocp.constant('V', 1.0, 'm/s')
 ocp.constant('rad2sec', 1.0, 's/(rad^2)')
-
+ocp.constant('w1', 0.5, 'nd')
 # Define costs
-ocp.path_cost('0.01*delta**2*(rad2sec) + 1','s')
+ocp.path_cost('w1*delta**2 + (1)','s')
 
 # Define constraints
 ocp.constraints() \
@@ -31,12 +31,13 @@ ocp.constraints() \
     .initial('y-y_0','m') \
     .initial('theta-theta_0','rad') \
     .terminal('x-x_f','m')  \
-    .terminal('y-y_f','m')
+    .terminal('y-y_f','m') \
+    .terminal('theta-theta_f','rad')
     # .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W') \
     # .path('gLoading','(D^2+L^2)/(mass*g0)','<',0.0,'m^2/s^2')
 
 
-ocp.scale(m='x', s=1, rad=1, nd=1)
+ocp.scale(m='x', s='x/V', rad=1, nd=1)
 
 
 guess_maker = beluga.guess_generator('auto',
@@ -51,15 +52,17 @@ continuation_steps = beluga.init_continuation()
 continuation_steps.add_step('bisection') \
                 .num_cases(2) \
                 .terminal('y', 1.0) \
-                .terminal('x', 1.0)
+                .terminal('x', 1.0) \
+                .terminal('theta', pi/2)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
                 .terminal('y', 10.0) \
-                .terminal('x', 10.0)
+                .terminal('x', 10.0) \
+                .const('L', 3.02)
 
-continuation_steps.add_step().num_cases(11) \
-                .initial('theta', pi/2)
+continuation_steps.add_step('bisection').num_cases(31,spacing='log') \
+                .const('w1', 0.1)
 #
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11)  \
