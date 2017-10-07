@@ -1,7 +1,7 @@
 import numpy as np
 from math import *
 import itertools as it
-
+from beluga.utils import keyboard
 np.set_printoptions(suppress=True, precision=4)
 
 def bc_func_left(_ya, _p, _aux, _arc_seq, _pi_seq):
@@ -84,7 +84,7 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#bc_list}}
             {{name}} = _aux['constraint'][('{{name}}', arc_idx+1)]
             {{/bc_list}}
-
+            # keyboard()
             {{#bc_list}}
             if arc_right_type == {{arctype}}:
                 pi_idx = _pi_seq[arc_idx+1]
@@ -103,7 +103,7 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
             {{#state_list}}_{{.}}_2p,{{/state_list}} = _y2p
             {{#control_list}}_{{.}}_m,{{/control_list}} = _u2m
             {{#control_list}}_{{.}}_p,{{/control_list}} = _u2p
-
+            # keyboard()
             {{#bc_list}}
             if arc_left_type == {{arctype}}:
                 res = np.array([{{#exit_bc}}{{.}},

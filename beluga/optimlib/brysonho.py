@@ -21,6 +21,7 @@ from beluga.problem import SymVar
 
 import sympy as sym
 from sympy.utilities.lambdify import lambdastr
+from beluga.utils import keyboard
 
 def make_sympy_fn(args, fn_expr):
     #   .replace('(*list(__flatten_args__([_0,_1])))', '') \
@@ -336,7 +337,7 @@ def process_path_constraints(path_constraints,
                 process_constraint(s, i, states, costates, controls, ham, quantity_vars, jacobian_fn, derivative_fn)
 
         s_list.append({'name': str(s['name']),
-                       'expr': str(s['expr']),
+                       'expr': str(s['expr'].subs(quantity_vars)),
                        'unit': str(s['unit']),
                        'direction': s['direction'],
                        'control_law': u_aug,
@@ -362,7 +363,7 @@ def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     parameters = sym.symbols(' '.join(params_list))
     return parameters
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, constraint_name=None):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
@@ -373,32 +374,50 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     # from beluga.utils import keyboard
     # keyboard()
     # [[str(option.get(u,0)) for u in unknowns] for option in control_opts]
+
+    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
+    u_args = [*states, *costates, *parameters, *constants]
+
+    if constraint_name is not None:
+        print('adding constraint agu',constraint_name)
+        ham_args.append(constraint_name)
+        u_args.append(constraint_name)
+    else:
+        ham_args.append('___dummy_arg___')
+        u_args.append('___dummy_arg___')
     control_opt_mat = sym.Matrix([[option.get(u,sym.S(0))
                                     for u in unknowns]
                                     for option in control_opts])
-    control_opt_fn = sym.lambdify([*states, *costates, *parameters, *constants], control_opt_mat)
+    control_opt_fn = sym.lambdify(u_args, control_opt_mat)
 
     print('Control law:', control_opt_mat)
-    ham_fn = make_sympy_fn([*states, *costates, *parameters, *constants, *unknowns], ham.subs(quantity_vars))
+    ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
 
     num_unknowns = len(unknowns)
     num_options = len(control_opts)
     num_states = len(states)
 
-
-    # @numba.jit
+    constraint_name = str(constraint_name)
     def compute_control_unc(t, X, p, aux):
         X = X[:(2*num_states+1)]
         C = aux['const'].values()
-        u_list = control_opt_fn(*X, *p, *C)
+        s_val = aux['constraint'].get((constraint_name, 1), None)
+        try:
+            u_list = control_opt_fn(*X, *p, *C, s_val)
+        except:
+            print('nofdfodfdfoi')
+            keyboard()
         ham_val = np.zeros(num_options)
         for i in range(num_options):
             try:
-                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
+                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i], s_val)
             except:
                 print(X, p, C, u_list[i])
+                print('mass')
+                keyboard()
                 raise
-
+        if len(ham_val) == 0:
+            keyboard()
         return u_list[np.argmin(ham_val)]
 
     # def compute_control(t, X, C):
@@ -501,7 +520,7 @@ def make_constrained_arc_fns(workspace):
 
     for arc_type, s in enumerate(workspace['s_list'],1):
         # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
-        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'])
+        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
         # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
         # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         pi_list = [str(_) for _ in s['pi_list']]
@@ -639,7 +658,7 @@ def generate_problem_data(workspace):
      'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
      'control_options': workspace['control_law'],
      'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
-     'num_controls': len(workspace['controls']),
+     'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
     }

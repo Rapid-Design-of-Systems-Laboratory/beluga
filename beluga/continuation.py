@@ -101,6 +101,11 @@ class ActivateConstraint(object):
             s_lim_val = max(0, s_lim_val)
             # print('Max_violation : ', s_lim_val)
 
+        if s_lim_i == 0:
+            s_lim_i = 1
+        elif s_lim_i == len(sol.x)-1:
+            s_lim_i = s_lim_i - 1
+
         arc_to_split = int(np.floor(sol.x[s_lim_i]))
         logging.info('Added constrained arc with max violation : %.4lf %s in arc %d' % (s_lim_val, s['unit'], arc_to_split))
 
@@ -114,11 +119,12 @@ class ActivateConstraint(object):
         idx_arc_start = s_lim_i - old_arc_idx[0]
         idx_arc_end = s_lim_i+1 - old_arc_idx[0]
 
+        print(sol.x.shape,'foo')
         old_arc_idx = (old_arc_idx[0], old_arc_idx[1]+1)
-        old_arc_x = sol.x[slice(*old_arc_idx)]
-        old_arc_y = sol.y[:,slice(*old_arc_idx)]
-        old_arc_u = sol.u[:,slice(*old_arc_idx)]
-
+        old_arc_x = np.array(sol.x[slice(*old_arc_idx)], copy=True)
+        old_arc_y = np.array(sol.y[:,slice(*old_arc_idx)], copy=True)
+        old_arc_u = np.array(sol.u[:,slice(*old_arc_idx)], copy=True)
+        print(sol.x.shape,'bar')
         original_tf = old_arc_y[-1,0]
 
         t_before = old_arc_x[idx_arc_start]*original_tf
@@ -126,7 +132,6 @@ class ActivateConstraint(object):
         t_after = (old_arc_x[-1] - old_arc_x[idx_arc_end])*original_tf
 
         logging.info('Arc position : t='+str(sol.x[s_lim_i])+'s')
-
         old_arc_x[0:idx_arc_start+1] = (old_arc_x[0:idx_arc_start+1] - old_arc_x[0])/(old_arc_x[idx_arc_start] - old_arc_x[0]) + arc_num # TODO: Fix for multi arc
         old_arc_x[idx_arc_end:] = (old_arc_x[idx_arc_end:] - old_arc_x[idx_arc_end])/(old_arc_x[-1] - old_arc_x[idx_arc_end]) + arc_num + 2
 
@@ -139,17 +144,11 @@ class ActivateConstraint(object):
         new_arc_y[-1,idx_arc_end+1] = t_during
         new_arc_y[-1,idx_arc_end+2:] = t_after
 
-        if old_arc_idx[0] > 0:
-            sol.x = np.hstack((sol.x[:old_arc_idx[0]], new_arc_x, sol.x[old_arc_idx[1]:]))
-            sol.y = np.hstack((sol.y[:old_arc_idx[0]], new_arc_y, sol.y[old_arc_idx[1]:]))
-            sol.u = np.hstack((sol.u[:old_arc_idx[0]], new_arc_u, sol.u[old_arc_idx[1]:]))
-        else:
-            sol.x = new_arc_x
-            sol.y = new_arc_y
-            sol.u = new_arc_u
-
-
-
+        num_odes = sol.y.shape[0]
+        num_controls = sol.u.shape[0]
+        sol.x = np.hstack((sol.x[:old_arc_idx[0]], new_arc_x, sol.x[old_arc_idx[1]:]))
+        sol.y = np.hstack((sol.y[:,:old_arc_idx[0]], new_arc_y, sol.y[:,old_arc_idx[1]:]))
+        sol.u = np.hstack((sol.u[:,:old_arc_idx[0]], new_arc_u, sol.u[:,old_arc_idx[1]:]))
 
         new_arcs = [(old_arc_idx[0], old_arc_idx[0]+idx_arc_start),
                     (old_arc_idx[0]+idx_arc_start+1, old_arc_idx[0]+idx_arc_end+1),
@@ -166,9 +165,11 @@ class ActivateConstraint(object):
         pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
         sol.parameters = np.append(sol.parameters, np.ones(len(pi_list))*0.0)
 
+        if len(pi_idx) == 0:
+            pi_idx = None
         new_pi_seq = (None, pi_idx, None)
         sol.pi_seq = (*sol.pi_seq[:arc_num], *new_pi_seq, *sol.pi_seq[arc_num+1:])
-
+        print('mooo')
         # keyboard()
         self.sol = sol
 
