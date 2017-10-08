@@ -23,26 +23,6 @@ import sympy as sym
 from sympy.utilities.lambdify import lambdastr
 from beluga.utils import keyboard
 
-def make_sympy_fn(args, fn_expr):
-    #   .replace('(*list(__flatten_args__([_0,_1])))', '') \
-    #   .replace('lambda _0,_1: ', '')\
-
-    fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
-                                                  .replace('(([[', '[') \
-                                                  .replace(']]))', ']') \
-                                                #   .replace('(lambda', 'lambda')
-    # print(fn_str)
-    jit_fn = numba.njit(parallel=True)(eval(fn_str))
-
-    # unpacked_args = []
-    # for a in args:
-    #     try:
-    #         unpacked_args.append(*a)
-    #     except:
-    #         unpacked_args.append(a)
-
-    return jit_fn
-
 def total_derivative(expr, var, dependent_vars=None):
     """
     Take derivative taking pre-defined quantities into consideration
@@ -691,7 +671,6 @@ BrysonHo = sp.Workflow([
 ], description='Traditional optimal control workflow')
 
 traditional = BrysonHo
-
 
 
 ## Unit tests ##################################################################
