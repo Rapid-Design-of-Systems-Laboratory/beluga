@@ -9,7 +9,7 @@ ocp.independent('t', 's')
 # Define equations of motion
 ocp.state('x','V*cos(theta)','m')   \
    .state('y','V*sin(theta)','m')  \
-   .state('theta','-V/L*(delta)','rad')
+   .state('theta','-V/L*delta','rad')
 
 
 # Define quantities used in the problem
@@ -22,6 +22,7 @@ ocp.constant('L', 1.0, 'm')
 ocp.constant('V', 1.0, 'm/s')
 ocp.constant('rad2sec', 1.0, 's/(rad^2)')
 ocp.constant('w1', 0.5, 'nd')
+ocp.constant('steeringLim', 30*pi/180, 'rad')
 # Define costs
 ocp.path_cost('w1*delta**2 + (1)','s')
 
@@ -32,8 +33,8 @@ ocp.constraints() \
     .initial('theta-theta_0','rad') \
     .terminal('x-x_f','m')  \
     .terminal('y-y_f','m') \
-    .terminal('theta-theta_f','rad')
-    # .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W') \
+    .terminal('theta-theta_f','rad') \
+    .path('steering','delta - steeringLim','<',0.0,'rad^2')
     # .path('gLoading','(D^2+L^2)/(mass*g0)','<',0.0,'m^2/s^2')
 
 
@@ -57,12 +58,19 @@ continuation_steps.add_step('bisection') \
 
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
-                .terminal('y', 10.0) \
-                .terminal('x', 10.0) \
-                .const('L', 3.02)
+                .terminal('y', 5.0) \
+                .terminal('x', 5.0) \
+                # .initial('theta', pi/2) \
+                # .const('L', 3.02)
 
-continuation_steps.add_step('bisection').num_cases(31,spacing='log') \
-                .const('w1', 0.1)
+continuation_steps.add_step('activate_constraint', name='steering')
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .constraint('steering', 0.0, index=1)
+
+# continuation_steps.add_step('bisection').num_cases(21) \
+#                 .const('w1', 0.25)
 #
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11)  \

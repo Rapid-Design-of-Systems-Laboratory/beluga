@@ -348,7 +348,6 @@ def process_path_constraints(path_constraints,
                        'pi_list': pi_list,
                        'corner': corner_conditions,
                        'tangency': tangency,
-                    #    'bound_var': s_bound,
                        'bound_val': s['bound']})
         mu_vars.append(mu_i)
 
@@ -362,82 +361,6 @@ def make_parameters(initial_lm_params, terminal_lm_params, s_list):
                                             terminal_lm_params)] #, *all_pi_names)]
     parameters = sym.symbols(' '.join(params_list))
     return parameters
-
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, constraint_name=None):
-    controls = sym.Matrix([_._sym for _ in controls])
-    constants = sym.Matrix([_._sym for _ in constants])
-    states = sym.Matrix([_.name for _ in states])
-    costates = sym.Matrix([_.name for _ in costates])
-    parameters = sym.Matrix(parameters)
-
-    unknowns = list(it.chain(controls, mu_vars))
-    # from beluga.utils import keyboard
-    # keyboard()
-    # [[str(option.get(u,0)) for u in unknowns] for option in control_opts]
-
-    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, *parameters, *constants]
-
-    if constraint_name is not None:
-        print('adding constraint agu',constraint_name)
-        ham_args.append(constraint_name)
-        u_args.append(constraint_name)
-    else:
-        ham_args.append('___dummy_arg___')
-        u_args.append('___dummy_arg___')
-    control_opt_mat = sym.Matrix([[option.get(u,sym.S(0))
-                                    for u in unknowns]
-                                    for option in control_opts])
-    control_opt_fn = sym.lambdify(u_args, control_opt_mat)
-
-    print('Control law:', control_opt_mat)
-    ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
-
-    num_unknowns = len(unknowns)
-    num_options = len(control_opts)
-    num_states = len(states)
-
-    constraint_name = str(constraint_name)
-    def compute_control_unc(t, X, p, aux):
-        X = X[:(2*num_states+1)]
-        C = aux['const'].values()
-        s_val = aux['constraint'].get((constraint_name, 1), None)
-        try:
-            u_list = control_opt_fn(*X, *p, *C, s_val)
-        except:
-            print('nofdfodfdfoi')
-            # keyboard()
-        ham_val = np.zeros(num_options)
-        for i in range(num_options):
-            try:
-                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i], s_val)
-            except:
-                print(X, p, C, u_list[i])
-                print('mass')
-                # keyboard()
-                raise
-        # if len(ham_val) == 0:
-        #     keyboard()
-        return u_list[np.argmin(ham_val)]
-
-    # def compute_control(t, X, C):
-    #     u_list = np.zeros((num_options, num_controls), dtype=np.float32)
-    #     ham_val = np.zeros(num_options, dtype=np.float32)
-    #     for i in range(num_options):
-    #         opt = control_fns[i]
-    #         # for j in numba.prange(num_controls):
-    #         for j in range(num_controls):
-    #         # # for j, (_,u_fn) in enumerate(opt):
-    #             u_fn = opt[j]
-    #             u_list[i, j] = u_fn(*X, *C)
-    #         ham_val[i] = ham_fn(*X, *u_list[i], *C)
-    #
-    #     u = u_list[np.argmin(ham_val)]
-    #     return u
-
-    yield compute_control_unc
-    yield ham_fn
-
 
 def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
 
@@ -510,7 +433,7 @@ def make_constrained_arc_fns(workspace):
     parameters = workspace['parameters']
     quantity_vars = workspace['quantity_vars']
     fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
-    control_fns = [workspace['control_fn']]
+    # control_fns = [workspace['control_fn']]
     tf_var = sympify('tf')
     costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ]
     bc_list = [] # Unconstrained arc placeholder
@@ -520,7 +443,7 @@ def make_constrained_arc_fns(workspace):
 
     for arc_type, s in enumerate(workspace['s_list'],1):
         # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
-        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
+        # u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
         # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
         # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         pi_list = [str(_) for _ in s['pi_list']]
@@ -543,10 +466,10 @@ def make_constrained_arc_fns(workspace):
               'name': s['name']}
         bc_list.append(bc)
 
-        control_fns.append(u_fn)
+        # control_fns.append(u_fn)
         costate_eoms.append(costate_eom)
 
-    yield control_fns
+    # yield control_fns
     yield costate_eoms
     yield bc_list
 
@@ -620,6 +543,9 @@ def make_constrained_arc_fns(workspace):
 #     return bc_fn, xic, xfc
 
 
+def sym_to_str(a):
+    return [str(_) for _ in a]
+
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
@@ -644,10 +570,17 @@ def generate_problem_data(workspace):
          [str(tf_var*costate.eom) for costate in workspace['costates']] +
          [0]   # TODO: Hardcoded 'tf'
      ,
-     'control_fns': workspace['control_fns'],
+     'states': workspace['states'],
+     'costates': workspace['costates'],
+     'constants': workspace['constants'],
+     'parameters': workspace['parameters'],
+     'controls': workspace['controls'],
+     'mu_vars': workspace['mu_vars'],
+     'quantity_vars': workspace['quantity_vars'],
+
      'costate_eoms': workspace['costate_eoms'],
      'bc_list': workspace['bc_list'],
-     'ham_fn': workspace['ham_fn'],
+     'ham': workspace['ham'],
 
      's_list': workspace['s_list'],
      'bc_list': workspace['bc_list'],
@@ -749,10 +682,7 @@ BrysonHo = sp.Workflow([
     sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
         outputs='parameters'),
 
-    sp.Task(make_control_and_ham_fn,
-            inputs=('control_law', 'states', 'costates', 'parameters', 'constants', 'controls', 'mu_vars', 'quantity_vars', 'ham'),
-            outputs=['control_fn', 'ham_fn']),
-    sp.Task(make_constrained_arc_fns, inputs='*', outputs=['control_fns', 'costate_eoms', 'bc_list']),
+    sp.Task(make_constrained_arc_fns, inputs='*', outputs=['costate_eoms', 'bc_list']),
     # sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
     # sp.Task(make_bcfn, inputs='*', outputs='bc_fn'),
     sp.Task(generate_problem_data,
