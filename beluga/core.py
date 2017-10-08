@@ -129,10 +129,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
 
     # Save data
-    del out['problem_data']['s_list']
+    # del out['problem_data']['s_list']
+
     # del out['problem_data']['corner_fns']
-    del out['problem_data']['control_fns']
-    del out['problem_data']['ham_fn']
+    # del out['problem_data']['control_fns']
+    # del out['problem_data']['ham_fn']
     with open(output_file, 'wb') as outfile:
         dill.settings['recurse'] = True
         dill.dump(out, outfile) # Dill Beluga object only
@@ -169,7 +170,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 s.compute_scaling(sol_guess)
                 s.scale(sol_guess)
 
-                # Note: sol is the same object as sol_guess    
+                # Note: sol is the same object as sol_guess
                 sol = bvp_algo.solve(sol_guess)
 
 

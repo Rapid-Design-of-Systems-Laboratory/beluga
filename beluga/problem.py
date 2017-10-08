@@ -248,7 +248,7 @@ class SymVar(object):
     def __init__(self, param_dict, sym_key='name', excluded=()):
         self.__dict__ = {k: sympify(v) if k not in excluded else v
                          for k,v in param_dict.items()}
-        self.param_list = param_dict.keys()
+        self.param_list = list(param_dict.keys())
         if sym_key is not None:
             self._sym = self.__dict__[sym_key]
         else:
