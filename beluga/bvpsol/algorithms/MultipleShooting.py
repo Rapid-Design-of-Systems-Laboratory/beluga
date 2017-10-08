@@ -20,13 +20,33 @@ import pystache
 
 import simplepipe as sp
 
-def make_sympy_fn(args, fn_expr):
+def make_njit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
                                                   .replace('(([[', '[') \
-                                                  .replace(']]))', ']')
+                                                  .replace(']]))', ']') \
 
     jit_fn = numba.njit(parallel=True)(eval(fn_str))
     return jit_fn
+
+def make_sympy_fn(args, fn_expr):
+
+    if hasattr(fn_expr, 'shape'):
+        output_shape = fn_expr.shape
+    else:
+        output_shape = None
+    if output_shape is not None:
+        jit_fns = [make_njit_fn(args, expr) for expr in fn_expr]
+        len_output = len(fn_expr)
+        # @numba.njit(parallel=True)
+        @numba.jit
+        def vector_fn(*args):
+            output = np.zeros(output_shape)
+            for i in range(len_output):
+                output.flat[i] = jit_fns[i](*args)
+            return output
+        return vector_fn
+    else:
+        return make_njit_fn(args, fn_expr)
 
 def load_eqn_template(problem_data, template_file,
                         renderer = pystache.Renderer(escape=lambda u: u)):
@@ -101,8 +121,10 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     control_opt_mat = sym.Matrix([[option.get(u,sym.S(0))
                                     for u in unknowns]
                                     for option in control_opts])
-    control_opt_fn = sym.lambdify(u_args, control_opt_mat)
 
+
+    # control_opt_fn = sym.lambdify(u_args, control_opt_mat)
+    control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
     print('Control law:', control_opt_mat)
     ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
 
@@ -117,8 +139,8 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
         s_val = aux['constraint'].get((constraint_name, 1), None)
         try:
             u_list = control_opt_fn(*X, *p, *C, s_val)
-        except:
-            print('nofdfodfdfoi')
+        except Exception as e:
+            print('nofdfodfdfoi', e.what())
             # keyboard()
         ham_val = np.zeros(num_options)
         for i in range(num_options):

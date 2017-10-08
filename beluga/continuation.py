@@ -119,12 +119,10 @@ class ActivateConstraint(object):
         idx_arc_start = s_lim_i - old_arc_idx[0]
         idx_arc_end = s_lim_i+1 - old_arc_idx[0]
 
-        print(sol.x.shape,'foo')
         old_arc_idx = (old_arc_idx[0], old_arc_idx[1]+1)
         old_arc_x = np.array(sol.x[slice(*old_arc_idx)], copy=True)
         old_arc_y = np.array(sol.y[:,slice(*old_arc_idx)], copy=True)
         old_arc_u = np.array(sol.u[:,slice(*old_arc_idx)], copy=True)
-        print(sol.x.shape,'bar')
         original_tf = old_arc_y[-1,0]
 
         t_before = old_arc_x[idx_arc_start]*original_tf
