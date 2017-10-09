@@ -5,7 +5,7 @@ def compute_hamiltonian(t, X, p, aux, u):
     # C = [v for k,v in aux['const'].items()]
     return ham_fn(*X[:-1], *p[:{{num_params}}], *aux['const'].values(), *u, None)
 
-def compute_control(_t, _X, _p, _aux, arc_idx=0):
+def compute_control(_t, _X, _p, _aux, arc_idx=None):
     _arc_seq = _aux.get('arc_seq', (0,))
     _pi_seq = _aux.get('pi_seq',(None,))
     if arc_idx is None:
@@ -20,7 +20,7 @@ def compute_control(_t, _X, _p, _aux, arc_idx=0):
 
 
 
-def deriv_func(_t, _X, _p, _aux, arc_idx=0):
+def deriv_func(_t, _X, _p, _aux, arc_idx=None):
     _arc_seq = _aux.get('arc_seq', (0,))
     _pi_seq = _aux.get('pi_seq',(None,))
     if arc_idx is None:

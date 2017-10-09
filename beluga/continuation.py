@@ -77,7 +77,7 @@ class ActivateConstraint(object):
         if current_arcs is None:
             current_arcs = [(0, len(sol.x)-1)]
 
-        sol.prepare(problem_data)#, 600, True)
+        sol.prepare(problem_data, 200, True)
         # Evaluate expr on sol
         s_vals = sol.evaluate(expr)
 

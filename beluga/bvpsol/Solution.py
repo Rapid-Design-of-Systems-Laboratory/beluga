@@ -37,17 +37,24 @@ class Solution(object):
         """
         self.y_splines = []
         self.u_splines = []
-        for i,row in enumerate(self.y):
-            spline = InterpolatedUnivariateSpline(self.x, row)
-            self.y_splines.append(spline)
+        for i, arc in enumerate(self.aux.get('arc_seq', (0,))):
+            arc_start, arc_end = self.arcs[i]
+            y_spline_arc = []
+            u_spline_arc = []
+            for j,row in enumerate(self.y):
+                spline = InterpolatedUnivariateSpline(self.x[arc_start:arc_end+1], row[arc_start:arc_end+1])
+                y_spline_arc.append(spline)
 
-        if len(self.u.shape) ==1 :
-            spline = InterpolatedUnivariateSpline(self.x, self.u)
-            self.u_splines.append(spline)
-        else:
-            for i,row in enumerate(self.u):
-                spline = InterpolatedUnivariateSpline(self.x, row)
-                self.u_splines.append(spline)
+            if len(self.u.shape) ==1 :
+                spline = InterpolatedUnivariateSpline(self.x[arc_start:arc_end+1], self.u[arc_start:arc_end+1])
+                u_spline_arc.append(spline)
+            else:
+                for j,row in enumerate(self.u):
+                    spline = InterpolatedUnivariateSpline(self.x[arc_start:arc_end+1], row[arc_start:arc_end+1])
+                    u_spline_arc.append(spline)
+
+            self.y_splines.append(y_spline_arc)
+            self.u_splines.append(u_spline_arc)
 
     def interpolate(self, new_x, overwrite=False):
         """
@@ -61,8 +68,8 @@ class Solution(object):
             or self.y_splines is None or self.u_splines is None:
             self.init_interpolate()
 
-        new_y = np.array([spline(new_x) for spline in self.y_splines])
-        new_u = np.array([spline(new_x) for spline in self.u_splines])
+        new_y = np.hstack([np.vstack([spline(new_x) for spline in spline_arc]) for spline_arc in self.y_splines])
+        new_u = np.hstack([np.vstack([spline(new_x) for spline in spline_arc]) for spline_arc in self.u_splines])
         if overwrite:
             self.x = new_x
             self.y = new_y
