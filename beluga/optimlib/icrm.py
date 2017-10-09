@@ -138,11 +138,11 @@ def process_path_constraints(workspace):
 
 
         psi = get_satfn(xi_vars[0], ubound=c_ubound, lbound=c_lbound, slopeAtZero=1)
-        psi_vars = [(sym.Symbol('psi'+str(ind+1)), psi)]
+        psi_vars = [(sympify2('psi'+str(ind+1)+'0('+str(xi_vars[0])+')'), psi)]
 
         # Add to quantity list
-        quantity_vars[sym.Symbol('psi'+str(ind+1))] = psi
-        quantity_list.append({'name':('psi'+str(ind+1)), 'expr':str(psi)})
+        quantity_vars[sym.Symbol('psi'+str(ind+1)+'0')] = psi
+        quantity_list.append({'name':('psi'+str(ind+1)+'0'), 'expr':str(psi)})
 
         # m-th order constraint needs up to m-th derivative of psi to be defined
         psi_i = psi
@@ -162,7 +162,7 @@ def process_path_constraints(workspace):
             quantity_list.append({'name':str(current_psi_var), 'expr':str(psi_i)})
 
         # psi_vars = psi_vars + []
-        psi_var_sub = [(v,k) for k,v in psi_vars]
+        # psi_var_sub = [(v,k) for k,v in psi_vars]
 
         # FIXME: Hardcoded h derivatives for now
         # h = [psi_vars[0][0]]
@@ -174,21 +174,21 @@ def process_path_constraints(workspace):
         #TODO: Hardcoded 't' as independent variable with unit of 's'
         # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
         c_vals = np.ones(order)*0.1
-        h = [psi_vars[0][1]]
+        h = [psi_vars[0][0]]
         xi_init_vals = []
         for i in range(order):
             # Add 'xi' state
             states.append(SymVar({'name':str(xi_vars[i]), 'eom':str(xi_vars[i+1]), 'unit':c.unit/(time_unit^i)}))
             # Constraint all cq at initial point (forms constraints for xi_ij)
             # ocp.constraints().initial(str(cq[i] - h[i]),'('+c.unit+')/s^('+str(i)+')')
-            constraints['initial'].append(SymVar({'expr':str(cq[i] - h[i]), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
+            constraints['initial'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
 
             # Add to initial guess vector
             xi_init_vals.append(c_vals[i])
 
-            dhdxi = [derivative_fn(h[i], xi_v) for xi_v in xi_vars[:-1]]
+            dhdxi = [derivative_fn(h[i], xi_v).subs(psi_vars_deriv) for xi_v in xi_vars[:-1]]
             dhdt  = sum(d1*d2 for d1,d2 in zip(dhdxi,xi_vars[1:])) # xi11dot = xi12 etc.
-            dhdt = dhdt.subs(psi_var_sub)
+            # dhdt = dhdt.subs(psi_var_sub)
             h.append(dhdt)
 
         h = [h_i.subs(psi_var_func) for h_i in h]
@@ -208,7 +208,9 @@ def process_path_constraints(workspace):
         eps_const = sympify('eps_'+str(c.name))
         eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
         eps_unit = sym.Symbol('nd')
-        constants.append(SymVar({'name':eps_const, 'value': 1, 'unit':str(eps_unit)}))
+        if not c.start_eps:
+            c.start_eps = 1
+        constants.append(SymVar({'name':eps_const, 'value': c.start_eps, 'unit':str(eps_unit)}))
         logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
         # Append new control to path cost

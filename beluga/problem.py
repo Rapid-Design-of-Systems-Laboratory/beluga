@@ -202,7 +202,7 @@ class ConstraintList(dict):
     independent = partialmethod(add_constraint, constraint_type='independent',
                 constraint_args=constraint_args)
     path = partialmethod(add_constraint, constraint_type='path',
-                constraint_args=('name', 'expr', 'direction', 'bound', 'unit')
+                constraint_args=('name', 'expr', 'direction', 'bound', 'unit', 'start_eps')
                 )
 
     # def get(self, constraint_type):
