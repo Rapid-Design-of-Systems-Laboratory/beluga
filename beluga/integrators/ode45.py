@@ -26,16 +26,18 @@ def ode45(f,tspan,y0,*args,**kwargs):
     abstol = kwargs.get('abstol', 1e-6)
     reltol = kwargs.get('reltol', 1e-2)
     r = scipy.integrate.ode(f).set_integrator('vode', method='adams', atol=abstol, rtol=reltol)
-    r.set_initial_value(y0, 0).set_f_params(*args)
+    r.set_initial_value(y0, tspan[0]).set_f_params(*args)
     y_out = np.zeros((len(tspan), len(y0)))
-    t1 = tspan[-1]
 
     y_out[0,:] = y0
-    ctr = 1
-    while r.successful() and r.t < t1 and ctr < len(tspan):
-        dt = tspan[ctr] - tspan[ctr-1]
+    # ctr = 1
+    for ctr, t in enumerate(tspan[1:],1):
+        if not r.successful():
+            break
+        # dt = tspan[ctr] - tspan[ctr-1]
+        dt = t - tspan[ctr-1]
         y_out[ctr, :] = r.integrate(r.t+dt)
-        ctr += 1
+        # ctr += 1
     return tspan, y_out
 
 

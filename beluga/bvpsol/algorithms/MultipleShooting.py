@@ -104,11 +104,11 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     states = sym.Matrix([_.name for _ in states])
     costates = sym.Matrix([_.name for _ in costates])
     parameters = sym.Matrix(parameters)
-
+    tf_var = sym.sympify('tf')
     unknowns = list(it.chain(controls, mu_vars))
 
-    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, *parameters, *constants]
+    ham_args = [*states, *costates, tf_var, *parameters, *constants, *unknowns]
+    u_args = [*states, *costates, tf_var, *parameters, *constants]
 
     if constraint_name is not None:
         ham_args.append(constraint_name)
@@ -134,7 +134,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     num_params = len(parameters)
     constraint_name = str(constraint_name)
     def compute_control_fn(t, X, p, aux):
-        X = X[:(2*num_states)]
+        X = X[:(2*num_states+1)]
         C = aux['const'].values()
         p = p[:num_params]
         s_val = aux['constraint'].get((constraint_name, 1), -1)
@@ -263,7 +263,7 @@ class MultipleShooting(BaseAlgorithm):
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
-        self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
+        self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
         self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
         return out_ws['code_module']
 
@@ -333,29 +333,35 @@ class MultipleShooting(BaseAlgorithm):
         return J
 
 
-    def __stmode_fd(self, x, y, parameters, aux, arc_idx, odefn, nOdes = 0, StepSize=1e-7):
+    def _stmode_fd(self, x, y, p, aux, arc_idx, odefn, StepSize=1e-7,show=False):
         "Finite difference version of state transition matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
 
         phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-        Y = np.array(y[0:nOdes])  # Just states
+        Y = np.array(y[0:nOdes], copy=True)  # Just states
         F = np.zeros((nOdes,nOdes))
 
         # Compute Jacobian matrix, F using finite difference
-        fx = odefn(x,Y,parameters,aux, arc_idx)
+        fx = odefn(x,Y,p,aux,arc_idx)
+        if show:
+            print(x, fx, self.bvp.deriv_func(x,Y,p,aux,arc_idx))
+            from beluga.utils import keyboard
+            keyboard()
         if np.any(np.isnan(fx)):
             print('NAAAAAAAAAAAN')
             from beluga.utils import keyboard
             keyboard()
-        for i in range(nOdes):
-            Y[i] = Y[i] + StepSize
-            F[:,i] = (odefn(x, Y, parameters,aux, arc_idx)-fx)/StepSize
-            Y[i] = Y[i] - StepSize
+
+        Yh = y[:nOdes] + np.eye(nOdes)*StepSize
+        for i,y_h in enumerate(Yh):
+            # Y[i] = Y[i] + StepSize
+            F[:,i] = (odefn(x, y_h, p,aux,arc_idx)-fx)/StepSize
+            # Y[i] = Y[i] - StepSize
 
         # Phidot = F*Phi (matrix product)
-        phiDot = np.real(np.dot(F,phi))
-        return np.concatenate( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
+        phiDot = F @ phi
+        return np.hstack( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
 
     def solve(self,solinit):
         """Solve a two-point boundary value problem
@@ -422,10 +428,11 @@ class MultipleShooting(BaseAlgorithm):
                 with timeout(seconds=10):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
-                        y0stm[nOdes:] = stm0
+                        y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, nOdes = y0g.shape[0], abstol=self.tolerance/100, reltol=1e-3)
 
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        # _,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-3)
                         yb[:,arc_idx] = yy[-1,:nOdes]
                         phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
                         phi_list.append(np.copy(phi))
@@ -447,7 +454,7 @@ class MultipleShooting(BaseAlgorithm):
                     raise RuntimeError('Error exceeded max_error')
 
                 # Solution converged if BCs are satisfied to tolerance
-                if max(abs(res)) < self.tolerance:
+                if r1 <= self.tolerance:
                     if self.verbose:
                         logging.info("Converged in "+str(n_iter)+" iterations.")
                     converged = True
@@ -479,6 +486,7 @@ class MultipleShooting(BaseAlgorithm):
                 try:
                     dy0 = alpha*beta*np.linalg.solve(J,-res)
                 except:
+                    keyboard()
                     rank1 = np.linalg.matrix_rank(J)
                     rank2 = np.linalg.matrix_rank(np.c_[J,-res])
                     if rank1 == rank2:
@@ -518,7 +526,7 @@ class MultipleShooting(BaseAlgorithm):
             y0 = np.zeros(ya.shape[0])
             timestep_ctr = 0
             for arc_idx, tspan in enumerate(tspan_list):
-                tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=self.tolerance/100, reltol=1e-3)
+                tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                 y_list.append(yy.T)
                 x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))

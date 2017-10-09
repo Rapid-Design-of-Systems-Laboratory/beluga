@@ -177,7 +177,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 sol = bvp_algo.solve(sol_guess)
 
 
-
                 s.unscale(sol)
                 if sol.converged:
                     # Post-processing phase
@@ -206,13 +205,14 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 else:
                     elapsed_time = toc()
                     logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
-
     except Exception as e:
         import traceback
         traceback.print_exc()
         logging.error('Exception : '+str(e))
         logging.error('Stopping')
 
+    from beluga.utils import keyboard
+    keyboard()
     return solution_set
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ from math import *
 
 def compute_hamiltonian(t, X, p, aux, u):
     # C = [v for k,v in aux['const'].items()]
-    return ham_fn(*X[:-1], *p[:{{num_params}}], *aux['const'].values(), *u, None)
+    return ham_fn(*X, *p[:{{num_params}}], *aux['const'].values(), *u, None)
 
 def compute_control(_t, _X, _p, _aux, arc_idx=None):
     _arc_seq = _aux.get('arc_seq', (0,))
@@ -12,7 +12,7 @@ def compute_control(_t, _X, _p, _aux, arc_idx=None):
         arc_idx = min(floor(_t), len(_arc_seq)-1)
     arc_type = _arc_seq[arc_idx]
     try:
-        return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
+        return control_fns[arc_type](_t,_X[:{{num_states}}],_p[:{{num_params}}],_aux)
     except Exception as e:
         raise
         return np.array([0]*{{num_controls}})
