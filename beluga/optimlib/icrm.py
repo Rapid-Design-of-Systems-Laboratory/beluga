@@ -43,6 +43,24 @@ def add_equality_constraints(ham, constraints):
 
     return ham
 
+def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_cost, derivative_fn):
+    """simplepipe task for creating the hamiltonian and costates
+
+    Workspace variables
+    -------------------
+    states - list of dict
+        List of "sympified" states
+
+    path_cost - Object representing the path cost terminal
+
+    Returns the hamiltonian and the list of costates
+    """
+    ham = path_cost.expr + sum([lam*s.eom
+                             for s, lam in zip(states, costate_names)])
+    ham = add_equality_constraints(ham, constraints)
+    yield ham
+    yield make_costate_rates(ham, states, costate_names, derivative_fn)
+
 def process_path_constraints(workspace):
     states = workspace['states']
     controls = workspace['controls']
@@ -350,12 +368,9 @@ ICRM = sp.Workflow([
     sp.Task(make_costate_names,
             inputs=('states'),
             outputs=('costate_names')),
-    sp.Task(make_hamiltonian_and_costate_rates,
-            inputs=('states', 'costate_names', 'path_cost', 'derivative_fn'),
+    sp.Task(make_ham_lamdot_with_eq_constraint,
+            inputs=('states', 'costate_names', 'constraints', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
-    sp.Task(add_equality_constraints,
-            inputs=('ham', 'constraints'),
-            outputs=('ham')),
     sp.Task(ft.partial(make_boundary_conditions, location='initial'),
             inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
             outputs=('bc_initial')),
