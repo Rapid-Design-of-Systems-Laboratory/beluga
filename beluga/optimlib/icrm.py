@@ -31,6 +31,15 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
         s = 4*slopeAtZero/(ubound - lbound)
         return ubound - ( ubound - lbound )/( 1 + sym.exp(s*var) )
 
+def add_equality_constraints(ham, constraints):
+
+    equality_constraints = constraints.get('equality', [])
+    # Adjoin equality constraints
+    for i in range(len(equality_constraints)):
+        ham += sympify('mu'+str(i+1)) * (sympify(equality_constraints[i].expr))
+
+    return ham
+
 def process_path_constraints(workspace):
     states = workspace['states']
     controls = workspace['controls']
@@ -39,7 +48,6 @@ def process_path_constraints(workspace):
     derivative_fn = workspace['derivative_fn']
     quantity_vars = workspace['quantity_vars']
     quantity_list = workspace['quantity_list']
-    guess = workspace['guess']
 
     path_cost_expr = workspace['path_cost'].expr
     path_cost_unit = workspace['path_cost'].unit
@@ -91,7 +99,7 @@ def process_path_constraints(workspace):
             # TODO: Allow continuation on constraints
             # Define new hidden constant
             c_limit = sympify('_'+str(c.name))
-            ocp.constant(str(c_limit),float(c.bound),c.unit)
+            constants.append(SymVar({'name':str(c_limit),'value':float(c.bound),'unit':c.unit}))
             logging.debug('Added constant '+str(c_limit))
 
         if c.direction == '>':
@@ -103,7 +111,7 @@ def process_path_constraints(workspace):
         else:
             raise ValueError('Invalid direction specified for constraint')
 
-        psi = get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=50)
+        psi = get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=1)
         psi_vars = [(sym.Symbol('psi'+str(ind+1)), psi)]
 
         # Add to quantity list
@@ -134,19 +142,22 @@ def process_path_constraints(workspace):
         # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
         c_vals = np.ones(order)*0.1
         h = [psi_vars[0][1]]
+        xi_init_vals = []
         for i in range(order):
             # Add 'xi' state
             states.append(SymVar({'name':str(xi_vars[i]), 'eom':str(xi_vars[i+1]), 'unit':c.unit/(time_unit^i)}))
             # Constraint all cq at initial point (forms constraints for xi_ij)
             # ocp.constraints().initial(str(cq[i] - h[i]),'('+c.unit+')/s^('+str(i)+')')
             constraints['initial'].append(SymVar({'expr':str(cq[i] - h[i]), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
+
             # Add to initial guess vector
-            guess.start.append(c_vals[i]) # FIXME
+            xi_init_vals.append(c_vals[i])
 
             dhdxi = [derivative_fn(h[i], xi_v) for xi_v in xi_vars[:-1]]
             dhdt  = sum(d1*d2 for d1,d2 in zip(dhdxi,xi_vars[1:])) # xi11dot = xi12 etc.
             dhdt = dhdt.subs(psi_var_sub)
             h.append(dhdt)
+
 
         # Add the smoothing control with the right unit
         ue_unit = c.unit/(time_unit**order)
@@ -184,9 +195,9 @@ def process_path_constraints(workspace):
     yield constants
     yield constraints
     yield s_list
+    yield xi_init_vals
     yield derivative_fn
     yield jacobian_fn
-    yield guess
     # ocp.path_cost(str(path_cost_expr), )
 
     # u_constraints = ocp.constraints().get('control')
@@ -208,7 +219,7 @@ def process_path_constraints(workspace):
     #     problem.constant(str(eps_const), 1, str(eps_unit))
     return ocp
 
-def make_ctrl_dae(states, costates, controls, constraints, dhdu, derivative_fn):
+def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
     equality_constraints = constraints.get('equality', [])
     if len(equality_constraints) > 0:
         mu_vars = [sympify('mu'+str(i+1)) for i in range(len(equality_constraints))]
@@ -231,11 +242,17 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, derivative_fn):
     dae_equations = list(udot)
     dae_bc = g
 
+    guess.start.extend(xi_init_vals)
+    guess.dae_num_states = len(U)
+
     yield mu_vars
     yield mu_lhs
     yield dae_states
     yield dae_equations
     yield dae_bc
+    yield guess
+
+
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
@@ -299,7 +316,7 @@ ICRM = sp.Workflow([
     sp.Task(process_quantities, inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
     sp.Task(process_path_constraints, inputs='*',
-            outputs=('states', 'controls', 'constants', 'constraints', 's_list', 'derivative_fn', 'jacobian_fn', 'guess')),
+            outputs=('states', 'controls', 'constants', 'constraints', 's_list', 'xi_init_vals', 'derivative_fn', 'jacobian_fn')),
 
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),
@@ -320,6 +337,9 @@ ICRM = sp.Workflow([
     sp.Task(make_hamiltonian_and_costate_rates,
             inputs=('states', 'costate_names', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
+    sp.Task(add_equality_constraints,
+            inputs=('ham', 'constraints'),
+            outputs=('ham')),
     sp.Task(ft.partial(make_boundary_conditions, location='initial'),
             inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
             outputs=('bc_initial')),
@@ -331,8 +351,8 @@ ICRM = sp.Workflow([
             inputs=('ham', 'controls', 'derivative_fn'),
             outputs=('dhdu')),
     sp.Task(make_ctrl_dae,
-            inputs=('states', 'costates', 'controls', 'constraints', 'dhdu', 'derivative_fn'),
-            outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc')),
+            inputs=('states', 'costates', 'controls', 'constraints', 'dhdu', 'xi_init_vals', 'guess', 'derivative_fn'),
+            outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc', 'guess')),
     sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
         outputs='parameters'),
     # sp.Task(make_dhdu,

@@ -23,8 +23,8 @@ def bc_func_left(_ya, _p, _aux):
     _x0 = _aux['initial']
 
     _H = compute_hamiltonian(0,_ya,_p,_aux,[{{#control_list}}{{.}},{{/control_list}}])
-    res_left = np.array([{{#left_bc_list}}{{.}},
-                    {{/left_bc_list}} ])
+    res_left = np.array([{{#bc_initial}}{{.}},
+                    {{/bc_initial}} ])
     return res_left
 
 def bc_func_right(_yb, _p, _aux):
@@ -47,12 +47,12 @@ def bc_func_right(_yb, _p, _aux):
     _xf = _aux['terminal']
 
     _H = compute_hamiltonian(1,_yb,_p,_aux,[{{#control_list}}{{.}},{{/control_list}}])
-    res_right = np.array([{{#right_bc_list}}{{.}},
-                {{/right_bc_list}}])
+    res_right = np.array([{{#bc_terminal}}{{.}},
+                {{/bc_terminal}}])
     return res_right
 
 def bc_func(_ya, _yb, _p, _aux):
-    res_left = bc_func_left(_ya, _p, _aux)
-    res_right = bc_func_right(_yb, _p, _aux)
+    res_left = bc_func_left(_ya[:,0], _p, _aux)
+    res_right = bc_func_right(_yb[:,-1], _p, _aux)
 
-    return np.r_[res_left,res_right] # Concatenate
+    return np.hstack((res_left, res_right))

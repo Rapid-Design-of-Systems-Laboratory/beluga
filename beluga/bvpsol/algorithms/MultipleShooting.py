@@ -265,7 +265,7 @@ class MultipleShooting(BaseAlgorithm):
 
         self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
         self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
-        return self.bvp
+        return out_ws['code_module']
 
     def bc_jac_params():
         P = np.zeros((nBCs, p.size))
@@ -345,7 +345,7 @@ class MultipleShooting(BaseAlgorithm):
         # Compute Jacobian matrix, F using finite difference
         fx = odefn(x,Y,parameters,aux, arc_idx)
         if np.any(np.isnan(fx)):
-            print('foo')
+            print('NAAAAAAAAAAAN')
             from beluga.utils import keyboard
             keyboard()
         for i in range(nOdes):
@@ -419,7 +419,7 @@ class MultipleShooting(BaseAlgorithm):
         try:
             while True:
                 phi_list = []
-                with timeout(seconds=4):
+                with timeout(seconds=10):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0
