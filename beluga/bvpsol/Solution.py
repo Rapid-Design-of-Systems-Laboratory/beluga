@@ -133,7 +133,7 @@ class Solution(object):
         last_t = 0
         for arc_start, arc_end in arcs:
             start_x = x[arc_start]
-            t_list.append((x[arc_start:arc_end+1] - start_x)*(last_t + y[tf_ind,arc_start]))
+            t_list.append(last_t+(x[arc_start:arc_end+1] - start_x)*y[tf_ind,arc_start])
             last_t += y[tf_ind,arc_start]
 
         variables += [('t', np.hstack(t_list))]
