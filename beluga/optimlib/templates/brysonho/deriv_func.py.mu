@@ -5,7 +5,7 @@ def compute_hamiltonian(t, X, p, aux, u):
     # C = [v for k,v in aux['const'].items()]
     return ham_fn(*X[:-1], *p[:{{num_params}}], *aux['const'].values(), *u, None)
 
-def compute_control(_t, _X, _p, _aux, arc_idx=None):
+def compute_control(_t, _X, _p, _aux, arc_idx=0):
     _arc_seq = _aux.get('arc_seq', (0,))
     _pi_seq = _aux.get('pi_seq',(None,))
     if arc_idx is None:
@@ -13,13 +13,14 @@ def compute_control(_t, _X, _p, _aux, arc_idx=None):
     arc_type = _arc_seq[arc_idx]
     try:
         return control_fns[arc_type](_t,_X[:{{num_states}}-1],_p[:{{num_params}}],_aux)
-    except:
+    except Exception as e:
+        raise
         return np.array([0]*{{num_controls}})
-        #print('oh nooes')
-        #from beluga.utils import keyboard
-        #keyboard()
 
-def deriv_func(_t, _X, _p, _aux, arc_idx=None):
+
+
+
+def deriv_func(_t, _X, _p, _aux, arc_idx=0):
     _arc_seq = _aux.get('arc_seq', (0,))
     _pi_seq = _aux.get('pi_seq',(None,))
     if arc_idx is None:

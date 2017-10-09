@@ -39,15 +39,11 @@ def make_sympy_fn(args, fn_expr):
         jit_fns = [make_njit_fn(args, expr) for expr in fn_expr]
         len_output = len(fn_expr)
         # @numba.njit(parallel=True)
-        # @numba.jit
+        @numba.jit(parallel=True)
         def vector_fn(*args):
             output = np.zeros(output_shape)
             for i in numba.prange(len_output):
-                try:
-                    output.flat[i] = jit_fns[i](*args)
-                except:
-                    print('Got args',args)
-                    raise
+                output.flat[i] = jit_fns[i](*args)
             return output
         return vector_fn
     else:
@@ -126,10 +122,10 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
 
 
     # control_opt_fn = sym.lambdify(u_args, control_opt_mat)
-    print('Making control fn with args',u_args)
+    # print('Making control fn with args',u_args)
     control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
 
-    print('Making ham fn with args', ham_args)
+    # print('Making ham fn with args', ham_args)
     ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
 
     num_unknowns = len(unknowns)
@@ -141,11 +137,14 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
         X = X[:(2*num_states)]
         C = aux['const'].values()
         p = p[:num_params]
-        s_val = aux['constraint'].get((constraint_name, 1), None)
+        s_val = aux['constraint'].get((constraint_name, 1), -1)
 
         try:
             u_list = control_opt_fn(*X, *p, *C, s_val)
         except Exception as e:
+            # print('oh nooes')
+            # from beluga.utils import keyboard
+            # keyboard()
             raise
 
             # keyboard()
