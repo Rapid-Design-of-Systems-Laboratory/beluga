@@ -6,7 +6,7 @@ Module: optimlib
 
 from .brysonho import *
 import sympy as sym
-from beluga.utils import keyboard
+from beluga.utils import sympify2, keyboard
 from beluga.problem import SymVar
 import logging
 
@@ -21,14 +21,17 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
     if ubound is None:
         # Return lower bound sat fn
         #ubound = -lbound
-        return lbound + sym.exp(var)
+        satfcn = lbound + sym.exp(var)
+        print('Using one-sided saturation function', satfcn)
+        return satfcn
     elif lbound is None:
         # Return upper bound sat fn
-        #lbound = -ubound
-        return ubound - sym.exp(-var)
+        satfcn = ubound - sym.exp(-var)
+        print('Using one-sided saturation function', satfcn)
+        return satfcn
     else:
-        print(ubound)
         s = 4*slopeAtZero/(ubound - lbound)
+        print('Using two sided saturation function')
         return ubound - ( ubound - lbound )/( 1 + sym.exp(s*var) )
 
 def add_equality_constraints(ham, constraints):
@@ -36,7 +39,7 @@ def add_equality_constraints(ham, constraints):
     equality_constraints = constraints.get('equality', [])
     # Adjoin equality constraints
     for i in range(len(equality_constraints)):
-        ham += sympify('mu'+str(i+1)) * (sympify(equality_constraints[i].expr))
+        ham += sympify('mu'+str(i+1)) * (sympify2(equality_constraints[i].expr))
 
     return ham
 
@@ -102,16 +105,21 @@ def process_path_constraints(workspace):
             constants.append(SymVar({'name':str(c_limit),'value':float(c.bound),'unit':c.unit}))
             logging.debug('Added constant '+str(c_limit))
 
+        c_lbound = c_ubound = None
         if c.direction == '>':
-            c.lbound = c_limit
-            c.ubound = -c_limit
+            c_lbound = c_limit
+            # c.ubound = -c_limit
         elif c.direction == '<':
-            c.ubound = c_limit
-            c.lbound = -c_limit
+            c_ubound = c_limit
+            # c.lbound = -c_limit
+        elif c.direction == '<>':
+            c_ubound = c_limit
+            c_lbound = -c_limit
         else:
             raise ValueError('Invalid direction specified for constraint')
 
-        psi = get_satfn(xi_vars[0], ubound=c.ubound, lbound=c.lbound, slopeAtZero=1)
+
+        psi = get_satfn(xi_vars[0], ubound=c_ubound, lbound=c_lbound, slopeAtZero=1)
         psi_vars = [(sym.Symbol('psi'+str(ind+1)), psi)]
 
         # Add to quantity list
@@ -120,13 +128,20 @@ def process_path_constraints(workspace):
 
         # m-th order constraint needs up to m-th derivative of psi to be defined
         psi_i = psi
-
+        psi_vars_deriv = []
+        psi_var_func = [(psi_vars[0][0], sym.Symbol('psi'+str(ind+1)+'0'))]
         for i in range(order):
+
             psi_i = derivative_fn(psi_i, xi_vars[0])
             # psi_vars.append((Symbol('psi'+str(ind+1)+str(i+1)+'('+str(xi_vars[0])+')'), psi_i))
-            psi_vars.append((sym.Symbol('psi'+str(ind+1)+str(i+1)), psi_i))
-            quantity_vars['psi'+str(ind+1)+str(i+1)] =  psi_i
-            quantity_list.append({'name':('psi'+str(ind+1)+str(i+1)), 'expr':str(psi_i)})
+            current_psi_var = sym.Symbol('psi'+str(ind+1)+str(i+1))
+            current_psi_var_func = sympify2(str(current_psi_var)+'('+str(xi_vars[0])+')')
+            psi_vars.append((current_psi_var, psi_i))
+            psi_var_func.append((current_psi_var_func, current_psi_var))
+            psi_vars_deriv.append((sympify2('Derivative(psi'+str(ind+1)+str(i)+'('+str(xi_vars[0])+'), '+str(xi_vars[0])+')'),
+                                   current_psi_var_func))
+            quantity_vars[current_psi_var] =  psi_i
+            quantity_list.append({'name':str(current_psi_var), 'expr':str(psi_i)})
 
         # psi_vars = psi_vars + []
         psi_var_sub = [(v,k) for k,v in psi_vars]
@@ -158,7 +173,7 @@ def process_path_constraints(workspace):
             dhdt = dhdt.subs(psi_var_sub)
             h.append(dhdt)
 
-
+        h = [h_i.subs(psi_var_func) for h_i in h]
         # Add the smoothing control with the right unit
         ue_unit = c.unit/(time_unit**order)
         controls.append(SymVar({'name':str(xi_vars[-1]), 'unit':str(ue_unit)}))
@@ -174,8 +189,8 @@ def process_path_constraints(workspace):
         # Add smoothing factor
         eps_const = sympify('eps_'+str(c.name))
         eps_unit = (path_cost_unit/ue_unit**2)/time_unit #Unit of integrand
-        # ocp.constant(str(eps_const), 1e-2, str(eps_unit))
-        constants.append(SymVar({'name':eps_const, 'value': 1e-2, 'unit':str(eps_unit)}))
+        eps_unit = sym.Symbol('nd')
+        constants.append(SymVar({'name':eps_const, 'value': 1, 'unit':str(eps_unit)}))
         logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
         # Append new control to path cost
@@ -184,7 +199,7 @@ def process_path_constraints(workspace):
     constraints['equality'] = eq
 
     logging.debug('Updated path cost is: '+str(path_cost_expr))
-
+    path_cost = SymVar({'expr': path_cost_expr, 'unit':path_cost_unit}, sym_key='expr')
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
     jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
 
@@ -194,6 +209,7 @@ def process_path_constraints(workspace):
     yield controls
     yield constants
     yield constraints
+    yield path_cost
     yield s_list
     yield xi_init_vals
     yield derivative_fn
@@ -316,7 +332,7 @@ ICRM = sp.Workflow([
     sp.Task(process_quantities, inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
     sp.Task(process_path_constraints, inputs='*',
-            outputs=('states', 'controls', 'constants', 'constraints', 's_list', 'xi_init_vals', 'derivative_fn', 'jacobian_fn')),
+            outputs=('states', 'controls', 'constants', 'constraints', 'path_cost', 's_list', 'xi_init_vals', 'derivative_fn', 'jacobian_fn')),
 
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),

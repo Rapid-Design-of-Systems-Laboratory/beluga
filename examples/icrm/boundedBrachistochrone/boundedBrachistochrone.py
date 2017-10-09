@@ -27,18 +27,18 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + 1.5*x','>',-0.5,'m')
+    .path('constraint1','y + x','>',-1.0,'m')
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
-ocp.scale(m='y', s='y/v', kg=1, rad=1)
+ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 # ocp.scale(m=1, s=1, kg=1, rad=1)
 
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
                     tolerance=1e-4,
-                    max_iterations=50,
+                    max_iterations=100,
                     verbose = True,
                     max_error=50
 )
@@ -46,24 +46,18 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1,
+                costate_guess = 0.1,
 )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(41) \
-                .terminal('x', 4) \
-                .terminal('y',-4)
+                .num_cases(6) \
+                .terminal('x', 10) \
+                .terminal('y',-10)
 
 continuation_steps.add_step('bisection').num_cases(41,spacing='log') \
-                 .const('eps_constraint1', 1e-6) #\
-
-# continuation_steps.add_step('activate_constraint', name='constraint1')
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .constraint('constraint1', 0.0, index=1)
+                 .const('eps_constraint1', 1e-4)
 
 
 beluga.solve(ocp,
@@ -132,8 +126,6 @@ beluga.solve(ocp,
 #
 #     # Can be array or function handle
 #     # TODO: implement an "initial guess" class subclassing Solution
-#     # problem.guess = bvpsol.bvpinit(np.linspace(0,1,2), [0,0,1,-0.1,-0.1,-0.1,0.1])
-#     # problem.guess.parameters = np.array([0.1,0.1,0.1,0.1,0.1])
 #     problem.guess.setup('auto',
 #                     start=[0,0,1],          # Starting values for states in order
 #                     direction='forward',
