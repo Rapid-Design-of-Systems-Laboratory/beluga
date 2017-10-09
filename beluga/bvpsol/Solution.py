@@ -30,6 +30,9 @@ class Solution(object):
         self.converged = False
         self.arcs = arcs
 
+        self.y_splines = None
+        self.u_splines = None
+
     # TODO: Write test for interpolation system
     def init_interpolate(self):
         """
@@ -64,8 +67,7 @@ class Solution(object):
         overwrite: Should the current solution be overwritten?
         """
         # Account for old data files with no sol_splines
-        if not hasattr(self,'y_splines') or not hasattr(self,'u_splines') \
-            or self.y_splines is None or self.u_splines is None:
+        if self.y_splines is None or self.u_splines is None:
             self.init_interpolate()
 
         new_y = np.hstack([np.vstack([spline(new_x) for spline in spline_arc]) for spline_arc in self.y_splines])

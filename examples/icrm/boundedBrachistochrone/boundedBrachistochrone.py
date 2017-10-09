@@ -30,14 +30,14 @@ ocp.constraints() \
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
-ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
-# ocp.scale(m=1, s=1, kg=1, rad=1)
+# ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
+ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
-                    tolerance=1e-4,
-                    max_iterations=50,
+                    tolerance=1e-5,
+                    max_iterations=20,
                     verbose = True,
                     max_error=50
 )
@@ -55,9 +55,11 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-continuation_steps.add_step('bisection').num_cases(201,spacing='log') \
-                 .const('eps_constraint1', 1e-5)
-
+# continuation_steps.add_step('bisection').num_cases(201,spacing='log') \
+#                  .const('eps_constraint1', 1e-4)
+#
+continuation_steps.add_step('bisection').num_cases(21,spacing='log') \
+                 .const('eps_constraint1', 1e-4)
 
 beluga.solve(ocp,
              method='icrm',

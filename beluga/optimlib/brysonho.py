@@ -247,7 +247,7 @@ def process_constraint(s,
 
     num_states = len(states)
     stateAndLam = [*states, *costates]
-    stateAndLamDot = [s.eom for s in it.chain(states, costates)]
+    stateAndLamDot = [s.eom*sympify('tf') for s in it.chain(states, costates)]
     costate_names = make_costate_names(states)
 
     ham_mat = sympy.Matrix([ham])
@@ -349,17 +349,18 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     ham_aug = s['ham']
     corner_conditions = s['corner']
     tangency = s['tangency']
+    tf_var = sympify('tf')
 
-    y1m = sympy.symbols(' '.join('_'+str(_.name)+'_1m' for _ in it.chain(states, costates)))
+    y1m = sympy.symbols(' '.join('_'+str(_.name)+'_1m' for _ in it.chain(states, costates, [tf_var])))
     y1m_x = sympy.Matrix([y1m[:num_states]])
     y1m_l = sympy.Matrix([y1m[costate_slice]])
 
-    y1p = sympy.symbols(' '.join('_'+str(_.name)+'_1p' for _ in it.chain(states, costates)))
+    y1p = sympy.symbols(' '.join('_'+str(_.name)+'_1p' for _ in it.chain(states, costates, [tf_var])))
     y1p_x = sympy.Matrix([y1p[:num_states]])
     y1p_l = sympy.Matrix([y1p[costate_slice]])
 
-    y2m = sympy.symbols(' '.join('_'+str(_.name)+'_2m' for _ in it.chain(states, costates)))
-    y2p = sympy.symbols(' '.join('_'+str(_.name)+'_2p' for _ in it.chain(states, costates)))
+    y2m = sympy.symbols(' '.join('_'+str(_.name)+'_2m' for _ in it.chain(states, costates, [tf_var])))
+    y2p = sympy.symbols(' '.join('_'+str(_.name)+'_2p' for _ in it.chain(states, costates, [tf_var])))
     y2m = sympy.Matrix([y2m])
     y2p = sympy.Matrix([y2p])
 
@@ -372,10 +373,10 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     def make_subs(in_vars, out_vars):
         return {k: v for k,v in zip(in_vars, out_vars)}
 
-    subs_1m = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y1m, u_m))
-    subs_1p = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y1p, u_p))
-    subs_2m = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y2m, u_m))
-    subs_2p = make_subs(it.chain(states, costates, controls, mu_vars), it.chain(y2p, u_p))
+    subs_1m = make_subs(it.chain(states, costates, [tf_var], controls, mu_vars), it.chain(y1m, u_m))
+    subs_1p = make_subs(it.chain(states, costates, [tf_var], controls, mu_vars), it.chain(y1p, u_p))
+    subs_2m = make_subs(it.chain(states, costates, [tf_var], controls, mu_vars), it.chain(y2m, u_m))
+    subs_2p = make_subs(it.chain(states, costates, [tf_var], controls, mu_vars), it.chain(y2p, u_p))
 
     ham1m = ham.subs(quantity_vars).subs(subs_1m)
     ham1p = ham_aug.subs(quantity_vars).subs(subs_1p)
@@ -390,7 +391,7 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
         ham1m - ham1p
     ]
     exit_bc = [
-        *(y2m - y2p), # Continuity in states and costates at exit
+        *(y2m - y2p)[:-1], # Continuity in states and costates at exit (excluding tf)
         ham2m - ham2p
     ]
     # bc_arc = [*tangency_1m,  # Tangency conditions, N(x,t) = 0
