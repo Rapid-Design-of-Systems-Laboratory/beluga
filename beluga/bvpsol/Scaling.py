@@ -102,7 +102,8 @@ class Scaling(dict):
                             for idx,state in enumerate(self.problem_data['state_list'])]
 
             var_dict = dict(variables)
-
+            # from beluga.utils import keyboard
+            # keyboard()
             # Evaluate expression to get scaling factor
             return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
 

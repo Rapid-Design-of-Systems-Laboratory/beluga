@@ -31,8 +31,8 @@ ocp.constraints() \
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
-# ocp.scale(m='y', s='y/v', kg=1, rad=1)
-ocp.scale(m=1, s=1, kg=1, rad=1)
+ocp.scale(m='y', s='y/v', kg=1, rad=1)
+# ocp.scale(m=1, s=1, kg=1, rad=1)
 
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
