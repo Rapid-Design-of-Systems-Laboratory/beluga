@@ -294,6 +294,7 @@ class GuessGenerator(object):
                                'static': self.static
                                }
         self.setup(**kwargs)
+        self.dae_num_states = 0
 
     def setup(self, mode='auto', **kwargs):
         """Sets up the initial guess generation process"""
@@ -407,19 +408,20 @@ class GuessGenerator(object):
             raise ValueError('param_guess too big. Maximum length allowed is ' +
                              len(solinit.aux['parameters']))
 
-        # dae_num_states = bvp.dae_num_states
-        # dae_guess = np.ones(dae_num_states) * 0.1
-        # dhdu_fn = bvp.dae_func_gen(0, x0, param_guess, solinit.aux)
-        #
-        # dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
-        # # dae_x0 = dae_guess
-        #
-        # x0 = np.append(x0, dae_x0)  # Add dae states
+        if self.dae_num_states > 0:
+            dae_guess = np.ones(self.dae_num_states) * 0.1
+            dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
+
+            dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
+            # dae_x0 = dae_guess
+
+            x0 = np.append(x0, dae_x0)  # Add dae states
 
         logging.debug('Generating initial guess by propagating: ')
         # logging.debug(str(x0))
-        [t, x] = ode45(bvp_fn.deriv_func, tspan, x0, param_guess, solinit.aux)
 
+        [t, x] = ode45(bvp_fn.deriv_func, tspan, x0, param_guess, solinit.aux)
+        
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         solinit.x = t
         solinit.y = x.T

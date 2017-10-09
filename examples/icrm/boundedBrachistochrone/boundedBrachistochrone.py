@@ -27,7 +27,7 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + x','>','xlim','m')
+    .path('constraint1','y + 1.5*x','>',-0.5,'m')
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
@@ -46,15 +46,15 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1
+                costate_guess = -0.1,
 )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .terminal('x', 10) \
-                .terminal('y',-10)
+                .num_cases(41) \
+                .terminal('x', 4) \
+                .terminal('y',-4)
 
 continuation_steps.add_step('bisection').num_cases(41,spacing='log') \
                  .const('eps_constraint1', 1e-6) #\
