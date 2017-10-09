@@ -165,7 +165,7 @@ class ActivateConstraint(object):
         new_pi_seq = (None, pi_idx, None)
         pi_seq = (*sol.aux['pi_seq'][:arc_num], *new_pi_seq, *sol.aux['pi_seq'][arc_num+1:])
         sol.aux['pi_seq'] = pi_seq
-        
+
         # keyboard()
         self.sol = sol
 
