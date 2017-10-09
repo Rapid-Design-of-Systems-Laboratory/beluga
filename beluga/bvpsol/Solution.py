@@ -40,8 +40,7 @@ class Solution(object):
         """
         self.y_splines = []
         self.u_splines = []
-        for i, arc in enumerate(self.aux.get('arc_seq', (0,))):
-            arc_start, arc_end = self.arcs[i]
+        for arc_start, arc_end in self.arcs:
             y_spline_arc = []
             u_spline_arc = []
             for j,row in enumerate(self.y):
@@ -59,7 +58,7 @@ class Solution(object):
             self.y_splines.append(y_spline_arc)
             self.u_splines.append(u_spline_arc)
 
-    def interpolate(self, new_x, overwrite=False):
+    def interpolate(self, new_x, new_arcs, overwrite=False):
         """
         Interpolates solution data over a new mesh of 'x'
 
@@ -70,13 +69,16 @@ class Solution(object):
         if self.y_splines is None or self.u_splines is None:
             self.init_interpolate()
 
-        new_y = np.hstack([np.vstack([spline(new_x) for spline in spline_arc]) for spline_arc in self.y_splines])
-        new_u = np.hstack([np.vstack([spline(new_x) for spline in spline_arc]) for spline_arc in self.u_splines])
+        new_y = np.hstack([np.vstack([spline(new_x[arc_start:arc_end+1]) for spline in spline_arc])
+                           for (arc_start, arc_end), spline_arc in zip(new_arcs, self.y_splines)])
+        new_u = np.hstack([np.vstack([spline(new_x[arc_start:arc_end+1]) for spline in spline_arc])
+                           for (arc_start, arc_end), spline_arc in zip(new_arcs, self.u_splines)])
+
         if overwrite:
             self.x = new_x
             self.y = new_y
             self.u = new_u
-
+            self.arcs = new_arcs
         return (new_y, new_u)
 
     def prepare(self, problem_data, mesh_size = None, overwrite=False):
@@ -91,13 +93,21 @@ class Solution(object):
         # keyboard()
         if mesh_size is not None and mesh_size > len(self.x):
             # Update solution to use new mesh if needed
-            new_x = np.linspace(self.x[0],self.x[-1],mesh_size)
-            (new_y, new_u) = self.interpolate(new_x, overwrite=overwrite)
+            new_x_list = []
+            new_arcs = []
+            arc_ctr = 0
+            for arc_start, arc_end in self.arcs:
+                new_x_list.append(np.linspace(self.x[arc_start], self.x[arc_end], mesh_size))
+                new_arcs.append((arc_ctr, arc_ctr + mesh_size - 1))
+                arc_ctr += mesh_size
+
+            new_x = np.hstack(new_x_list)
+            (new_y, new_u) = self.interpolate(new_x, new_arcs, overwrite=overwrite)
         else:
-            new_x, new_y, new_u = self.x, self.y, self.u
-        x,y,u = self.x, self.y, self.u
+            new_x, new_y, new_u, new_arcs = self.x, self.y, self.u, self.arcs
+        x,y,u,arcs = self.x, self.y, self.u, self.arcs
         if not overwrite:
-            x,y,u = new_x, new_y, new_u
+            x,y,u,arcs = new_x, new_y, new_u, new_arcs
 
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
@@ -118,8 +128,15 @@ class Solution(object):
                        for idx,control in enumerate(problem_data['control_list'])]
 
         # TODO: Name 'tf' is hardcoded
+        t_list = []
         tf_ind = problem_data['state_list'].index('tf')
-        variables += [('t',x*y[tf_ind,1])]
+        last_t = 0
+        for arc_start, arc_end in arcs:
+            start_x = x[arc_start]
+            t_list.append((x[arc_start:arc_end+1] - start_x)*(last_t + y[tf_ind,arc_start]))
+            last_t += y[tf_ind,arc_start]
+
+        variables += [('t', np.hstack(t_list))]
         self.var_dict = dict(variables)
 
 
