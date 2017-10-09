@@ -333,7 +333,7 @@ class MultipleShooting(BaseAlgorithm):
         return J
 
 
-    def __stmode_fd(self, x, y, parameters, aux, arc_idx, odefn, nOdes = 0, StepSize=1e-6):
+    def __stmode_fd(self, x, y, parameters, aux, arc_idx, odefn, nOdes = 0, StepSize=1e-7):
         "Finite difference version of state transition matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
