@@ -20,7 +20,7 @@ def compute_hamiltonian(_t,_X,_p,_aux,_u):
     return {{ham_expr}}
 
 def compute_control(_t,_X,_p,_aux):
-  pass
+  return _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
 # Used to solve initial guess
 def get_dhdu_func(_t,_X,_p,_aux):
