@@ -66,6 +66,7 @@ class MatPlotLib(BaseRenderer):
             ylabel(p._ylabel,figure=fh)
         if p._title is not None:
             title(p._title,figure=fh)
+        grid(True)
 
     def render_subplot(self,f,index,plot):
         """
