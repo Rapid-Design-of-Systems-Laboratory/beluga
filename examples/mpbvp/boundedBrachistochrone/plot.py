@@ -11,4 +11,9 @@ plots.add_plot().line('x','y',label='Solution')               \
 plots.add_plot().line('t','theta*180/3.14')                    \
                 .xlabel('t (s)').ylabel('theta (degrees)')      \
                 .title('Control history')
+
+plots.add_plot().line('t','lamX')                    \
+                .xlabel('t (s)').ylabel('lamX')      \
+                .title('lamX')
+
 plots.render()

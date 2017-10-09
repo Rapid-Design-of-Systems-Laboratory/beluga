@@ -33,11 +33,11 @@ def ode45(f,tspan,y0,*args,**kwargs):
     tt = np.linspace(tspan[0],tspan[-1],200)
     y_out[0,:] = y0
     ctr = 1
-    while r.successful() and r.t < t1:
+    while r.successful() and r.t < t1 and ctr < len(tt):
         dt = tspan[ctr] - tspan[ctr-1]
         y_out[ctr, :] = r.integrate(r.t+dt)
         ctr += 1
-    return tspan, y_out
+    return tt, y_out
 
 
 # Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py

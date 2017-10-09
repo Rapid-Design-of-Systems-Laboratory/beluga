@@ -15,7 +15,6 @@ ocp.control('theta','rad')
 
 # Define constants
 ocp.constant('g',9.81,'m/s^2')
-ocp.constant('xlim',1.0,'m')
 
 # Define costs
 ocp.path_cost('1','s')
@@ -38,7 +37,7 @@ ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
                     tolerance=1e-4,
-                    max_iterations=100,
+                    max_iterations=50,
                     verbose = True,
                     max_error=50
 )
@@ -56,8 +55,8 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-continuation_steps.add_step('bisection').num_cases(41,spacing='log') \
-                 .const('eps_constraint1', 1e-4)
+continuation_steps.add_step('bisection').num_cases(201,spacing='log') \
+                 .const('eps_constraint1', 1e-5)
 
 
 beluga.solve(ocp,
