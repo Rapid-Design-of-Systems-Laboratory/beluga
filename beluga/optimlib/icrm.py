@@ -39,6 +39,7 @@ def process_path_constraints(workspace):
     derivative_fn = workspace['derivative_fn']
     quantity_vars = workspace['quantity_vars']
     quantity_list = workspace['quantity_list']
+    guess = workspace['guess']
 
     path_cost_expr = workspace['path_cost'].expr
     path_cost_unit = workspace['path_cost'].unit
@@ -140,7 +141,7 @@ def process_path_constraints(workspace):
             # ocp.constraints().initial(str(cq[i] - h[i]),'('+c.unit+')/s^('+str(i)+')')
             constraints['initial'].append(SymVar({'expr':str(cq[i] - h[i]), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
             # Add to initial guess vector
-            # guess.start.append(c_vals[i]) # FIXME
+            guess.start.append(c_vals[i]) # FIXME
 
             dhdxi = [derivative_fn(h[i], xi_v) for xi_v in xi_vars[:-1]]
             dhdt  = sum(d1*d2 for d1,d2 in zip(dhdxi,xi_vars[1:])) # xi11dot = xi12 etc.
@@ -185,6 +186,7 @@ def process_path_constraints(workspace):
     yield s_list
     yield derivative_fn
     yield jacobian_fn
+    yield guess
     # ocp.path_cost(str(path_cost_expr), )
 
     # u_constraints = ocp.constraints().get('control')
@@ -240,6 +242,7 @@ def generate_problem_data(workspace):
     tf_var = sympify('tf') #TODO: Change to independent var?
 
     problem_data = {
+    'method':'icrm',
     'problem_name': workspace['problem_name'],
     'aux_list': [
             {
@@ -296,7 +299,7 @@ ICRM = sp.Workflow([
     sp.Task(process_quantities, inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
     sp.Task(process_path_constraints, inputs='*',
-            outputs=('states', 'controls', 'constants', 'constraints', 's_list', 'derivative_fn', 'jacobian_fn')),
+            outputs=('states', 'controls', 'constants', 'constraints', 's_list', 'derivative_fn', 'jacobian_fn', 'guess')),
 
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),

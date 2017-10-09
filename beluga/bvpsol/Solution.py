@@ -7,7 +7,7 @@ class Solution(object):
     y = None
     p = None
     nOdes = 0
-    def __init__(self, x=None, y=None, parameters=None, aux=None, arc_seq=(0,), pi_seq=(None,), state_list=None, arcs=None):
+    def __init__(self, x=None, y=None, parameters=None, aux=None, state_list=None, arcs=None):
         "x,y and parameters should be vectors"
         if x is not None and y is not None:
             self.x = np.array(x)
@@ -29,8 +29,6 @@ class Solution(object):
         self.var_dict = None
         self.converged = False
         self.arcs = arcs
-        self.arc_seq = arc_seq
-        self.pi_seq = pi_seq
 
     # TODO: Write test for interpolation system
     def init_interpolate(self):

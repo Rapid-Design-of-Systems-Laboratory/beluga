@@ -73,7 +73,7 @@ class ActivateConstraint(object):
         num_params = problem_data['num_params']
 
         current_arcs = sol.arcs
-        current_arcseq = sol.arc_seq
+        current_arcseq = sol.aux['arc_seq']
         if current_arcs is None:
             current_arcs = [(0, len(sol.x)-1)]
 
@@ -153,11 +153,8 @@ class ActivateConstraint(object):
                     (old_arc_idx[0]+idx_arc_end+2, old_arc_idx[0]+len(new_arc_x)-1)]
 
         sol.arcs = (*sol.arcs[:arc_num], *new_arcs, *sol.arcs[arc_num+1:])
-        sol.arc_seq = (*sol.arc_seq[:arc_num+1], arc_type, *sol.arc_seq[arc_num:])
-
-        # left_idx, right_idx = map(np.array, zip(*sol.arcs))
-        # ya = sol.y[:,left_idx]
-        # yb = sol.y[:,right_idx]
+        arc_seq = (*sol.aux['arc_seq'][:arc_num+1], arc_type, *sol.aux['arc_seq'][arc_num:])
+        sol.aux['arc_seq'] = arc_seq
 
         pi_idx_start = len(sol.parameters)
         pi_idx = np.array(list(range(pi_idx_start, pi_idx_start+len(pi_list))))
@@ -166,8 +163,9 @@ class ActivateConstraint(object):
         if len(pi_idx) == 0:
             pi_idx = None
         new_pi_seq = (None, pi_idx, None)
-        sol.pi_seq = (*sol.pi_seq[:arc_num], *new_pi_seq, *sol.pi_seq[arc_num+1:])
-        print('mooo')
+        pi_seq = (*sol.aux['pi_seq'][:arc_num], *new_pi_seq, *sol.aux['pi_seq'][arc_num+1:])
+        sol.aux['pi_seq'] = pi_seq
+        
         # keyboard()
         self.sol = sol
 

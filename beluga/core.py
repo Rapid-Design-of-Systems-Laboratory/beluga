@@ -82,7 +82,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     # wf = brysonho.BrysonHo
     # workspace = brysonho.init_workspace(ocp)
     # ocp_ws = wf(workspace)
-    ocp_ws = wf({'problem': ocp})
+    ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
 
     solinit = Solution()
 
@@ -98,11 +98,12 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
                                                    'arc_type': i,
                                                    'pi_list':[str(_) for _ in s['pi_list']]})
                                       for i, s in enumerate(ocp_ws['problem_data']['s_list'],1))
-
+    solinit.aux['arc_seq'] = (0,)
+    solinit.aux['pi_seq'] = (None,)
     bvp_fn = bvp_algorithm.preprocess(ocp_ws['problem_data'])
     # The initial guess is automatically stored in the bvp object
     # solinit is just a reference to it
-    solinit = guess_generator.generate(bvp_fn, solinit)
+    solinit = ocp_ws['guess'].generate(bvp_fn, solinit)
 
     # # includes costates
     state_names = ocp_ws['problem_data']['state_list']
@@ -162,9 +163,9 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
 
             for aux in step:  # Continuation step returns 'aux' dictionary
                 sol_guess.aux = aux
-                if sol is not None:
-                    sol_guess.pi_seq = sol.pi_seq
-                    sol_guess.arc_seq = sol.arc_seq
+                # if sol is not None:
+                #     sol_guess.pi_seq = sol.pi_seq
+                #     sol_guess.arc_seq = sol.arc_seq
 
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
@@ -194,7 +195,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp_fn.compute_control(_t,_X,sol.parameters,sol.aux,sol.arc_seq,sol.pi_seq)
+                    f = lambda _t, _X: bvp_fn.compute_control(_t,_X,sol.parameters,sol.aux)
                     sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
                     # Copy solution object for storage and reuse `sol` in next
