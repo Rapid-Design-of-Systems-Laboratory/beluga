@@ -61,7 +61,7 @@ def process_quantities(quantities):
 
     # Trivial case when no quantities are defined
     if len(quantities) == 0:
-        yield []
+        yield {}
         yield []
         yield total_derivative
         yield ft.partial(jacobian, derivative_fn=total_derivative)
@@ -522,10 +522,6 @@ def make_constrained_arc_fns(workspace):
 #
 #     return bc_fn, xic, xfc
 
-
-def sym_to_str(a):
-    return [str(_) for _ in a]
-
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
@@ -609,6 +605,7 @@ def init_workspace(ocp):
 
 # Implement workflow using simplepipe and functions defined above
 BrysonHo = sp.Workflow([
+    sp.Task(init_workspace, inputs=('problem',), outputs='*'),
     sp.Task(process_quantities,
             inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
