@@ -422,10 +422,6 @@ def make_constrained_arc_fns(workspace):
 
 
     for arc_type, s in enumerate(workspace['s_list'],1):
-        # u_fn = make_sympy_fn([*states, *costates, *parameters, *constants],s['control_law'])
-        # u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
-        # u_fn = sym.lambdify(fn_args_lamdot, s['control_law'])
-        # corner_fn = make_sympy_fn([*states, *costates, *parameters, *constants], s['corner'])
         pi_list = [str(_) for _ in s['pi_list']]
 
 
@@ -527,6 +523,7 @@ def generate_problem_data(workspace):
 
     tf_var = sympify('tf') #TODO: Change to independent var?
     problem_data = {
+    'method':'brysonho',
     'problem_name': workspace['problem_name'],
     'aux_list': [
             {

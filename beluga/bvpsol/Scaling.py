@@ -72,7 +72,7 @@ class Scaling(dict):
         indices = {}
 
         for c_type, c_list in ws['constraints'].items():
-            for c, mul_var in zip(c_list, ws[c_type+'_lm_params']):
+            for c, mul_var in zip(c_list, ws.get(c_type+'_lm_params',[])):
                 mul_unit = '('+cost_unit+')/('+str(c.unit)+')'
                 self.scale_func['parameters'][str(mul_var)] = self.create_scale_fn(mul_unit)
 
