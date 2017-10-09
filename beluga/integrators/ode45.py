@@ -6,60 +6,36 @@ def ode_wrap(func,*args):   # Required for odeint
         return func(y,t,*args)
     return func_wrapper
 
-def split_tspan(tspan):
-# def split_tspan(tspan, y0):
-    # Detect duplicates in time array to find arc junctions
-    [arc_end_idx] = np.where(np.diff(tspan) == 0)
-    # np.add() required because of how np.split works
-    arc_end_idx = np.add(arc_end_idx,1)
-
-    if len(arc_end_idx) > 0:
-        return np.split(tspan,arc_end_idx)
-    else:
-        return tspan
-
-    # if len(arc_end_idx) > 0:
-    #     return (np.split(tspan,arc_end_idx),
-    #             np.split(y0,arc_end_idx,axis=1))
-    # else:
-    #     return ([tspan],[y0])
-
 def ode45(f,tspan,y0,*args,**kwargs):
     """Implements interface similar to MATLAB's ode45 using scipy"""
 
     # return ode45_old(f,tspan,y0,*args,**kwargs)
 
-    if len(tspan) == 2:
-        # TODO: Change hardcoding?
-        tspan = np.linspace(tspan[0],tspan[1],200)
-    t0 = tspan[0]
-    t1 = tspan[1]
-    yy = scipy.integrate.odeint(ode_wrap(f,*args),y0,tspan)
-    return (tspan,yy)
+    # if len(tspan) == 2:
+    #     # TODO: Change hardcoding?
+    #     tspan = np.linspace(tspan[0],tspan[1],200)
+    # t0 = tspan[0]
+    # t1 = tspan[1]
+    # yy = scipy.integrate.odeint(ode_wrap(f,*args),y0,tspan)
+    # return (tspan,yy)
+    #
 
-    tt = tspan[0]
-    yy = np.array([y0])
+    ## Superfast option below
+    abstol = kwargs.get('abstol', 1e-6)
+    reltol = kwargs.get('reltol', 1e-2)
+    r = scipy.integrate.ode(f).set_integrator('vode', method='adams', atol=abstol, rtol=reltol)
+    r.set_initial_value(y0, 0).set_f_params(*args)
+    y_out = np.zeros((len(tspan), len(y0)))
+    t1 = tspan[-1]
 
-    from beluga.utils import keyboard
-
-    r = scipy.integrate.ode(f).set_integrator('lsoda')
-    r.set_f_params(*args)   # Add extra arguments to be passed in
-    r.set_initial_value(y0,tspan[0])
-
-    if 'num_steps' in kwargs:
-        num_steps = kwargs['num_steps']
-    else:
-        num_steps = 200 # HARDCODED num_steps
-
-    tt = np.linspace(tspan[0],tspan[-1],num_steps)
-    dt = tt[1]-tt[0]
-
-    while r.successful() and r.t < tspan[-1]:
-        r.integrate(r.t+dt)
-        yy = np.vstack((yy,r.y))  # Add new timestep as row
-
-
-    return (tt,yy)
+    # tt = np.linspace(tspan[0],tspan[-1],len)
+    y_out[0,:] = y0
+    ctr = 1
+    while r.successful() and r.t < t1:
+        dt = tspan[ctr] - tspan[ctr-1]
+        y_out[ctr, :] = r.integrate(r.t+dt)
+        ctr += 1
+    return tspan, y_out
 
 
 # Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
