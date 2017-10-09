@@ -19,7 +19,9 @@ def ode45(f,tspan,y0,*args,**kwargs):
     # yy = scipy.integrate.odeint(ode_wrap(f,*args),y0,tspan)
     # return (tspan,yy)
     #
-
+    if len(tspan) == 2:
+            # TODO: Change hardcoding?
+            tspan = np.linspace(tspan[0],tspan[1],200)
     ## Superfast option below
     abstol = kwargs.get('abstol', 1e-6)
     reltol = kwargs.get('reltol', 1e-2)
@@ -28,7 +30,7 @@ def ode45(f,tspan,y0,*args,**kwargs):
     y_out = np.zeros((len(tspan), len(y0)))
     t1 = tspan[-1]
 
-    # tt = np.linspace(tspan[0],tspan[-1],len)
+    tt = np.linspace(tspan[0],tspan[-1],200)
     y_out[0,:] = y0
     ctr = 1
     while r.successful() and r.t < t1:

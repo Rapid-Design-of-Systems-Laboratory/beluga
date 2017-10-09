@@ -78,6 +78,8 @@ class Solution(object):
         overwrite: Overwrite existing solution with new mesh
         """
         # TODO: Test mesh_size improvement in prepare()
+        # from beluga.utils import keyboard
+        # keyboard()
         if mesh_size is not None and mesh_size > len(self.x):
             # Update solution to use new mesh if needed
             new_x = np.linspace(self.x[0],self.x[-1],mesh_size)
