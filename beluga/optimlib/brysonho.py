@@ -591,7 +591,7 @@ def init_workspace(ocp):
     workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
                                 for c_type, c_list in constraints.items()
                                 if c_type != 'path'}
-    workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction'))
+    workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction', 'start_eps'))
                                      for c_obj in constraints.get('path', [])]
 
     workspace['quantities'] = [SymVar(q) for q in ocp.quantities()]
