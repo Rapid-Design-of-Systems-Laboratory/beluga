@@ -1,6 +1,6 @@
 from beluga.visualization import BelugaPlot
 
-plots = BelugaPlot('./data-1k2-eps4.dill',default_sol=-1,default_step=-1)
+plots = BelugaPlot('./data_fpa60.dill',default_sol=-1,default_step=-1)
 
 plots.add_plot().line('theta*180/3.14','h/1000')                    \
                 .xlabel('Downrange (deg)').ylabel('h (km)')      \
