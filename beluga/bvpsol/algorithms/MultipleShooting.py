@@ -116,7 +116,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     else:
         ham_args.append('___dummy_arg___')
         u_args.append('___dummy_arg___')
-    control_opt_mat = sym.Matrix([[option.get(u,sym.S(0))
+    control_opt_mat = sym.Matrix([[option.get(u, '0')
                                     for u in unknowns]
                                     for option in control_opts])
 
@@ -177,7 +177,8 @@ def make_functions(problem_data, module):
     print('Making unconstrained control')
     control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars,ham)
 
-    problem_data['ham_fn'] = ham_fn
+    # problem_data['ham_fn'] = ham_fn
+    module.ham_fn = ham_fn
     control_fns = [control_fn] # Also makethiss
     print('Processing constraints')
     for arc_type, s in enumerate(problem_data['s_list'],1):
