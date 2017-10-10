@@ -1,6 +1,6 @@
-"""Brachistochrone example."""
+"""Brachistochrone example with path constraint."""
 
-ocp = beluga.OCP('brachisto')
+ocp = beluga.OCP('boundedBrachistochrone')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -28,8 +28,6 @@ ocp.constraints() \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
     .path('constraint1','y + x + xlim','>',0.0,'m')
-    # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
-
 
 ocp.scale(m='x', s='x/v', kg=1, rad=1)
 # ocp.scale(m=1, s=1, kg=1, rad=1)

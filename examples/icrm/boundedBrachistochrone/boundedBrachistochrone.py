@@ -1,4 +1,4 @@
-"""Brachistochrone example."""
+"""Brachistochrone example with path constraint."""
 
 ocp = beluga.OCP('brachisto')
 
@@ -55,11 +55,8 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-# continuation_steps.add_step('bisection').num_cases(201,spacing='log') \
-#                  .const('eps_constraint1', 1e-4)
-#
 continuation_steps.add_step('bisection').num_cases(21,spacing='log') \
-                 .const('eps_constraint1', 1e-4)
+                 .const('eps_constraint1', 1e-5)
 
 beluga.solve(ocp,
              method='icrm',

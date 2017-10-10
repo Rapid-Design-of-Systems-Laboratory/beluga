@@ -211,8 +211,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
         logging.error('Exception : '+str(e))
         logging.error('Stopping')
 
-    from beluga.utils import keyboard
-    keyboard()
     return solution_set
 
 if __name__ == '__main__':
