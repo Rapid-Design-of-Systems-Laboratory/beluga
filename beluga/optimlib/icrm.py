@@ -74,7 +74,7 @@ def process_path_constraints(workspace):
     path_cost_unit = workspace['path_cost'].unit
     if path_cost_expr == 0:
         logging.debug('No path cost specified, using unit from terminal cost function')
-        path_cost_expr = workspace['terminal_cost'].expr
+        path_cost_expr = sympify('0')
         path_cost_unit = workspace['terminal_cost'].unit
 
     logging.debug('Path cost is of unit: '+str(path_cost_unit))
