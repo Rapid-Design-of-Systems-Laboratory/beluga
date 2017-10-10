@@ -58,7 +58,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     max_error=50
 )
 
-ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1)
+ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e7)
 
 guess_maker = beluga.guess_generator('auto',
                 start=[80e3,0,4e3,-pi/2],          # Starting values for states in order
@@ -68,15 +68,15 @@ guess_maker = beluga.guess_generator('auto',
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step('bisection').num_cases(11) \
-                        .terminal('h', 10000.0) \
+continuation_steps.add_step('bisection').num_cases(21) \
+                        .terminal('h', 15000.0) \
 
-continuation_steps.add_step('bisection').num_cases(31)  \
-                        .initial('gam', -45*pi/180) \
+continuation_steps.add_step('bisection').num_cases(41)  \
+                        .initial('gam', -60*pi/180) \
+                        .terminal('theta', 0.5*pi/180)
+
+continuation_steps.add_step('bisection').num_cases(11)  \
                         .terminal('theta', 1*pi/180)
-
-continuation_steps.add_step('bisection').num_cases(6)  \
-                        .terminal('theta', 2*pi/180)
 
 # ocp.guess.setup(mode='file', filename='data-skip-10000-eps2.dill', step=-1, iteration=-1)
 # ocp.steps.add_step('bisection').num_cases(11)  \
