@@ -57,7 +57,7 @@ class Plot(object):
     def line_series(self, x_expr, y_expr, label=None, step = None, start = 0, skip = 0, end = -1, datasource = None):
         if datasource is None:
             datasource = self.datasource
-        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
+        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'style':{}, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
         return self
 
     def preprocess(self):

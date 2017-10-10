@@ -74,7 +74,7 @@ def process_path_constraints(workspace):
     path_cost_unit = workspace['path_cost'].unit
     if path_cost_expr == 0:
         logging.debug('No path cost specified, using unit from terminal cost function')
-        path_cost_expr = sympify('0')
+        path_cost_expr = None
         path_cost_unit = workspace['terminal_cost'].unit
 
     logging.debug('Path cost is of unit: '+str(path_cost_unit))
@@ -141,7 +141,7 @@ def process_path_constraints(workspace):
         psi_vars = [(sympify2('psi'+str(ind+1)+'0('+str(xi_vars[0])+')'), psi)]
 
         # Add to quantity list
-        quantity_vars[sym.Symbol('psi'+str(ind+1)+'0')] = psi
+        quantity_vars['psi'+str(ind+1)+'0'] = str(psi)
         quantity_list.append({'name':('psi'+str(ind+1)+'0'), 'expr':str(psi)})
 
         # m-th order constraint needs up to m-th derivative of psi to be defined
@@ -158,7 +158,7 @@ def process_path_constraints(workspace):
             psi_var_func.append((current_psi_var_func, current_psi_var))
             psi_vars_deriv.append((sympify2('Derivative(psi'+str(ind+1)+str(i)+'('+str(xi_vars[0])+'), '+str(xi_vars[0])+')'),
                                    current_psi_var_func))
-            quantity_vars[current_psi_var] =  psi_i
+            quantity_vars[str(current_psi_var)] = str(psi_i)
             quantity_list.append({'name':str(current_psi_var), 'expr':str(psi_i)})
 
         # psi_vars = psi_vars + []
@@ -214,7 +214,10 @@ def process_path_constraints(workspace):
         logging.debug('Adding smoothing factor '+str(eps_const)+' with unit '+str(eps_unit))
 
         # Append new control to path cost
-        path_cost_expr = path_cost_expr + eps_const*xi_vars[-1]**2
+        if path_cost_expr is None:
+            path_cost_expr = eps_const*xi_vars[-1]**2
+        else:
+            path_cost_expr = path_cost_expr + eps_const*xi_vars[-1]**2
 
     constraints['equality'] = eq
 

@@ -127,6 +127,11 @@ class Solution(object):
         variables += [(control,np.array(u[idx,:]))
                        for idx,control in enumerate(problem_data['control_list'])]
 
+
+        # Define constants
+        variables += [(str(constant),np.ones_like(x)*float(constant.value))
+                       for idx,constant in enumerate(problem_data['constants'])]
+
         # TODO: Name 'tf' is hardcoded
         t_list = []
         tf_ind = problem_data['state_list'].index('tf')
@@ -137,8 +142,12 @@ class Solution(object):
             last_t += y[tf_ind,arc_start]
 
         variables += [('t', np.hstack(t_list))]
-        self.var_dict = dict(variables)
 
+        self.qvars = problem_data['quantity_vars']
+
+        variables += [(str(q_k), ne.evaluate(q_v, dict(variables)))
+        for q_k, q_v in problem_data['quantity_vars'].items()]
+        self.var_dict = dict(variables)
 
     def evaluate(self,expr):
         """
@@ -147,4 +156,5 @@ class Solution(object):
         The caller is responsible for calling the prepare() method first
         """
         #TODO: Write test for evaluate()
+
         return ne.evaluate(expr,self.var_dict)
