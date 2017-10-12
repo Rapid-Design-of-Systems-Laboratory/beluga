@@ -73,7 +73,7 @@ class ActivateConstraint(object):
         num_params = problem_data['num_params']
 
         current_arcs = sol.arcs
-        current_arcseq = sol.aux['arc_seq']
+        current_arcseq = sol.aux.get('arc_seq', (0,))
         if current_arcs is None:
             current_arcs = [(0, len(sol.x)-1)]
 

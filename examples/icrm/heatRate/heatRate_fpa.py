@@ -48,12 +48,12 @@ ocp.constraints().initial('h-h_0','m') \
                     .initial('gam-gam_0','rad') \
                     .terminal('h-h_f','m')  \
                     .terminal('theta-theta_f','rad') \
-                    .path('heatRate','(qdot/qdotMax)','<',1,'nd',start_eps=1e-2) \
+                    .path('heatRate','(qdot/qdotMax)','<',1.0,'nd',start_eps=1e-2) \
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
-                    tolerance=1e-5,
-                    max_iterations=20,
+                    tolerance=1e-4,
+                    max_iterations=25,
                     verbose = True,
                     max_error=50
 )
@@ -61,9 +61,9 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e7)
 
 guess_maker = beluga.guess_generator('auto',
-                start=[80e3,0,4e3,-pi/2],          # Starting values for states in order
+                start=[80e3,0.0,5e3,-pi/2],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1
+                costate_guess = 0.1
 )
 
 continuation_steps = beluga.init_continuation()
@@ -71,7 +71,7 @@ continuation_steps = beluga.init_continuation()
 continuation_steps.add_step('bisection').num_cases(21) \
                         .terminal('h', 15000.0) \
 
-continuation_steps.add_step('bisection').num_cases(41)  \
+continuation_steps.add_step('bisection').num_cases(31)  \
                         .initial('gam', -60*pi/180) \
                         .terminal('theta', 0.5*pi/180)
 
@@ -99,4 +99,5 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data_fpa60.dill')
+             output_file='data_fpa60.dill'
+             )

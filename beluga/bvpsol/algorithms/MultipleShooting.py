@@ -19,22 +19,21 @@ import sympy as sym
 import pystache
 
 import simplepipe as sp
+import math
 
 def make_njit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
                                                   .replace('(([[', '[') \
-                                                  .replace(']]))', ']') \
-
+                                                  .replace(']]))', ']')
     jit_fn = numba.njit(parallel=True)(eval(fn_str))
     return jit_fn
 
 def make_sympy_fn(args, fn_expr):
-
     if hasattr(fn_expr, 'shape'):
         output_shape = fn_expr.shape
     else:
         output_shape = None
-    print(f'Making fn with {len(args)} args',args)
+
     if output_shape is not None:
         jit_fns = [make_njit_fn(args, expr) for expr in fn_expr]
         len_output = len(fn_expr)
@@ -433,6 +432,7 @@ class MultipleShooting(BaseAlgorithm):
                         # print(arc_idx, tspan, ya[:,arc_idx])
 
                         t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                         # _,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-3)
                         yb[:,arc_idx] = yy[-1,:nOdes]
                         phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
