@@ -134,19 +134,6 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     # Save data
     # del out['problem_data']['s_list']
-    import sympy
-    def myprint(d):
-        for k, v in d.items():
-            if isinstance(v, dict):
-                myprint(v)
-            else:
-                # print("{0} : {1}".format(k, v))
-                if(isinstance(k,type(sympy.S(0)))):
-                    print(k,'is zerooo')
-                if(isinstance(v,type(sympy.S(0)))):
-                    print(k,v,'is zmooo')
-    myprint(out)
-    keyboard()
     del out['problem_data']['states']
     del out['problem_data']['costates']
 
@@ -154,7 +141,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     qvars = {str(k):str(v) for k,v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
     with open(output_file, 'wb') as outfile:
-        dill.settings['recurse'] = False
+        dill.settings['recurse'] = True
         dill.dump(out, outfile) # Dill Beluga object only
 
 

@@ -91,7 +91,7 @@ class Solution(object):
         # TODO: Test mesh_size improvement in prepare()
         # from beluga.utils import keyboard
         # keyboard()
-        if mesh_size is not None and mesh_size > len(self.x):
+        if mesh_size is not None and mesh_size > len(self.x)*len(self.arcs):
             # Update solution to use new mesh if needed
             new_x_list = []
             new_arcs = []
@@ -113,10 +113,11 @@ class Solution(object):
         #TODO: Make state_list a part of the Solution object
 
         # Define every aux variable (such as constants) in the dictionary
-        variables = [(aux_name, aux_val)
+        variables = [(aux_name, np.ones_like(x)*aux_val)
                      for aux_type in self.aux
                      if isinstance(self.aux[aux_type], dict)
                      for (aux_name, aux_val) in self.aux[aux_type].items()
+                     if isinstance(aux_val, float)
                      ]
         # Define state variables
         # Have to do in this order to override state values with arrays
@@ -129,8 +130,8 @@ class Solution(object):
 
 
         # Define constants
-        variables += [(str(constant),np.ones_like(x)*float(constant.value))
-                       for idx,constant in enumerate(problem_data['constants'])]
+        # variables += [(str(constant),np.ones_like(x)*float(self.aux['const'][].value))
+        #                for idx,constant in enumerate(problem_data['constants'])]
 
         # TODO: Name 'tf' is hardcoded
         t_list = []
@@ -138,15 +139,16 @@ class Solution(object):
         last_t = 0
         for arc_start, arc_end in arcs:
             start_x = x[arc_start]
+            # from beluga.utils import keyboard
+            # keyboard()
             t_list.append(last_t+(x[arc_start:arc_end+1] - start_x)*y[tf_ind,arc_start])
             last_t += y[tf_ind,arc_start]
 
         variables += [('t', np.hstack(t_list))]
 
-        self.qvars = problem_data['quantity_vars']
-
-        variables += [(str(q_k), ne.evaluate(q_v, dict(variables)))
-        for q_k, q_v in problem_data['quantity_vars'].items()]
+        # self.qvars = problem_data['quantity_vars']
+        # variables += [(str(q_k), ne.evaluate(str(q_v), dict(variables)))
+        #               for q_k, q_v in problem_data['quantity_vars'].items()]
         self.var_dict = dict(variables)
 
     def evaluate(self,expr):

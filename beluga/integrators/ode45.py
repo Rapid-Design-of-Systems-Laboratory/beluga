@@ -21,11 +21,12 @@ def ode45(f,tspan,y0,*args,**kwargs):
     #
     if len(tspan) == 2:
         # TODO: Change hardcoding?
-        tspan = np.linspace(tspan[0],tspan[1],400)
+        tspan = np.linspace(tspan[0],tspan[1],100)
     ## Superfast option below
     abstol = kwargs.get('abstol', 1e-6)
     reltol = kwargs.get('reltol', 1e-2)
-    r = scipy.integrate.ode(f).set_integrator('vode', method='adams', atol=abstol, rtol=reltol)
+    # r = scipy.integrate.ode(f).set_integrator('vode', method='adams', atol=abstol, rtol=reltol)
+    r = scipy.integrate.ode(f).set_integrator('dopri5', atol=abstol, rtol=reltol)
     r.set_initial_value(y0, tspan[0]).set_f_params(*args)
     y_out = np.zeros((len(tspan), len(y0)))
 

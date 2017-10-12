@@ -41,7 +41,7 @@ ocp.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
 # ocp.constant('g0',9.80665,'m/s^2')
 
 ocp.constant('Wsec3pkg',1,'W*s^3*kg^-1')
-ocp.constant('heatRateLimit', 2500e4, 'W')
+ocp.constant('heatRateLimit', 1200e4, 'W')
 
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
@@ -81,14 +81,17 @@ continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .terminal('h', 0)
 
-continuation_steps.add_step().num_cases(11) \
+continuation_steps.add_step('bisection').num_cases(11) \
                 .initial('gam',-60*pi/180)\
                 .terminal('theta', 1.0*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11)  \
                 .terminal('theta', 2*pi/180)
-# .initial('gam',-45*pi/180)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .terminal('h', 15000)
 
 beluga.solve(ocp,
              method='traditional',

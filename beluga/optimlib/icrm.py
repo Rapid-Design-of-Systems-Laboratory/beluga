@@ -281,7 +281,8 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
     dae_equations = list(udot)
     dae_bc = g
 
-    guess.start.extend(xi_init_vals)
+    if guess.start is not None:
+        guess.start.extend(xi_init_vals)
     guess.dae_num_states = len(U)
 
     yield mu_vars
