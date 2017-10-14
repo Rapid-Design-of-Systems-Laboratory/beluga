@@ -3,6 +3,7 @@ from math import *
 
 import scipy.linalg
 from math import *
+# from beluga.utils.math import *
 
 def im(Z):
     return Z.imag
@@ -47,16 +48,11 @@ def compute_g(_X, _p, _aux):
     return np.array([{{#dHdu}}{{.}},
             {{/dHdu}}])
 
-def compute_hamiltonian(_t,_X,_p,_aux,_u):
+def compute_hamiltonian(_t,_X,_p,_const,_u):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
-    [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:]
+    [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:{{num_states}}+{{dae_var_num}}]
     # Declare all auxiliary variables
-{{#aux_list}}
-{{#vars}}
-    {{.}} = _aux['{{type}}']['{{.}}']
-{{/vars}}
-{{/aux_list}}
-
+    {{#aux_list}}{{#vars}}{{.}},{{/vars}}{{/aux_list}} = _const
     # Declare all quantities
 {{#quantity_list}}
     {{name}} = {{expr}}
@@ -64,7 +60,7 @@ def compute_hamiltonian(_t,_X,_p,_aux,_u):
 
     return {{ham_expr}}
 
-def compute_control(_t,_X,_p,_aux):
+def compute_control(_t,_X,_p,_const):
   return _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
 # Used to solve initial guess
@@ -90,18 +86,22 @@ def get_dhdu_func(_t,_X,_p,_aux):
 
     return dHdu
 
-def deriv_func(_t,_X,_p,_aux,arc_idx=0):
+
+def deriv_func_ode45(_t,_X,_p,_aux):
+    return deriv_func_nojit(_t,_X,_p,list(_aux['const'].values()))
+
+def deriv_func_mcpi(_t,_X,dXdt_,_const):
+    dXdt_[:{{num_states}}+{{dae_var_num}}] = deriv_func(_t, _X[:{{num_states}}+{{dae_var_num}}], _X[{{num_states}}+{{dae_var_num}}:{{num_states}}+{{dae_var_num}}+{{num_params}}], _const)
+    dXdt_[{{num_states}}:] = 0
+
+def deriv_func_nojit(_t,_X,_p,_const):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
     # Declare all auxiliary variables
-{{#aux_list}}
-{{#vars}}
-    {{.}} = _aux['{{type}}']['{{.}}']
-{{/vars}}
-{{/aux_list}}
+    {{#aux_list}}{{#vars}}{{.}},{{/vars}}{{/aux_list}} = _const
 
     # Declare all predefined expressions
 {{#quantity_list}}
@@ -122,4 +122,5 @@ def deriv_func(_t,_X,_p,_aux,arc_idx=0):
         {{/dae_eom_list}}]
     )
 
-deriv_func_ode45 = deriv_func
+import numba
+deriv_func = (deriv_func_nojit)

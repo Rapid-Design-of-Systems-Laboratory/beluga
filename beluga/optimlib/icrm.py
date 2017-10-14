@@ -34,6 +34,25 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
         print('Using two sided saturation function')
         return ubound - ( ubound - lbound )/( 1 + sym.exp(s*var) )
 
+def make_bc_mask(constraints, states, controls, mu_vars, initial_cost, derivative_fn):
+    """Creates mask marking free and bound variables at t=0
+
+    free = 1, constrained = 0
+    """
+    state_mask = []
+    costate_mask = []
+    for state in states:
+        dcdX = derivative_fn(initial_cost, state)
+        if dcdX == 0: # state not constrained
+            state_mask.append(1) # State free
+            costate_mask.append(0) # Costate fixed
+        else:
+            state_mask.append(0)    # State constrained
+            costate_mask.append(1)  # Costate free
+
+    return state_mask+costate_mask+[1]*(len(controls)+len(mu_vars)+1) # Add tf as free param
+
+
 def add_equality_constraints(ham, constraints):
 
     equality_constraints = constraints.get('equality', [])
@@ -82,6 +101,7 @@ def process_path_constraints(workspace):
     path_constraints = workspace['path_constraints']
 
     eq = constraints.get('equality', [])
+    xi_init_vals = []
     for (ind,c) in enumerate(path_constraints):
         # Determine order of constraint
         logging.debug('Processing path constraint: '+str(c.name))
@@ -175,13 +195,13 @@ def process_path_constraints(workspace):
         # c_vals = [80e3, -5000, 9.539074102210087] # third number is vdot at zero approx
         c_vals = np.ones(order)*0.1
         h = [psi_vars[0][0]]
-        xi_init_vals = []
+
         for i in range(order):
             # Add 'xi' state
             states.append(SymVar({'name':str(xi_vars[i]), 'eom':str(xi_vars[i+1]), 'unit':c.unit/(time_unit^i)}))
             # Constraint all cq at initial point (forms constraints for xi_ij)
             # ocp.constraints().initial(str(cq[i] - h[i]),'('+c.unit+')/s^('+str(i)+')')
-            constraints['initial'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
+            constraints['terminal'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
 
             # Add to initial guess vector
             xi_init_vals.append(c_vals[i])
@@ -340,13 +360,14 @@ def generate_problem_data(workspace):
      'num_states': 2*len(workspace['states']) + 1,
      'num_params': len(workspace['parameters']),
      'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
-     'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
-     'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
+     'bc_initial': [str(_) for _ in workspace['bc_initial']],
+     'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
      'control_options': [],
      'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
      'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
+    #  'bc_free_mask': workspace['bc_free_mask'],
     }
 
     return problem_data
@@ -364,7 +385,6 @@ ICRM = sp.Workflow([
     sp.Task(ft.partial(make_aug_params, location='initial'),
             inputs=('constraints'),
             outputs=('initial_lm_params')),
-
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
             inputs=('terminal_cost', 'constraints'),
             outputs=('aug_terminal_cost')),
@@ -380,9 +400,15 @@ ICRM = sp.Workflow([
     sp.Task(ft.partial(make_boundary_conditions, location='initial'),
             inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
             outputs=('bc_initial')),
+    # sp.Task(ft.partial(make_boundary_conditions, location='initial'),
+    #         inputs=('constraints', 'states', 'costates', 'initial_cost', 'derivative_fn'),
+    #         outputs=('bc_initial')),
     sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
             inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
             outputs=('bc_terminal')),
+    # sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
+    #         inputs=('constraints', 'states', 'costates', 'terminal_cost', 'derivative_fn'),
+    #         outputs=('bc_terminal')),
     sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
     sp.Task(make_dhdu,
             inputs=('ham', 'controls', 'derivative_fn'),
