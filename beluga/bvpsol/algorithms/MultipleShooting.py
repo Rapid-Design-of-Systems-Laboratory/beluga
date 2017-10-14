@@ -238,11 +238,6 @@ PythonCodeGen = sp.Workflow([
     sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
             inputs=['bc_func_code', 'code_module'],
             outputs='bc_func_fn'),
-    # sp.Task(lambda module: getattr(module, 'compute_control'),
-    #         inputs=['code_module'],
-    #         outputs='compute_control_fn'),
-
-    # sp.Task(make_bvp, inputs='*', outputs=['bvp'])
 ], description='Generates and compiles the required BVP functions from problem data')
 
 class MultipleShooting(BaseAlgorithm):
@@ -431,7 +426,7 @@ class MultipleShooting(BaseAlgorithm):
                         y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
 
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                         # _,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-3)
                         yb[:,arc_idx] = yy[-1,:nOdes]
@@ -527,7 +522,7 @@ class MultipleShooting(BaseAlgorithm):
             y0 = np.zeros(ya.shape[0])
             timestep_ctr = 0
             for arc_idx, tspan in enumerate(tspan_list):
-                tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
                 y_list.append(yy.T)
                 x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))

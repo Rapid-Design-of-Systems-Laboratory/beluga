@@ -420,8 +420,8 @@ class GuessGenerator(object):
         logging.debug('Generating initial guess by propagating: ')
         # logging.debug(str(x0))
 
-        [t, x] = ode45(bvp_fn.deriv_func, tspan, x0, param_guess, solinit.aux)
-
+        [t, x] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
+        
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         solinit.x = t
         solinit.y = x.T

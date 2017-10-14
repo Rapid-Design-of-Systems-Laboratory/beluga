@@ -56,3 +56,5 @@ def deriv_func(_t, _X, _p, _aux, arc_idx=None):
 {{/costate_eoms}}
 
     return np.hstack((state_eom, lam_eom, [0]))
+
+deriv_func_ode45 = deriv_func
