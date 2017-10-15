@@ -62,16 +62,23 @@ def make_bc(constraints,
 
     return bc_list
 
-def make_bc_mask(constraints, states, controls, mu_vars, initial_cost, derivative_fn):
+def make_bc_mask(states,
+             controls,
+             mu_vars,
+             cost,
+             aug_cost,
+             derivative_fn):
     """Creates mask marking free and bound variables at t=0
 
     free = 1, constrained = 0
     """
+    aug_cost_expr = (aug_cost.expr - cost.expr)
+
     state_mask = []
     costate_mask = []
     for state in states:
-        dcdX = derivative_fn(initial_cost, state)
-        if dcdX == 0: # state not constrained
+        if derivative_fn(aug_cost_expr, state) == 0:
+            # State not constrained -> costate = 0
             state_mask.append(1) # State free
             costate_mask.append(0) # Costate fixed
         else:
@@ -402,7 +409,7 @@ def generate_problem_data(workspace):
      'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
-    #  'bc_free_mask': workspace['bc_free_mask'],
+     'bc_free_mask': workspace['bc_free_mask'],
     }
 
     return problem_data
@@ -453,6 +460,10 @@ ICRM = sp.Workflow([
             outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc', 'guess')),
     sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
         outputs='parameters'),
+    sp.Task(make_bc_mask,
+            inputs=('states', 'controls', 'mu_vars', 'initial_cost', 'aug_initial_cost', 'derivative_fn'),
+            outputs=('bc_free_mask')),
+
     # sp.Task(make_dhdu,
     #         inputs=('ham', 'controls', 'derivative_fn'),
     #         outputs=('dhdu')),

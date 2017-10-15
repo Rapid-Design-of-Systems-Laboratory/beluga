@@ -59,3 +59,5 @@ def bc_func(_ya, _yb, _aux):
     res_right = bc_func_right(_yb, _aux)
 
     return np.hstack((res_left, res_right))
+
+bc_free_mask = [{{#bc_free_mask}}{{.}},{{/bc_free_mask}}]
