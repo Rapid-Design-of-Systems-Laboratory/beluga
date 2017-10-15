@@ -26,12 +26,12 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + x','>',-1.0,'m',start_eps=1.0)
+    .path('constraint1','y + x','>',-1.0,'m',start_eps=1e-1)
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
-# ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
-ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
+ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
+# ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
@@ -44,13 +44,13 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                costate_guess = 0.1,
+                costate_guess = -0.1,
 )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(6) \
+                .num_cases(101) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
