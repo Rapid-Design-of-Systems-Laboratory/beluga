@@ -240,9 +240,11 @@ def process_path_constraints(workspace):
             path_cost_expr = path_cost_expr + eps_const*xi_vars[-1]**2
 
     constraints['equality'] = eq
-
-    logging.debug('Updated path cost is: '+str(path_cost_expr))
-    path_cost = SymVar({'expr': path_cost_expr, 'unit':path_cost_unit}, sym_key='expr')
+    if path_cost_expr is not None:
+        logging.debug('Updated path cost is: '+str(path_cost_expr))
+        path_cost = SymVar({'expr': path_cost_expr, 'unit':path_cost_unit}, sym_key='expr')
+    else:
+        path_cost = SymVar({'expr': '0', 'unit':path_cost_unit}, sym_key='expr')
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
     jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
 

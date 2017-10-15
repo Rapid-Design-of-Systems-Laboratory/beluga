@@ -235,7 +235,7 @@ class QCPI(BaseAlgorithm):
         xp_0 = np.hstack((x_0, A_j0.flat)) # Add perturbed ICs as extra states
         xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
         xpm_0 = np.reshape(xp_0, (q+2, nOdes))  # Matrix 'view' of xp_0
-        tspan = x
+        tspan = (x[0], x[-1])
         t_short = [tspan[0], tspan[-1]]
         converged = False
         N = 21
@@ -266,12 +266,13 @@ class QCPI(BaseAlgorithm):
             pert_eom(t_arr, x_guess, g_arr, const)
 
             beta = (C_a @ g_arr)
+            print('Err1',err1)
             if err1 < 1e-1:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
-                # print('Residue : '+str(res_norm_0))
-                if res_norm_0 < 1e-6:
+                print('Residue : '+str(res_norm_0))
+                if res_norm_0 < 1e-4:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -289,7 +290,10 @@ class QCPI(BaseAlgorithm):
                 lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
 
                 # First row is all ones, rows after = Jac @ perturbations at tf
-                k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
+                try:
+                    k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
+                except:
+                    k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
                 A_0 = k_j @ A_j0
                 alpha = .1
 
