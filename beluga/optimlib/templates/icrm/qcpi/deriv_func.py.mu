@@ -1,9 +1,7 @@
 import numpy as np
-from math import *
-
+from numpy import *
+import numba
 import scipy.linalg
-from math import *
-# from beluga.utils.math import *
 
 def im(Z):
     return Z.imag
@@ -92,7 +90,7 @@ def deriv_func_ode45(_t,_X,_p,_aux):
 
 def deriv_func_mcpi(_t,_X,dXdt_,_const):
     dXdt_[:{{num_states}}+{{dae_var_num}}] = deriv_func(_t, _X[:{{num_states}}+{{dae_var_num}}], _X[{{num_states}}+{{dae_var_num}}:{{num_states}}+{{dae_var_num}}+{{num_params}}], _const)
-    dXdt_[{{num_states}}:] = 0
+    dXdt_[{{num_states}}+{{dae_var_num}}:] = 0
 
 def deriv_func_nojit(_t,_X,_p,_const):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
@@ -117,10 +115,11 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
     #return np.hstack((Xdot, udot))
     return np.array([{{#deriv_list}}{{.}},
-        {{/deriv_list}}]+
-        [{{#dae_eom_list}}{{.}},
+        {{/deriv_list}}
+        {{#dae_eom_list}}{{.}},
         {{/dae_eom_list}}]
     )
 
-import numba
+
+
 deriv_func = (deriv_func_nojit)

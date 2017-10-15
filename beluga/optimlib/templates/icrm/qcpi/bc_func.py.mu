@@ -1,6 +1,6 @@
 # TODO: Preprocess, postprocess hooks?
 import numpy as np
-from math import *
+from numpy import *
 def bc_func_left(_ya, _aux):
     # Declare all auxiliary variables
 {{#aux_list}}
@@ -51,6 +51,7 @@ def bc_func_right(_yb, _aux):
     _H = compute_hamiltonian(1,_yb,_p,_aux['const'].values(),[{{#control_list}}{{.}},{{/control_list}}])
     res_right = np.array([{{#bc_terminal}}{{.}},
                 {{/bc_terminal}}])
+    
     return res_right
 
 def bc_func(_ya, _yb, _aux):

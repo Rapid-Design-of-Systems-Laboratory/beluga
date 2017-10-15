@@ -360,6 +360,8 @@ def generate_problem_data(workspace):
      'num_states': 2*len(workspace['states']) + 1,
      'num_params': len(workspace['parameters']),
      'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
+    #  'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
+    #  'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'])],
      'bc_initial': [str(_) for _ in workspace['bc_initial']],
      'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
      'control_options': [],

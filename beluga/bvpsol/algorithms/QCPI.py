@@ -122,6 +122,19 @@ def make_pert_eom(nOdes, q, eom_fn):
     return pert_eom
 
 @ft.lru_cache(maxsize=16)
+def make_mcpi_eom(eom_fn):
+    """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
+
+    # @njit(parallel=True)
+    def mcpi_eom(t, X_, dXdt_, *args):
+        # One timestep at a time
+        for j in range(len(t)):
+            eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
+
+    return mcpi_eom
+
+
+@ft.lru_cache(maxsize=16)
 def make_bc_jac(bcfn, nOdes, step_size=1e-4):
     """Makes compiled BC jacobian function using forward difference"""
 
@@ -166,6 +179,7 @@ class QCPI(BaseAlgorithm):
         self.bc_right_fn  = out_ws['code_module'].bc_func_right
         # self.deriv_func = njit(parallel=True)(out_ws['code_module'].deriv_func_mcpi)
         self.deriv_func = out_ws['code_module'].deriv_func_mcpi
+        self.mcpi_eom = make_mcpi_eom(self.deriv_func)
 
         return out_ws['code_module']
     def solve(self,solinit):
@@ -201,8 +215,14 @@ class QCPI(BaseAlgorithm):
         nParams = paramGuess.size
         nOdes = nXandLam + nParams
         ## Setup QCPI
-        # Each row is one initial condition for particular solution
+        x_0 = np.concatenate((ya[:,0], paramGuess))
 
+        res_left = self.bc_left_fn(x_0, aux)
+        left_jac = np.zeros((len(res_left), nOdes))
+        left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
+        left_bc_jac_fn(x_0, left_jac, aux)
+
+        # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
@@ -210,7 +230,6 @@ class QCPI(BaseAlgorithm):
 
         q = len(A_j0) - 1
 
-        x_0 = np.concatenate((ya[:,0], paramGuess))
         # Set up perturbed ICs
         xp_0 = np.hstack((x_0, A_j0.flat)) # Add perturbed ICs as extra states
         xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
@@ -240,31 +259,18 @@ class QCPI(BaseAlgorithm):
         pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
 
-        bc_left_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
-
-        M = None
-
         err1 = 1000
         np.set_printoptions(precision=4, linewidth=160)
         for ctr in range(max_iter):
             pert_eom(t_arr, x_guess, g_arr, const)
 
             beta = (C_a @ g_arr)
-            beta[0]+= x0_twice          # Compute Chebyshev coefficients of solution
-            x_new = C_x @ beta          # Compute solution
-
-            err1 = np.max(absdiff(x_new, x_guess))
-
-            if err1 < 1e-2:
+            if err1 < 1e-1:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
-                # from beluga.utils import keyboard
-                # keyboard()
-
                 res_norm_0 = np.amax(np.abs((res)))
                 print('Residue : '+str(res_norm_0))
-
-                if res_norm_0 < 1e-3:
+                if res_norm_0 < 1e-6:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -276,22 +282,13 @@ class QCPI(BaseAlgorithm):
                 A_jf = (A_jf - x_tf[:nOdes]).T
 
                 x_t0 = x_new[-1,:]
-                res_left = self.bc_left_fn(x_t0[:nOdes], aux)
-
-                if M is None:
-                    M = np.zeros((len(res_left), nOdes))
-                    bc_left_jac_fn(x_t0[:nOdes], M, aux)
-
                 A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
                 A0 = (A0 - x_t0[:nOdes]).T
-                lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, M @ A0))
-                k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
+                res_left = left_bc_jac_fn(x_t0, left_jac, aux)
+                lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
 
                 # First row is all ones, rows after = Jac @ perturbations at tf
-                # lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf))
-
-                # k_j = np.linalg.solve(lhs, np.hstack((1, -res)))
-                # k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res)))
+                k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
                 A_0 = k_j @ A_j0
                 alpha = .1
 
@@ -299,15 +296,23 @@ class QCPI(BaseAlgorithm):
                 x0_twice = 2*xp_0
                 x_new[-1] = xp_0
 
+            beta[0]+= x0_twice          # Compute Chebyshev coefficients of solution
+            x_new = C_x @ beta          # Compute solution
 
-
+            err1 = np.max(absdiff(x_new, x_guess))
             x_guess = x_new
 
-        if not converged:
-            print('Failed')
+        # Return initial guess if it failed to converge
+        sol = solinit
+        if converged:
+            if len(tspan) > 2:
+                _, x_out = mcpi(self.mcpi_eom, tspan, x_new[-1, :nOdes], args=(const,))
+                sol.x, sol.y = tspan, x_out[:,:nXandLam].T
+                sol.parameters = x_out[0,nXandLam:]
+            else:
+                sol.x, sol.y = t_arr[::-1], np.flipud(x_new)
+                sol.parameters = x_new[0,nXandLam:]
 
-        if len(tspan) > 2:
-            _, x_out = mcpi(self.deriv_func, tspan, x_new[-1, :nOdes], args=(const,))
-            return tspan, x_out
-        else:
-            return t_arr[::-1], np.flipud(x_new)
+        sol.converged = converged
+        sol.aux = aux
+        return sol
