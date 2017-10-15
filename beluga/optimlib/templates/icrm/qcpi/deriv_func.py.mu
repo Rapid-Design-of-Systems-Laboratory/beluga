@@ -88,6 +88,7 @@ def get_dhdu_func(_t,_X,_p,_aux):
 def deriv_func_ode45(_t,_X,_p,_aux):
     return deriv_func_nojit(_t,_X,_p,list(_aux['const'].values()))
 
+@numba.njit(parallel=True)
 def deriv_func_mcpi(_t,_X,dXdt_,_const):
     dXdt_[:{{num_states}}+{{dae_var_num}}] = deriv_func(_t, _X[:{{num_states}}+{{dae_var_num}}], _X[{{num_states}}+{{dae_var_num}}:{{num_states}}+{{dae_var_num}}+{{num_params}}], _const)
     dXdt_[{{num_states}}+{{dae_var_num}}:] = 0
@@ -122,4 +123,4 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
 
 
-deriv_func = (deriv_func_nojit)
+deriv_func = numba.njit(parallel=True)(deriv_func_nojit)

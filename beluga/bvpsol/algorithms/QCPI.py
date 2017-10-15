@@ -9,7 +9,7 @@ import numpy as np
 import functools as ft
 import imp
 from beluga.problem import BVP
-
+import sys
 # def create_odefn(problem_data, module):
 #
 
@@ -165,8 +165,9 @@ class QCPI(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
         out_ws = QCPICodeGen({'problem_data': problem_data})
-        print(out_ws['bc_func_code'])
-        print(out_ws['deriv_func_code'])
+        # print(out_ws['bc_func_code'])
+        # print(out_ws['deriv_func_code'])
+
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], None) #out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
@@ -180,7 +181,7 @@ class QCPI(BaseAlgorithm):
         # self.deriv_func = njit(parallel=True)(out_ws['code_module'].deriv_func_mcpi)
         self.deriv_func = out_ws['code_module'].deriv_func_mcpi
         self.mcpi_eom = make_mcpi_eom(self.deriv_func)
-
+        sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
     def solve(self,solinit):
         x  = solinit.x
@@ -269,7 +270,7 @@ class QCPI(BaseAlgorithm):
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
-                print('Residue : '+str(res_norm_0))
+                # print('Residue : '+str(res_norm_0))
                 if res_norm_0 < 1e-6:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
