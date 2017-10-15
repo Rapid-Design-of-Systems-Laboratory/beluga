@@ -222,7 +222,7 @@ class QCPI(BaseAlgorithm):
         # Each row is one initial condition for particular solution
         A_j0 = np.eye(nOdes)
         A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
-        A_j0 = np.unique(A_j0, axis=0)*.001   # Remove duplicates
+        A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
         # A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
@@ -236,8 +236,8 @@ class QCPI(BaseAlgorithm):
         tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 21
-        max_iter = 2000
+        N = 31
+        max_iter = 500
 
         # Setup MCPI
         w1 = (tspan[-1]-tspan[0])/2
@@ -284,11 +284,11 @@ class QCPI(BaseAlgorithm):
             #
             # if ctr > 70:
             #     print('Err1',err1)
-            if err1 < 1:
+            if err1 < 1e-2:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
-                # if ctr > 20:
+                # if ctr > 90:
                 #     print('Residue : '+str(res_norm_0))
                 if res_norm_0 < 1e-3 and err1 < 1e-3:
                     converged = True
@@ -319,21 +319,21 @@ class QCPI(BaseAlgorithm):
                 A_0 = k_j @ A_j0
                 # alpha = .1
 
-                # Damp the update
-                r1 = res_norm_0
-                if r0 is not None:
-                    alpha2 = (r0-r1)/(alpha1*r0)
-                    if alpha2 < 0:
-                        alpha2 = 1
-                if r1>1:
-                    alpha1 = 1/(2*r1)
-                else:
-                    alpha1 = 1
-                if r1 < 10*1e-3:
-                    alpha1, alpha2 = 1, 0.5
-                r0 = r1
+                # # Damp the update
+                # r1 = res_norm_0
+                # if r0 is not None:
+                #     alpha2 = (r0-r1)/(alpha1*r0)
+                #     if alpha2 < 0:
+                #         alpha2 = 1
+                # if r1>1:
+                #     alpha1 = 1/(2*r1)
+                # else:
+                #     alpha1 = 1
+                # if r1 < 10*1e-4:
+                #     alpha1, alpha2 = 1, 0.2
+                # r0 = r1
 
-                xpm_0 += 0.1 * A_0   # Also adds to xp_0 as xpm_0 is a view
+                xpm_0 += 0.05 * A_0   # Also adds to xp_0 as xpm_0 is a view
                 x0_twice = 2*xp_0
                 x_new[-1] = xp_0
 
