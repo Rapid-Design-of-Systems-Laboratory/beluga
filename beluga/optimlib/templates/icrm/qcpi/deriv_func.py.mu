@@ -125,5 +125,5 @@ def deriv_func_nojit(_t,_X,_p,_const):
     )
 
 
-
+num_dae_vars = {{dae_var_num}}
 deriv_func = numba.njit(parallel=True)(deriv_func_nojit)
