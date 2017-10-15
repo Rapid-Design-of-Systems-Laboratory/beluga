@@ -109,7 +109,7 @@ QCPICodeGen = sp.Workflow([
 def make_pert_eom(nOdes, q, eom_fn):
     """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
 
-    # @njit(parallel=True)
+    @njit(parallel=True)
     def pert_eom(t, X, dXdt, *args):
         for i in range(q+2):
             # Extract only relevant states
@@ -165,8 +165,8 @@ class QCPI(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
         out_ws = QCPICodeGen({'problem_data': problem_data})
-        # print(out_ws['bc_func_code'])
-        # print(out_ws['deriv_func_code'])
+        print(out_ws['bc_func_code'])
+        print(out_ws['deriv_func_code'])
 
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], None) #out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
@@ -183,6 +183,7 @@ class QCPI(BaseAlgorithm):
         self.mcpi_eom = make_mcpi_eom(self.deriv_func)
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
+
     def solve(self,solinit):
         x  = solinit.x
         # Get initial states from the guess structure
@@ -196,38 +197,30 @@ class QCPI(BaseAlgorithm):
         # Only the start and end times are required for ode45
         arcs = solinit.arcs
 
-        if arcs is None:
-            arcs = [(0, len(solinit.x)-1)]
-            solinit.arcs = arcs
+        ya = solinit.y[:,0]
+        yb = solinit.y[:,-1]
 
-        arc_seq = aux['arc_seq']
-        num_arcs = len(arc_seq)
-        if len(arcs) % 2 == 0:
-            raise Exception('Number of arcs must be odd!')
-
-        left_idx, right_idx = map(np.array, zip(*arcs))
-        ya = solinit.y[:,left_idx]
-        yb = solinit.y[:,right_idx]
-
-        tmp = np.arange(num_arcs+1, dtype=np.float32)
-        tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
         # Extract number of ODEs in the system to be solved
         nXandLam = y0g.shape[0]
         nParams = paramGuess.size
         nOdes = nXandLam + nParams
+
         ## Setup QCPI
-        x_0 = np.concatenate((ya[:,0], paramGuess))
+        x_0 = np.concatenate((ya, paramGuess))
 
         res_left = self.bc_left_fn(x_0, aux)
         left_jac = np.zeros((len(res_left), nOdes))
         left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
         left_bc_jac_fn(x_0, left_jac, aux)
 
+        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.01
+        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.01)
+        x_pert[abs(x_pert) < 1e-4] = 0.01
         # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
-        A_j0 = np.vstack((np.zeros(nOdes), np.eye(nOdes)*0.01))
+        A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
 
         q = len(A_j0) - 1
 
@@ -235,10 +228,11 @@ class QCPI(BaseAlgorithm):
         xp_0 = np.hstack((x_0, A_j0.flat)) # Add perturbed ICs as extra states
         xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
         xpm_0 = np.reshape(xp_0, (q+2, nOdes))  # Matrix 'view' of xp_0
-        tspan = (x[0], x[-1])
+        # tspan = x
+        tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 21
+        N = 25
         max_iter = 500
 
         # Setup MCPI
@@ -247,7 +241,14 @@ class QCPI(BaseAlgorithm):
         tau, C_x, C_a = mcpi_init(N)      # tau is in reverse order (1 to -1)
         C_a = w1 * C_a
         t_arr = tau*w1 + w2
+
         x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
+
+        if x_guess.shape[0] == solinit.y.shape[1]:
+            init_y = np.hstack((solinit.y.T, np.tile(paramGuess, (N+1, 1))))
+            x_guess[1:,:] = np.tile(init_y[1:,:], (q+2,))
+
+
         x0_twice = 2*x_guess[0]
         g_arr = np.empty_like(x_guess)
         const = tuple(aux['const'].values())
@@ -266,13 +267,13 @@ class QCPI(BaseAlgorithm):
             pert_eom(t_arr, x_guess, g_arr, const)
 
             beta = (C_a @ g_arr)
-            print('Err1',err1)
-            if err1 < 1e-1:
+            # print('Err1',err1)
+            if err1 < 1e-2:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
-                print('Residue : '+str(res_norm_0))
-                if res_norm_0 < 1e-4:
+                # print('Residue : '+str(res_norm_0))
+                if res_norm_0 < 1e-3:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -312,11 +313,16 @@ class QCPI(BaseAlgorithm):
         if converged:
             if len(tspan) > 2:
                 _, x_out = mcpi(self.mcpi_eom, tspan, x_new[-1, :nOdes], args=(const,))
-                sol.x, sol.y = tspan, x_out[:,:nXandLam].T
-                sol.parameters = x_out[0,nXandLam:]
             else:
-                sol.x, sol.y = t_arr[::-1], np.flipud(x_new)
-                sol.parameters = x_new[0,nXandLam:]
+                x_out = np.flipud(x_new)[:,:nOdes]
+                tspan = t_arr[::-1]
+
+            sol.x, sol.y = tspan, x_out[:,:nXandLam].T
+            sol.parameters = x_out[0,nXandLam:]
+            sol.arcs = [(0, len(sol.x)-1)]
+            sol.arc_seq = (0,)
+            # keyboard()
+
 
         sol.converged = converged
         sol.aux = aux
