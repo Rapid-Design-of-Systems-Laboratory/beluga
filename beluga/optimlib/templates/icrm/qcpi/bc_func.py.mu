@@ -51,7 +51,7 @@ def bc_func_right(_yb, _aux):
     _H = compute_hamiltonian(1,_yb,_p,_aux['const'].values(),[{{#control_list}}{{.}},{{/control_list}}])
     res_right = np.array([{{#bc_terminal}}{{.}},
                 {{/bc_terminal}}])
-    
+
     return res_right
 
 def bc_func(_ya, _yb, _aux):
@@ -59,6 +59,3 @@ def bc_func(_ya, _yb, _aux):
     res_right = bc_func_right(_yb, _aux)
 
     return np.hstack((res_left, res_right))
-
-
-left_bc_mask = np.array([0]*({{num_states}}-1)+[1]*({{num_params}}+{{num_controls}}+1))

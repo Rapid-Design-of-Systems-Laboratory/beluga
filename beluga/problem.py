@@ -409,11 +409,11 @@ class GuessGenerator(object):
                              len(solinit.aux['parameters']))
 
         if self.dae_num_states > 0:
-            dae_guess = np.ones(self.dae_num_states) * 3.14/3
+            dae_guess = np.ones(self.dae_num_states) * -0.1
             dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
 
             dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
-            dae_x0 = dae_guess
+            # dae_x0 = dae_guess
             print('dae_x0',dae_x0)
             x0 = np.append(x0, dae_x0)  # Add dae states
 
