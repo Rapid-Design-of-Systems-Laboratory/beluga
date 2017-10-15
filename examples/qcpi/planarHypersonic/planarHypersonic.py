@@ -56,7 +56,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
              )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[80e3,0,5000,-90*pi/180],
+                start=[20e3,0,1000,-90*pi/180],
                 direction='forward',
                 costate_guess = -0.1
 )
@@ -64,13 +64,15 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(2) \
-                .terminal('theta',0.05*pi/180) \
-                .terminal('h', 0)
+                .num_cases(21) \
+                .terminal('h', 16000) \
+                .terminal('theta',0.1*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11)  \
-                .terminal('theta', 1.0*pi/180)
+                .terminal('h',12000) \
+                # .initial('v',2000) \
+                # .terminal('theta', 0.2*pi/180)
 
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(201)  \

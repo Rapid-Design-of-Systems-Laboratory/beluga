@@ -171,6 +171,7 @@ class QCPI(BaseAlgorithm):
         self.stm_ode_func = self.bvp.deriv_func
         self.module = out_ws['code_module']
         self.left_bc_mask = out_ws['code_module'].bc_free_mask
+        self.num_dae_vars = out_ws['code_module'].num_dae_vars
         # self.left_bc_mask = problem_data['bc_free_mask']
         # print(self.left_bc_mask)
         self.bc_left_fn = out_ws['code_module'].bc_func_left
@@ -197,6 +198,11 @@ class QCPI(BaseAlgorithm):
         ya = solinit.y[:,0]
         yb = solinit.y[:,-1]
 
+        # Set initial values
+        icvals= np.array(list(aux['initial'].values()))
+        icval_slice = np.array(self.left_bc_mask[:-self.num_dae_vars])==0
+        ya[:-1][icval_slice] = icvals[icval_slice]
+
         # Extract number of ODEs in the system to be solved
         nXandLam = y0g.shape[0]
         nParams = paramGuess.size
@@ -216,7 +222,7 @@ class QCPI(BaseAlgorithm):
         # Each row is one initial condition for particular solution
         A_j0 = np.eye(nOdes)
         A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
-        A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
+        A_j0 = np.unique(A_j0, axis=0)*.001   # Remove duplicates
         # A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
