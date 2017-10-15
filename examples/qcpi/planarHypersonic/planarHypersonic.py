@@ -64,19 +64,27 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
+                .num_cases(11) \
                 .terminal('h', 16000) \
                 .terminal('theta',0.1*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11)  \
-                .terminal('h',12000) \
-                # .initial('v',2000) \
-                # .terminal('theta', 0.2*pi/180)
+                .terminal('h',11000)
 
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(201)  \
-#                 .initial('h', 80e3)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(5)  \
+                .initial('v',2000)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11)  \
+                .terminal('h',8500)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(5)  \
+                .initial('v',4000)
+
 
 beluga.solve(ocp,
              method='icrm',
