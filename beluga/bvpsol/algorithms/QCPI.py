@@ -135,18 +135,15 @@ def make_mcpi_eom(eom_fn):
 
 
 @ft.lru_cache(maxsize=16)
-def make_bc_jac(bcfn, nOdes, step_size=1e-4):
+def make_bc_jac(bcfn, nOdes, step_size=1e-6):
     """Makes compiled BC jacobian function using forward difference"""
 
     # @njit(parallel=True)
     def jac_fn(Yb, jac, *args):
         fx = bcfn(Yb, *args)
-#         steps = np.eye(nOdes)*step_size + Yb
-#         for i, x_h in enumerate(steps):
+        steps = np.eye(nOdes)*step_size + Yb[:nOdes]
         for i in prange(nOdes):
-            Yb[i] += step_size
-            fxh = bcfn(Yb, *args)
-            Yb[i] -= step_size
+            fxh = bcfn(steps[i], *args)
             jac[:,i] = (fxh - fx)/step_size
 
         return fx
@@ -213,14 +210,15 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
         left_bc_jac_fn(x_0, left_jac, aux)
 
-        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.01
-        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.01)
-        x_pert[abs(x_pert) < 1e-4] = 0.01
+        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
+        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.001)
+        x_pert[abs(x_pert) < 1e-6] = 0.001
         # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
-        A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
+        # A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
+        A_j0 = np.vstack((np.zeros(nOdes), 1e-6*np.eye(nOdes)))
 
         q = len(A_j0) - 1
 
@@ -232,8 +230,8 @@ class QCPI(BaseAlgorithm):
         tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 25
-        max_iter = 500
+        N = 31
+        max_iter = 250
 
         # Setup MCPI
         w1 = (tspan[-1]-tspan[0])/2
@@ -242,12 +240,10 @@ class QCPI(BaseAlgorithm):
         C_a = w1 * C_a
         t_arr = tau*w1 + w2
 
-        x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
-
-        if x_guess.shape[0] == solinit.y.shape[1]:
-            init_y = np.hstack((solinit.y.T, np.tile(paramGuess, (N+1, 1))))
-            x_guess[1:,:] = np.tile(init_y[1:,:], (q+2,))
-
+        if solinit.extra is not None:
+            x_guess = solinit.extra
+        else:
+            x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
 
         x0_twice = 2*x_guess[0]
         g_arr = np.empty_like(x_guess)
@@ -261,19 +257,34 @@ class QCPI(BaseAlgorithm):
         pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
 
+        alpha1 = 1
+        alpha2 = 1
+        r0 = None
+
         err1 = 1000
         np.set_printoptions(precision=4, linewidth=160)
         for ctr in range(max_iter):
+            # res_left = left_bc_jac_fn(x_guess[-1,:nOdes], left_jac, aux)
+            # dx0 = 0.1*np.linalg.lstsq(left_jac, -res_left)[0]
+            # x_guess[-1,:nOdes] += dx0
+            # x0_twice = 2*x_guess[-1]
             pert_eom(t_arr, x_guess, g_arr, const)
 
             beta = (C_a @ g_arr)
-            # print('Err1',err1)
-            if err1 < 1e-2:
+            beta[0]+= x0_twice          # Compute Chebyshev coefficients of solution
+            x_new = C_x @ beta          # Compute solution
+
+            err1 = np.max(absdiff(x_new, x_guess))
+            #
+            # if ctr > 70:
+            #     print('Err1',err1)
+            if err1 < 1:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
-                # print('Residue : '+str(res_norm_0))
-                if res_norm_0 < 1e-3:
+                # if ctr > 20:
+                #     print('Residue : '+str(res_norm_0))
+                if res_norm_0 < 1e-3 and err1 < 1e-3:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -296,16 +307,26 @@ class QCPI(BaseAlgorithm):
                 except:
                     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
                 A_0 = k_j @ A_j0
-                alpha = .1
+                # alpha = .1
 
-                xpm_0 += alpha * A_0   # Also adds to xp_0 as xpm_0 is a view
+                # Damp the update
+                r1 = res_norm_0
+                if r0 is not None:
+                    alpha2 = (r0-r1)/(alpha1*r0)
+                    if alpha2 < 0:
+                        alpha2 = 1
+                if r1>1:
+                    alpha1 = 1/(2*r1)
+                else:
+                    alpha1 = 1
+                if r1 < 10*1e-3:
+                    alpha1, alpha2 = 1, 0.5
+                r0 = r1
+
+                xpm_0 += 0.1 * A_0   # Also adds to xp_0 as xpm_0 is a view
                 x0_twice = 2*xp_0
                 x_new[-1] = xp_0
 
-            beta[0]+= x0_twice          # Compute Chebyshev coefficients of solution
-            x_new = C_x @ beta          # Compute solution
-
-            err1 = np.max(absdiff(x_new, x_guess))
             x_guess = x_new
 
         # Return initial guess if it failed to converge
@@ -321,8 +342,7 @@ class QCPI(BaseAlgorithm):
             sol.parameters = x_out[0,nXandLam:]
             sol.arcs = [(0, len(sol.x)-1)]
             sol.arc_seq = (0,)
-            # keyboard()
-
+            sol.extra = x_new
 
         sol.converged = converged
         sol.aux = aux

@@ -32,6 +32,7 @@ class Solution(object):
 
         self.y_splines = None
         self.u_splines = None
+        self.extra = None
 
     # TODO: Write test for interpolation system
     def init_interpolate(self):
