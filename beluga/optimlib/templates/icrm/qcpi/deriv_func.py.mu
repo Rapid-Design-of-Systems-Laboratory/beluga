@@ -16,27 +16,25 @@ def compute_jacobian(f, X, indices=None, StepSize=1e-100, args=()):
                 for index, ih in enumerate(I)
                 if index in indices],order='F').T
 
-def compute_jacobian_fd(f, X, indices=None, StepSize=1e-6, args=()):
-    I = np.eye({{num_states}}+{{dae_var_num}})*StepSize
-    if indices is None:
-        indices = range({{num_states}}+{{dae_var_num}})
+@numba.njit
+def compute_jacobian_fd(X, _const, step_size=1e-6):
+    jac = np.zeros(({{dae_var_num}}, {{num_states}}+{{dae_var_num}}))
+    fx = compute_g(X, _const)
+    steps = np.eye({{num_states}}+{{dae_var_num}})*step_size + X[:{{num_states}}+{{dae_var_num}}]
+    for i in numba.prange({{num_states}}+{{dae_var_num}}):
+        fxh = compute_g(steps[i], _const)
+        jac[:,i] = (fxh - fx)/step_size
 
-    fx = f(X[:({{num_states}}+{{dae_var_num}})], *args)
-    return np.array([ (f(X[:({{num_states}}+{{dae_var_num}})]+h, *args) - fx)/StepSize
-                for index, h in enumerate(I)
-                if index in indices],order='F').T
+    return jac
 
-def compute_g(_X, _p, _aux):
+@numba.njit
+def compute_g(_X, _const):
     I = 1j
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:({{num_states}})]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
     # Declare all auxiliary variables
-    {{#aux_list}}
-    {{#vars}}
-    {{.}} = _aux['{{type}}']['{{.}}']
-    {{/vars}}
-    {{/aux_list}}
+    {{#aux_list}}{{#vars}}{{.}},{{/vars}}{{/aux_list}} = _const
 
     # Declare all quantities
     {{#quantity_list}}
@@ -96,6 +94,8 @@ def deriv_func_mcpi(_t,_X,dXdt_,_const):
 def deriv_func_nojit(_t,_X,_p,_const):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
+    tf = abs(tf)
+    _X[{{num_states}}-1] = tf
 
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
@@ -109,12 +109,15 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
     #Xdot = np.array([{{#deriv_list}}{{.}},
     #                 {{/deriv_list}}])
-    #dg     = compute_jacobian_fd(compute_g, _X, args=(_p, _aux))
+    #dg     = compute_jacobian_fd(_X, _const)
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-    #udot   = scipy.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
-
-    #return np.hstack((Xdot, udot))
+    #udot   = np.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
+    #udot2 = np.array([{{#dae_eom_list}}{{.}},{{/dae_eom_list}}])
+    #print(udot, udot2)
+    #from beluga.utils import keyboard
+    #keyboard()
+    #return np.hstack((Xdot, udot2))
     return np.array([{{#deriv_list}}{{.}},
         {{/deriv_list}}
         {{#dae_eom_list}}{{.}},
