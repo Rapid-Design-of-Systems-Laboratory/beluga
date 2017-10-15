@@ -170,7 +170,7 @@ class QCPI(BaseAlgorithm):
 
         self.stm_ode_func = self.bvp.deriv_func
         self.module = out_ws['code_module']
-        # self.left_bc_mask = out_ws['code_module'].left_bc_mask
+        self.left_bc_mask = out_ws['code_module'].bc_free_mask
         # self.left_bc_mask = problem_data['bc_free_mask']
         # print(self.left_bc_mask)
         self.bc_left_fn = out_ws['code_module'].bc_func_left
@@ -214,11 +214,11 @@ class QCPI(BaseAlgorithm):
         x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.001)
         x_pert[abs(x_pert) < 1e-6] = 0.001
         # Each row is one initial condition for particular solution
-        # A_j0 = np.eye(nOdes)
-        # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
-        # A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
+        A_j0 = np.eye(nOdes)
+        A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
+        A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
         # A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
-        A_j0 = np.vstack((np.zeros(nOdes), 1e-6*np.eye(nOdes)))
+        # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
         q = len(A_j0) - 1
 
@@ -230,8 +230,8 @@ class QCPI(BaseAlgorithm):
         tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 31
-        max_iter = 250
+        N = 21
+        max_iter = 2000
 
         # Setup MCPI
         w1 = (tspan[-1]-tspan[0])/2
@@ -294,18 +294,22 @@ class QCPI(BaseAlgorithm):
                 A_jf = np.reshape(x_tf[nOdes:], (q+1, nOdes))
                 # Subtract unperturbed terminal state to get perturbations
                 A_jf = (A_jf - x_tf[:nOdes]).T
-
-                x_t0 = x_new[-1,:]
-                A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
-                A0 = (A0 - x_t0[:nOdes]).T
-                res_left = left_bc_jac_fn(x_t0, left_jac, aux)
-                lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
+                lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf))
+                try:
+                    k_j = np.linalg.solve(lhs, np.hstack((1, -res)))
+                except:
+                    k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res)))
+                # x_t0 = x_new[-1,:]
+                # A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
+                # A0 = (A0 - x_t0[:nOdes]).T
+                # res_left = left_bc_jac_fn(x_t0, left_jac, aux)
+                # lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
 
                 # First row is all ones, rows after = Jac @ perturbations at tf
-                try:
-                    k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
-                except:
-                    k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
+                # try:
+                #     k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
+                # except:
+                #     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
                 A_0 = k_j @ A_j0
                 # alpha = .1
 
