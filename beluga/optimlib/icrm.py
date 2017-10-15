@@ -34,6 +34,34 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
         print('Using two sided saturation function')
         return ubound - ( ubound - lbound )/( 1 + sym.exp(s*var) )
 
+def make_bc(constraints,
+             states,
+             costates,
+             cost,
+             aug_cost,
+             derivative_fn,
+             location,
+             prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
+                         ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
+
+    prefix_map = dict(prefix_map)
+    bc_list = [sanitize_constraint_expr(x, states, location, prefix_map)
+                    for x in constraints[location]]
+
+    *_, sign = dict(prefix_map)[location]
+
+    cost_expr = sign * cost
+    aug_cost_expr = sign * (aug_cost.expr - cost.expr)
+
+    #TODO: Fix hardcoded if conditions
+    #TODO: Change to symbolic
+    for state,costate in zip(states, costates):
+        if derivative_fn(aug_cost_expr, state) == 0:
+            # State not constrained -> costate = 0
+            bc_list.append(str(costate - derivative_fn(cost_expr, state)))
+
+    return bc_list
+
 def make_bc_mask(constraints, states, controls, mu_vars, initial_cost, derivative_fn):
     """Creates mask marking free and bound variables at t=0
 
@@ -333,7 +361,8 @@ def generate_problem_data(workspace):
          [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
          + ['tf']
      ,
-     'parameter_list': [str(p) for p in workspace['parameters']],
+    #  'parameter_list': [str(p) for p in workspace['parameters']],
+     'parameter_list': [],
      'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
      'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
      'deriv_list':
@@ -344,7 +373,8 @@ def generate_problem_data(workspace):
      'states': workspace['states'],
      'costates': workspace['costates'],
      'constants': workspace['constants'],
-     'parameters': workspace['parameters'],
+    #  'parameters': workspace['parameters'],
+     'parameters': [],
      'controls': workspace['controls'],
      'mu_vars': workspace['mu_vars'],
      'quantity_vars': workspace['quantity_vars'],
@@ -360,7 +390,8 @@ def generate_problem_data(workspace):
      's_list': [],
      'bc_list': [],
      'num_states': 2*len(workspace['states']) + 1,
-     'num_params': len(workspace['parameters']),
+    #  'num_params': len(workspace['parameters']),
+     'num_params': 0,
      'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
     #  'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
     #  'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'])],
@@ -401,18 +432,18 @@ ICRM = sp.Workflow([
     sp.Task(make_ham_lamdot_with_eq_constraint,
             inputs=('states', 'costate_names', 'constraints', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
-    sp.Task(ft.partial(make_boundary_conditions, location='initial'),
-            inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
-            outputs=('bc_initial')),
     # sp.Task(ft.partial(make_boundary_conditions, location='initial'),
-    #         inputs=('constraints', 'states', 'costates', 'initial_cost', 'derivative_fn'),
+    #         inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
     #         outputs=('bc_initial')),
-    sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
-            inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
-            outputs=('bc_terminal')),
+    sp.Task(ft.partial(make_bc, location='initial'),
+            inputs=('constraints', 'states', 'costates', 'initial_cost', 'aug_initial_cost', 'derivative_fn'),
+            outputs=('bc_initial')),
     # sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
-    #         inputs=('constraints', 'states', 'costates', 'terminal_cost', 'derivative_fn'),
+    #         inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
     #         outputs=('bc_terminal')),
+    sp.Task(ft.partial(make_bc, location='terminal'),
+            inputs=('constraints', 'states', 'costates', 'terminal_cost', 'aug_terminal_cost', 'derivative_fn'),
+            outputs=('bc_terminal')),
     sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
     sp.Task(make_dhdu,
             inputs=('ham', 'controls', 'derivative_fn'),
