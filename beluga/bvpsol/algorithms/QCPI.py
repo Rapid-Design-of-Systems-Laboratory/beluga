@@ -236,7 +236,7 @@ class QCPI(BaseAlgorithm):
         tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 21
+        N = 51
         max_iter = 2000
 
         # Setup MCPI
@@ -251,14 +251,17 @@ class QCPI(BaseAlgorithm):
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
         const = tuple(aux['const'].values())
 
-        t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
-        # if solinit.extra is not None:
+        _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+        if any(np.isnan(x_guess2.flat)):
+            if solinit.extra is not None:
         #     # t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
-        #     # x_guess = solinit.extra
-        # else:
+                x_guess = solinit.extra
+            else:
         #     t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
         #     # x_guess = solinit.extra
-        #     # x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
+                x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
+        else:
+            x_guess = x_guess2
 
         x0_twice = 2*x_guess[0]
         g_arr = np.empty_like(x_guess)
@@ -272,6 +275,7 @@ class QCPI(BaseAlgorithm):
         r0 = None
 
         err1 = 1000
+        err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
         for ctr in range(max_iter):
             # res_left = left_bc_jac_fn(x_guess[-1,:nOdes], left_jac, aux)
@@ -287,13 +291,19 @@ class QCPI(BaseAlgorithm):
             err1 = np.max(absdiff(x_new, x_guess))
             #
             # if ctr > -10:
-            # print('Err1',err1)
-            if err1 < 100*self.tolerance:
+            if np.isnan(err1):
+                x_new = x_guess # Reset to old version in case of NaN
+                # from beluga.utils import keyboard
+                # keyboard()
+                print('NaaaaaN')
+                break
+
+            if err1 < self.tolerance or abs(err0-err1)<self.tolerance:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
                 # if ctr > -90:
-                #     print('Residue : '+str(res_norm_0))
+                # print('Residue : '+str(res_norm_0))
                 if res_norm_0 < self.tolerance:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
@@ -342,6 +352,7 @@ class QCPI(BaseAlgorithm):
                 x_new[-1] = xp_0
 
             x_guess = x_new
+            err0 = err1
 
         # Return initial guess if it failed to converge
         sol = solinit
