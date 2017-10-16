@@ -421,8 +421,8 @@ class GuessGenerator(object):
             dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
 
             dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
-            # dae_x0 = dae_guess
-            # dae_x0[1:] = 0
+            dae_x0 = dae_guess
+            dae_x0[1:] = 0
             print('dae_x0',dae_x0)
             x0 = np.append(x0, dae_x0)  # Add dae states
 

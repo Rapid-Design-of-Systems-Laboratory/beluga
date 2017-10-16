@@ -99,4 +99,6 @@ def mcpi(ode_fn, tspan, x_0, N=51, maxiter=501, xtol=1e-4, args=()):
         return tspan, cheby_eval(beta, tspan)
     else:
         # Else return solution on CGL mesh
-        return t_arr, np.array(list(reversed(x_new)))
+        # return t_arr, np.array(list(reversed(x_new)))
+        return t_arr[::-1], np.flipud(x_new)
+        # return t_arr[::-1], np.flipud(x_new)

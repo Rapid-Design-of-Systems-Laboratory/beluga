@@ -45,7 +45,7 @@ ocp.constraints() \
     .terminal('theta-theta_f','rad')
     # .initial('gam - gam_0', 'rad') \
 
-# ocp.scale(m='h', s='h/v', kg='mass', rad=1)
+# ocp.scale(m='h/20', s='h/v', kg='mass', rad=1)
 ocp.scale(m=1e3, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
@@ -58,7 +58,8 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 guess_maker = beluga.guess_generator('auto',
                 start=[20e3,0,1000,-90*pi/180],
                 direction='forward',
-                costate_guess = -0.1
+                costate_guess = -0.1,
+                control_guess = 0.0001,
 )
 
 continuation_steps = beluga.init_continuation()
@@ -85,6 +86,17 @@ continuation_steps.add_step('bisection') \
                 .num_cases(5)  \
                 .initial('v',4000)
 
+continuation_steps.add_step('bisection') \
+                .num_cases(5)  \
+                .initial('h',25000) \
+
+continuation_steps.add_step('bisection') \
+                .num_cases(21) \
+                .terminal('theta',0.9*pi/180)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(4) \
+                .terminal('h',0)
 
 beluga.solve(ocp,
              method='icrm',
