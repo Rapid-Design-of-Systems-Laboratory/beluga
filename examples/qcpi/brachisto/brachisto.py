@@ -1,4 +1,5 @@
 """Brachistochrone example."""
+from math import pi
 
 ocp = beluga.OCP('brachisto')
 
@@ -27,7 +28,7 @@ ocp.constraints() \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m')
 
-ocp.scale(m='y', s='y/v', kg=1, rad=1)
+ocp.scale(m='x', s='x/v', kg=1, rad=1)
 # ocp.scale(m=1, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
@@ -47,7 +48,8 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1
+                costate_guess = -0.1,
+                control_guess = 80*pi/180
 )
 
 

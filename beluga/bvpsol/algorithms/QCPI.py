@@ -201,7 +201,7 @@ class QCPI(BaseAlgorithm):
         # Set initial values
         icvals= np.array(list(aux['initial'].values()))
         icval_slice = np.array(self.left_bc_mask[:-self.num_dae_vars])==0
-        ya[:-1][icval_slice] = icvals[icval_slice]
+        ya[:-self.num_dae_vars][icval_slice] = icvals[icval_slice]
 
         # Extract number of ODEs in the system to be solved
         nXandLam = y0g.shape[0]
@@ -216,9 +216,9 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
         left_bc_jac_fn(x_0, left_jac, aux)
 
-        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
-        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.001)
-        x_pert[abs(x_pert) < 1e-6] = 0.001
+        # x_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
+        # x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.001)
+        # x_pert[abs(x_pert) < 1e-6] = 0.001
         # Each row is one initial condition for particular solution
         A_j0 = np.eye(nOdes)
         A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
@@ -236,8 +236,8 @@ class QCPI(BaseAlgorithm):
         tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 31
-        max_iter = 500
+        N = 21
+        max_iter = 2000
 
         # Setup MCPI
         w1 = (tspan[-1]-tspan[0])/2
@@ -246,22 +246,26 @@ class QCPI(BaseAlgorithm):
         C_a = w1 * C_a
         t_arr = tau*w1 + w2
 
-        if solinit.extra is not None:
-            x_guess = solinit.extra
-        else:
-            x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
+        # Make functions
+        pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
+        bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
+        const = tuple(aux['const'].values())
+
+        t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+        # if solinit.extra is not None:
+        #     # t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+        #     # x_guess = solinit.extra
+        # else:
+        #     t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+        #     # x_guess = solinit.extra
+        #     # x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
 
         x0_twice = 2*x_guess[0]
         g_arr = np.empty_like(x_guess)
-        const = tuple(aux['const'].values())
 
         res = self.bc_right_fn(x_0, aux)
         nBCs = len(res)
         psi_jac = np.zeros((nBCs, nOdes))
-
-        # Make functions
-        pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
-        bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
 
         alpha1 = 1
         alpha2 = 1
@@ -282,15 +286,15 @@ class QCPI(BaseAlgorithm):
 
             err1 = np.max(absdiff(x_new, x_guess))
             #
-            # if ctr > 70:
-            #     print('Err1',err1)
-            if err1 < 1e-2:
+            # if ctr > -10:
+            # print('Err1',err1)
+            if err1 < 100*self.tolerance:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
-                # if ctr > 90:
+                # if ctr > -90:
                 #     print('Residue : '+str(res_norm_0))
-                if res_norm_0 < 1e-3 and err1 < 1e-3:
+                if res_norm_0 < self.tolerance:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -320,7 +324,7 @@ class QCPI(BaseAlgorithm):
                 # alpha = .1
 
                 # # Damp the update
-                # r1 = res_norm_0
+                r1 = res_norm_0
                 # if r0 is not None:
                 #     alpha2 = (r0-r1)/(alpha1*r0)
                 #     if alpha2 < 0:
@@ -331,9 +335,9 @@ class QCPI(BaseAlgorithm):
                 #     alpha1 = 1
                 # if r1 < 10*1e-4:
                 #     alpha1, alpha2 = 1, 0.2
-                # r0 = r1
+                r0 = r1
 
-                xpm_0 += 0.05 * A_0   # Also adds to xp_0 as xpm_0 is a view
+                xpm_0 += 0.1 * A_0   # Also adds to xp_0 as xpm_0 is a view
                 x0_twice = 2*xp_0
                 x_new[-1] = xp_0
 
@@ -352,7 +356,7 @@ class QCPI(BaseAlgorithm):
             sol.parameters = x_out[0,nXandLam:]
             sol.arcs = [(0, len(sol.x)-1)]
             sol.arc_seq = (0,)
-            sol.extra = x_new
+            sol.extra = x_guess
 
         sol.converged = converged
         sol.aux = aux
