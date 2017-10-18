@@ -45,8 +45,8 @@ ocp.constraints() \
     .terminal('theta-theta_f','rad')
     # .initial('gam - gam_0', 'rad') \
 
-# ocp.scale(m='h/20', s='h/v', kg='mass', rad=1)
-ocp.scale(m=1e3, s=1, kg=1, rad=1)
+ocp.scale(m='h', s='h/v', kg='mass', rad=1)
+# ocp.scale(m=1e3, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                         tolerance=1e-4,
@@ -56,47 +56,52 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
              )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[20e3,0,1000,-90*pi/180],
+                start=[80e3,0.0,4000,-89*pi/180],
                 direction='forward',
                 costate_guess = -0.1,
-                control_guess = 0.0001,
+                control_guess = 0.1,
 )
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step('bisection') \
-                .num_cases(31) \
-                .terminal('h', 16000) \
-                .terminal('theta',0.1*pi/180)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(31)  \
-                .terminal('h',11000)
-
-
-continuation_steps.add_step('bisection') \
-                .num_cases(5)  \
-                .initial('v',2000)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(11)  \
-                .terminal('h',8500)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(5)  \
-                .initial('v',4000)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(5)  \
-                .initial('h',25000) \
-
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(31) \
+#                 .terminal('h', 16000) \
+#                 .terminal('theta',0.1*pi/180)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(31)  \
+#                 .terminal('h',11000)
+#
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(5)  \
+#                 .initial('v',2000)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11)  \
+#                 .terminal('h',8500)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(5)  \
+#                 .initial('v',4000)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(5)  \
+#                 .initial('h',25000) \
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(21) \
+#                 .terminal('theta',0.9*pi/180)
+#
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
-                .terminal('theta',0.9*pi/180)
+                .terminal('h',15000) \
+                # .terminal('theta',0.01*pi/180)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(4) \
-                .terminal('h',0)
+                .num_cases(501) \
+                .terminal('theta',5.0*pi/180)
 
 beluga.solve(ocp,
              method='icrm',
