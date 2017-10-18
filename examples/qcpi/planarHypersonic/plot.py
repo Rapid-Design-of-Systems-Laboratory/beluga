@@ -15,10 +15,16 @@ plots.add_plot().line('theta*re/1000','h/1000',datasource=ds,label='DS1')       
                 .xlabel('Downrange (km)').ylabel('h (km)')      \
                 .title('Altitude vs. Downrange')
 #                .line('theta*re/1000','h/1000',datasource=ds2,label='DS2')                   \
+#
+# plots.add_plot().line('v/1000','h/1000')                    \
+#                 .xlabel('v (km/s)').ylabel('h (km)')      \
+#                 .title('Altitude vs. Velocity')
+#
 
-plots.add_plot().line('v/1000','h/1000')                    \
-                .xlabel('v (km/s)').ylabel('h (km)')      \
-                .title('Altitude vs. Velocity')
+plots.add_plot().line('t','gam*180/3.14')                    \
+                .xlabel('t (s)').ylabel('fpa (degrees)')      \
+                .title('FPA vs. Time')
+
 
 
 plots.add_plot().line('t','alfa*180/3.14')                    \
