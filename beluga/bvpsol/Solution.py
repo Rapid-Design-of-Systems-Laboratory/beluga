@@ -10,12 +10,12 @@ class Solution(object):
     def __init__(self, x=None, y=None, parameters=None, aux=None, state_list=None, arcs=None):
         "x,y and parameters should be vectors"
         if x is not None and y is not None:
-            self.x = np.array(x)
-            self.y = np.array(y)
+            self.x = np.array(x, dtype=np.float64)
+            self.y = np.array(y, dtype=np.float64)
         else:
             self.x = self.y = self.u = None
         if parameters is not None:
-            self.parameters = np.array(parameters)
+            self.parameters = np.array(parameters, dtype=np.float64)
         else:
             self.parameters = None
 
@@ -122,11 +122,11 @@ class Solution(object):
                      ]
         # Define state variables
         # Have to do in this order to override state values with arrays
-        variables += [(state,np.array(y[idx,:]))
+        variables += [(state,np.array(y[idx,:], dtype=np.float64))
                        for idx,state in enumerate(problem_data['state_list'])]
 
         # Define control variables
-        variables += [(control,np.array(u[idx,:]))
+        variables += [(control,np.array(u[idx,:], dtype=np.float64))
                        for idx,control in enumerate(problem_data['control_list'])]
 
 

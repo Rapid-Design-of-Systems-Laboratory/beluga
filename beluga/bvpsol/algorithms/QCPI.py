@@ -240,7 +240,7 @@ class QCPI(BaseAlgorithm):
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*.001   # Remove duplicates
-        A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
+        A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes, dtype=np.float64)))
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
         q = len(A_j0) - 1
@@ -260,7 +260,7 @@ class QCPI(BaseAlgorithm):
         w1 = (tspan[-1]-tspan[0])/2
         w2 = (tspan[-1]+tspan[0])/2
         tau, C_x, C_a = mcpi_init(N)      # tau is in reverse order (1 to -1)
-        C_a = w1 * C_a
+        C_a = w1 * C_a.astype(np.float64)
         t_arr = tau*w1 + w2
 
         # Make functions
@@ -273,11 +273,11 @@ class QCPI(BaseAlgorithm):
         _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
         if np.isnan(x_guess2.flat).any():
             if solinit.extra is not None and not np.isnan(solinit.extra.flat).any():
-                x_guess = solinit.extra
+                x_guess = solinit.extra.astype(np.float64)
             else:
-                x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
+                x_guess = np.tile(xp_0, (N+1, 1)).astype(np.float64)  # Each column -> time history of one state
         else:
-            x_guess = np.flipud(x_guess2)
+            x_guess = np.flipud(x_guess2).astype(np.float64)
 
         x0_twice = 2*x_guess[-1]
         g_arr = np.empty_like(x_guess)
@@ -357,25 +357,26 @@ class QCPI(BaseAlgorithm):
                 A_0 = k_j @ A_j0
 
                 # stepsize calculation
-                x_t = x_guess[:,:nOdes]
+                x_t = x_new[:,:nOdes]
                 A_t = np.zeros_like(x_t)
-                # Compute A for every time step
-                for i in range(x_guess.shape[0]):
-                    x_ti = x_guess[i,:]
-                    A_ji = np.reshape(x_ti[nOdes:], (q+1, nOdes))
-                    # Subtract unperturbed x(t) to get perturbation at time t
-                    A_ji = (A_ji - x_ti[:nOdes])
-                    A_ti = k_j @ A_ji
-                    A_t[i,:] = k_j @ A_ji
-
                 P0 = perf_idx_fn(x_t, A_t, 0.0, aux)
                 if P0 < self.tolerance:
                     converged = True
                     print('Converged (w/ P0) in %d iterations.' % ctr)
                     break
+
+                # Compute A for every time step
+                for i in range(x_guess.shape[0]):
+                    x_ti = x_new[i,:]
+                    A_ji = np.reshape(x_ti[nOdes:], (q+1, nOdes))
+                    # Subtract unperturbed x(t) to get perturbation at time t
+                    A_ji = (A_ji.astype(np.float64) - x_ti[:nOdes].astype(np.float64))
+                    A_ti = k_j @ A_ji
+                    A_t[i,:] = k_j @ A_ji
+
                 alpha = 2.0
                 P = P0 + 1
-                while P > P0:
+                while P > P0 and alpha > self.tolerance:
                     alpha = alpha/2.0
                     P = perf_idx_fn(x_t, A_t, alpha, aux)
 
