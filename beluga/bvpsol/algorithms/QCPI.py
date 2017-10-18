@@ -235,7 +235,7 @@ class QCPI(BaseAlgorithm):
 
         x_pert = np.absolute(np.max(solinit.y, axis=1))*0.0001
         x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.0001)
-        x_pert[abs(x_pert) < 1e-12] = 0.001
+        x_pert[x_pert < 10*self.tolerance] = 10*self.tolerance
         # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
