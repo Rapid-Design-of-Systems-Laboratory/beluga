@@ -15,7 +15,7 @@ ocp.control('theta','rad')
 
 # Define constants
 ocp.constant('g',9.81,'m/s^2')
-ocp.constant('xlim',-1.0,'m')
+ocp.constant('xlim',-2.0,'m')
 # Define costs
 ocp.path_cost('1','s')
 
@@ -35,10 +35,11 @@ ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
-                    tolerance=1e-6,
+                    tolerance=1e-8,
                     max_iterations=500,
                     verbose = True,
-                    max_error=50
+                    max_error=50,
+                    N=31
 )
 
 guess_maker = beluga.guess_generator('auto',
@@ -52,14 +53,14 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(101) \
+                .num_cases(61) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-#
-# continuation_steps.add_step('bisection').num_cases(21) \
-#                  .const('xlim', -2)
-#
+# #
+# continuation_steps.add_step('bisection').num_cases(101) \
+#                  .const('xlim', -1.50)
+# #
 # continuation_steps.add_step('bisection').num_cases(11,spacing='log') \
 #                  .const('eps_constraint1', 1e-5)
 
