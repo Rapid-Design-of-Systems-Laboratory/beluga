@@ -105,11 +105,10 @@ QCPICodeGen = sp.Workflow([
 ], description='Generates and compiles the required BVP functions from problem data')
 
 
+pert_eom_bck = None
 @ft.lru_cache(maxsize=16)
 def make_pert_eom(nOdes, q, eom_fn):
     """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
-
-    @njit(parallel=True)
     def pert_eom(t, X, dXdt, *args):
         for i in range(q+2):
             # Extract only relevant states
@@ -119,7 +118,9 @@ def make_pert_eom(nOdes, q, eom_fn):
             for j in range(len(t)):
                 eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
 
-    return pert_eom
+    global pert_eom_bck
+    pert_eom_bck = pert_eom
+    return njit(parallel=True)(pert_eom)
 
 @ft.lru_cache(maxsize=16)
 def make_mcpi_eom(eom_fn):
@@ -270,18 +271,15 @@ class QCPI(BaseAlgorithm):
         const = tuple(aux['const'].values())
 
         _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
-        if any(np.isnan(x_guess2.flat)):
-            if solinit.extra is not None:
-        #     # t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+        if np.isnan(x_guess2.flat).any():
+            if solinit.extra is not None and not np.isnan(solinit.extra.flat).any():
                 x_guess = solinit.extra
             else:
-        #     t_arr, x_guess = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
-        #     # x_guess = solinit.extra
                 x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
         else:
-            x_guess = x_guess2
+            x_guess = np.flipud(x_guess2)
 
-        x0_twice = 2*x_guess[0]
+        x0_twice = 2*x_guess[-1]
         g_arr = np.empty_like(x_guess)
 
         res = self.bc_right_fn(x_0, aux)
@@ -296,10 +294,6 @@ class QCPI(BaseAlgorithm):
         err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
         for ctr in range(max_iter):
-            # res_left = left_bc_jac_fn(x_guess[-1,:nOdes], left_jac, aux)
-            # dx0 = 0.1*np.linalg.lstsq(left_jac, -res_left)[0]
-            # x_guess[-1,:nOdes] += dx0
-            # x0_twice = 2*x_guess[-1]
             pert_eom(t_arr, x_guess, g_arr, const)
 
             # if np.any(np.isnan(g_arr)):
@@ -313,10 +307,14 @@ class QCPI(BaseAlgorithm):
             x_new = C_x @ beta          # Compute solution
 
             err1 = np.max(absdiff(x_new, x_guess))
-            #
-            # if ctr > -10:
+            if np.isnan(err1):
+                x_new = x_guess
+                print('NaaaaaN')
+                break
+                from beluga.utils import keyboard
+                keyboard()
 
-            if err1 < 100*self.tolerance or abs(err0-err1)<self.tolerance:
+            if err1 < 10*self.tolerance or abs(err0-err1)<self.tolerance:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
@@ -338,11 +336,13 @@ class QCPI(BaseAlgorithm):
                 A_jf = np.reshape(x_tf[nOdes:], (q+1, nOdes))
                 # Subtract unperturbed terminal state to get perturbations
                 A_jf = (A_jf - x_tf[:nOdes]).T
+
                 # lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf))
                 # try:
                 #     k_j = np.linalg.solve(lhs, np.hstack((1, -res)))
                 # except:
                 #     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res)))
+
                 x_t0 = x_new[-1,:]
                 A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
                 A0 = (A0 - x_t0[:nOdes]).T
