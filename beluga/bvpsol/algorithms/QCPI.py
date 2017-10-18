@@ -231,9 +231,9 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
         left_bc_jac_fn(x_0, left_jac, aux)
 
-        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.0001
-        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.0001)
-        x_pert[abs(x_pert) < 1e-6] = 0.01
+        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
+        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.001)
+        x_pert[abs(x_pert) < 1e-12] = 0.01
         # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
@@ -251,7 +251,7 @@ class QCPI(BaseAlgorithm):
         tspan = x[0], x[-1]
         t_short = [tspan[0], tspan[-1]]
         converged = False
-        N = 51
+        N = 101
         max_iter = self.max_iterations
 
         # Setup MCPI
@@ -301,6 +301,12 @@ class QCPI(BaseAlgorithm):
             # x0_twice = 2*x_guess[-1]
             pert_eom(t_arr, x_guess, g_arr, const)
 
+            # if np.any(np.isnan(g_arr)):
+            #     print('NaaaaaNaaaa')
+            #     from beluga.utils import keyboard
+            #     keyboard()
+            #     break
+
             beta = (C_a @ g_arr)
             beta[0]+= x0_twice          # Compute Chebyshev coefficients of solution
             x_new = C_x @ beta          # Compute solution
@@ -347,7 +353,7 @@ class QCPI(BaseAlgorithm):
                     k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
                 except:
                     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
-                A_0 = k_j @ A_j0
+                # A_0 = k_j @ A_j0
                 # alpha = .1
 
                 # stepsize calculation
@@ -372,12 +378,16 @@ class QCPI(BaseAlgorithm):
                 while P > P0:
                     alpha = alpha/2.0
                     P = perf_idx_fn(x_t, A_t, alpha, aux)
-                # print(f'alpha = {alpha}')
-                xpm_0 += alpha * A_0   # Also adds to xp_0 as xpm_0 is a view
-                x_guess[:,:nOdes] += alpha * A_t
 
-                x0_twice = 2*xp_0
-                x_new[-1] = xp_0
+                # xpm_0 += alpha * A_0   # Also adds to xp_0 as xpm_0 is a view
+                # x_new[:,:nOdes] += alpha * A_t
+                #
+                # x0_twice = 2*xp_0
+                # x_new[-1] = xp_0
+                xpm_0 += alpha * A_t[-1]   # Also adds to xp_0 as xpm_0 is a view
+                x_new[:,:nOdes] += alpha * A_t
+                x_new[-1,nOdes:] = xp_0[nOdes:]
+                x0_twice = 2*x_new[-1,:]
 
             x_guess = x_new
             err0 = err1
@@ -395,7 +405,7 @@ class QCPI(BaseAlgorithm):
             sol.parameters = x_out[0,nXandLam:]
             sol.arcs = [(0, len(sol.x)-1)]
             sol.arc_seq = (0,)
-            sol.extra = x_guess
+            sol.extra = x_new
 
         sol.converged = converged
         sol.aux = aux

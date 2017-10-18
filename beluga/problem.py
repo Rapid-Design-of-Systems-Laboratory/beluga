@@ -364,6 +364,7 @@ class GuessGenerator(object):
                    time_integrate=0.1,
                    costate_guess=0.1,
                    control_guess=0.1,
+                   use_control_guess=False,
                    param_guess=None):
         """Setup automatic initial guess generation"""
 
@@ -381,6 +382,7 @@ class GuessGenerator(object):
         self.costate_guess = costate_guess
         self.param_guess = param_guess
         self.control_guess = control_guess
+        self.use_control_guess = use_control_guess
 
     def auto(self, bvp_fn, solinit, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
@@ -418,11 +420,13 @@ class GuessGenerator(object):
 
         if self.dae_num_states > 0:
             dae_guess = u0
-            dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
+            if not self.use_control_guess:
+                dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
 
-            dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
-            dae_x0 = dae_guess
-            dae_x0[1:] = 0
+                dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
+            else:
+                dae_x0 = dae_guess
+
             print('dae_x0',dae_x0)
             x0 = np.append(x0, dae_x0)  # Add dae states
 
