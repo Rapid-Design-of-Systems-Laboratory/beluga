@@ -95,14 +95,27 @@ continuation_steps = beluga.init_continuation()
 #                 .terminal('theta',0.9*pi/180)
 #
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .terminal('h',15000) \
+                .num_cases(11) \
+                .terminal('h',15e3) \
                 .terminal('theta',0.01*pi/180)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(51) \
-                .initial('gam', -60*pi/180) \
-                .terminal('theta',0.05*pi/180)
+                .num_cases(11) \
+                .initial('gam', -80*pi/180) \
+                .terminal('theta',0.10*pi/180)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(101) \
+                .terminal('h',0) \
+                .terminal('theta',0.15*pi/180)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(51) \
+#                 .terminal('theta',0.15*pi/180)
+#
+continuation_steps.add_step('bisection') \
+                .num_cases(101) \
+                .initial('gam',-75*pi/180) \
+#                 .terminal('theta',0.5*pi/180)
 
 beluga.solve(ocp,
              method='icrm',
