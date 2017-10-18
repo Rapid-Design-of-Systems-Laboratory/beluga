@@ -50,7 +50,7 @@ ocp.scale(m=1e3, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                         tolerance=1e-4,
-                        max_iterations=100,
+                        max_iterations=200,
                         verbose = True,
                         max_error=100
              )
@@ -65,12 +65,12 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
+                .num_cases(31) \
                 .terminal('h', 16000) \
                 .terminal('theta',0.1*pi/180)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11)  \
+                .num_cases(31)  \
                 .terminal('h',11000)
 
 

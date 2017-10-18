@@ -107,17 +107,17 @@ def deriv_func_nojit(_t,_X,_p,_const):
     {{name}} = {{expr}}
 {{/quantity_list}}
 
-    Xdot = np.array([{{#deriv_list}}{{.}},
-                     {{/deriv_list}}])
-    dg     = compute_jacobian_fd(_X, _const)
-    dgdX   = dg[:,:{{num_states}}]
-    dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-    udot   = np.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
+    #Xdot = np.array([{{#deriv_list}}{{.}},
+    #                 {{/deriv_list}}])
+    #dg     = compute_jacobian_fd(_X, _const)
+    #dgdX   = dg[:,:{{num_states}}]
+    #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
+    #udot   = np.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
     #udot2 = np.array([{{#dae_eom_list}}{{.}},{{/dae_eom_list}}])
     #print(udot, udot2)
     #from beluga.utils import keyboard
     #keyboard()
-    return np.hstack((Xdot, udot))
+    #return np.hstack((Xdot, udot))
     return np.array([{{#deriv_list}}{{.}},
         {{/deriv_list}}
         {{#dae_eom_list}}{{.}},
