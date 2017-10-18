@@ -151,6 +151,21 @@ def make_bc_jac(bcfn, nOdes, step_size=1e-6):
     return jac_fn
 
 
+@ft.lru_cache(maxsize=16)
+def make_perf_idx(bc_left_fn, bc_right_fn):
+    # @njit(parallel=True)
+    def perf_idx(x_t, A_t, alpha, *args):
+        P = 0
+        # MCPI gives reversed time history
+        x_f = x_t[0,:] + alpha*A_t[0,:]
+        x_0 = x_t[-1,:] + alpha*A_t[-1,:]
+
+        f_vec = bc_left_fn(x_0, *args)
+        g_vec = bc_right_fn(x_f, *args)
+        P = P + f_vec.T @ f_vec + g_vec.T @ g_vec
+        return P
+    return perf_idx
+
 class QCPI(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, verbose=True):
         self.tolerance = tolerance
@@ -216,14 +231,14 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
         left_bc_jac_fn(x_0, left_jac, aux)
 
-        # x_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
-        # x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.001)
-        # x_pert[abs(x_pert) < 1e-6] = 0.001
+        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.0001
+        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.0001)
+        x_pert[abs(x_pert) < 1e-6] = 0.01
         # Each row is one initial condition for particular solution
-        A_j0 = np.eye(nOdes)
-        A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
-        A_j0 = np.unique(A_j0, axis=0)*.01   # Remove duplicates
-        # A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
+        # A_j0 = np.eye(nOdes)
+        # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
+        # A_j0 = np.unique(A_j0, axis=0)*.001   # Remove duplicates
+        A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes)))
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
         q = len(A_j0) - 1
@@ -237,7 +252,7 @@ class QCPI(BaseAlgorithm):
         t_short = [tspan[0], tspan[-1]]
         converged = False
         N = 51
-        max_iter = 2000
+        max_iter = self.max_iterations
 
         # Setup MCPI
         w1 = (tspan[-1]-tspan[0])/2
@@ -249,6 +264,8 @@ class QCPI(BaseAlgorithm):
         # Make functions
         pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
+        perf_idx_fn = make_perf_idx(self.bc_left_fn, self.bc_right_fn)
+
         const = tuple(aux['const'].values())
 
         _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
@@ -298,7 +315,7 @@ class QCPI(BaseAlgorithm):
                 print('NaaaaaN')
                 break
 
-            if err1 < self.tolerance or abs(err0-err1)<self.tolerance:
+            if err1 < 100*self.tolerance or abs(err0-err1)<self.tolerance:
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
@@ -314,40 +331,51 @@ class QCPI(BaseAlgorithm):
                 A_jf = np.reshape(x_tf[nOdes:], (q+1, nOdes))
                 # Subtract unperturbed terminal state to get perturbations
                 A_jf = (A_jf - x_tf[:nOdes]).T
-                lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf))
-                try:
-                    k_j = np.linalg.solve(lhs, np.hstack((1, -res)))
-                except:
-                    k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res)))
-                # x_t0 = x_new[-1,:]
-                # A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
-                # A0 = (A0 - x_t0[:nOdes]).T
-                # res_left = left_bc_jac_fn(x_t0, left_jac, aux)
-                # lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
+                # lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf))
+                # try:
+                #     k_j = np.linalg.solve(lhs, np.hstack((1, -res)))
+                # except:
+                #     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res)))
+                x_t0 = x_new[-1,:]
+                A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
+                A0 = (A0 - x_t0[:nOdes]).T
+                res_left = left_bc_jac_fn(x_t0, left_jac, aux)
+                lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
 
                 # First row is all ones, rows after = Jac @ perturbations at tf
-                # try:
-                #     k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
-                # except:
-                #     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
+                try:
+                    k_j = np.linalg.solve(lhs, np.hstack((1, -res, -res_left)))
+                except:
+                    k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res, -res_left)))
                 A_0 = k_j @ A_j0
                 # alpha = .1
 
-                # # Damp the update
-                r1 = res_norm_0
-                # if r0 is not None:
-                #     alpha2 = (r0-r1)/(alpha1*r0)
-                #     if alpha2 < 0:
-                #         alpha2 = 1
-                # if r1>1:
-                #     alpha1 = 1/(2*r1)
-                # else:
-                #     alpha1 = 1
-                # if r1 < 10*1e-4:
-                #     alpha1, alpha2 = 1, 0.2
-                r0 = r1
+                # stepsize calculation
+                x_t = x_guess[:,:nOdes]
+                A_t = np.zeros_like(x_t)
+                # Compute A for every time step
+                for i in range(x_guess.shape[0]):
+                    x_ti = x_guess[i,:]
+                    A_ji = np.reshape(x_ti[nOdes:], (q+1, nOdes))
+                    # Subtract unperturbed x(t) to get perturbation at time t
+                    A_ji = (A_ji - x_ti[:nOdes])
+                    A_ti = k_j @ A_ji
+                    A_t[i,:] = k_j @ A_ji
 
-                xpm_0 += 0.1 * A_0   # Also adds to xp_0 as xpm_0 is a view
+                P0 = perf_idx_fn(x_t, A_t, 0.0, aux)
+                if P0 < self.tolerance:
+                    converged = True
+                    print('Converged (w/ P0) in %d iterations.' % ctr)
+                    break
+                alpha = 2.0
+                P = P0 + 1
+                while P > P0:
+                    alpha = alpha/2.0
+                    P = perf_idx_fn(x_t, A_t, alpha, aux)
+                # print(f'alpha = {alpha}')
+                xpm_0 += alpha * A_0   # Also adds to xp_0 as xpm_0 is a view
+                x_guess[:,:nOdes] += alpha * A_t
+
                 x0_twice = 2*xp_0
                 x_new[-1] = xp_0
 
