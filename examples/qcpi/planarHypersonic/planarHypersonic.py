@@ -70,21 +70,12 @@ continuation_steps.add_step('bisection') \
                 .terminal('theta',0.01*pi/180)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(51) \
+                .num_cases(101) \
                 .terminal('theta',5.0*pi/180) \
-                # .initial('gam', -80*pi/180) \
 
 continuation_steps.add_step('bisection') \
                 .num_cases(101) \
                 .const('rho0',1.2) \
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(51) \
-#                 .terminal('theta',0.15*pi/180)
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(101) \
-#                 .initial('gam',-60*pi/180) \
-#                 .terminal('theta',0.5*pi/180)
 
 beluga.solve(ocp,
              method='icrm',
