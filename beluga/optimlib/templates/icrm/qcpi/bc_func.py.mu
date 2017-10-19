@@ -1,6 +1,9 @@
 # TODO: Preprocess, postprocess hooks?
 import numpy as np
 from numpy import *
+import numba
+
+@numba.jit(parallel=True)
 def bc_func_left(_ya, _aux):
     # Declare all auxiliary variables
 {{#aux_list}}
@@ -28,6 +31,7 @@ def bc_func_left(_ya, _aux):
                     {{/bc_initial}} ])
     return res_left
 
+@numba.jit(parallel=True)
 def bc_func_right(_yb, _aux):
     # Declare all auxiliary variables
 {{#aux_list}}
@@ -55,6 +59,9 @@ def bc_func_right(_yb, _aux):
     return res_right
 
 def bc_func(_ya, _yb, _aux):
+    #_const = list(_aux['const'].values())
+    #_xf = list(_aux['terminal'].values())
+    #_x0 = list(_aux['initial'].values())
     res_left = bc_func_left(_ya, _aux)
     res_right = bc_func_right(_yb, _aux)
 
