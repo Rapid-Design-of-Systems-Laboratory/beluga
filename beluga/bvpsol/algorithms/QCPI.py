@@ -1,7 +1,7 @@
 """Quasi-linear Chebyshev Picard Iteration method"""
 
 from beluga.integrators.mcpi import mcpi, mcpi_init, cheby_eval, absdiff
-from numba import njit, prange
+from numba import njit, prange, jit
 from .BaseAlgorithm import BaseAlgorithm
 import pystache
 import simplepipe as sp
@@ -139,7 +139,7 @@ def make_mcpi_eom(eom_fn):
 def make_bc_jac(bcfn, nOdes, step_size=1e-6):
     """Makes compiled BC jacobian function using forward difference"""
 
-    # @njit(parallel=True)
+    @jit(parallel=True)
     def jac_fn(Yb, jac, *args):
         fx = bcfn(Yb, *args)
         steps = np.eye(nOdes)*step_size + Yb[:nOdes]
@@ -154,7 +154,7 @@ def make_bc_jac(bcfn, nOdes, step_size=1e-6):
 
 @ft.lru_cache(maxsize=16)
 def make_perf_idx(bc_left_fn, bc_right_fn):
-    # @njit(parallel=True)
+    @jit(parallel=True)
     def perf_idx(x_t, A_t, alpha, *args):
         P = 0
         # MCPI gives reversed time history
