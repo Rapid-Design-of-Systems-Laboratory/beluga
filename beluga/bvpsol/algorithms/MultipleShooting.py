@@ -339,14 +339,14 @@ class MultipleShooting(BaseAlgorithm):
 
         # Compute Jacobian matrix, F using finite difference
         fx = odefn(x,Y,p,aux,arc_idx)
-        if show:
-            print(x, fx, self.bvp.deriv_func(x,Y,p,aux,arc_idx))
-            from beluga.utils import keyboard
-            keyboard()
+        # if show:
+        #     print(x, fx, self.bvp.deriv_func(x,Y,p,aux,arc_idx))
+        #     from beluga.utils import keyboard
+        #     keyboard()
         if np.any(np.isnan(fx)):
             print('NAAAAAAAAAAAN')
-            from beluga.utils import keyboard
-            keyboard()
+            # from beluga.utils import keyboard
+            # keyboard()
 
         Yh = y[:nOdes] + np.eye(nOdes)*StepSize
         for i,y_h in enumerate(Yh):
@@ -482,16 +482,19 @@ class MultipleShooting(BaseAlgorithm):
                 try:
                     dy0 = alpha*beta*np.linalg.solve(J,-res)
                 except:
-                    keyboard()
-                    rank1 = np.linalg.matrix_rank(J)
-                    rank2 = np.linalg.matrix_rank(np.c_[J,-res])
-                    if rank1 == rank2:
-                        # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
-                        dy0 = -alpha*beta*(np.linalg.inv(J @ J.T) @ J).T @ res
-                        # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
-                    else:
-                        # Re-raise exception if system is infeasible
-                        raise
+                    dy0, *_ = np.linalg.lstsq(J, -res)
+                    dy0 = alpha*beta*dy0
+
+                    # # keyboard()
+                    # rank1 = np.linalg.matrix_rank(J)
+                    # rank2 = np.linalg.matrix_rank(np.c_[J,-res])
+                    # if rank1 == rank2:
+                    #     # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
+                    #     dy0 = -alpha*beta*(np.linalg.inv(J @ J.T) @ J).T @ res
+                    #     # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
+                    # else:
+                    #     # Re-raise exception if system is infeasible
+                    #     raise
                 # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
 
                 # Apply corrections to states and parameters (if any)

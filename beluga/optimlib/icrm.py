@@ -233,10 +233,10 @@ def process_path_constraints(workspace):
 
         for i in range(order):
             # Add 'xi' state
-            states.append(SymVar({'name':str(xi_vars[i]), 'eom':str(xi_vars[i+1]), 'unit':c.unit/(time_unit^i)}))
+            states.append(SymVar({'name':str(xi_vars[i]), 'eom':str(xi_vars[i+1]), 'unit':(c.unit/(time_unit**i))}))
             # Constraint all cq at initial point (forms constraints for xi_ij)
             # ocp.constraints().initial(str(cq[i] - h[i]),'('+c.unit+')/s^('+str(i)+')')
-            constraints['terminal'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit^i)}, sym_key='expr'))
+            constraints['terminal'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit**i)}, sym_key='expr'))
 
             # Add to initial guess vector
             xi_init_vals.append(c_vals[i])
