@@ -4,14 +4,13 @@ import numexpr as ne
 import collections
 from sympy import *
 from sympy.utilities.lambdify import lambdify
-
 from beluga.utils import keyboard
 
 class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
     """
-    def __init__(self, step, sol, mesh_size, datasource):
+    def __init__(self, step, sol, mesh_size, datasource, colormap=None):
         self.step_index = step
         self.sol_index = sol
         self.mesh_size = mesh_size
@@ -19,6 +18,7 @@ class Plot(object):
         self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
         self.postprocess_fn = None
+        self.colormap = colormap
 
     def xlabel(self, label):
         self._xlabel = label

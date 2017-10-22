@@ -58,7 +58,7 @@ class BelugaPlot:
             if self.renderer is None:
                 raise ValueError('Renderer "'+renderer+'" not found')
 
-    def add_plot(self, step = None, sol = None, datasource = None):
+    def add_plot(self, step = None, sol = None, datasource = None, colormap=None):
         """
         Adds a new plot
             (alias for add_plot() in PlotList)
@@ -70,7 +70,7 @@ class BelugaPlot:
         if datasource is None:
             datasource = self.datasource
 
-        plot = Plot(step, sol, self.mesh_size, datasource)
+        plot = Plot(step, sol, self.mesh_size, datasource, colormap)
         self._plots.append(plot)
         return plot
 
