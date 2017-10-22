@@ -58,8 +58,11 @@ class MatPlotLib(BaseRenderer):
         fh = self._get_figure(f);
         has_legend = False
         num_lines = sum(1 for line in p.plot_data for d in line['data'] )
-        cm_subsection = np.linspace(0.0, 1.0, num_lines)
-        colors = [ cm.jet(x) for x in cm_subsection ]
+        if p.colormap is not None:
+            cm_subsection = np.linspace(0.0, 1.0, num_lines)
+            colors = [ p.colormap(x) for x in cm_subsection ]
+        else:
+            colors = [None]*num_lines
 
         i = 0
         for line in p.plot_data:
