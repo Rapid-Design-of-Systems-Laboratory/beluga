@@ -81,6 +81,8 @@ class BelugaPlot:
             fig = self.renderer.create_figure()
             self.renderer.render_plot(fig,plot)
             self._figures.append(fig)
+            if plot.postprocess_fn is not None:
+                plot.postprocess_fn(fig, plot)
         if show:
             self.show()
 

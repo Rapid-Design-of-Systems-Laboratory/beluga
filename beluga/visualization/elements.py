@@ -18,6 +18,7 @@ class Plot(object):
         self.datasource = datasource
         self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
+        self.postprocess_fn = None
 
     def xlabel(self, label):
         self._xlabel = label
@@ -88,6 +89,9 @@ class Plot(object):
                                          'y_data': sol.evaluate(line['y'])})
             else:
                 raise ValueError('Invalid plot type specified')
+
+    def postprocess(self, fn):
+        self.postprocess_fn = fn
 
 class PlotList(list):
     """
