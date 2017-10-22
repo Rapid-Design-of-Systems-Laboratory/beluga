@@ -1,5 +1,8 @@
 from beluga.visualization.renderers import BaseRenderer
 from matplotlib.pyplot import *
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+import numpy as np
 
 class MatPlotLib(BaseRenderer):
     """
@@ -54,13 +57,19 @@ class MatPlotLib(BaseRenderer):
         """
         fh = self._get_figure(f);
         has_legend = False
+        num_lines = sum(1 for line in p.plot_data for d in line['data'] )
+        cm_subsection = np.linspace(0.0, 1.0, num_lines)
+        colors = [ cm.jet(x) for x in cm_subsection ]
+
+        i = 0
         for line in p.plot_data:
             has_legend = has_legend or (line['label'] is not None)
             for dataset in line['data']:
                 if isinstance(line['style'], str):
-                    plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh)
+                    plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh, color=colors[i],)
                 elif isinstance(line['style'], dict):
-                    plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh, **line['style'])
+                    plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh, color=colors[i],**line['style'])
+                i += 1
         if has_legend:
             fh.gca().legend()
         if p._xlabel is not None:
