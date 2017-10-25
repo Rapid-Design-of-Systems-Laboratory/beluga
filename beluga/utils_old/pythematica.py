@@ -22,11 +22,13 @@ def mathematica_parse(expr):
         (r'\[','('),                  # Replace square brackets with parenthesis
         (r'\]',')'),                  # Replace square brackets with parenthesis
         (r'arc(\w+)','a\\1'),         # Replace inverse trig functions
+        (r'sec\((\w+)\)','(1/cos(\\1))')  # Change sec to 1/cos
     )
     for rule,replacement in rules:
         expr,n = re.subn(rule,replacement,expr)
 
     return sympify(expr)
+
 
 def mathematica_solve(expr,vars):
     if isinstance(expr,list):
