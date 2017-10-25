@@ -1,4 +1,6 @@
 from math import pi
+import dill
+import numpy as np
 # Figure out way to implement caching automatically
 # @functools.lru_cache(maxsize=None)
 # def CLfunction(alfa):
@@ -58,7 +60,6 @@ ocp.constant('re',6378000,'m') # Radius of planet, m
 ocp.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
 ocp.constant('rn',1/12*0.3048,'m') # Nose radius, m
 
-
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
@@ -69,13 +70,35 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         max_error=100,
              )
 
-guess_maker = beluga.guess_generator('auto',
-                start=[80000,0,0,5000,-(90+5)*pi/180, 0],
-                direction='forward',
-                costate_guess = -0.01,
-                control_guess=[0.0,0.0],
-                time_integrate=0.01,
-)
+with open('data-initial-guess-to-ground.dill','rb') as f:
+        out = dill.load(f)
+
+sol = out['solution'][-1][-1]
+sol.aux['parameters'] = []# np.append(sol.aux['parameters'],'lagrange_initial_5')
+sol.aux['constraint'] = {}
+sol.arcs = None
+sol.aux['arc_seq'] = (0,)
+# keyboard()
+# sol.aux['parameters'].append('lagrange_initial_5')
+# sol.parameters = sol.parameters[0:3]
+sol.y = np.r_[sol.y, sol.u]
+sol.parameters = np.concatenate((sol.parameters[0:4],(0,),sol.parameters[4:]),axis=0)
+sol.parameters = np.array([])
+# sol.parameters.append(0.0)
+guess_maker = beluga.guess_generator('static', solinit = sol)
+
+# problem.guess.setup('file', filename='data-initial-guess-to-ground.dill', step=-1, iteration=-1)
+
+
+
+#
+# guess_maker = beluga.guess_generator('auto',
+#                 start=[80000,0,0,5000,-(90+5)*pi/180, 0],
+#                 direction='forward',
+#                 costate_guess = -0.01,
+#                 control_guess=[0.0,0.0],
+#                 time_integrate=0.01,
+# )
 
 continuation_steps = beluga.init_continuation()
 
@@ -93,7 +116,7 @@ continuation_steps.add_step().num_cases(41)          \
 #                         .terminal('theta',5*pi/180) \
 #                         .terminal('phi',5*pi/180)
 beluga.solve(ocp,
-             method='icrm',
+             method='brysonho',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
