@@ -420,7 +420,7 @@ class MultipleShooting(BaseAlgorithm):
         try:
             while True:
                 phi_list = []
-                with timeout(seconds=10):
+                with timeout(seconds=20):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
@@ -469,14 +469,14 @@ class MultipleShooting(BaseAlgorithm):
                     if beta < 0:
                         beta = 1
                 if r1>1:
-                    alpha = 1/(2*r1)
+                    alpha = 1/(5*r1)
                 else:
                     alpha = 1
                 r0 = r1
 
                 # No damping if error within one order of magnitude
                 # of tolerance
-                if r1 < 10*self.tolerance:
+                if r1 < min(10*self.tolerance,1e-3):
                     alpha, beta = 1, 1
 
                 try:

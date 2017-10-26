@@ -431,7 +431,7 @@ class GuessGenerator(object):
             x0 = np.append(x0, dae_x0)  # Add dae states
 
         logging.debug('Generating initial guess by propagating: ')
-        # logging.debug(str(x0))
+        logging.debug(str(x0))
 
         [t, x] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
 
