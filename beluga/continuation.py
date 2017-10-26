@@ -371,3 +371,5 @@ class BisectionStrategy(ManualStrategy):
         logging.info('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
         return super(BisectionStrategy, self).next(True)
+class ContinuationSolution(list):
+    pass

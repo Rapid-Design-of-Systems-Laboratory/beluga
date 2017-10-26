@@ -1,14 +1,16 @@
 ## NOTE: ONLY WORKS ON MAC
 import subprocess, re, sys
+import os
 from sympy import mathematica_code as mcode
 from beluga.utils import sympify
 # Credits: http://sapiensgarou.blogspot.com.br/2012/06/how-to-run-mathematica-functions-on.html
 def mathematica_run(command):
     """Call the shell script which in turn calls mathematica"""
     # Fix this path to use actual root path from config
-    from beluga import Beluga
+    # from beluga import Beluga
 
-    script = Beluga.config.getroot()+'/beluga/utils/pythematica/runMath.sh'
+    script = os.path.dirname(__file__)+'/runMath.sh'
+    print(script)
     p = subprocess.Popen([script,command], stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
     out, err = p.communicate()
@@ -20,11 +22,13 @@ def mathematica_parse(expr):
         (r'\[','('),                  # Replace square brackets with parenthesis
         (r'\]',')'),                  # Replace square brackets with parenthesis
         (r'arc(\w+)','a\\1'),         # Replace inverse trig functions
+        (r'sec\((\w+)\)','(1/cos(\\1))')  # Change sec to 1/cos
     )
     for rule,replacement in rules:
         expr,n = re.subn(rule,replacement,expr)
 
     return sympify(expr)
+
 
 def mathematica_solve(expr,vars):
     if isinstance(expr,list):
@@ -42,7 +46,7 @@ def mathematica_solve(expr,vars):
         out = [dict([varsol.split(' -> ') for varsol in s.split(', ')])
                 for s in sol_str[2:-2].split('}, {')]
         # Convert solution strings to sympy expressions
-        out = [dict([(var,mathematica_parse(expr)) for (var,expr) in sol.items()]) for sol in out]
+        out = [dict([(sympify(var),mathematica_parse(expr)) for (var,expr) in sol.items()]) for sol in out]
         # print(out)
         return out
 
