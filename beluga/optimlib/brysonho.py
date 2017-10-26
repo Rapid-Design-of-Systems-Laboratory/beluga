@@ -215,9 +215,27 @@ def make_dhdu(ham, controls, derivative_fn):
 
     return dhdu
 
+import logging
 def make_control_law(dhdu, controls):
     """Solves control equation to get control law."""
-    ctrl_sol = sympy.solve(dhdu, controls, dict=True)
+    try:
+        var_list = list(controls)
+        logging.info("Attempting using SymPy ...")
+        logging.debug("dHdu = "+str(dhdu))
+        # ctrl_sol = sympy.solve(dhdu, var_list, dict=True)
+
+        raise ValueError() # Force mathematica
+    except ValueError as e:  # FIXME: Use right exception name here
+        logging.debug(e)
+        logging.info("No control law found")
+        from beluga.utils_old.pythematica import mathematica_solve
+        logging.info("Attempting using Mathematica ...")
+        var_sol = mathematica_solve(dhdu,var_list)
+        # TODO: Extend numerical control laws to mu's
+        ctrl_sol = var_sol
+    print('Control found')
+    print(ctrl_sol)
+    # ctrl_sol = sympy.solve(dhdu, controls, dict=True)
     # control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
     #                         for (ctrl,expr) in option.items()]
     #                         for option in ctrl_sol]
