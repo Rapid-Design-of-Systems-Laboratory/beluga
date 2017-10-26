@@ -109,13 +109,13 @@ def deriv_func(_t,_X,_p,_aux,arc_idx=0):
 {{/quantity_list}}
 
     #Xdot = np.array([{{#deriv_list}}{{.}},
-    #                 {{/deriv_list}}])
+    #                 {{/deriv_list}}])/tf
     #dg     = compute_jacobian_fd(compute_g, _X, args=(_p, _aux))
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
     #udot   = scipy.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
 
-    #return np.hstack((Xdot, udot))
+    #return np.hstack((Xdot, udot))*tf
     return np.array([{{#deriv_list}}{{.}},
         {{/deriv_list}}]+
         [{{#dae_eom_list}}{{.}},

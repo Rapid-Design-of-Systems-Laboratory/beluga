@@ -342,6 +342,8 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
         guess.start.extend(xi_init_vals)
     guess.dae_num_states = len(U)
 
+    # from beluga.utils import keyboard
+    # keyboard()
     yield mu_vars
     yield mu_lhs
     yield dae_states
@@ -400,10 +402,10 @@ def generate_problem_data(workspace):
     #  'num_params': len(workspace['parameters']),
      'num_params': 0,
      'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
-    #  'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
-    #  'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'])],
-     'bc_initial': [str(_) for _ in workspace['bc_initial']],
-     'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
+     'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
+     'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'])],
+    #  'bc_initial': [str(_) for _ in workspace['bc_initial']],
+    #  'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
      'control_options': [],
      'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
      'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
@@ -411,6 +413,9 @@ def generate_problem_data(workspace):
      'quantity_list': workspace['quantity_list'],
      'bc_free_mask': workspace['bc_free_mask'],
     }
+    from beluga.utils import keyboard
+    keyboard
+    # print(sympy.latex(udot[0], symbol_names={sympy.Symbol('lamX'):r'\lambda_x', sympy.Symbol('lamY'):r'\lambda_y', sympy.Symbol('lamV'):r'\lambda_v', sympy.Symbol('lamXI11'):r'\lambda_{\xi_1}'}))
 
     return problem_data
 # Implement workflow using simplepipe and functions defined above

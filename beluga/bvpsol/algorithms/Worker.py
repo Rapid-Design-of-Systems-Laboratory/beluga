@@ -1,5 +1,5 @@
-from .joblib import Parallel, delayed
-from .joblib import pool
+from joblib import Parallel, delayed
+from joblib import pool
 from .Propagator import Propagator
 from .propagators import *
 from beluga.utils import keyboard

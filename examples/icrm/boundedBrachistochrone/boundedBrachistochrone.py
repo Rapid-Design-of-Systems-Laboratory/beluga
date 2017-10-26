@@ -7,14 +7,14 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('x', 'v*cos(theta)', 'm')   \
-   .state('y', '-v*sin(theta)','m')   \
+   .state('y', 'v*sin(theta)','m')   \
    .state('v', 'g*sin(theta)','m/s')
 
 # Define controls
 ocp.control('theta','rad')
 
 # Define constants
-ocp.constant('g',9.81,'m/s^2')
+ocp.constant('g',-9.81,'m/s^2')
 
 # Define costs
 ocp.path_cost('1','s')

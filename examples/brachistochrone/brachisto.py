@@ -54,8 +54,8 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .terminal('x', 5) \
-                .terminal('y',-5)
+                .terminal('x', 10) \
+                .terminal('y',-10)
 
 beluga.solve(ocp,
              method='traditional',

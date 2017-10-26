@@ -8,7 +8,7 @@ class BelugaPlot:
     """
     Manages the plotting framework
     """
-    def __init__(self, filename = None, datasource='dill', renderer = 'matplotlib', default_step = -1, default_sol = -1, mesh_size=512):
+    def __init__(self, filename = None, datasource='dill', renderer = 'matplotlib', default_step = -1, default_sol = -1):
         """
         Initializes plotting framework with given data file
         """
@@ -19,7 +19,6 @@ class BelugaPlot:
         self.filename = filename
         self.default_step_idx = default_step
         self.default_sol_idx = default_sol
-        self.mesh_size = mesh_size
 
         # Load datasource by filename unless one is specified directly
         if filename is not None:
@@ -58,7 +57,7 @@ class BelugaPlot:
             if self.renderer is None:
                 raise ValueError('Renderer "'+renderer+'" not found')
 
-    def add_plot(self, step = None, sol = None, datasource = None, colormap=None):
+    def add_plot(self, step = None, sol = None, datasource = None, colormap=None, mesh_size=512):
         """
         Adds a new plot
             (alias for add_plot() in PlotList)
@@ -70,7 +69,7 @@ class BelugaPlot:
         if datasource is None:
             datasource = self.datasource
 
-        plot = Plot(step, sol, self.mesh_size, datasource, colormap)
+        plot = Plot(step, sol, mesh_size, datasource, colormap)
         self._plots.append(plot)
         return plot
 

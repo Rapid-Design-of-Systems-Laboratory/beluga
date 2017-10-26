@@ -248,6 +248,7 @@ def process_constraint(s,
     num_states = len(states)
     stateAndLam = [*states, *costates]
     stateAndLamDot = [s.eom*sympify('tf') for s in it.chain(states, costates)]
+    stateAndLamDot = [s.eom for s in it.chain(states, costates)]
     costate_names = make_costate_names(states)
 
     ham_mat = sympy.Matrix([ham])
@@ -273,7 +274,7 @@ def process_constraint(s,
                 control_law = {**u_sol, **mu_sol[0]}
                 constrained_control_law.append(control_law)
 
-            # from beluga.utils import keyboard
+            from beluga.utils import keyboard
             # keyboard()
 
             # constrained_control_law = make_control_law(dhdu, [*controls, mult])

@@ -58,8 +58,7 @@ ocp.constraints() \
     .terminal('h-h_f','m')  \
     .terminal('theta-theta_f','rad') \
     .path('heatRate','(k*sqrt(rho0*exp(-h/H)/rn)*v^3)*Wsec3pkg - heatRateLimit','<',0.0,'W') \
-    .path('gLoading','(D^2+L^2)/(mass*g0)','<',0.0,'m^2/s^2')
-    # .path('AoA','alfa**2 - alfaLimit**2','<',0.0,'rad**2') \
+    .path('AoA','alfa - alfaLimit','<',0.0,'rad') \
 
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, W=1e7, nd=1)
@@ -90,7 +89,7 @@ continuation_steps = beluga.init_continuation()
 
 
 guess_maker = beluga.guess_generator('file', filename='./data_HR2000.dill', step=-1, iteration=-1)
-continuation_steps.add_step('activate_constraint', name='gLoading')
+continuation_steps.add_step('activate_constraint', name='AoA')
 
 continuation_steps.add_step('bisection') \
                 .num_cases(101) \
