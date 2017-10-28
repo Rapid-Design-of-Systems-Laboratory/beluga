@@ -93,7 +93,7 @@ def get_dhdu_func(_t,_X,_p,_aux):
 def deriv_func(_t,_X,_p,_aux,arc_idx=0):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
-
+    
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
     # Declare all auxiliary variables

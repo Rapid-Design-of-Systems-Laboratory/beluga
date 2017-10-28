@@ -360,10 +360,10 @@ class QCPI(BaseAlgorithm):
                 x_t = x_new[:,:nOdes]
                 A_t = np.zeros_like(x_t)
                 P0 = perf_idx_fn(x_t, A_t, 0.0, aux)
-                if P0 < self.tolerance:
-                    converged = True
-                    print('Converged (w/ P0) in %d iterations.' % ctr)
-                    break
+                # if P0 < self.tolerance and ctr > 0:
+                #     converged = True
+                #     print('Converged (w/ P0) in %d iterations.' % ctr)
+                #     break
 
                 # Compute A for every time step
                 for i in range(x_guess.shape[0]):

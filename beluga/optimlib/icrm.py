@@ -403,11 +403,7 @@ def generate_problem_data(workspace):
      'num_params': 0,
      'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
      'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
-<<<<<<< HEAD
-     'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'])],
-=======
      'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
->>>>>>> f712a44c8c76d2460f7395bb06944a45b69b51d3
     #  'bc_initial': [str(_) for _ in workspace['bc_initial']],
     #  'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
      'control_options': [],
