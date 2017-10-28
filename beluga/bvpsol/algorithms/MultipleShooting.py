@@ -420,7 +420,7 @@ class MultipleShooting(BaseAlgorithm):
         try:
             while True:
                 phi_list = []
-                with timeout(seconds=20):
+                with timeout(seconds=1000):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
