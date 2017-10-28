@@ -72,10 +72,10 @@ continuation_steps = beluga.init_continuation()
 #                 time_integrate=1.0
 # )
 guess_maker = beluga.guess_generator('auto',
-                start=[-0.8,0,pi/6, -0.8,0,pi/6],          # Starting values for states in order
+                start=[-0.8,0,pi/6, -0.8,0,-pi/6],          # Starting values for states in order
                 direction='forward',
-                costate_guess = [0.0, 0.0, 0.1, 0.0, 0.0, 0.1],
-                control_guess = [-0.05, -0.05],
+                costate_guess = [0.0, 0.0, 0.1, 0.0, 0.0, -0.1],
+                control_guess = [-0.05, 0.05],
                 time_integrate=1.0
 )
 # guess_maker = beluga.guess_generator('auto',
@@ -100,11 +100,7 @@ continuation_steps.add_step('bisection') \
                 .initial('psi2', -pi/6) \
                 .terminal('xbar2', 0.0)\
                 .terminal('ybar2', -0.0) \
-                .terminal('psi2', -pi/3)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(51) \
-                .initial('psi2', -pi/6) \
+                .terminal('psi2', +pi/3)
 
 beluga.solve(ocp,
              method='icrm',
