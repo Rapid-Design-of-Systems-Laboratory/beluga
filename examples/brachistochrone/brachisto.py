@@ -29,12 +29,13 @@ ocp.constraints() \
 
 ocp.scale(m='x', s='x/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+bvp_solver = beluga.bvp_algorithm('MultipleShooting_mike',
                         derivative_method='fd',
                         tolerance=1e-4,
                         max_iterations=100,
                         verbose = True,
-                        max_error=100
+                        max_error=100,
+                        number_arcs=2
              )
 
 # bvp_solver = beluga.bvp_algorithm('SingleShooting',

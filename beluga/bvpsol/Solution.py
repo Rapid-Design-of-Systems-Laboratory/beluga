@@ -147,9 +147,9 @@ class Solution(object):
 
         variables += [('t', np.hstack(t_list))]
 
-        # self.qvars = problem_data['quantity_vars']
-        # variables += [(str(q_k), ne.evaluate(str(q_v), dict(variables)))
-        #               for q_k, q_v in problem_data['quantity_vars'].items()]
+        self.qvars = problem_data['quantity_vars']
+        variables += [(str(q_k), ne.evaluate(str(q_v), dict(variables)))
+                      for q_k, q_v in problem_data['quantity_vars'].items()]
         self.var_dict = dict(variables)
 
     def evaluate(self,expr):

@@ -21,7 +21,7 @@ def ode45(f,tspan,y0,*args,**kwargs):
     #
     if len(tspan) == 2:
         # TODO: Change hardcoding?
-        tspan = np.linspace(tspan[0],tspan[1],100)
+        tspan = np.linspace(tspan[0],tspan[1],200)
     ## Superfast option below
     abstol = kwargs.get('abstol', 1e-6)
     reltol = kwargs.get('reltol', 1e-2)

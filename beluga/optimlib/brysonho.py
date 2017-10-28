@@ -222,9 +222,9 @@ def make_control_law(dhdu, controls):
         var_list = list(controls)
         logging.info("Attempting using SymPy ...")
         logging.debug("dHdu = "+str(dhdu))
-        # ctrl_sol = sympy.solve(dhdu, var_list, dict=True)
+        ctrl_sol = sympy.solve(dhdu, var_list, dict=True)
 
-        raise ValueError() # Force mathematica
+        # raise ValueError() # Force mathematica
     except ValueError as e:  # FIXME: Use right exception name here
         logging.debug(e)
         logging.info("No control law found")

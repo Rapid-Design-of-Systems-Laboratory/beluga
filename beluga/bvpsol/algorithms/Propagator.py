@@ -1,8 +1,8 @@
 from .propagators import *
-from joblib import Parallel, delayed
-from joblib import pool
 import os
 from beluga.utils import keyboard
+from multiprocessing_on_dill import pool
+import dill
 
 import numpy as np
 
@@ -32,28 +32,9 @@ class Propagator(object):
         elif self.process_count > os.cpu_count():
             self.process_count = os.cpu_count()
 
-        # Same number of threads as processes until I can figure out how to get past the GIL lock
-        self.threads = self.process_count
-
-    def startPool(self):
-        if self.poolinitialized == 0:
-            self.pool = pool.Pool(processes=self.process_count)
-            self.poolinitialized = True
-
-    def closePool(self):
         self.poolinitialized = False
-        self.pool.close()
-        self.pool.terminate()
 
-    def setSolver(self,solver='ode45'):
-        possibles = globals().copy()
-        possibles.update(locals())
-        method = possibles.get(solver)
-        if not method:
-             raise Exception("Method %s not implemented" % solver)
-        self.solver = method
-
-    def solve(self, f, tspan, y0, *args, **kwargs):
+    def __call__(self, f, tspan, y0, *args, **kwargs):
         # Solve can handle either tspan with list length 2, and numpy array y0 for a SINGLE arc
         # or a tspan list the same length as y0 list for MULTIPLE arcs
 
@@ -62,23 +43,41 @@ class Propagator(object):
         if isinstance(y0,np.ndarray):
             sol = self.solver(f, tspan, y0, *args, **kwargs)
         else:
-            """if len(tspan) == 1 & len(y0) == 1:
-                sol = self.solver(f, tspan[0], y0[0], *args, **kwargs)
-            elif len(tspan) == 1 & len(y0) != 1:
-                t_and_y = Parallel(n_jobs=self.threads,backend='threading')(delayed(self.solver)(f,tspan[0],y,*args,**kwargs) for y in y0)
-                sol = t_and_y # FIX THIS
-            elif isinstance(tspan, np.ndarray):
-                sol = Parallel(n_jobs=self.threads,backend='threading')(delayed(self.solver)(f,tspan[0],y,*args,**kwargs) for y in y0)
-            else:"""
             if self.poolinitialized:
-                #multisol = self.pool.map_async(self.solver,[(f,t,y, args,kwargs) for (t,y) in zip(tspan,y0)])
                 multisol = [self.pool.apply_async(self.solver,(f,t,y) + args,(kwargs)) for (t,y) in zip(tspan,y0)]
                 t_and_y = [s.get() for s in multisol]
+
                 sol = list(zip(*t_and_y))
+                return sol
 
             else:
-                # If pool hasn't been initialized, use backend threading.
-                t_and_y = Parallel(n_jobs=self.threads,backend='threading')(delayed(ode45)(f,t,y,*args,**kwargs) for (t,y) in zip(tspan,y0))
-                sol = list(zip(*t_and_y))
+                tout = []
+                yout = []
+                for i in range(len(y0)):
+                    ttemp, ytemp = ode45(f,tspan[i], y0[i], *args, **kwargs)
+                    tout.append(ttemp)
+                    yout.append(ytemp)
 
-        return sol
+                return tout, yout
+
+    def startPool(self):
+        if dill.__version__ == '0.2.5':
+            if self.poolinitialized is False:
+                self.pool = pool.Pool(processes=self.process_count)
+                self.poolinitialized = True
+        else:
+            print('Could not start parallel pool. Running in single-core mode. Use dill version 0.2.5 for parallelization.')
+
+    def closePool(self):
+        if self.poolinitialized:
+            self.poolinitialized = False
+            self.pool.close()
+            self.pool.terminate()
+
+    def setSolver(self,solver='ode45'):
+        possibles = globals().copy()
+        possibles.update(locals())
+        method = possibles.get(solver)
+        if not method:
+             raise Exception("Method %s not implemented" % solver)
+        self.solver = method

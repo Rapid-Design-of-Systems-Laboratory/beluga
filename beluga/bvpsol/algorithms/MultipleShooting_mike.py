@@ -6,7 +6,7 @@ from .. import Solution
 from .BaseAlgorithm import BaseAlgorithm
 from math import *
 from beluga.utils import keyboard
-# from joblib import Memory
+# from .joblib import Memory
 from .Propagator import Propagator
 from .Worker import Worker
 import logging, sys, os
@@ -21,7 +21,7 @@ except ImportError:
 import beluga
 from .. import Solution
 from beluga.utils import keyboard
-from beluga.integrators import ode45
+from beluga.integrators import ode45 as ode45_1
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 
@@ -260,6 +260,12 @@ PythonCodeGen = sp.Workflow([
 ], description='Generates and compiles the required BVP functions from problem data')
 
 class MultipleShooting_mike(BaseAlgorithm):
+    def __new__(cls, tolerance=1e-6, max_iterations=100, max_error=100, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
+        obj = super(MultipleShooting_mike, cls).__new__(cls)
+        if number_arcs == 1:
+            return MultipleShooting(tolerance=tolerance, max_iterations=max_iterations, max_error=max_error, derivative_method=derivative_method, cache_dir=cache_dir, verbose=verbose, cached=cached)
+        return obj
+
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=100, derivative_method='fd', cache_dir = None,verbose=False,cached=True,number_arcs=-1):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
@@ -286,23 +292,13 @@ class MultipleShooting_mike(BaseAlgorithm):
         # self.worker.Propagator.setSolver(solver='ode45')
         self.worker = None
 
-    def preprocess(self, problem_data):
-        """Code generation and compilation before running solver."""
-        out_ws = PythonCodeGen({'problem_data': problem_data})
-        print(out_ws['bc_func_code'])
-        print(out_ws['deriv_func_code'])
-        self.bvp = BVP(out_ws['deriv_func_fn'],
-                       out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
-
-        self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
-        self.bc_jac_func  = ft.partial(self.__bcjac_fd, bc_func=self.bvp.bc_func)
-        return out_ws['code_module']
-
     def set_cache_dir(self,cache_dir):
         self.cache_dir = cache_dir
-        # if self.cached and cache_dir is not None:
-        #     memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
-        #     self.solve = memory.cache(self.solve)
+        if self.cached and cache_dir is not None:
+            raise NotImplementedError
+            # TODO: Fix this cache function. It used an old outdated package that no longer works.
+            # memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
+            self.solve = memory.cache(self.solve)
 
     def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-50):
         ya = np.array(ya, dtype=complex)
@@ -470,11 +466,6 @@ class MultipleShooting_mike(BaseAlgorithm):
         Raises:
         """
         guess = solinit
-        if self.number_arcs == 1:
-            # Single Shooting
-            from .SingleShooting import SingleShooting
-            Single = SingleShooting(self.tolerance, self.max_iterations, self.derivative_method, self.cache_dir, self.verbose, self.cached)
-            return Single.solve(bvp)
 
         if self.worker is not None:
             ode45 = self.worker.Propagator
@@ -485,19 +476,17 @@ class MultipleShooting_mike(BaseAlgorithm):
 
         # Decrease time step if the number of arcs is greater than the number of indices
         if self.number_arcs >= len(guess.x):
-            x,ynew = ode45.solve(self.bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux, abstol=self.tolerance/10, reltol=1e-3)
+            x,ynew = ode45(bvp.deriv_func, np.linspace(guess.x[0],guess.x[-1],self.number_arcs+1), guess.y[:,0], guess.parameters, guess.aux, abstol=self.tolerance/10, reltol=1e-3)
             guess.y = np.transpose(ynew)
             guess.x = x
 
-        solinit = guess
         x = solinit.x
         # Get initial states from the guess structure
-
-        y0g = [solinit.y[:,np.floor(i/self.number_arcs*x.shape[0]).astype(np.int32)] for i in range(self.number_arcs)]
+        y0g = [solinit.y[:,int(np.floor(i/self.number_arcs*x.shape[0]))] for i in range(self.number_arcs)]
         paramGuess = solinit.parameters
 
         deriv_func = self.bvp.deriv_func
-        self.bc_func =self. bvp.bc_func
+        self.bc_func = self.bvp.bc_func
         aux = solinit.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
@@ -533,7 +522,7 @@ class MultipleShooting_mike(BaseAlgorithm):
                 if iter>self.max_iterations:
                     logging.warn("Maximum iterations exceeded!")
                     break
-                # keyboard
+
                 y0set = [np.concatenate( (y0g[i], stm0) ) for i in range(self.number_arcs)]
 
                 for i in range(self.number_arcs):
@@ -541,12 +530,11 @@ class MultipleShooting_mike(BaseAlgorithm):
                     right = int(np.floor((i+1)/self.number_arcs*t.shape[0]))
                     if i == self.number_arcs-1:
                         right = t.shape[0] - 1
-                    print(left,right,len(t))
                     tspanset[i] = [t[left],t[right]]
                     #tspanset[i] = np.linspace(t[left],t[right],np.ceil(5000/self.number_arcs))
 
                 # Propagate STM and original system together
-                tset,yySTM = ode45.solve(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-5)
+                tset,yySTM = ode45(self.stm_ode_func, tspanset, y0set, deriv_func, paramGuess, aux, abstol=self.tolerance/10, reltol=1e-5)
 
                 # Obtain just last timestep for use with correction
                 yf = [yySTM[i][-1] for i in range(self.number_arcs)]
@@ -648,3 +636,15 @@ class MultipleShooting_mike(BaseAlgorithm):
         if self.worker is None:
             ode45.closePool()
         return sol
+
+    def preprocess(self, problem_data):
+        """Code generation and compilation before running solver."""
+        out_ws = PythonCodeGen({'problem_data': problem_data})
+        print(out_ws['bc_func_code'])
+        print(out_ws['deriv_func_code'])
+        self.bvp = BVP(out_ws['deriv_func_fn'],
+                       out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
+
+        # self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
+        # self.bc_jac_func  = ft.partial(self.__bcjac_fd, bc_func=self.bvp.bc_func)
+        return out_ws['code_module']
