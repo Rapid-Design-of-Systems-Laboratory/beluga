@@ -60,7 +60,7 @@ class Plot(object):
             datasource = self.datasource
         if style is None:
             style = {}
-        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'style':style, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource, 'style': style})
+        self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'style':style, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
         return self
 
     def preprocess(self):
