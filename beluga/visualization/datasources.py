@@ -103,7 +103,7 @@ class GPOPS(BaseDataSource):
         self.filename = filename
         states = tuple(states)
         costates = tuple('lam'+x.upper() for x in states)
-        self.problem_data = {'state_list':states+costates+('tf',),
+        self.problem_data = {'state_list':states+costates,
                              'control_list':controls,
                              'quantity_vars':{}}
     def reset(self):
