@@ -56,7 +56,7 @@ def analytical_sol_u(renderer, fig, p):
     plt.tight_layout()
     save_pic(renderer,fig,p,'icrm_u')
 
-plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data-freeflight-1d.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot().line('t','x',label='$x$ [m] - ICRM', sol=-1, step=-1, style={'lw': 2.0})\
                 .line('t','v',label='$v$ [m/s]- ICRM', step=-1, sol=-1, style={'lw': 2.0})\
@@ -70,6 +70,10 @@ plots.add_plot().line('t','a',label='$u$ - ICRM', sol=-1, step=-1, style={'lw': 
 plots.add_plot(colormap=cmx.gnuplot).line_series('t','v',step=-1,skip=1)\
                 .xlabel('$t$ [s]').ylabel('$v(t)$ [m/s]')\
                 .postprocess(ft.partial(save_pic, suffix='icrm_evol'))
+
+plots.add_plot(colormap=cmx.gnuplot).line_series('t','x',step=0)\
+                .xlabel('$t$ [s]').ylabel('$x$ [m]') \
+                .postprocess(ft.partial(save_pic, suffix='icrm_traj_evol'))
 
 #
 # plots.add_plot().line('t','theta*180/3.14',label='ICRM Solution', style={'lw': 2.0})\

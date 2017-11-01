@@ -36,7 +36,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[0,0.01],          # Starting values for states in order
+                start=[0,0.0],          # Starting values for states in order
                 direction='forward',
                 costate_guess = [-0.2, -0.4],
                 control_guess = [1, 0, 0],
