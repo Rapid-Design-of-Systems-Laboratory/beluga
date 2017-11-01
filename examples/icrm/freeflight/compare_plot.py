@@ -39,7 +39,7 @@ def analytical_sol_xv(renderer, fig, p):
 
     plt.plot(t_list, x_t, 'o', label='$x$ - Analytical')
     plt.plot(t_list, v_t, 'o', label='$v$ - Analytical')
-    plt.legend(prop=fontP)
+    plt.legend(prop=fontP,loc='lower right')
     plt.ylim([-0.02, 1.2])
     plt.tight_layout()
     save_pic(renderer,fig,p,'icrm_traj')
@@ -52,7 +52,7 @@ def analytical_sol_u(renderer, fig, p):
 
     u_list[t_list > T/2] = -1.0
     plt.plot(t_list, u_list, 'o', label='$u$ - Analytical')
-    plt.legend(prop=fontP)
+    plt.legend(prop=fontP,loc='center right')
     plt.tight_layout()
     save_pic(renderer,fig,p,'icrm_u')
 
@@ -63,7 +63,7 @@ plots.add_plot().line('t','x',label='$x$ [m] - ICRM', sol=-1, step=-1, style={'l
                 .xlabel('$t$ [s]') \
                 .postprocess(analytical_sol_xv)
 
-plots.add_plot().line('t','a',label='$u$ [m] - ICRM', sol=-1, step=-1, style={'lw': 2.0})\
+plots.add_plot().line('t','a',label='$u$ - ICRM', sol=-1, step=-1, style={'lw': 2.0})\
                 .xlabel('$t$ [s]').ylabel('$u(t)$ [m/s$^2$] -- ICRM') \
                 .postprocess(analytical_sol_u)
 
