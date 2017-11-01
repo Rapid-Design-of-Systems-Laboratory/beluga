@@ -10,6 +10,7 @@ import functools as ft
 import imp
 from beluga.problem import BVP
 import sys
+import logging
 # def create_odefn(problem_data, module):
 #
 
@@ -301,7 +302,11 @@ class QCPI(BaseAlgorithm):
         err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
         for ctr in range(max_iter):
-            pert_eom(t_arr, x_guess, g_arr, const)
+            try:
+                pert_eom(t_arr, x_guess, g_arr, const)
+            except:
+                logging.error('Perturbed EOM failed.')
+                break
 
             # if np.any(np.isnan(g_arr)):
             #     print('NaaaaaNaaaa')
