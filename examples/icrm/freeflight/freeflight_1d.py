@@ -49,7 +49,8 @@ continuation_steps = beluga.init_continuation()
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .terminal('x', 1.0) \
-                .terminal('v', 0)
+                .terminal('v', 0) \
+                .initial('v', 0.0)
 
 continuation_steps.add_step('bisection').num_cases(6) \
                  .const('eps_accLimit', 1e-1)

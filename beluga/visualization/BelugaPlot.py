@@ -57,7 +57,7 @@ class BelugaPlot:
             if self.renderer is None:
                 raise ValueError('Renderer "'+renderer+'" not found')
 
-    def add_plot(self, step = None, sol = None, datasource = None, colormap=None, mesh_size=512):
+    def add_plot(self, step = None, sol = None, datasource = None, colormap=None, mesh_size=None):
         """
         Adds a new plot
             (alias for add_plot() in PlotList)
