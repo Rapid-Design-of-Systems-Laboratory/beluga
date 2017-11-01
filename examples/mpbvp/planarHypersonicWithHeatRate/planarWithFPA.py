@@ -79,15 +79,15 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .terminal('h', 0)
+                .terminal('h', 0.0)
 
 continuation_steps.add_step('bisection').num_cases(11) \
                 .initial('gam',-60*pi/180)\
                 .terminal('theta', 1.0*pi/180)
 
-continuation_steps.add_step('bisection') \
-                .num_cases(11)  \
-                .terminal('theta', 2*pi/180)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11)  \
+#                 .terminal('theta', 2*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
