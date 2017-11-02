@@ -33,7 +33,8 @@ def analytical_sol_u(renderer, fig, p):
 
 plots = BelugaPlot('./data_fpa60.dill',default_sol=-1,default_step=-1)
 mpbvp_ds = Dill('../../mpbvp/planarHypersonicWithHeatRate/data_1200.dill')
-const_ds = Dill('./data_1200_ep4.dill')
+const_ds = Dill('./data_1200_ep6.dill')
+qdot_ds = Dill('./data_1200_ep4.dill')
 
 plots.add_plot(colormap=cmx.gnuplot2).line_series('theta*180/3.14159','h/1000',step=1,skip=0,style={'lw':2.0}) \
                 .xlabel('$\\theta$ [deg]').ylabel('$h$ [km]')\
@@ -58,6 +59,23 @@ plots.add_plot(colormap=cmx.viridis).line_series('v/1000','h/1000',datasource=mp
                 .xlabel('$v$ [km/s]').ylabel('$h$ [km]') \
                 .postprocess(ft.partial(save_pic, suffix='mpbvp_evol_hv'))
 
+# Continuation on Qdotmax
+plots.add_plot(colormap=cmx.gnuplot2).line_series('t','k*sqrt(rho0*exp(-h/H)/rn)*v**3/10000',datasource=qdot_ds,step=-1,skip=0) \
+                .xlabel('$t$ [s]').ylabel('$\\dot{q}$ [W/cm$^2$]') \
+                .postprocess(ft.partial(save_pic, suffix='icrm_evol1_qdot'))
+
+plots.add_plot(colormap=cmx.gnuplot2).line_series('v/1000','h/1000',datasource=qdot_ds,step=-1,skip=0) \
+                .xlabel('$v$ [km/s]').ylabel('$h$ [km]') \
+                .postprocess(ft.partial(save_pic, suffix='icrm_evol1_hv'))
+
+# Continuaton in epsilon
+plots.add_plot(colormap=cmx.viridis).line_series('t','k*sqrt(rho0*exp(-h/H)/rn)*v**3/10000',datasource=const_ds,step=-1,skip=0) \
+                .xlabel('$t$ [s]').ylabel('$\\dot{q}$ [W/cm$^2$]') \
+                .postprocess(ft.partial(save_pic, suffix='icrm_evol2_qdot'))
+
+plots.add_plot(colormap=cmx.viridis).line_series('v/1000','h/1000',datasource=const_ds,step=-1,skip=0) \
+                .xlabel('$v$ [km/s]').ylabel('$h$ [km]') \
+                .postprocess(ft.partial(save_pic, suffix='icrm_evol2_hv'))
 
 plots.add_plot()\
                 .line('t','k*sqrt(rho0*exp(-h/H)/rn)*v**3/10000', datasource=mpbvp_ds, label='MPBVP', style={'lw':2.0}) \
@@ -70,7 +88,6 @@ plots.add_plot()\
                 .line('v/1000','h/1000', datasource=const_ds, label='ICRM', style={'lw':2.0}) \
                 .xlabel('$v$ [km/s]').ylabel('$h$ [km]') \
                 .postprocess(ft.partial(save_pic, suffix='mpbvp_icrm_hv'))
-
 
 # plots.add_plot().line('theta*180/3.14','h/1000')                    \
 #                 .xlabel('Downrange (km)').ylabel('h (km)')      \

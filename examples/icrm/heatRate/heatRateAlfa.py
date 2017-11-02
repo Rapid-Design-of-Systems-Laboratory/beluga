@@ -45,7 +45,7 @@ ocp.constant('rn',1/12*0.3048,'m') # Nose radius, m
 ocp.constant('k',1.74153e-4,'W*(s^3/(sqrt(kg)*m))') # Some units magic
 ocp.quantity('qdot','k*sqrt(rho/rn)*v^3')   # Convectional heat rate
 ocp.constant('qdotMax', 10000e4, 'W')
-ocp.constant('alfaMax', 180*pi/180, 'rad')
+ocp.constant('alfaMax', 40*pi/180, 'rad')
 ocp.quantity('alfa','alfaMax*u')
 # Define constraints
 ocp.constraints().initial('h-h_0','m') \
@@ -55,7 +55,7 @@ ocp.constraints().initial('h-h_0','m') \
                     .terminal('h-h_f','m')  \
                     .terminal('theta-theta_f','rad') \
                     .path('heatRate','(qdot/qdotMax)','<',1,'nd',start_eps=1e-2) \
-                    .path('alfaLim','u','<>',1, 'nd', start_eps=1e-3)
+                    .path('alfaLim','u','<>',1, 'nd', start_eps=1e-2)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',

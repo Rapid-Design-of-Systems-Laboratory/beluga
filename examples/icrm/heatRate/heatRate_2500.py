@@ -91,12 +91,21 @@ continuation_steps = beluga.init_continuation()
 # continuation_steps.add_step('bisection').num_cases(31)  \
 #                         .const('qdotMax', 1200e4)
 
+# guess_maker = beluga.guess_generator('file', filename='./data_1200_ep4.dill', step=-1, iteration=-1)
+#
+#
+# continuation_steps.add_step('bisection').num_cases(101,spacing='log')  \
+#                         .const('eps_heatRate', 1e-6)
+
+
 guess_maker = beluga.guess_generator('file', filename='./data_1200_ep4.dill', step=-1, iteration=-1)
 
+continuation_steps.add_step('bisection').num_cases(41)  \
+                        .initial('v', 5e3)
 
 continuation_steps.add_step('bisection').num_cases(101,spacing='log')  \
                         .const('eps_heatRate', 1e-6)
-
+                        
 beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
@@ -104,7 +113,8 @@ beluga.solve(ocp,
              guess_generator=guess_maker,
             #  output_file='data_2500_ep2.dill'
             #  output_file='data_1200_ep4.dill'
-             output_file='data_1200_ep6.dill'
+             #output_file='data_1200_ep6.dill'
+             output_file='data_1200_5k_ep6.dill'
              )
 
 # continuation_steps.add_step('bisection').num_cases(11)  \
