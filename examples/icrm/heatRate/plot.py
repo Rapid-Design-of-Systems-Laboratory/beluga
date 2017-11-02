@@ -1,8 +1,8 @@
 from beluga.visualization import BelugaPlot
 
 # plots = BelugaPlot('./data_2500_ep4.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
-# plots = BelugaPlot('./data-flydown.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
-plots = BelugaPlot('./data-1k2-eps6-eps6.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data-flydown.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+# plots = BelugaPlot('./data-1k2-eps6-eps6.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot().line('theta*180/3.14','h/1000')                    \
                 .xlabel('Downrange (deg)').ylabel('h (km)')      \
