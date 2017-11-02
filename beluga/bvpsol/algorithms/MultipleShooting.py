@@ -421,13 +421,17 @@ class MultipleShooting(BaseAlgorithm):
         try:
             while True:
                 phi_list = []
+                x_list = []
+                y_list = []
                 with timeout(seconds=1000):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
 
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        y_list.append(yy[:,:nOdes].T)
+                        x_list.append(t)
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                         # _,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-3)
                         yb[:,arc_idx] = yy[-1,:nOdes]
@@ -440,14 +444,15 @@ class MultipleShooting(BaseAlgorithm):
                     break
 
                 res = bc_func(ya, yb, paramGuess, aux)
+                print(yb[0],aux['terminal']['h'],aux['const']['eps_heatRate'])
                 if any(np.isnan(res)):
                     print(res)
                     # from beluga.utils import keyboard
                     # keyboard()
                     raise RuntimeError("Nan in residue")
 
-
-                r1 = np.linalg.norm(res)
+                # r1 = np.linalg.norm(res)
+                r1 = max(abs(res))
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
 
@@ -524,17 +529,17 @@ class MultipleShooting(BaseAlgorithm):
         # Return initial guess if it failed to converge
         sol = solinit
         if converged:
-            y_list = []
-            x_list = []
+            # y_list = []
+            # x_list = []
             sol.arcs = []
             y0 = np.zeros(ya.shape[0])
             timestep_ctr = 0
-            for arc_idx, tspan in enumerate(tspan_list):
-                tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
-                y_list.append(yy.T)
-                x_list.append(tt)
+            for arc_idx, tt in enumerate(x_list):
+            #     tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+            #     y_list.append(yy.T)
+            #     x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
-                timestep_ctr += len(tt)
+            #     timestep_ctr += len(tt)
 
             # If problem converged, propagate solution to get full trajectory
             sol.x = np.hstack(x_list)

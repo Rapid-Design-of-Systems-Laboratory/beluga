@@ -239,6 +239,7 @@ def process_path_constraints(workspace):
             constraints['terminal'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit**i)}, sym_key='expr'))
 
             # Add to initial guess vector
+            print(f'Adding {xi_vars[i]} = {c_vals[i]}')
             xi_init_vals.append(c_vals[i])
 
             dhdxi = [derivative_fn(h[i], xi_v).subs(psi_vars_deriv) for xi_v in xi_vars[:-1]]

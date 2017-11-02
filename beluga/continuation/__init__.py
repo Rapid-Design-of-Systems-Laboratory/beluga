@@ -199,7 +199,7 @@ class ManualStrategy(object):
         self.terminal = functools.partial(self.set, param_type='terminal')
         self.initial = functools.partial(self.set, param_type='initial')
         self.const = functools.partial(self.set, param_type='const')
-
+        self.orig_num_cases = num_cases
         self.constant = self.const
 
     def reset(self):
@@ -267,6 +267,7 @@ class ManualStrategy(object):
                 raise RuntimeError('Cannot set num_cases during iteration')
 
             self._num_cases = num_cases
+            self.orig_num_cases = num_cases
             self._spacing   = spacing
             return self
 
@@ -318,6 +319,7 @@ class BisectionStrategy(ManualStrategy):
         self.num_divisions = num_divisions
         self.max_divisions = max_divisions
         self.division_ctr = 0
+        self.orig_num_cases = initial_num_cases
 
     def __str__(self):
         return str(self.vars)
@@ -343,6 +345,11 @@ class BisectionStrategy(ManualStrategy):
         if self.division_ctr > self.max_divisions:
             logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
             raise RuntimeError('Exceeded max_divisions')
+
+
+        # if self._num_cases > self.orig_num_cases*3:
+        #     logging.error('Number of steps exceeded thrice the original')
+        #     raise RuntimeError('Exceeded num_cases limit')
 
         # If previous step did not converge, move back a half step
         for var_type, var_name in self.var_iterator():
@@ -371,5 +378,3 @@ class BisectionStrategy(ManualStrategy):
         logging.info('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
         return super(BisectionStrategy, self).next(True)
-class ContinuationSolution(list):
-    pass

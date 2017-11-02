@@ -53,11 +53,19 @@ ocp.constraints().initial('h-h_0','m') \
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
                     tolerance=1e-4,
-                    max_iterations=20,
+                    max_iterations=40,
                     verbose = True,
                     max_error=50
 )
 
+# bvp_solver = beluga.bvp_algorithm('QCPI',
+#                     tolerance=1e-6,
+#                     max_iterations=200,
+#                     verbose = True,
+#                     max_error=50,
+#                     N=101
+# )
+#
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e6)
 
 guess_maker = beluga.guess_generator('auto',
@@ -78,10 +86,10 @@ continuation_steps = beluga.init_continuation()
 # continuation_steps.add_step('bisection').num_cases(11)  \
 #                         .terminal('theta', 2*pi/180)
 #
-# guess_maker = beluga.guess_generator('file', filename='./data_fpa60.dill', step=-1, iteration=-1)
+# guess_maker = beluga.guess_generator('file', filename='./data_fpa60_5k.dill', step=-1, iteration=-1)
 #
-# continuation_steps.add_step('bisection').num_cases(11)  \
-#                         .const('qdotMax', 2500e4)
+# continuation_steps.add_step('bisection').num_cases(41)  \
+#                         .const('qdotMax', 1200e4)
 # #
 # # guess_maker = beluga.guess_generator('file', filename='./data_2500_ep2.dill', step=-1, iteration=-1)
 # #
@@ -97,15 +105,26 @@ continuation_steps = beluga.init_continuation()
 # continuation_steps.add_step('bisection').num_cases(101,spacing='log')  \
 #                         .const('eps_heatRate', 1e-6)
 
+#
+guess_maker = beluga.guess_generator('file', filename='./data_1200_5k_1deg_ep4.dill', step=-1, iteration=-1)
 
-guess_maker = beluga.guess_generator('file', filename='./data_1200_ep4.dill', step=-1, iteration=-1)
+continuation_steps.add_step('bisection').num_cases(41,spacing='log')  \
+                        .const('eps_heatRate', 1e-6)\
+                        .terminal('h',15000) \
+                        .terminal('theta',1*pi/180) \
+                        .initial('v',5e3) \
+                        .const('qdotMax',1200e4)
 
-continuation_steps.add_step('bisection').num_cases(41)  \
-                        .initial('v', 5e3)
+# guess_maker = beluga.guess_generator('file', filename='./data_1200_5k_1deg_ep6.dill', step=-1, iteration=-1)
+#
+# # Fix tolerance
+# continuation_steps.add_step('bisection').num_cases(3,spacing='log')  \
+#                         .const('eps_heatRate', 1e-6) \
+#                         .terminal('h',15000) \
+#                         .terminal('theta',1*pi/180) \
+#                         .initial('v',5e3) \
+#                         .const('qdotMax',1200e4)
 
-continuation_steps.add_step('bisection').num_cases(101,spacing='log')  \
-                        .const('eps_heatRate', 1e-6)
-                        
 beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
@@ -114,7 +133,7 @@ beluga.solve(ocp,
             #  output_file='data_2500_ep2.dill'
             #  output_file='data_1200_ep4.dill'
              #output_file='data_1200_ep6.dill'
-             output_file='data_1200_5k_ep6.dill'
+             output_file='data_1200_5k_1deg_ep6.dill'
              )
 
 # continuation_steps.add_step('bisection').num_cases(11)  \

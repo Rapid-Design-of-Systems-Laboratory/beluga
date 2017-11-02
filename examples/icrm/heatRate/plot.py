@@ -3,6 +3,7 @@ from beluga.visualization import BelugaPlot
 # plots = BelugaPlot('./data_2500_ep4.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 plots = BelugaPlot('./data-flydown.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 # plots = BelugaPlot('./data-1k2-eps6-eps6.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data_1200_5k_1deg_ep6.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot().line('theta*180/3.14','h/1000')                    \
                 .xlabel('Downrange (deg)').ylabel('h (km)')      \
@@ -20,7 +21,7 @@ plots.add_plot().line('t','k*sqrt(rho0*exp(-h/H)/rn)*v**3/1e4')                 
 #                 .xlabel('t (s)').ylabel('Heat rate')      \
 #                 .title('Heatrate vs. Time')
 
-plots.add_plot().line('t','alfa*180/3.14') \
+plots.add_plot().line('t','v/1000') \
                 .xlabel('t (s)').ylabel('Alpha (deg)')      \
                 .title('Control History')
 plots.render()

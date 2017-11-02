@@ -21,9 +21,13 @@ ocp.control('abar2','nd')
 # Define constants
 ocp.constant('V',300,'m/s')
 ocp.constant('tfreal',50,'s')
-ocp.constant('sepLimit',100e3,'nd')
+ocp.constant('ylim',0.5,'nd')
+
+ocp.constant('w1',0.33,'nd')
+ocp.constant('w2',0.33,'nd')
+ocp.constant('w3',0.33,'nd')
 # Define costs
-ocp.path_cost('abar^2 + abar2^2 + 1','nd')
+ocp.path_cost('w1*abar^2 + w2*abar2^2 + w3*1','nd')
 
 # Define constraints
 ocp.constraints() \
@@ -40,9 +44,6 @@ ocp.constraints() \
     .terminal('xbar2-xbar2_f','nd')   \
     .terminal('ybar2-ybar2_f','nd') \
     .terminal('psi2 - psi2_f', 'nd') \
-
-# ocp.constraints() \
-#     .path('separation','sqrt(xbar - xbar2)**2 + (ybar - ybar2)**2','<','(sepLimit/(V*tfreal))','nd',start_eps=1e-4)
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
@@ -64,13 +65,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 
 continuation_steps = beluga.init_continuation()
 
-# guess_maker = beluga.guess_generator('auto',
-#                 start=[-0.8,0,pi/6],#, -0.8,0,-pi/6],          # Starting values for states in order
-#                 direction='forward',
-#                 costate_guess = [0.0, 0.0, 0.1],#, 0.0, 0.0, 0.1],
-#                 control_guess = [-0.05],#, -0.05],
-#                 time_integrate=1.0
-# )
+
 guess_maker = beluga.guess_generator('auto',
                 start=[-0.8,0,pi/6, -0.8,0,-pi/6],          # Starting values for states in order
                 direction='forward',
@@ -85,7 +80,7 @@ guess_maker = beluga.guess_generator('auto',
 #                 control_guess = [-0.05, -0.05, 0, 0],
 #                 time_integrate=1.0
 # )
-#
+
 
 continuation_steps.add_step('bisection') \
                 .num_cases(51) \
