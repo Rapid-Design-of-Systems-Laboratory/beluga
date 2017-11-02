@@ -219,6 +219,7 @@ import logging
 def make_control_law(dhdu, controls):
     """Solves control equation to get control law."""
     try:
+        print(controls)
         var_list = list(controls)
         logging.info("Attempting using SymPy ...")
         logging.debug("dHdu = "+str(dhdu))
@@ -288,7 +289,7 @@ def process_constraint(s,
             mu_sol_list = []
             constrained_control_law = []
             for u_sol in u_sol_list:
-                mu_sol = make_control_law(dh_du[0].subs(u_sol), mult)
+                mu_sol = make_control_law(dh_du[0].subs(u_sol), [mult])
                 control_law = {**u_sol, **mu_sol[0]}
                 constrained_control_law.append(control_law)
 

@@ -49,6 +49,7 @@ def bc_func_right(_yb, _p, _aux):
     _H = compute_hamiltonian(1,_yb,_p,_aux,[{{#control_list}}{{.}},{{/control_list}}])
     res_right = np.array([{{#bc_terminal}}{{.}},
                 {{/bc_terminal}}])
+
     return res_right
 
 def bc_func(_ya, _yb, _p, _aux):

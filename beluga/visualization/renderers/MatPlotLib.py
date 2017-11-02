@@ -67,7 +67,10 @@ class MatPlotLib(BaseRenderer):
         i = 0
         for line in p.plot_data:
             has_legend = has_legend or (line['label'] is not None)
+
             for dataset in line['data']:
+                if(len(dataset['x_data'])!=len(dataset['y_data'])):
+                    continue
                 if isinstance(line['style'], str):
                     plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh, color=colors[i],)
                 elif isinstance(line['style'], dict):

@@ -76,6 +76,7 @@ continuation_steps.add_step('bisection').num_cases(31)  \
                         .terminal('theta', 0.5*pi/180)
 
 continuation_steps.add_step('bisection').num_cases(11)  \
+                        .initial('v',5e3)\
                         .terminal('theta', 1*pi/180)
 
 # ocp.guess.setup(mode='file', filename='data-skip-10000-eps2.dill', step=-1, iteration=-1)
@@ -99,5 +100,5 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data_fpa60.dill'
+             output_file='data_fpa60_5k.dill'
              )
