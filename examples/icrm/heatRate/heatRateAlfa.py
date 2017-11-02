@@ -1,3 +1,4 @@
+
 """Planar hypersonic problem with simple path constraint."""
 from math import pi
 # Rename this and/or move to optim package?
@@ -21,7 +22,9 @@ ocp.state('h','(v*sin(gam))','m')   \
        .state('gam','L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)','rad')
 
 # Define controls
-ocp.control('alfa','rad')
+
+# Define controls
+ocp.control('u','nd')
 
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
@@ -43,7 +46,7 @@ ocp.constant('k',1.74153e-4,'W*(s^3/(sqrt(kg)*m))') # Some units magic
 ocp.quantity('qdot','k*sqrt(rho/rn)*v^3')   # Convectional heat rate
 ocp.constant('qdotMax', 10000e4, 'W')
 ocp.constant('alfaMax', 180*pi/180, 'rad')
-
+ocp.quantity('alfa','alfaMax*u')
 # Define constraints
 ocp.constraints().initial('h-h_0','m') \
                     .initial('theta-theta_0','rad') \
@@ -52,7 +55,7 @@ ocp.constraints().initial('h-h_0','m') \
                     .terminal('h-h_f','m')  \
                     .terminal('theta-theta_f','rad') \
                     .path('heatRate','(qdot/qdotMax)','<',1,'nd',start_eps=1e-2) \
-                    .path('alfaLim','alfa/alfaMax','<>',1, 'nd', start_eps=1e-2)
+                    .path('alfaLim','u','<>',1, 'nd', start_eps=1e-3)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     derivative_method='fd',
@@ -63,37 +66,47 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     max_error=50,
 )
 
+# bvp_solver = beluga.bvp_algorithm('qcpi',
+#                     tolerance=1e-4,
+#                     max_iterations=300,
+#                     verbose = True,
+#                     max_error=50,
+#                     N=81
+# )
+
 # ocp.bvp_solver = algorithms.SingleShooting(derivative_method='fd', timeout=10, tolerance=1e-5, max_iterations=20, verbose = True, cached = False, max_error=30)
 
-ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e6)
+ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e7)
 
 
 continuation_steps = beluga.init_continuation()
-# guess_maker = beluga.guess_generator('auto',
-#                 start=[80e3,0.0,4e3,-pi/2],          # Starting values for states in order
-#                 direction='forward',
-#                 costate_guess = -0.1,
-#                 control_guess = 0.1
-# )
-# continuation_steps.add_step('bisection').num_cases(21) \
-#                         .terminal('h', 16000.0) \
-#
-# continuation_steps.add_step('bisection').num_cases(41)  \
-#                         .initial('gam', -60*pi/180) \
-#                         .terminal('theta', 0.5*pi/180)
-#
-# # continuation_steps.add_step('bisection').num_cases(11)  \
-# #                         .terminal('theta', 1*pi/180)
-# #
-# # continuation_steps.add_step('bisection').num_cases(11)  \
-# #                         .const('alfaMax', 40*pi/180)
-# beluga.solve(ocp,
-#              method='icrm',
-#              bvp_algorithm=bvp_solver,
-#              steps=continuation_steps,
-#              guess_generator=guess_maker,
-#              output_file='data-flydown.dill'
-#              )
+guess_maker = beluga.guess_generator('auto',
+                start=[80e3,0.0,5e3,-pi/2+1*pi/180],
+                direction='forward',
+                costate_guess = -0.1,
+                control_guess = 0.0,
+                use_control_guess = True
+)
+continuation_steps.add_step('bisection').num_cases(21) \
+                        .terminal('h', 16000.0) \
+                        .terminal('theta',0.01*pi/180)
+
+continuation_steps.add_step('bisection').num_cases(101)  \
+                        .initial('gam', -60*pi/180) \
+                        .terminal('theta', 0.5*pi/180)
+
+continuation_steps.add_step('bisection').num_cases(11)  \
+                        .terminal('theta', 1*pi/180)
+
+continuation_steps.add_step('bisection').num_cases(11)  \
+                        .const('alfaMax', 40*pi/180)
+beluga.solve(ocp,
+             method='icrm',
+             bvp_algorithm=bvp_solver,
+             steps=continuation_steps,
+             guess_generator=guess_maker,
+             output_file='data-flydown.dill'
+             )
 #
 # # ^^ Saved as data-flydown.dill
 #
@@ -129,14 +142,14 @@ continuation_steps = beluga.init_continuation()
 #              )
 # # ^^ Saved as data-1k2-eps6-eps4.dill
 #
-guess_maker = beluga.guess_generator('file', filename='./data-1k2-eps6-eps6.dill', step=-1, iteration=-1)
-continuation_steps.add_step('bisection').num_cases(101)  \
-                        .terminal('theta', 1*pi/180)
-beluga.solve(ocp,
-             method='icrm',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker,
-             output_file='data-1k2-1deg-eps6-eps6.dill'
-             )
-# # ^^ Saved as data-1k2-eps6-eps7.dill
+# guess_maker = beluga.guess_generator('file', filename='./data-1k2-eps6-eps6.dill', step=-1, iteration=-1)
+# continuation_steps.add_step('bisection').num_cases(101)  \
+#                         .terminal('theta', 1*pi/180)
+# beluga.solve(ocp,
+#              method='icrm',
+#              bvp_algorithm=bvp_solver,
+#              steps=continuation_steps,
+#              guess_generator=guess_maker,
+#              output_file='data-1k2-1deg-eps6-eps6.dill'
+#              )
+# # # ^^ Saved as data-1k2-eps6-eps7.dill

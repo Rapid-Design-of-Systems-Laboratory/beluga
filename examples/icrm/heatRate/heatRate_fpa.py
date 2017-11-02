@@ -61,14 +61,14 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e7)
 
 guess_maker = beluga.guess_generator('auto',
-                start=[80e3,0.0,5e3,-pi/2],          # Starting values for states in order
+                start=[80e3,0.0,4e3,-pi/2],          # Starting values for states in order
                 direction='forward',
                 costate_guess = 0.1
 )
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step('bisection').num_cases(21) \
+continuation_steps.add_step('bisection').num_cases(41) \
                         .terminal('h', 15000.0) \
 
 continuation_steps.add_step('bisection').num_cases(31)  \
