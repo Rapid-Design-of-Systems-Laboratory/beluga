@@ -92,6 +92,8 @@ class Solution(object):
         # TODO: Test mesh_size improvement in prepare()
         # from beluga.utils import keyboard
         # keyboard()
+        if not hasattr(self, 'arcs'):
+            self.arcs = ((0,-1),)
         if mesh_size is not None and mesh_size > len(self.x)*len(self.arcs):
             # Update solution to use new mesh if needed
             new_x_list = []
@@ -147,9 +149,9 @@ class Solution(object):
 
         variables += [('t', np.hstack(t_list))]
 
-        self.qvars = problem_data['quantity_vars']
+        self.qvars = problem_data.get('quantity_vars', {})
         variables += [(str(q_k), ne.evaluate(str(q_v), dict(variables)))
-                      for q_k, q_v in problem_data['quantity_vars'].items()]
+                      for q_k, q_v in self.qvars.items()]
         self.var_dict = dict(variables)
 
     def evaluate(self,expr):
