@@ -345,6 +345,7 @@ class MultipleShooting(BaseAlgorithm):
         #     keyboard()
         if np.any(np.isnan(fx)):
             print('NAAAAAAAAAAAN')
+            raise ValueError('NAAAN')
             # from beluga.utils import keyboard
             # keyboard()
 
@@ -441,7 +442,11 @@ class MultipleShooting(BaseAlgorithm):
                 res = bc_func(ya, yb, paramGuess, aux)
                 if any(np.isnan(res)):
                     print(res)
+                    # from beluga.utils import keyboard
+                    # keyboard()
                     raise RuntimeError("Nan in residue")
+
+
                 r1 = np.linalg.norm(res)
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
