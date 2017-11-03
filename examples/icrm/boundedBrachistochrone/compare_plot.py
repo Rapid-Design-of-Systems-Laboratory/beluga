@@ -45,8 +45,8 @@ plots.add_plot().line('x','y',label='ICRM Solution', sol=-1, step=-1, style={'lw
                 .postprocess(ft.partial(save_pic, suffix='icrm_xy'))
 
 plots.add_plot().line('t','theta*180/3.14',label='ICRM Solution', style={'lw': 2.0})\
-                .line('t','theta*180/3.14',label='MPBVP Solution', datasource=mpbvp_ds, step=-1, sol=-1, style={'lw': 2.0})\
-                .line('t','theta*180/3.14',label='Unconstrained Solution', datasource=mpbvp_ds, step=0, sol=-1, style={'lw': 2.0})\
+                .line('t','-theta*180/3.14',label='MPBVP Solution', datasource=mpbvp_ds, step=-1, sol=-1, style={'lw': 2.0})\
+                .line('t','-theta*180/3.14',label='Unconstrained Solution', datasource=mpbvp_ds, step=0, sol=-1, style={'lw': 2.0})\
                 .xlabel('$t$ [s]').ylabel('$\\theta$ [deg]')      \
                 .postprocess(ft.partial(save_pic, suffix='icrm_theta'))
 

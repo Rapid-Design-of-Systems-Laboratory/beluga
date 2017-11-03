@@ -22,9 +22,10 @@ def twosided(x, lb, ub):
 x = np.linspace(-2, 2, 100)
 
 plt.plot(x, onesided_upper(x, 1), label='One-sided SatFcn - Upper', lw = 2.0)
+plt.plot(x, np.ones_like(x)*1, label='Upper limit', ls='dashed', color='r')
 plt.plot(x, onesided_lower(x, -1), label='One-sided SatFcn - Lower', lw = 2.0)
 plt.plot(x, np.ones_like(x)*-1, label='Lower limit', ls='dashed', color='k')
-plt.plot(x, np.ones_like(x)*1, label='Upper limit', ls='dashed', color='r')
+
 # plt.plot(x, twosided(x, -1, 1), label='Two-sided SatFcn', lw = 2.0)
 plt.grid(True)
 plt.xlabel('$x$')

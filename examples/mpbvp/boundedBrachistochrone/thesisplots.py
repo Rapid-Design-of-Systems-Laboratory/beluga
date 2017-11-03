@@ -56,7 +56,7 @@ plots.add_plot().line_series('x','y', step=2, start=0, style={'lw': 2.5}) \
                 .xlabel('$x(t)$ [m]').ylabel('$y(t)$ [m]')      \
                 .postprocess(postprocess_xy_plot)
 
-plots.add_plot().line_series('t','theta*180/3.14', step=2, start=0) \
+plots.add_plot().line_series('t','-theta*180/3.14', step=2, start=0) \
                 .xlabel('$t$ [s]').ylabel('$\\theta(t)$ [deg]')      \
                 .postprocess(postprocess_theta_plot)
 

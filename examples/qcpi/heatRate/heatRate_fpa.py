@@ -82,9 +82,10 @@ continuation_steps.add_step('bisection').num_cases(5)  \
                         .initial('h',80e3) \
                         .initial('v',5e3)
 
-continuation_steps.add_step('bisection').num_cases(5)  \
+continuation_steps.add_step('bisection').num_cases(21)  \
                         .initial('gam', -60*pi/180) \
-                        .terminal('theta', 1*pi/180) \
+                        # .terminal('theta', 0.5*pi/180) \
+
 
 # continuation_steps.add_step('bisection').num_cases(11)  \
 #                         .terminal('theta', 1*pi/180)

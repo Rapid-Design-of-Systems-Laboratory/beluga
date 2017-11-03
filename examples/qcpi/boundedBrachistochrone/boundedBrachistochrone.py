@@ -30,8 +30,8 @@ ocp.constraints() \
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
+# ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 ocp.scale(m=25, s=1, kg=1, rad=1, nd=1)
-
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
                     tolerance=1e-4,
@@ -44,9 +44,9 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1,
-                control_guess = [3.14*60/180, 0.0, 0.0],
-                use_control_guess = False
+                costate_guess = 0.1,
+                control_guess = [-3.14*60/180, 0.0, 0.0],
+                use_control_guess = True
 )
 
 continuation_steps = beluga.init_continuation()
