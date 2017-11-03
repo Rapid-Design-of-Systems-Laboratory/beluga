@@ -92,7 +92,7 @@ from beluga.bvpsol import Solution
 import numpy as np
 class GPOPS(BaseDataSource):
     valid_exts = ['mat']
-    def __init__(self, filename = 'data.mat', states=None, controls=None):
+    def __init__(self, filename = 'data.mat', states=None, controls=None, const=None):
         """
         Initializes the data source with supplied filename
         """
@@ -103,6 +103,7 @@ class GPOPS(BaseDataSource):
         self.filename = filename
         states = tuple(states)
         costates = tuple('lam'+x.upper() for x in states)
+        self._const = const
         self.problem_data = {'state_list':states+costates,
                              'control_list':controls,
                              'quantity_vars':{}}
@@ -117,6 +118,9 @@ class GPOPS(BaseDataSource):
         if not self.is_loaded:
             logging.info("Loading datafile "+self.filename+"...")
             out = loadmat(self.filename)
+
+            if 'output' in out:
+                out = out['output']['result'][0][0][0][0]
             soldata = out['solution']['phase'][0][0][0][0]
 
             # if 'solution' not in self._data:
@@ -134,7 +138,14 @@ class GPOPS(BaseDataSource):
             _sol.x = soldata['time'][:,0]/tf
             _sol.y = np.r_[soldata['state'].T,soldata['costate'].T,np.ones_like(soldata['time']).T*tf]
             _sol.u = soldata['control'].T
+
+            if 'tf' not in self.problem_data['state_list']:
+                self.problem_data['state_list'] = tuple(self.problem_data['state_list']) + ('tf',)
+
             _sol.arcs = ((0, len(_sol.x)-1),)
+
+            if self._const is not None:
+                _sol.aux = {'const':self._const}
 
             self._sol = [[_sol]]
             logging.info('Loaded solution from data file')

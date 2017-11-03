@@ -167,4 +167,3 @@ class Solution(object):
         """
         #TODO: Write test for evaluate()
         return ne.evaluate(expr,self.var_dict)
-        
