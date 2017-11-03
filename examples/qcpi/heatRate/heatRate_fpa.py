@@ -59,13 +59,13 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 )
 
 # ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e5)
-ocp.scale(m=160e3, s=1, kg='mass', rad=1, nd=1, W=1e7)
+ocp.scale(m=200e3, s=1, kg='mass', rad=1, nd=1, W=1e7)
 
 
 
 continuation_steps = beluga.init_continuation()
 guess_maker = beluga.guess_generator('auto',
-                start=[40e3,0.0,2e3,-89*pi/180],          # Starting values for states in order
+                start=[40e3,0.0,3e3,-89*pi/180],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1,
                 control_guess = 0.0#1*pi/180
@@ -78,8 +78,8 @@ continuation_steps.add_step('bisection').num_cases(11) \
 continuation_steps.add_step('bisection').num_cases(5)  \
                         .initial('gam', -80*pi/180) \
                         .terminal('theta', 0.1*pi/180) \
-                        .initial('v',3e3)
-                        # .initial('h',80e3) \
+                        # .initial('v',3e3)\
+                        # .initial('h',60e3)
 
 
 continuation_steps.add_step('bisection').num_cases(11)  \
@@ -92,11 +92,15 @@ continuation_steps.add_step('bisection').num_cases(15)  \
 continuation_steps.add_step('bisection').num_cases(10)  \
                         .terminal('theta', 0.5*pi/180)
 
-# guess_maker = beluga.guess_generator('file', filename='./data-40k-3k-03.dill', step=-1, iteration=-1)
 #
-# continuation_steps.add_step('bisection').num_cases(11)  \
-#                         .terminal('theta', 0.5*pi/180)
+# guess_maker = beluga.guess_generator('file', filename='./data-40k-3k-05.dill', step=-1, iteration=-1)
 
+continuation_steps.add_step('bisection').num_cases(11)  \
+                        .initial('h', 60e3) \
+                        .initial('v', 5e3)
+
+continuation_steps.add_step('bisection').num_cases(51)  \
+                        .terminal('theta',1.0*pi/180)
 # guess_maker = beluga.guess_generator('file', filename='./data_fpa60_ms.dill', step=-1, iteration=-1)
 #
 # continuation_steps.add_step('bisection').num_cases(11)  \
