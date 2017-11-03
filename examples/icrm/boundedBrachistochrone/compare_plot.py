@@ -8,7 +8,8 @@ output_dir = './plots/'
 def save_pic(renderer, fig, p, suffix):
     fh = renderer._get_figure(fig)
     plt.tight_layout()
-    tikz_save(f'{output_dir}/brachisto_{suffix}.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    # tikz_save(f'{output_dir}/brachisto_{suffix}.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    plt.savefig(f'{output_dir}/brachisto_{suffix}.eps')
 
 def postprocess_lambda(renderer, fig, p):
     from matplotlib.font_manager import FontProperties
@@ -32,7 +33,7 @@ def postprocess_gpops(renderer, fig, p):
     # Replace − with - in the output file
     save_pic(renderer, fig, p, 'gpops_costates')
 
-mpbvp_ds = Dill('../../mpbvp/boundedBrachistochrone/data.dill')
+mpbvp_ds = Dill('../../mpbvp/boundedBrachistochrone/data_mpbvp_sol.dill')
 plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 gpops_ds = GPOPS('./brachisto_eps5.mat',states=('x','y','v','xi','tf'),controls=('theta','ue1'))
 
@@ -69,11 +70,5 @@ plots.add_plot(mesh_size=None).line('t','lamX', label='$\\lambda_x$ ICRM')\
                 .xlabel('t (s)').ylabel('$\\lambda(t)$')      \
                 .postprocess(postprocess_gpops)
 
-
-# plots.add_plot().line('t','lamY', label='$\\lambda_y(t)$ ICRM ', style={'lw': 2.0})\
-#                 .line('t','lamY', label='$\\lambda_y(t)$ MPBVP', datasource=mpbvp_ds, step=-1, sol=-1, style={'lw': 2.0})\
-#                 .line('t','lamY', label='$\\lambda_y(t)$ Unconstrained', datasource=mpbvp_ds, step=0, sol=-1, style={'lw': 2.0}) \
-#                 .xlabel('$t$ [s]').ylabel('$\\lambda_y(t)$') \
-#                 .postprocess(ft.partial(save_pic, suffix='icrm_lamY'))
 
 plots.render()

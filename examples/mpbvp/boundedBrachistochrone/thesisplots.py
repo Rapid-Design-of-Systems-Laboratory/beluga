@@ -8,7 +8,7 @@ mpl.rcParams['legend.fontsize'] = 'x-large'
 mpl.rcParams['xtick.labelsize'] = 'x-large'
 mpl.rcParams['ytick.labelsize'] = 'x-large'
 
-plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data_mpbvp_sol.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 output_dir = './plots/'
 def postprocess_xy_plot(renderer, fig, plot):
@@ -25,7 +25,8 @@ def postprocess_xy_plot(renderer, fig, plot):
                 bbox=bbox_props)
     t.set_alpha(.4)
 
-    tikz_save(output_dir+'brachisto_mpbvp_xy.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    # tikz_save(output_dir+'brachisto_mpbvp_xy.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    plt.savefig(output_dir+'brachisto_mpbvp_xy.eps')
 
 def postprocess_theta_plot(renderer, fig, plot):
     """fig: Matplotlib figure number.
@@ -46,7 +47,8 @@ def postprocess_theta_plot(renderer, fig, plot):
                 weight=400,
                 bbox=bbox_props)
     t.set_alpha(.5)
-    tikz_save(output_dir+'brachisto_mpbvp_theta.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    # tikz_save(output_dir+'brachisto_mpbvp_theta.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    plt.savefig(output_dir+'brachisto_mpbvp_theta.eps')
 
 
 plots.add_plot().line_series('x','y', step=2, start=0, style={'lw': 2.5}) \

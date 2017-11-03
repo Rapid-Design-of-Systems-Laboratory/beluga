@@ -444,7 +444,7 @@ class MultipleShooting(BaseAlgorithm):
                     break
 
                 res = bc_func(ya, yb, paramGuess, aux)
-                print(yb[0],aux['terminal']['h'],aux['const']['eps_heatRate'])
+                
                 if any(np.isnan(res)):
                     print(res)
                     # from beluga.utils import keyboard

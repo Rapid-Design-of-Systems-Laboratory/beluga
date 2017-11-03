@@ -21,8 +21,8 @@ fontP.set_size('small')
 def save_pic(renderer, fig, p, suffix):
     fh = renderer._get_figure(fig)
     plt.tight_layout()
-    tikz_save(f'{output_dir}/heatRateAlfa_{suffix}.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
-    # plt.savefig(f'{output_dir}/heatRateAlfa_{suffix}.eps')
+    # tikz_save(f'{output_dir}/heatRateAlfa_{suffix}.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+    plt.savefig(f'{output_dir}/heatRateAlfa_{suffix}.eps')
 
 def analytical_sol_xv(renderer, fig, p):
 
