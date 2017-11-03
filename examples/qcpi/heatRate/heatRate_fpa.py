@@ -38,8 +38,8 @@ ocp.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
 ocp.constant('rn',1/12*0.3048,'m') # Nose radius, m
 # ocp.constant('k',1.74153e-4,'sqrt(kg)/m')   # Sutton-Graves constant
 ocp.constant('k',1.74153e-4,'W*(s^3/(sqrt(kg)*m))') # Some units magic
-ocp.quantity('qdot','k*sqrt(rho/rn)*v^3')   # Convectional heat rate
-ocp.constant('qdotMax', 10000e4, 'W')
+ocp.quantity('qdot','k*sqrt(rho/rn)*v**3')   # Convectional heat rate
+ocp.constant('qdotMax', 20000e4, 'W')
 
 # Define constraints
 ocp.constraints().initial('h-h_0','m') \
@@ -48,36 +48,38 @@ ocp.constraints().initial('h-h_0','m') \
                     .initial('gam-gam_0','rad') \
                     .terminal('h-h_f','m')  \
                     .terminal('theta-theta_f','rad') \
-                    .path('heatRate','(qdot/qdotMax)','<',1.0,'nd',start_eps=1e-2) \
+                    .path('heatRate','(qdot/qdotMax)','<',1.0,'nd',start_eps=1e-6) \
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-4,
-                    max_iterations=250,
+                    max_iterations=400,
                     verbose = True,
-                    max_error=50
+                    max_error=50,
+                    N = 251
 )
 
 # ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e5)
-ocp.scale(m=10e3, s=1, kg='mass', rad=1, nd=1, W=1e7)
+ocp.scale(m=160e3, s=1, kg='mass', rad=1, nd=1, W=1e7)
 
 guess_maker = beluga.guess_generator('auto',
-                start=[80e3,0.0,4e3,-89*pi/180],          # Starting values for states in order
+                start=[40e3,0.0,2e3,-89*pi/180],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1,
-                # control_guess = 0.1
+                control_guess = 0.0#1*pi/180
 )
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step('bisection').num_cases(21) \
-                        .terminal('h', 25000.0) \
-                        .terminal('theta',0.0001*pi/180)
+continuation_steps.add_step('bisection').num_cases(11) \
+                        .terminal('h', 15000.0) \
+                        .terminal('theta',0.001*pi/180)
 #
 # guess_maker = beluga.guess_generator('file', filename='./data_fpa60_ms.dill', step=0, iteration=-1)
 #
-continuation_steps.add_step('bisection').num_cases(51)  \
-                        .initial('gam', -85*pi/180) \
-                        .terminal('theta', 0.1*pi/180)
+continuation_steps.add_step('bisection').num_cases(5)  \
+                        .initial('gam', -80*pi/180) \
+                        .terminal('theta', 0.1*pi/180) \
+                        .initial('h',80e3)
 #
 # continuation_steps.add_step('bisection').num_cases(11)  \
 #                         .terminal('theta', 1*pi/180)
