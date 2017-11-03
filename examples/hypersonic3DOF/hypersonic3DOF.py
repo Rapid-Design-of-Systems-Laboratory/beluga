@@ -67,56 +67,56 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         tolerance=1e-4,
                         max_iterations=100,
                         verbose = True,
-                        max_error=100,
+                        max_error=400,
              )
-
-with open('data-initial-guess-to-ground.dill','rb') as f:
-        out = dill.load(f)
-
-sol = out['solution'][-1][-1]
-sol.aux['parameters'] = []# np.append(sol.aux['parameters'],'lagrange_initial_5')
-sol.aux['constraint'] = {}
-sol.arcs = None
-sol.aux['arc_seq'] = (0,)
-# keyboard()
-# sol.aux['parameters'].append('lagrange_initial_5')
-# sol.parameters = sol.parameters[0:3]
-sol.y = np.r_[sol.y, sol.u]
-sol.parameters = np.concatenate((sol.parameters[0:4],(0,),sol.parameters[4:]),axis=0)
-sol.parameters = np.array([])
-# sol.parameters.append(0.0)
-guess_maker = beluga.guess_generator('static', solinit = sol)
-
-# problem.guess.setup('file', filename='data-initial-guess-to-ground.dill', step=-1, iteration=-1)
-
-
-
 #
-# guess_maker = beluga.guess_generator('auto',
-#                 start=[80000,0,0,5000,-(90+5)*pi/180, 0],
-#                 direction='forward',
-#                 costate_guess = -0.01,
-#                 control_guess=[0.0,0.0],
-#                 time_integrate=0.01,
-# )
+# with open('data-initial-guess-to-ground.dill','rb') as f:
+#         out = dill.load(f)
+#
+# sol = out['solution'][-1][-1]
+# # sol.aux['parameters'] = []
+# # sol.y = np.r_[sol.y, sol.u]
+# sol.aux['parameters'] = np.append(sol.aux['parameters'],'lagrange_initial_5')
+# sol.aux['constraint'] = {}
+# sol.arcs = None
+# sol.aux['arc_seq'] = (0,)
+# # keyboard()
+# # sol.aux['parameters'].append('lagrange_initial_5')
+# # sol.parameters = sol.parameters[0:3]
+#
+# # sol.parameters = np.array([])
+# sol.parameters = np.concatenate((sol.parameters[0:4],(0,),sol.parameters[4:]),axis=0)
+#
+# # sol.parameters.append(0.0)
+# guess_maker = beluga.guess_generator('static', solinit = sol)
+
+
+guess_maker = beluga.guess_generator('auto',
+                start=[20000,0,0,1000,-(90+10)*pi/180, 0],
+                direction='forward',
+                costate_guess = -0.1,
+                control_guess=[0.1,0.0],
+                time_integrate=1.0,
+)
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step().num_cases(11)           \
-                        .terminal('h',0)
+continuation_steps.add_step('bisection').num_cases(11)           \
+                        .terminal('h',0) \
+                        .terminal('theta',0.1*pi/180)
 #
 # continuation_steps.add_step().num_cases(11)          \
 #                         .initial('h',80000)
 
-continuation_steps.add_step().num_cases(41)          \
-                        .terminal('theta',5*pi/180) \
-                        .terminal('phi',2*pi/180)
-
-# continuation_steps.add_step().num_cases(10)              \
+# continuation_steps.add_step().num_cases(41)          \
 #                         .terminal('theta',5*pi/180) \
-#                         .terminal('phi',5*pi/180)
+#                         .terminal('phi',2*pi/180)
+#
+# # continuation_steps.add_step().num_cases(10)              \
+# #                         .terminal('theta',5*pi/180) \
+# #                         .terminal('phi',5*pi/180)
 beluga.solve(ocp,
-             method='brysonho',
+             method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
