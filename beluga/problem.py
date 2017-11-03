@@ -404,6 +404,7 @@ class GuessGenerator(object):
             u0 = self.control_guess
 
         # Add time of integration to states
+
         x0 = np.append(x0, self.time_integrate)
 
         # Guess zeros for missing parameters
@@ -431,8 +432,10 @@ class GuessGenerator(object):
             x0 = np.append(x0, dae_x0)  # Add dae states
 
         logging.debug('Generating initial guess by propagating: ')
-        # logging.debug(str(x0))
+        logging.debug(str(x0))
 
+        if self.direction =='reverse':
+            tspan = [0, -1]
         [t, x] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
 
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)

@@ -36,7 +36,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[0,0.01],          # Starting values for states in order
+                start=[0,0.0],          # Starting values for states in order
                 direction='forward',
                 costate_guess = [-0.2, -0.4],
                 control_guess = [1, 0, 0],
@@ -49,7 +49,8 @@ continuation_steps = beluga.init_continuation()
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .terminal('x', 1.0) \
-                .terminal('v', 0)
+                .terminal('v', 0) \
+                .initial('v', 0.0)
 
 continuation_steps.add_step('bisection').num_cases(6) \
                  .const('eps_accLimit', 1e-1)

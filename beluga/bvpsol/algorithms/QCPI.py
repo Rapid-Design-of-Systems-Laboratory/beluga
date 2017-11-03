@@ -10,6 +10,7 @@ import functools as ft
 import imp
 from beluga.problem import BVP
 import sys
+import logging
 # def create_odefn(problem_data, module):
 #
 
@@ -167,6 +168,7 @@ def make_perf_idx(bc_left_fn, bc_right_fn):
         return P
     return perf_idx
 
+
 class QCPI(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, N=21, verbose=True):
         self.tolerance = tolerance
@@ -233,14 +235,16 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn = make_bc_jac(self.bc_left_fn, nOdes)
         left_bc_jac_fn(x_0, left_jac, aux)
 
-        x_pert = np.absolute(np.max(solinit.y, axis=1))*0.0001
-        x_pert = np.append(x_pert, np.absolute(solinit.parameters)*0.0001)
-        x_pert[x_pert < 10*self.tolerance] = 10*self.tolerance
+
+        y_pert = np.absolute(np.max(solinit.y, axis=1))*0.00001
+        y_pert = np.append(y_pert, np.absolute(solinit.parameters)*0.00001)
+        y_pert[y_pert < 1*self.tolerance] = 1*self.tolerance
+        A_j0 = np.vstack((np.zeros(nOdes), y_pert*np.eye(nOdes, dtype=np.float64)))
         # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*.001   # Remove duplicates
-        A_j0 = np.vstack((np.zeros(nOdes), x_pert*np.eye(nOdes, dtype=np.float64)))
+
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
         q = len(A_j0) - 1
@@ -270,8 +274,12 @@ class QCPI(BaseAlgorithm):
 
         const = tuple(aux['const'].values())
 
-        _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
-        if np.isnan(x_guess2.flat).any():
+        try:
+            _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+        except:
+            x_guess2 = None
+
+        if x_guess2 is None or np.isnan(x_guess2.flat).any():
             if solinit.extra is not None and not np.isnan(solinit.extra.flat).any():
                 x_guess = solinit.extra.astype(np.float64)
             else:
@@ -294,7 +302,11 @@ class QCPI(BaseAlgorithm):
         err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
         for ctr in range(max_iter):
-            pert_eom(t_arr, x_guess, g_arr, const)
+            try:
+                pert_eom(t_arr, x_guess, g_arr, const)
+            except:
+                logging.error('Perturbed EOM failed.')
+                break
 
             # if np.any(np.isnan(g_arr)):
             #     print('NaaaaaNaaaa')
@@ -360,10 +372,10 @@ class QCPI(BaseAlgorithm):
                 x_t = x_new[:,:nOdes]
                 A_t = np.zeros_like(x_t)
                 P0 = perf_idx_fn(x_t, A_t, 0.0, aux)
-                if P0 < self.tolerance:
-                    converged = True
-                    print('Converged (w/ P0) in %d iterations.' % ctr)
-                    break
+                # if P0 < self.tolerance and ctr > 0:
+                #     converged = True
+                #     print('Converged (w/ P0) in %d iterations.' % ctr)
+                #     break
 
                 # Compute A for every time step
                 for i in range(x_guess.shape[0]):
@@ -387,7 +399,13 @@ class QCPI(BaseAlgorithm):
                 # x_new[-1] = xp_0
                 # xpm_0 += alpha * A_t[-1]   # Also adds to xp_0 as xpm_0 is a view
                 # x_new[:,:nOdes] += alpha * A_t
-                x_new[-1,nOdes:] = xp_0[nOdes:]
+                x_new[-1,:] = xp_0[:]
+
+                # y_pert = make_y_pert(x_new.T, paramGuess, self.tolerance)
+                # A_j0 = np.vstack((np.zeros(nOdes), y_pert*np.eye(nOdes, dtype=np.float64)))
+                # xp_0 = np.hstack((x_0, A_j0.flat)) # Add perturbed ICs as extra states
+                # xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
+                # xpm_0 = np.reshape(xp_0, (q+2, nOdes))  # Matrix 'view' of xp_0
                 # x0_twice = 2*x_new[-1,:]
 
             x_guess = x_new

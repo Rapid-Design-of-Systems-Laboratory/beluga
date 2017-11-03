@@ -239,6 +239,7 @@ def process_path_constraints(workspace):
             constraints['terminal'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit**i)}, sym_key='expr'))
 
             # Add to initial guess vector
+            print(f'Adding {xi_vars[i]} = {c_vals[i]}')
             xi_init_vals.append(c_vals[i])
 
             dhdxi = [derivative_fn(h[i], xi_v).subs(psi_vars_deriv) for xi_v in xi_vars[:-1]]
@@ -342,6 +343,8 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
         guess.start.extend(xi_init_vals)
     guess.dae_num_states = len(U)
 
+    # from beluga.utils import keyboard
+    # keyboard()
     yield mu_vars
     yield mu_lhs
     yield dae_states
@@ -411,6 +414,9 @@ def generate_problem_data(workspace):
      'quantity_list': workspace['quantity_list'],
      'bc_free_mask': workspace['bc_free_mask'],
     }
+    from beluga.utils import keyboard
+    keyboard
+    # print(sympy.latex(udot[0], symbol_names={sympy.Symbol('lamX'):r'\lambda_x', sympy.Symbol('lamY'):r'\lambda_y', sympy.Symbol('lamV'):r'\lambda_v', sympy.Symbol('lamXI11'):r'\lambda_{\xi_1}'}))
 
     return problem_data
 # Implement workflow using simplepipe and functions defined above

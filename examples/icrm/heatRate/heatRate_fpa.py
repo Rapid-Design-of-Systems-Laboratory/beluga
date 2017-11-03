@@ -61,14 +61,14 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 ocp.scale(m='h', s='h/v', kg='mass', rad=1, nd=1, W=1e7)
 
 guess_maker = beluga.guess_generator('auto',
-                start=[80e3,0.0,5e3,-pi/2],          # Starting values for states in order
+                start=[80e3,0.0,4e3,-pi/2],          # Starting values for states in order
                 direction='forward',
                 costate_guess = 0.1
 )
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step('bisection').num_cases(21) \
+continuation_steps.add_step('bisection').num_cases(41) \
                         .terminal('h', 15000.0) \
 
 continuation_steps.add_step('bisection').num_cases(31)  \
@@ -76,6 +76,7 @@ continuation_steps.add_step('bisection').num_cases(31)  \
                         .terminal('theta', 0.5*pi/180)
 
 continuation_steps.add_step('bisection').num_cases(11)  \
+                        .initial('v',5e3)\
                         .terminal('theta', 1*pi/180)
 
 # ocp.guess.setup(mode='file', filename='data-skip-10000-eps2.dill', step=-1, iteration=-1)
@@ -99,5 +100,5 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data_fpa60.dill'
+             output_file='data_fpa60_5k.dill'
              )

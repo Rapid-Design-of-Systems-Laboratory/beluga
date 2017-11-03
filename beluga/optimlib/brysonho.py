@@ -219,12 +219,13 @@ import logging
 def make_control_law(dhdu, controls):
     """Solves control equation to get control law."""
     try:
+        print(controls)
         var_list = list(controls)
         logging.info("Attempting using SymPy ...")
         logging.debug("dHdu = "+str(dhdu))
-        # ctrl_sol = sympy.solve(dhdu, var_list, dict=True)
+        ctrl_sol = sympy.solve(dhdu, var_list, dict=True)
 
-        raise ValueError() # Force mathematica
+        # raise ValueError() # Force mathematica
     except ValueError as e:  # FIXME: Use right exception name here
         logging.debug(e)
         logging.info("No control law found")
@@ -266,6 +267,7 @@ def process_constraint(s,
     num_states = len(states)
     stateAndLam = [*states, *costates]
     stateAndLamDot = [s.eom*sympify('tf') for s in it.chain(states, costates)]
+    stateAndLamDot = [s.eom for s in it.chain(states, costates)]
     costate_names = make_costate_names(states)
 
     ham_mat = sympy.Matrix([ham])
@@ -287,11 +289,11 @@ def process_constraint(s,
             mu_sol_list = []
             constrained_control_law = []
             for u_sol in u_sol_list:
-                mu_sol = make_control_law(dh_du[0].subs(u_sol), mult)
+                mu_sol = make_control_law(dh_du[0].subs(u_sol), [mult])
                 control_law = {**u_sol, **mu_sol[0]}
                 constrained_control_law.append(control_law)
 
-            # from beluga.utils import keyboard
+            from beluga.utils import keyboard
             # keyboard()
 
             # constrained_control_law = make_control_law(dhdu, [*controls, mult])

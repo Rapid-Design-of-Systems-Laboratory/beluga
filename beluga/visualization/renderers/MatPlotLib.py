@@ -67,11 +67,23 @@ class MatPlotLib(BaseRenderer):
         i = 0
         for line in p.plot_data:
             has_legend = has_legend or (line['label'] is not None)
+            override_color = None
+            if isinstance(line['style'], dict):
+                override_color = line['style'].pop('color', None)
+
             for dataset in line['data']:
+                # Allow overriding colormap fom style vector
+                if override_color is not None:
+                    line_color = override_color
+                else:
+                    line_color = colors[i]
+
+                if(len(dataset['x_data'])!=len(dataset['y_data'])):
+                    continue
                 if isinstance(line['style'], str):
-                    plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh, color=colors[i],)
+                    plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh, color=line_color,)
                 elif isinstance(line['style'], dict):
-                    plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh, color=colors[i],**line['style'])
+                    plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh, color=line_color,**line['style'])
                 i += 1
         if has_legend:
             fh.gca().legend()

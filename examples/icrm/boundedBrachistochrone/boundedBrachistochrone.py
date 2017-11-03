@@ -7,14 +7,14 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('x', 'v*cos(theta)', 'm')   \
-   .state('y', '-v*sin(theta)','m')   \
+   .state('y', 'v*sin(theta)','m')   \
    .state('v', 'g*sin(theta)','m/s')
 
 # Define controls
 ocp.control('theta','rad')
 
 # Define constants
-ocp.constant('g',9.81,'m/s^2')
+ocp.constant('g',-9.81,'m/s^2')
 
 # Define costs
 ocp.path_cost('1','s')
@@ -30,7 +30,7 @@ ocp.constraints() \
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
-# ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
+# ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 
@@ -39,7 +39,8 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     tolerance=1e-5,
                     max_iterations=20,
                     verbose = True,
-                    max_error=50
+                    max_error=50,
+                    # N = 30,
 )
 
 guess_maker = beluga.guess_generator('auto',

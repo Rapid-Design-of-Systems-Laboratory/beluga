@@ -34,9 +34,9 @@ except ImportError:
     from Queue import Queue
 
 
-from joblib.parallel import Parallel, delayed, SafeFunction, WorkerInterrupt, \
+from .joblib.parallel import Parallel, delayed, SafeFunction, WorkerInterrupt, \
         mp, cpu_count, VALID_BACKENDS
-from joblib.my_exceptions import JoblibException
+from .joblib.my_exceptions import JoblibException
 
 import nose
 
