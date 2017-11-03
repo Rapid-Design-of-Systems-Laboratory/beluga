@@ -79,12 +79,16 @@ continuation_steps.add_step('bisection').num_cases(11) \
 continuation_steps.add_step('bisection').num_cases(5)  \
                         .initial('gam', -80*pi/180) \
                         .terminal('theta', 0.1*pi/180) \
-                        .initial('h',80e3) \
-                        .initial('v',5e3)
+                        .initial('v',3e3)
+                        # .initial('h',80e3) \
 
-continuation_steps.add_step('bisection').num_cases(21)  \
+
+continuation_steps.add_step('bisection').num_cases(11)  \
                         .initial('gam', -60*pi/180) \
                         # .terminal('theta', 0.5*pi/180) \
+
+continuation_steps.add_step('bisection').num_cases(10)  \
+                        .terminal('theta', 0.3*pi/180) \
 
 
 # continuation_steps.add_step('bisection').num_cases(11)  \

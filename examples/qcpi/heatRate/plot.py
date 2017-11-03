@@ -23,8 +23,9 @@ plots.add_plot().line('t','alfa*180/3.14') \
                 .xlabel('t (s)').ylabel('Alpha (deg)')      \
                 .title('Control History')
 
-plots.add_plot().line('t','gam*180/3.14') \
-                .xlabel('t (s)').ylabel('FPA (deg)')      \
+# plots.add_plot().line('t','gam*180/3.14') \
+plots.add_plot().line('t','v/1000') \
+                .xlabel('t (s)').ylabel('v (km/s)')      \
                 .title('FPA')
 
 plots.render()
