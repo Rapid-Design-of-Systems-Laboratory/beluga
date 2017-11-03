@@ -65,7 +65,7 @@ ds_gpops = GPOPS('./alfa_tol_e6.mat',
 # 90
 plots.add_plot(mesh_size=200,colormap=cmx.Blues)\
                 .line_series('t','alfa*180/3.14', skip=1, datasource=ds_constraint, style={'lw':2.0}) \
-                .line('t','alfaMax*180/3.14', datasource=ds_constraint, style={'lw':2.0,'color':'red'}) \
+                .line('t','alfaMax*180/3.14', datasource=ds_constraint, label='Control limit', style={'lw':2.0,'color':'red'}) \
                 .xlabel('$t$ [s]').ylabel('$\\alpha$ [deg]')      \
                 .postprocess(ft.partial(save_pic, suffix='evol_qdot_alpha'))
 
@@ -77,12 +77,13 @@ plots.add_plot(mesh_size=200,colormap=cmx.Blues)\
 
 plots.add_plot(mesh_size=200,colormap=cmx.viridis)\
                 .line_series('t','alfa*180/3.14', skip=1, datasource=ds_epsHR, style={'lw':2.0}) \
-                .line('t','alfaMax*180/3.14', datasource=ds_epsHR, style={'lw':2.0,'color':'red'}) \
+                .line('t','alfaMax*180/3.14', label='Control limit', datasource=ds_epsHR, style={'lw':2.0,'color':'red'}) \
                 .xlabel('$t$ [s]').ylabel('$\\alpha$ [deg]') \
                 .postprocess(ft.partial(save_pic, suffix='evol_epsHR_alpha'))
 
 plots.add_plot(mesh_size=200,colormap=cmx.viridis)\
                 .line_series('t','qdot/1e4', skip=1, datasource=ds_epsHR, style={'lw':2.0})              \
+                .line('t','qdotMax/1e4', datasource=ds_epsHR, label='Constraint Limit', style={'lw':2.0,'color':'red'}) \
                 .xlabel('$t$ [s]').ylabel('$\\dot{q}$ [W/cm$^2$]')      \
                 .postprocess(ft.partial(save_pic, suffix='evol_epsHR_qdot'))
 
@@ -94,13 +95,14 @@ plots.add_plot(mesh_size=200,colormap=cmx.viridis)\
 
 plots.add_plot(mesh_size=200,colormap=cmx.viridis)\
                 .line_series('t','qdot/1e4', skip=1, datasource=ds_epsAlfa, style={'lw':2.0})              \
+                .line('t','qdotMax/1e4', datasource=ds_epsAlfa, label='Constraint Limit', style={'lw':2.0,'color':'red'}) \
                 .xlabel('$t$ [s]').ylabel('$\\dot{q}$ [W/cm$^2$]')      \
                 .postprocess(ft.partial(save_pic, suffix='evol_epsAlfa_qdot'))
 
 
 plots.add_plot().line('v/1000','h/1000', datasource=ds_epsAlfa, label='ICRM', style={'lw':2.0}) \
                 .line('v/1000','h/1000', datasource=ds_gpops, label='GPOPS', style={'lw':0.0,'marker':'o'}) \
-                .xlabel('$t$ [s]').ylabel('$\\alpha$ [deg]') \
+                .xlabel('$v$ [km/s]').ylabel('$h$ [km]') \
                 .postprocess(ft.partial(save_pic, suffix='gpops_hv'))
 
 plots.add_plot().line('t','alfa*180/3.14', datasource=ds_epsAlfa, label='ICRM', style={'lw':2.0}) \
