@@ -8,14 +8,14 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('x', 'v*cos(theta)', 'm')   \
-   .state('y', '-v*sin(theta)','m')   \
+   .state('y', 'v*sin(theta)','m')   \
    .state('v', 'g*sin(theta)','m/s')
 
 # Define controls
 ocp.control('theta','rad')
 
 # Define constants
-ocp.constant('g',9.81,'m/s^2')
+ocp.constant('g',-9.81,'m/s^2')
 
 # Define costs
 ocp.path_cost('1','s')
@@ -49,7 +49,7 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,1],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1,
+                costate_guess = 0.1,
                 control_guess = 80*pi/180
 )
 
