@@ -1,5 +1,6 @@
 from beluga.visualization import BelugaPlot
 
+# plots = BelugaPlot('./data_fpa60_ms.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot().line('theta*180/3.14','h/1000')                    \
