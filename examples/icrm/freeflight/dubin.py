@@ -59,13 +59,13 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(51) \
                 .terminal('y', 5.0) \
                 .terminal('x', 5.0) \
                 .terminal('theta', pi/4)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(51) \
                 .terminal('y1', 0.0) \
                 .terminal('x1', 5.0) \
                 .terminal('theta', -pi/4)

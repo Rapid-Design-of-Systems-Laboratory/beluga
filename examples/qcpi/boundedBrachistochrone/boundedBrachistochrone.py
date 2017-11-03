@@ -7,14 +7,14 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('x', 'v*cos(theta)', 'm')   \
-   .state('y', '-v*sin(theta)','m')   \
+   .state('y', 'v*sin(theta)','m')   \
    .state('v', 'g*sin(theta)','m/s')
 
 # Define controls
 ocp.control('theta','rad')
 
 # Define constants
-ocp.constant('g',9.81,'m/s^2')
+ocp.constant('g',-9.81,'m/s^2')
 ocp.constant('xlim',-1.0,'m')
 # Define costs
 ocp.path_cost('1','s')
@@ -26,20 +26,19 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + x','>','xlim','m',start_eps=1e-3)
+    .path('constraint1','y + x','>','xlim','m',start_eps=1e-4)
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
-ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
-# ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
+ocp.scale(m=25, s=1, kg=1, rad=1, nd=1)
 
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
                     tolerance=1e-4,
-                    max_iterations=200,
+                    max_iterations=500,
                     verbose = True,
                     max_error=50,
-                    N=51
+                    N=41 # 21 -> 6, 31 -> 8+, 41-> 10 @ 1e-4/1e-4
 )
 
 guess_maker = beluga.guess_generator('auto',
@@ -47,22 +46,16 @@ guess_maker = beluga.guess_generator('auto',
                 direction='forward',
                 costate_guess = -0.1,
                 control_guess = [3.14*60/180, 0.0, 0.0],
-                use_control_guess = True
+                use_control_guess = False
 )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(201) \
+                .num_cases(21) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-# #
-# continuation_steps.add_step('bisection').num_cases(101) \
-#                  .const('xlim', -1.0)
-#
-continuation_steps.add_step('bisection').num_cases(101) \
-                 .const('eps_constraint1', 7.5e-4)
 
 beluga.solve(ocp,
              method='icrm',

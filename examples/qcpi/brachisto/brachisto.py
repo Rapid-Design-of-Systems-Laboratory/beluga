@@ -35,7 +35,8 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
                         tolerance=1e-4,
                         max_iterations=100,
                         verbose = True,
-                        max_error=100
+                        max_error=100,
+                        N = 21,
              )
 
 # bvp_solver = beluga.bvp_algorithm('SingleShooting',

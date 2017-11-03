@@ -74,6 +74,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 #         out = dill.load(f)
 #
 # sol = out['solution'][-1][-1]
+<<<<<<< HEAD
 # # sol.aux['parameters'] = []
 # # sol.y = np.r_[sol.y, sol.u]
 # sol.aux['parameters'] = np.append(sol.aux['parameters'],'lagrange_initial_5')
@@ -98,9 +99,48 @@ guess_maker = beluga.guess_generator('auto',
                 control_guess=[0.1,0.0],
                 time_integrate=1.0,
 )
+=======
+# sol.aux['parameters'] = []# np.append(sol.aux['parameters'],'lagrange_initial_5')
+# sol.aux['constraint'] = {}
+# sol.arcs = None
+# sol.aux['arc_seq'] = (0,)
+# sol.extra = None
+# # # keyboard()
+# # # sol.aux['parameters'].append('lagrange_initial_5')
+# # # sol.parameters = sol.parameters[0:3]
+# sol.y = np.r_[sol.y, sol.u]
+# # sol.parameters = np.concatenate((sol.parameters[0:4],(0,),sol.parameters[4:]),axis=0)
+# sol.parameters = np.array([])
+# # sol.parameters.append(0.0)
+# guess_maker = beluga.guess_generator('static', solinit = sol)
+#
+# # problem.guess.setup('file', filename='data-initial-guess-to-ground.dill', step=-1, iteration=-1)
+
+
+
+
+# guess_maker = beluga.guess_generator('auto',
+#                 start=[10000,0,0,.5e3,-(90+10)*pi/180, 0.0],
+#                 costate_guess = -0.00001,
+#                 control_guess=[0*pi/180,0.0001],
+#                 use_control_guess=True,
+#                 # direction='forward',
+#                 # time_integrate=0.01,
+# )
+>>>>>>> bfeff52e60aef67791268cef88c6f8f41312f30d
+
+guess_maker = beluga.guess_generator('auto',
+                start=[80000,0,0,5e3,-(90+10)*pi/180, 0.0],
+                costate_guess = -0.1,
+                # control_guess=[0*pi/180,0.0001],
+                # use_control_guess=True,
+                # direction='forward',
+                # time_integrate=0.01,
+)
 
 continuation_steps = beluga.init_continuation()
 
+<<<<<<< HEAD
 continuation_steps.add_step('bisection').num_cases(11)           \
                         .terminal('h',0) \
                         .terminal('theta',0.1*pi/180)
@@ -115,6 +155,18 @@ continuation_steps.add_step('bisection').num_cases(11)           \
 # # continuation_steps.add_step().num_cases(10)              \
 # #                         .terminal('theta',5*pi/180) \
 # #                         .terminal('phi',5*pi/180)
+=======
+continuation_steps.add_step().num_cases(11)           \
+                        .terminal('h',0)
+
+continuation_steps.add_step('bisection').num_cases(41)          \
+                        .terminal('theta',5*pi/180)
+                        # .terminal('phi',2*pi/180)
+
+continuation_steps.add_step('bisection').num_cases(41) \
+                        .terminal('phi',2*pi/180)
+
+>>>>>>> bfeff52e60aef67791268cef88c6f8f41312f30d
 beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,

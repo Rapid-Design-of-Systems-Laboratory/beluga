@@ -1,23 +1,62 @@
 from beluga.visualization import BelugaPlot
+from matplotlib2tikz import save as tikz_save
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+mpl.rcParams['axes.labelsize'] = 'x-large'
+mpl.rcParams['legend.fontsize'] = 'x-large'
+mpl.rcParams['xtick.labelsize'] = 'x-large'
+mpl.rcParams['ytick.labelsize'] = 'x-large'
 
 plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
-def postprocess_xy_plot(fig, plot):
-    """fig: Matplotlib figure object.
+output_dir = './plots/'
+def postprocess_xy_plot(renderer, fig, plot):
+    """fig: Matplotlib figure number.
     plot: Plot object."""
 
-    print('postprocessing yeaaa!')
+    fh = renderer._get_figure(fig);
+    ax = fh.gca()
+    plt.axis('equal')
+    bbox_props = dict(boxstyle="rarrow,pad=0.2", fc="yellow", ec="b", lw=2, alpha=0.5)
+    t = ax.text(4, -6, "Decreasing constraint violation", ha="center", va="center", rotation=45,
+                size=14,
+                weight=400,
+                bbox=bbox_props)
+    t.set_alpha(.4)
 
-plots.add_plot().line_series('x','y', step=2, start=0, skip=2) \
+    tikz_save(output_dir+'brachisto_mpbvp_xy.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+
+def postprocess_theta_plot(renderer, fig, plot):
+    """fig: Matplotlib figure number.
+    plot: Plot object."""
+
+    fh = renderer._get_figure(fig);
+    ax = fh.gca()
+    bbox_props = dict(boxstyle="larrow,pad=0.2", fc="yellow", ec="b", lw=2, alpha=0.5)
+    t = ax.text(0.5, -65, "Constraint violation $\\rightarrow$ 0", ha="center", va="center", rotation=-45,
+                size=13,
+                weight=400,
+                bbox=bbox_props)
+    t.set_alpha(.5)
+
+    bbox_props = dict(boxstyle="rarrow,pad=0.2", fc="yellow", ec="b", lw=2, alpha=0.5)
+    t = ax.text(1.465, -33, "Constraint violation $\\rightarrow$ 0", ha="center", va="center", rotation=-45,
+                size=13,
+                weight=400,
+                bbox=bbox_props)
+    t.set_alpha(.5)
+    tikz_save(output_dir+'brachisto_mpbvp_theta.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
+
+
+plots.add_plot().line_series('x','y', step=2, start=0, style={'lw': 2.5}) \
                 .line('x','-1.0-x',label='x + y + 1 = 0',step=-1,sol=-1) \
-                .xlabel('x(t)').ylabel('y(t)')      \
-                .title('Trajectory') \
+                .xlabel('$x(t)$ [m]').ylabel('$y(t)$ [m]')      \
                 .postprocess(postprocess_xy_plot)
-# .line('x','-2-0.75*x',label='Constraint2',step=-1,sol=-1) \
-plots.add_plot().line('t','theta*180/3.14')                    \
-                .line_series('t','theta*180/3.14', step=2, start=0, skip=2) \
-                .xlabel('t (s)').ylabel('theta (degrees)')      \
-                .title('Control history')
+
+plots.add_plot().line_series('t','theta*180/3.14', step=2, start=0) \
+                .xlabel('$t$ [s]').ylabel('$\\theta(t)$ [deg]')      \
+                .postprocess(postprocess_theta_plot)
 
 # plots.add_plot().line('t','lamX')                    \
 #                 .xlabel('t (s)').ylabel('lamX')      \

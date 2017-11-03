@@ -8,16 +8,16 @@ from nose.tools import assert_equal
 from nose.tools import assert_raises
 from nose.tools import assert_false
 from nose.tools import assert_true
-from joblib.test.common import with_numpy, np
-from joblib.test.common import setup_autokill
-from joblib.test.common import teardown_autokill
+from .joblib.test.common import with_numpy, np
+from .joblib.test.common import setup_autokill
+from .joblib.test.common import teardown_autokill
 
-from joblib._multiprocessing_helpers import mp
+from .joblib._multiprocessing_helpers import mp
 if mp is not None:
-    from joblib.pool import MemmapingPool
-    from joblib.pool import has_shareable_memory
-    from joblib.pool import ArrayMemmapReducer
-    from joblib.pool import reduce_memmap
+    from .joblib.pool import MemmapingPool
+    from .joblib.pool import has_shareable_memory
+    from .joblib.pool import ArrayMemmapReducer
+    from .joblib.pool import reduce_memmap
 
 
 TEMP_FOLDER = None

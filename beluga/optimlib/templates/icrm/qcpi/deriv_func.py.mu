@@ -86,7 +86,7 @@ def get_dhdu_func(_t,_X,_p,_aux):
 def deriv_func_ode45(_t,_X,_p,_aux):
     return deriv_func_nojit(_t,_X,_p,list(_aux['const'].values()))
 
-@numba.njit(parallel=True)
+@numba.njit(parallel=True,cache=True)
 def deriv_func_mcpi(_t,_X,dXdt_,_const):
     dXdt_[:{{num_states}}+{{dae_var_num}}] = deriv_func(_t, _X[:{{num_states}}+{{dae_var_num}}], _X[{{num_states}}+{{dae_var_num}}:{{num_states}}+{{dae_var_num}}+{{num_params}}], _const)
     dXdt_[{{num_states}}+{{dae_var_num}}:] = 0
@@ -107,17 +107,16 @@ def deriv_func_nojit(_t,_X,_p,_const):
     {{name}} = {{expr}}
 {{/quantity_list}}
 
+    #if v < 10:
+    #    v = 10.0
     #Xdot = np.array([{{#deriv_list}}{{.}},
-    #                 {{/deriv_list}}])
+    #                 {{/deriv_list}}])/tf
     #dg     = compute_jacobian_fd(_X, _const)
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
     #udot   = np.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
-    #udot2 = np.array([{{#dae_eom_list}}{{.}},{{/dae_eom_list}}])
-    #print(udot, udot2)
-    #from beluga.utils import keyboard
-    #keyboard()
-    #return np.hstack((Xdot, udot))
+    #return np.hstack((Xdot, udot))*tf
+
     return np.array([{{#deriv_list}}{{.}},
         {{/deriv_list}}
         {{#dae_eom_list}}{{.}},
@@ -126,4 +125,4 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
 
 num_dae_vars = {{dae_var_num}}
-deriv_func = numba.njit(parallel=True)(deriv_func_nojit)
+deriv_func = numba.njit(parallel=True,cache=True)(deriv_func_nojit)
