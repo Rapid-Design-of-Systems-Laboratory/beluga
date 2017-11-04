@@ -18,6 +18,7 @@ import collections as cl
 from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
 from .utils import tic, toc, keyboard
+import beluga
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='SingleShooting',
@@ -157,6 +158,26 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
         sol_guess = solinit
         sol = None
         for step_idx, step in enumerate(steps):
+            # if step_idx == 5:
+                # new_bvp = beluga.bvp_algorithm('qcpi',
+                #                     tolerance=1e-4,
+                #                     max_iterations=400,
+                #                     verbose = True,
+                #                     max_error=50,
+                #                     N = 511
+                # )
+                #
+                # new_bvp.stm_ode_func = bvp_algo.stm_ode_func
+                # new_bvp.module = bvp_algo.module
+                # new_bvp.left_bc_mask = bvp_algo.left_bc_mask
+                # new_bvp.num_dae_vars = bvp_algo.num_dae_vars
+                # new_bvp.bc_left_fn = bvp_algo.bc_left_fn
+                # new_bvp.bc_right_fn  = bvp_algo.bc_right_fn
+                # new_bvp.deriv_func = bvp_algo.deriv_func
+                # new_bvp.mcpi_eom = bvp_algo.mcpi_eom
+                # new_bvp.bvp = bvp_algo.bvp
+                # bvp_algo = new_bvp
+
             logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
 
             solution_set.append([])

@@ -354,6 +354,8 @@ class GuessGenerator(object):
             raise ValueError('Initial guess iteration index out of bounds')
 
         sol = out['solution'][self.step][self.iteration]
+        sol.extra = None
+        
         fp.close()
 
         logging.info('Initial guess loaded')
