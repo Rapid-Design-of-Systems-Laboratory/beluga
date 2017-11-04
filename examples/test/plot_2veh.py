@@ -1,6 +1,6 @@
 from beluga.visualization import BelugaPlot
 import matplotlib.pyplot as plt
-plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data4_2veh.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 # plots.add_plot().line('xbar*V*tfreal','ybar*V*tfreal')                    \
 #                 .xlabel('x(t)').ylabel('y(t)')      \

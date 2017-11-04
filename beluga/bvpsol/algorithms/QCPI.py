@@ -211,13 +211,13 @@ class QCPI(BaseAlgorithm):
         bc_func = self.bvp.bc_func
 
         aux = solinit.aux
-        # Only the start and end times are required for ode45
+        # Only the start and end data are required for ode45
         arcs = solinit.arcs
 
         ya = solinit.y[:,0]
         yb = solinit.y[:,-1]
 
-        # Set initial values
+        # # Set initial values
         icvals= np.array(list(aux['initial'].values()))
         icval_slice = np.array(self.left_bc_mask[:-self.num_dae_vars])==0
         ya[:-self.num_dae_vars][icval_slice] = icvals[icval_slice]
@@ -236,8 +236,8 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn(x_0, left_jac, aux)
 
 
-        y_pert = np.absolute(np.max(solinit.y, axis=1))*0.00001
-        y_pert = np.append(y_pert, np.absolute(solinit.parameters)*0.00001)
+        y_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
+        y_pert = np.append(y_pert, np.absolute(solinit.parameters)*0.001)
         y_pert[y_pert < 1*min(self.tolerance,1e-4)] = 1*min(self.tolerance,1e-4)
         A_j0 = np.vstack((np.zeros(nOdes), y_pert*np.eye(nOdes, dtype=np.float64)))
         # Each row is one initial condition for particular solution
@@ -255,6 +255,7 @@ class QCPI(BaseAlgorithm):
         xpm_0 = np.reshape(xp_0, (q+2, nOdes))  # Matrix 'view' of xp_0
         # tspan = x
         tspan = x[0], x[-1]
+
         t_short = [tspan[0], tspan[-1]]
         converged = False
         N = self.N
@@ -266,7 +267,6 @@ class QCPI(BaseAlgorithm):
         tau, C_x, C_a = mcpi_init(N)      # tau is in reverse order (1 to -1)
         C_a = w1 * C_a.astype(np.float64)
         t_arr = tau*w1 + w2
-
         # Make functions
         pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
@@ -278,6 +278,7 @@ class QCPI(BaseAlgorithm):
             _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
         except:
             x_guess2 = None
+
         # x_guess2 = None
         # if solinit.extra is None or solinit.extra.shape[0] != (N+1):
         #     try:
@@ -290,16 +291,18 @@ class QCPI(BaseAlgorithm):
         #         x_guess2 = None
         if x_guess2 is None or np.isnan(x_guess2.flat).any():
             if solinit.extra is not None and not np.isnan(solinit.extra.flat).any():
-                x_guess = solinit.extra.astype(np.float64)
+                x_guess = solinit.extra
             else:
-                x_guess = np.tile(xp_0, (N+1, 1)).astype(np.float64)  # Each column -> time history of one state
+                x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
         else:
-            x_guess = np.flipud(x_guess2).astype(np.float64)
+            x_guess = np.flipud(x_guess2)
+            # print('nsoododoshds')
 
         x0_twice = 2*x_guess[-1]
         g_arr = np.empty_like(x_guess)
 
         res = self.bc_right_fn(x_0, aux)
+
         nBCs = len(res)
         psi_jac = np.zeros((nBCs, nOdes))
 
@@ -328,10 +331,11 @@ class QCPI(BaseAlgorithm):
             x_new = C_x @ beta          # Compute solution
 
             err1 = np.max(absdiff(x_new, x_guess))
-            print(err1)
-            if err1 > self.max_error:
-                logging.error('Error exceeded max error')
-                break
+            # print(err1)
+            # if err1 > self.max_error:
+            #     x_new = x_guess
+            #     logging.error('Error exceeded max error')
+            #     break
             if np.isnan(err1):
                 x_new = x_guess
                 print('NaaaaaN')
@@ -344,9 +348,10 @@ class QCPI(BaseAlgorithm):
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
                 # if ctr > -90:
-                # print('Residue : '+str(res_norm_0))
+                print('Residue : '+str(res_norm_0))
 
                 if res_norm_0 > self.max_error:
+                    x_new = x_guess # Reset to old version in case of NaN
                     logging.error('Error exceeded max error')
                     break
                 if res_norm_0 < self.tolerance:
@@ -399,18 +404,20 @@ class QCPI(BaseAlgorithm):
                     x_ti = x_new[i,:]
                     A_ji = np.reshape(x_ti[nOdes:], (q+1, nOdes))
                     # Subtract unperturbed x(t) to get perturbation at time t
-                    A_ji = (A_ji.astype(np.float64) - x_ti[:nOdes].astype(np.float64))
+                    A_ji = (A_ji - x_ti[:nOdes])
                     A_ti = k_j @ A_ji
                     A_t[i,:] = k_j @ A_ji
 
                 alpha = 2.0
                 P = P0 + 1
-                while P > P0 and alpha > self.tolerance:
+                while P > P0 and alpha > min(self.tolerance,1e-4):
                     alpha = alpha/2.0
                     P = perf_idx_fn(x_t, A_t, alpha, aux)
 
                 xpm_0 += alpha * A_0   # Also adds to xp_0 as xpm_0 is a view
                 x_new[:,:nOdes] += alpha * A_t
+                # for i in range(1,q+1):
+                #     x_new[:,nOdes*i:(nOdes*(i+1))] = alpha * A_t
 
                 x0_twice = 2*xp_0
                 # x_new[-1] = xp_0
