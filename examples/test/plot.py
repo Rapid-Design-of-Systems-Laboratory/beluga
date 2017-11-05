@@ -12,7 +12,7 @@ plots.add_plot().line('x','y',label='traj1')\
                 .title('Trajectory') \
                 .postprocess(lambda a,b,c: plt.axis('equal'))
 
-plots.add_plot().line('t','theta*180/pi')\
+plots.add_plot().line('t','z')\
                 .xlabel('t (s)').ylabel('theta [deg]')\
                 .title('Control history')
 
