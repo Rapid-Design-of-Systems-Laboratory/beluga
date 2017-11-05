@@ -236,14 +236,15 @@ class QCPI(BaseAlgorithm):
         left_bc_jac_fn(x_0, left_jac, aux)
 
 
-        y_pert = np.absolute(np.max(solinit.y, axis=1))*0.001
-        y_pert = np.append(y_pert, np.absolute(solinit.parameters)*0.001)
-        y_pert[y_pert < 1*min(self.tolerance,1e-4)] = 1*min(self.tolerance,1e-4)
-        A_j0 = np.vstack((np.zeros(nOdes), y_pert*np.eye(nOdes, dtype=np.float64)))
+        # y_pert = np.absolute(np.max(solinit.y, axis=1))*0.000001
+        # y_pert = np.append(y_pert, np.absolute(solinit.parameters)*0.000001)
+        # y_pert[y_pert < 1*min(self.tolerance,1e-6)] = 1*min(self.tolerance,1e-6)
+        # A_j0 = np.vstack((np.zeros(nOdes), y_pert*np.eye(nOdes, dtype=np.float64)))
         # Each row is one initial condition for particular solution
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
-        # A_j0 = np.unique(A_j0, axis=0)*.001   # Remove duplicates
+        # A_j0 = np.unique(A_j0, axis=0)*1e-6   # Remove duplicates
+        A_j0 = np.vstack((np.zeros(nOdes), np.eye(nOdes, dtype=np.float64)*1e-4))
 
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
