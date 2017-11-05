@@ -27,7 +27,7 @@ ocp.constraints().initial('x-x_0','m')\
 #                  .terminal('x2-x2_f','m')\
 #                  .terminal('y2-y2_f','m')
 
-ocp.constraints().path('c1','sqrt((x-xc)**2 + (y-yc)**2)','>','rc','nd',start_eps=1e-1)
+ocp.constraints().path('c1','sqrt((x-xc)**2 + (y-yc)**2)','>','rc','nd',start_eps=1e-4)
 # ocp.constraints().path('c1','y','>',-1,'nd',start_eps=1e-6)
                 # .path('thr1','thr','<>',1,'nd',start_eps=1e-6)
 
@@ -37,12 +37,20 @@ ocp.constant('rc',1.0,'m')
 
 ocp.scale(m=1, s=1, kg=1, rad=1,nd=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        derivative_method='fd',
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+#                         derivative_method='fd',
+#                         tolerance=1e-4,
+#                         max_iterations=30,
+#                         verbose = True,
+#                         max_error=400,
+#              )
+
+bvp_solver = beluga.bvp_algorithm('qcpi',
                         tolerance=1e-4,
-                        max_iterations=30,
+                        max_iterations=300,
                         verbose = True,
                         max_error=400,
+                        N=41
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -71,7 +79,7 @@ continuation_steps.add_step('bisection').num_cases(11)           \
 #                         .const('rc',1.5)
 
 
-guess_maker = beluga.guess_generator(mode='file', filename='data-guess.dill', step=-1, iteration=-1)
+# guess_maker = beluga.guess_generator(mode='file', filename='data-guess.dill', step=-1, iteration=-1)
 continuation_steps.add_step('bisection').num_cases(31) \
                         .const('yc',0.5) \
                         # .const('xc',5.0) \
