@@ -17,12 +17,13 @@ def compute_jacobian(f, X, indices=None, StepSize=1e-100, args=()):
                 if index in indices],order='F').T
 
 @numba.njit
-def compute_jacobian_fd(X, _const, step_size=1e-6):
+def compute_jacobian_fd(X, _const, step_size=1e-7):
     jac = np.zeros(({{dae_var_num}}, {{num_states}}+{{dae_var_num}}))
     fx = compute_g(X, _const)
-    steps = np.eye({{num_states}}+{{dae_var_num}})*step_size + X[:{{num_states}}+{{dae_var_num}}]
+    x = X[:{{num_states}}+{{dae_var_num}}]
+    steps = np.eye({{num_states}}+{{dae_var_num}})*step_size
     for i in numba.prange({{num_states}}+{{dae_var_num}}):
-        fxh = compute_g(steps[i], _const)
+        fxh = compute_g(steps[i]+x, _const)
         jac[:,i] = (fxh - fx)/step_size
 
     return jac
@@ -109,19 +110,30 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
     #if v < 10:
     #    v = 10.0
-    #Xdot = np.array([{{#deriv_list}}{{.}},
-    #                 {{/deriv_list}}])/tf
+    Xdot = np.array([{{#deriv_list}}{{.}},
+                     {{/deriv_list}}])/tf
     #dg     = compute_jacobian_fd(_X, _const)
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-    #udot   = np.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
-    #return np.hstack((Xdot, udot))*tf
+    dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1))
+    dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}))
 
-    return np.array([{{#deriv_list}}{{.}},
-        {{/deriv_list}}
-        {{#dae_eom_list}}{{.}},
-        {{/dae_eom_list}}]
-    )
+    dgdX[:] = np.array({{dgdX}}).reshape(({{dae_var_num}},{{num_states}}-1))
+    dgdU[:] = np.array({{dgdU}}).reshape(({{dae_var_num}},{{dae_var_num}}))
+
+    #from beluga.utils import keyboard
+
+    udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
+    #udot2=  np.array([{{#dae_eom_list}}{{.}},
+    #    {{/dae_eom_list}}])/tf
+    #print(np.linalg.norm(np.absolute(udot2-udot)))
+    return np.hstack((Xdot, udot))*tf
+
+    #return np.array([{{#deriv_list}}{{.}},
+    #    {{/deriv_list}}
+    #    {{#dae_eom_list}}{{.}},
+    #    {{/dae_eom_list}}]
+    #)
 
 
 num_dae_vars = {{dae_var_num}}

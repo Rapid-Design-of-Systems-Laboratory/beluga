@@ -29,8 +29,8 @@ ocp.constraints() \
     .terminal('y-y_f','m')
 
 # ocp.scale(m='x', s='x/v', kg=1, rad=1)
-ocp.scale(m='y', s='y/v', kg=1, rad=1)
-# ocp.scale(m=1, s=1, kg=1, rad=1)
+# ocp.scale(m='y', s='y/v', kg=1, rad=1)
+ocp.scale(m=1, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
                         tolerance=1e-4,
@@ -39,8 +39,8 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
                         max_error=100,
                         N = 21,
              )
-
-# bvp_solver = beluga.bvp_algorithm('SingleShooting',
+#
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 #                     derivative_method='fd',
 #                     tolerance=1e-4,
 #                     max_iterations=50,

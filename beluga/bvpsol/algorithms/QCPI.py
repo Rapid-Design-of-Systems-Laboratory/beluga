@@ -266,7 +266,7 @@ class QCPI(BaseAlgorithm):
         w1 = (tspan[-1]-tspan[0])/2
         w2 = (tspan[-1]+tspan[0])/2
         tau, C_x, C_a = mcpi_init(N)      # tau is in reverse order (1 to -1)
-        C_a = w1 * C_a.astype(np.float64)
+        C_a = w1 * C_a
         t_arr = tau*w1 + w2
         # Make functions
         pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
@@ -317,8 +317,8 @@ class QCPI(BaseAlgorithm):
         for ctr in range(max_iter):
             try:
                 pert_eom(t_arr, x_guess, g_arr, const)
-            except:
-                logging.error('Perturbed EOM failed.')
+            except Exception as e:
+                logging.error('Perturbed EOM failed.:',e)
                 break
 
             # if np.any(np.isnan(g_arr)):
@@ -348,6 +348,10 @@ class QCPI(BaseAlgorithm):
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
+
+                x_t0 = x_new[-1,:]
+                res_left = left_bc_jac_fn(x_t0, left_jac, aux)
+
                 # if ctr > -90:
                 print('Residue : '+str(res_norm_0))
 
@@ -355,7 +359,7 @@ class QCPI(BaseAlgorithm):
                     x_new = x_guess # Reset to old version in case of NaN
                     logging.error('Error exceeded max error')
                     break
-                if res_norm_0 < self.tolerance:
+                if res_norm_0 < self.tolerance and np.amax(np.abs(res_left)) < self.tolerance:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -378,10 +382,10 @@ class QCPI(BaseAlgorithm):
                 # except:
                 #     k_j, *_ = np.linalg.lstsq(lhs, np.hstack((1, -res)))
 
-                x_t0 = x_new[-1,:]
+
                 A0 = np.reshape(x_t0[nOdes:], (q+1, nOdes))
                 A0 = (A0 - x_t0[:nOdes]).T
-                res_left = left_bc_jac_fn(x_t0, left_jac, aux)
+
                 lhs = np.vstack((np.ones((1,q+1)), psi_jac @ A_jf, left_jac @ A0))
 
                 # First row is all ones, rows after = Jac @ perturbations at tf

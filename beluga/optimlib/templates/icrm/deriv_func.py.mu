@@ -93,7 +93,7 @@ def get_dhdu_func(_t,_X,_p,_aux):
 def deriv_func(_t,_X,_p,_aux,arc_idx=0):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
-    
+
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
     # Declare all auxiliary variables
@@ -108,18 +108,26 @@ def deriv_func(_t,_X,_p,_aux,arc_idx=0):
     {{name}} = {{expr}}
 {{/quantity_list}}
 
-    #Xdot = np.array([{{#deriv_list}}{{.}},
-    #                 {{/deriv_list}}])/tf
+    Xdot = np.array([{{#deriv_list}}{{.}},
+                     {{/deriv_list}}])/tf
     #dg     = compute_jacobian_fd(compute_g, _X, args=(_p, _aux))
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
     #udot   = scipy.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
 
     #return np.hstack((Xdot, udot))*tf
-    return np.array([{{#deriv_list}}{{.}},
-        {{/deriv_list}}]+
-        [{{#dae_eom_list}}{{.}},
-        {{/dae_eom_list}}]
-    )
+    dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1))
+    dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}))
+
+    dgdX[:] = np.array({{dgdX}}).reshape(({{dae_var_num}},{{num_states}}-1))
+    dgdU[:] = np.array({{dgdU}}).reshape(({{dae_var_num}},{{dae_var_num}}))
+
+    udot = scipy.linalg.solve(dgdU, -dgdX @ Xdot[:{{num_states}}-1])
+    return np.hstack((Xdot, udot))*tf
+    #return np.array([{{#deriv_list}}{{.}},
+    #    {{/deriv_list}}]+
+    #    [{{#dae_eom_list}}{{.}},
+    #    {{/dae_eom_list}}]
+    #)
 
 deriv_func_ode45 = deriv_func

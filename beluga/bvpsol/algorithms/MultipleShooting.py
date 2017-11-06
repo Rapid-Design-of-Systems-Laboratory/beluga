@@ -429,7 +429,7 @@ class MultipleShooting(BaseAlgorithm):
                         y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
 
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
                         y_list.append(yy[:,:nOdes].T)
                         x_list.append(t)
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
@@ -444,15 +444,17 @@ class MultipleShooting(BaseAlgorithm):
                     break
 
                 res = bc_func(ya, yb, paramGuess, aux)
-                
+
                 if any(np.isnan(res)):
                     print(res)
                     # from beluga.utils import keyboard
                     # keyboard()
-                    raise RuntimeError("Nan in residue")
+                    raise RuntimeError("Nan in residual")
 
                 # r1 = np.linalg.norm(res)
                 r1 = max(abs(res))
+                if r0 is not None and r1 > self.tolerance*10 and abs(r1-r0)<self.tolerance:
+                    raise RuntimeError('Not enough change in residual. Stopping ...')
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
 

@@ -351,6 +351,8 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
     yield dae_equations
     yield dae_bc
     yield guess
+    yield dgdX
+    yield dgdU
 
 
 def generate_problem_data(workspace):
@@ -413,9 +415,11 @@ def generate_problem_data(workspace):
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
      'bc_free_mask': workspace['bc_free_mask'],
+     'dgdX': str(workspace['dgdX'][:]),
+     'dgdU': str(workspace['dgdU'][:]),
     }
-    from beluga.utils import keyboard
-    keyboard
+    # from beluga.utils import keyboard
+    # keyboard()
     # print(sympy.latex(udot[0], symbol_names={sympy.Symbol('lamX'):r'\lambda_x', sympy.Symbol('lamY'):r'\lambda_y', sympy.Symbol('lamV'):r'\lambda_v', sympy.Symbol('lamXI11'):r'\lambda_{\xi_1}'}))
 
     return problem_data
@@ -463,7 +467,7 @@ ICRM = sp.Workflow([
             outputs=('dhdu')),
     sp.Task(make_ctrl_dae,
             inputs=('states', 'costates', 'controls', 'constraints', 'dhdu', 'xi_init_vals', 'guess', 'derivative_fn'),
-            outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc', 'guess')),
+            outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc', 'guess', 'dgdX', 'dgdU')),
     sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
         outputs='parameters'),
     sp.Task(make_bc_mask,
