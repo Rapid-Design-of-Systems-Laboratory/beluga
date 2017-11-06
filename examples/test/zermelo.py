@@ -33,11 +33,11 @@ ocp.constraints().path('c1','sqrt((x-xc1)**2 + (y-yc1)**2)','>','rc1','m',start_
 # ocp.constraints().path('c1','y','>',-1,'nd',start_eps=1e-6)
                 # .path('thr1','thr','<>',1,'nd',start_eps=1e-6)
 
-ocp.constant('xc1',1.0,'m') # 1
-ocp.constant('yc1',6.0,'m') # 4
+ocp.constant('xc1',1.75,'m') # 1
+ocp.constant('yc1',3.5,'m') # 6
 ocp.constant('rc1',1.0,'m')
 
-ocp.constant('xc2',7.0,'m') # 7.5
+ocp.constant('xc2',5.75,'m') # 7.5
 ocp.constant('yc2',4.0,'m') # 3.5
 ocp.constant('rc2',1.0,'m')
 
@@ -108,11 +108,11 @@ continuation_steps.add_step('bisection').num_cases(5)           \
 #                         .terminal('y',5) \
 
 # guess_maker = beluga.guess_generator(mode='file', filename='data-3s.dill', step=-1, iteration=-1)
-continuation_steps.add_step('bisection').num_cases(11)\
-                        .const('xc1',1.75) \
-                        .const('yc1',3.5) \
-                        .const('xc2',5.75) \
-                        .const('yc2',4.0) \
+continuation_steps.add_step('bisection').num_cases(5)\
+                        .const('xc1',2.25) \
+                        .const('yc1',2.5) \
+                        .const('xc2',5.25) \
+                        .const('yc2',4.5) \
                         # .const('xc3',7.5) \
                         # .const('yc3',8.5)
 
