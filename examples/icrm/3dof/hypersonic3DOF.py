@@ -1,15 +1,4 @@
 from math import pi
-import dill
-import numpy as np
-# Figure out way to implement caching automatically
-# @functools.lru_cache(maxsize=None)
-# def CLfunction(alfa):
-#     return 1.5658*alfa
-#
-# # @functools.lru_cache(maxsize=None)
-# def CDfunction(alfa):
-#     return 1.6537*alfa**2 + 0.0612
-#
 # Rename this and/or move to optim package?
 ocp = beluga.OCP('hypersonic3DOF')
 
@@ -19,23 +8,22 @@ ocp.independent('t', 's')
 rho = 'rho0*exp(-h/H)'
 Cl  = '(1.5658*alfa + -0.0000)'
 Cd  = '(1.6537*alfa^2 + 0.0612)'
-# Cl = 'CLfunction(alfa)'
-# Cd = 'CDfunction(alfa)'
-D   = '(0.5*'+rho+'*v^2*'+Cd+'*Aref)'
-L   = '(0.5*'+rho+'*v^2*'+Cl+'*Aref)'
+
+D   = f'(0.5*{rho}*v^2*{Cd}*Aref)'
+L   = f'(0.5*{rho}*v^2*{Cl}*Aref)'
 r   = '(re+h)'
 
 # Define equations of motion
 ocp.state('h','v*sin(gam)','m')                                     \
-       .state('theta','v*cos(gam)*cos(psi)/('+r+'*cos(phi))','rad')    \
-       .state('phi','v*cos(gam)*sin(psi)/'+r,'rad')                    \
-       .state('v','-'+D+'/mass - mu*sin(gam)/'+r+'^2','m/s')            \
-       .state('gam',L+'*cos(bank)/(mass*v) - mu/(v*'+r+'^2)*cos(gam) + v/'+r+'*cos(gam)','rad')                                         \
-       .state('psi',L+'*sin(bank)/(mass*cos(gam)*v) - v/'+r+'*cos(gam)*cos(psi)*tan(phi)','rad')
+       .state('theta',f'v*cos(gam)*cos(psi)/({r}*cos(phi))','rad')    \
+       .state('phi',f'v*cos(gam)*sin(psi)/{r}','rad')                    \
+       .state('v',f'-{D}/mass - mu*sin(gam)/{r}^2','m/s')            \
+       .state('gam',f'{L}*cos(bank)/(mass*v) - mu/(v*{r}^2)*cos(gam) + v/{r}*cos(gam)','rad')                                         \
+       .state('psi',f'{L}*sin(bank)/(mass*cos(gam)*v) - v/{r}*cos(gam)*cos(psi)*tan(phi)','rad')
 
 # Define controls
 ocp.control('bank','rad') \
-       .control('alfa','rad')
+   .control('alfa','rad')
 
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
@@ -92,27 +80,28 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 
 
 guess_maker = beluga.guess_generator('auto',
-                start=[20000,0,0,1000,-(90+10)*pi/180, 0],
+                start=[40000,0,0,2000,-(90+10)*pi/180, 0],
                 direction='forward',
-                costate_guess = -0.1,
-                control_guess=[0.1,0.0],
-                time_integrate=1.0,
+                costate_guess = 0.1,
+                control_guess=[0.01,0.001],
+                use_control_guess=True,
+                time_integrate=0.01,
 )
-
-guess_maker = beluga.guess_generator('auto',
-                start=[40000,0,0,3e3,-(90+10)*pi/180, 0.0],
-                costate_guess = -0.1,
-                # control_guess=[0*pi/180,0.0001],
-                # use_control_guess=True,
-                # direction='forward',
-                # time_integrate=0.01,
-)
+#
+# guess_maker = beluga.guess_generator('auto',
+#                 start=[40000,0,0,2e3,-(90+10)*pi/180, 0.0],
+#                 costate_guess = -0.1,
+#                 # control_guess=[0*pi/180,0.0001],
+#                 # use_control_guess=True,
+#                 # direction='forward',
+#                 # time_integrate=0.01,
+# )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection').num_cases(11)           \
-                        .terminal('h',0) \
-                        .terminal('theta',0.1*pi/180)
+                        .terminal('h',15000) \
+                        .terminal('theta',0.01*pi/180)
 
 # continuation_steps.add_step().num_cases(11)           \
 #                         .terminal('h',0)
@@ -125,7 +114,7 @@ continuation_steps.add_step('bisection').num_cases(41) \
                         .terminal('phi',2*pi/180)
 
 beluga.solve(ocp,
-             method='traditional',
+             method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)

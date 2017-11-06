@@ -27,15 +27,25 @@ ocp.constraints().initial('x-x_0','m')\
 #                  .terminal('x2-x2_f','m')\
 #                  .terminal('y2-y2_f','m')
 
-ocp.constraints().path('c1','sqrt((x-xc)**2 + (y-yc)**2)','>','rc','nd',start_eps=1e-4)
+ocp.constraints().path('c1','sqrt((x-xc1)**2 + (y-yc1)**2)','>','rc1','m',start_eps=1e-1) \
+                 .path('c2','sqrt((x-xc2)**2 + (y-yc2)**2)','>','rc2','m',start_eps=1e-1) \
+                 .path('c3','sqrt((x-xc3)**2 + (y-yc3)**2)','>','rc3','m',start_eps=1e-1)
 # ocp.constraints().path('c1','y','>',-1,'nd',start_eps=1e-6)
                 # .path('thr1','thr','<>',1,'nd',start_eps=1e-6)
 
-ocp.constant('xc',5,'m')
-ocp.constant('yc',5,'m')
-ocp.constant('rc',1.5,'m')
+ocp.constant('xc1',1.0,'m') # 1
+ocp.constant('yc1',6.0,'m') # 4
+ocp.constant('rc1',1.0,'m')
 
-ocp.scale(m=1, s=1, kg=1, rad=1,nd=1)
+ocp.constant('xc2',7.0,'m') # 7.5
+ocp.constant('yc2',4.0,'m') # 3.5
+ocp.constant('rc2',1.0,'m')
+
+ocp.constant('xc3',6.0,'m') # 6
+ocp.constant('yc3',9.0,'m') # 9
+ocp.constant('rc3',1.0,'m')
+
+ocp.scale(m=10, s=1, kg=1, rad=1,nd=1)
 
 # bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 #                         derivative_method='fd',
@@ -49,15 +59,23 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                         tolerance=1e-4,
                         max_iterations=300,
                         verbose = True,
-                        max_error=400,
-                        N=41
+                        max_error=1000,
+                        N=101
              )
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0, 0],
                 direction='forward',
                 # costate_guess = 0.1,
-                costate_guess = [-0.1,-0.1,0.0]
+                costate_guess = [-0.1,-0.1,0.0],
+)
+guess_maker = beluga.guess_generator('auto',
+                start=[0, 0],
+                direction='forward',
+                # costate_guess = 0.1,
+                costate_guess = [-0.1,-0.1,0.0,0.0,0.0],
+                control_guess = [pi/4,0,0,0,0,0,0],
+                use_control_guess=True
 )
 #
 # guess_maker = beluga.guess_generator('auto',
@@ -68,21 +86,36 @@ guess_maker = beluga.guess_generator('auto',
 # )
 
 continuation_steps = beluga.init_continuation()
-#
-continuation_steps.add_step('bisection').num_cases(11)           \
-                        .terminal('x',10) \
-                        .terminal('y',0.0) \
-                        # .terminal('x2',10) \
-                        # .terminal('y2',2.0)
-#
+
+continuation_steps.add_step('bisection').num_cases(5)           \
+                        .terminal('x',10.0) \
+                        .terminal('y',10.0) \
+# 500s
+
 # continuation_steps.add_step('bisection').num_cases(11)           \
 #                         .const('rc',1.5)
 
 
 # guess_maker = beluga.guess_generator(mode='file', filename='data-guess.dill', step=-1, iteration=-1)
-continuation_steps.add_step('bisection').num_cases(31) \
-                        .const('yc',0.5) \
+# continuation_steps.add_step('bisection').num_cases(31, spacing='log') \
+#                         .const('yc',0.5) \
                         # .const('xc',5.0) \
+
+# continuation_steps.add_step('bisection').num_cases(11)           \
+#                         .terminal('y',15.0) \
+
+# continuation_steps.add_step('bisection').num_cases(41) \
+#                         .terminal('y',5) \
+
+# guess_maker = beluga.guess_generator(mode='file', filename='data-3s.dill', step=-1, iteration=-1)
+continuation_steps.add_step('bisection').num_cases(11)\
+                        .const('xc1',1.75) \
+                        .const('yc1',3.5) \
+                        .const('xc2',5.75) \
+                        .const('yc2',4.0) \
+                        # .const('xc3',7.5) \
+                        # .const('yc3',8.5)
+
 
 beluga.solve(ocp,
              method='icrm',
