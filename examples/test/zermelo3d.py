@@ -37,8 +37,8 @@ ocp.constraints().initial('x2-x2_0','m')\
                  .initial('z2-z2_0','m')\
                  .terminal('z2-z2_f','m')
 
-ocp.constraints().path('c1','((x-xc)**2 + (y-yc)**2)','>','rc**2','nd',start_eps=1e-2)\
-                 .path('c2','((x2-xc)**2 + (y2-yc)**2)','>','rc**2','nd',start_eps=1e-2)
+ocp.constraints().path('c1','sqrt((x-xc)**2 + (y-yc)**2)','>','rc','m',start_eps=1e-2)\
+                 .path('c2','sqrt((x2-xc)**2 + (y2-yc)**2)','>','rc','m',start_eps=1e-2)
 # ocp.constraints().path('c1','y','>',-1,'nd',start_eps=1e-6)
                 # .path('thr1','thr','<>',1,'nd',start_eps=1e-6)
 
@@ -47,12 +47,12 @@ ocp.constant('yc',10,'m')
 ocp.constant('rc',1.5,'m')
 ocp.constant('r1',5.0,'m')
 
-ocp.scale(m=1, s=1, kg=1, rad=1,nd=1)
+ocp.scale(m=10, s=1, kg=1, rad=1,nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         derivative_method='fd',
-                        tolerance=1e-4,
-                        max_iterations=100,
+                        tolerance=1e-3,
+                        max_iterations=2000,
                         verbose = True,
                         max_error=400,
              )
@@ -76,7 +76,9 @@ guess_maker = beluga.guess_generator('auto',
                 start=[0, 0, 0, 0, 0, 0, 10.0],
                 direction='forward',
                 # costate_guess = -0.1,
-                costate_guess = [-0.1,-0.1,-0.1,-0.1,-0.1,-0.1,0.1,0.1,0.1]
+                costate_guess = [-0.1,-0.1,-0.1,-0.1,-0.1,-0.1,-0.1,0.01,0.01],
+                control_guess=[0.0]*8,
+                use_control_guess=True
 )
 
 continuation_steps = beluga.init_continuation()
