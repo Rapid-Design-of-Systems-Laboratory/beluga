@@ -27,9 +27,9 @@ ocp.constraints().initial('x-x_0','m')\
 #                  .terminal('x2-x2_f','m')\
 #                  .terminal('y2-y2_f','m')
 
-ocp.constraints().path('c1','sqrt((x-xc1)**2 + (y-yc1)**2)','>','rc1','m',start_eps=1e-1) \
-                 .path('c2','sqrt((x-xc2)**2 + (y-yc2)**2)','>','rc2','m',start_eps=1e-1) \
-                 .path('c3','sqrt((x-xc3)**2 + (y-yc3)**2)','>','rc3','m',start_eps=1e-1)
+ocp.constraints().path('c1','sqrt((x-xc1)**2 + (y-yc1)**2)','>','rc1','m',start_eps=1e-6) \
+                 .path('c2','sqrt((x-xc2)**2 + (y-yc2)**2)','>','rc2','m',start_eps=1e-6) \
+                 .path('c3','sqrt((x-xc3)**2 + (y-yc3)**2)','>','rc3','m',start_eps=1e-6)
 # ocp.constraints().path('c1','y','>',-1,'nd',start_eps=1e-6)
                 # .path('thr1','thr','<>',1,'nd',start_eps=1e-6)
 
@@ -56,11 +56,11 @@ ocp.scale(m=10, s=1, kg=1, rad=1,nd=1)
 #              )
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
-                        tolerance=1e-4,
+                        tolerance=1e-3,
                         max_iterations=300,
                         verbose = True,
-                        max_error=1000,
-                        N=101
+                        max_error=2000,
+                        N=41
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -84,7 +84,7 @@ guess_maker = beluga.guess_generator('auto',
 #                 costate_guess = -0.1,
 #                 # costate_guess = [-0.1,-0.1,0.0]
 # )
-
+#202 seconds with 1e-3 and 41
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection').num_cases(5)           \
