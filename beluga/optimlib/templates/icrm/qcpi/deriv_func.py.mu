@@ -121,19 +121,8 @@ def deriv_func_nojit(_t,_X,_p,_const):
     dgdX[:] = np.array({{dgdX}}).reshape(({{dae_var_num}},{{num_states}}-1))
     dgdU[:] = np.array({{dgdU}}).reshape(({{dae_var_num}},{{dae_var_num}}))
 
-    #from beluga.utils import keyboard
-
     udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
-    #udot2=  np.array([{{#dae_eom_list}}{{.}},
-    #    {{/dae_eom_list}}])/tf
-    #print(np.linalg.norm(np.absolute(udot2-udot)))
     return np.hstack((Xdot, udot))*tf
-
-    #return np.array([{{#deriv_list}}{{.}},
-    #    {{/deriv_list}}
-    #    {{#dae_eom_list}}{{.}},
-    #    {{/dae_eom_list}}]
-    #)
 
 
 num_dae_vars = {{dae_var_num}}
