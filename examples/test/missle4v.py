@@ -25,18 +25,18 @@ ocp.state('xbar4', 'cos(psi4)', 'nd')\
    .state('ybar4', 'sin(psi4)', 'nd')\
    .state('psi4', '10*abar4', 'nd')
 ocp.control('abar4','nd')
-
-ocp.state('xbar5', 'cos(psi5)', 'nd')\
-   .state('ybar5', 'sin(psi5)', 'nd')\
-   .state('psi5', '10*abar5', 'nd')
-ocp.control('abar5','nd')
+#
+# ocp.state('xbar5', 'cos(psi5)', 'nd')\
+#    .state('ybar5', 'sin(psi5)', 'nd')\
+#    .state('psi5', '10*abar5', 'nd')
+# ocp.control('abar5','nd')
 
 # Define constants
 ocp.constant('V',300,'m/s')
 ocp.constant('tfreal',50,'s')
 
 # Define costs
-ocp.path_cost('abar^2 + abar2^2 + abar3^2 + abar4^2 + abar5^2','nd')
+ocp.path_cost('abar^2 + abar2^2 + abar3^2 + abar4^2 + 0^2','nd')
 # ocp.path_cost('1','nd')
 
 # Define constraints
@@ -49,11 +49,15 @@ ocp.constraints() \
     .independent('tf - 1', 'nd')
 
 ocp.constraints() \
-    .path('u1','abar','<>',1,'nd',start_eps=1e-6) \
-    .path('u2','abar2','<>',1,'nd',start_eps=1e-6)\
-    .path('u3','abar3','<>',1,'nd',start_eps=1e-6)\
-    .path('u4','abar4','<>',1,'nd',start_eps=1e-6)\
-    .path('u5','abar5','<>',1,'nd',start_eps=1e-6)
+    .path('l1','ybar2/0.5','<',1,'m',start_eps=1e-2)\
+    .path('l2','ybar3/0.5','<',1,'m',start_eps=1e-2)\
+    # .path('l3','ybar3','<',0.3,'m',start_eps=1e-8)\
+    # .path('l4','ybar4','<',0.3,'m',start_eps=1e-8)
+#     .path('u1','abar','<>',1,'nd',start_eps=1e-6) \
+#     .path('u2','abar2','<>',1,'nd',start_eps=1e-6)\
+#     .path('u3','abar3','<>',1,'nd',start_eps=1e-6)\
+#     .path('u4','abar4','<>',1,'nd',start_eps=1e-6)\
+#     .path('u5','abar5','<>',1,'nd',start_eps=1e-6)
 
 ocp.constraints() \
     .initial('xbar2-xbar2_0','nd')\
@@ -75,14 +79,16 @@ ocp.constraints() \
     .terminal('xbar4-xbar4_f','nd')\
     .terminal('ybar4-ybar4_f','nd') \
     .terminal('psi4 - psi4_f', 'nd') \
+#
+# ocp.constraints() \
+#     .initial('xbar5-xbar5_0','nd')\
+#     .initial('ybar5-ybar5_0','nd')\
+#     .terminal('xbar5-xbar5_f','nd')\
+#     .terminal('ybar5-ybar5_f','nd') \
+#     .terminal('psi5 - psi5_f', 'nd') \
 
-ocp.constraints() \
-    .initial('xbar5-xbar5_0','nd')\
-    .initial('ybar5-ybar5_0','nd')\
-    .terminal('xbar5-xbar5_f','nd')\
-    .terminal('ybar5-ybar5_f','nd') \
-    .terminal('psi5 - psi5_f', 'nd') \
-
+# 1191 (45) - 5 vehicles with 4 path constraints
+# 911 seconds for 5 v and one path constraint
 # 247(31) seconds for 5 vehicle with GPOPS in background
 # 68(14) seconds for 3 vehicle with u constraints
 # 114(20) seconds for 4 vehicles with u constraint
@@ -91,7 +97,7 @@ ocp.constraints() \
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        tolerance=1e-4,
+                        tolerance=1e-3,
                         max_iterations=30,
                         verbose = True,
                         derivative_method='fd',
@@ -100,16 +106,16 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-3,
-                    max_iterations=500,
+                    max_iterations=100,
                     verbose = True,
-                    N=41
+                    N=101
 )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[-0.8,0,0.0,-0.8,0.1,0.0,-0.8,0.2,0.0, -0.8,0.3,0.0, -0.8,-0.4,0.0],          # Starting values for states in order
+                start=[-0.8,0,0.0,-0.8,0.1,0.0,-0.8,0.2,0.0, -0.8,0.25,0.0],#, -0.8,-0.1,0.0],          # Starting values for states in order
                 direction='forward',
-                costate_guess = [0.0, 0.0, 0.1]*5,
-                control_guess = [-0.05, -0.05, -0.5, -0.5, -0.5, 0,0,0,0,0, 0,0,0,0,0],
+                costate_guess = [0.0, 0.0, 0.01]*4+[0,0]*2,
+                control_guess = [-0.005]*4+ [0,0]*2,#, 0,0,0,0,0, 0,0,0,0,0],
                 time_integrate=1.0
 )
 
@@ -141,15 +147,15 @@ continuation_steps.add_step('bisection') \
                 .terminal('ybar3', 0.0) \
                 .terminal('psi3', -pi/2)\
                 .initial('xbar4', -0.8) \
-                .initial('ybar4', 0.3) \
+                .initial('ybar4', 0.25) \
                 .terminal('xbar4', 0.0)\
                 .terminal('ybar4', 0.0) \
                 .terminal('psi4', -120*pi/180)\
-                .initial('xbar5', -0.8) \
-                .initial('ybar5', -0.1) \
-                .terminal('xbar5', 0.0)\
-                .terminal('ybar5', 0.0) \
-                .terminal('psi5', 30*pi/180)
+                # .initial('xbar5', -0.8) \
+                # .initial('ybar5', -0.1) \
+                # .terminal('xbar5', 0.0)\
+                # .terminal('ybar5', 0.0) \
+                # .terminal('psi5', 30*pi/180)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(21) \
 

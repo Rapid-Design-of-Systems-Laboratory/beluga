@@ -73,7 +73,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-3,
                     max_iterations=500,
-                    verbose = True,
+                    verbose = True
 )
 
 guess_maker = beluga.guess_generator('auto',
