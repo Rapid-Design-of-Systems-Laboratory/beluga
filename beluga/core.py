@@ -194,14 +194,24 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
+                # if step_idx == 1 and step.ctr == 0:
+                #     print('2nd set')
+                #     from beluga.utils import keyboard
+                #     keyboard()
+
                 s.compute_scaling(sol_guess)
                 s.scale(sol_guess)
 
                 # Note: sol is the same object as sol_guess
                 sol = bvp_algo.solve(sol_guess)
 
+                # if step.ctr == 5:
+                #     print('end of first set')
+                #     from beluga.utils import keyboard
+                #     keyboard()
 
                 s.unscale(sol)
+
                 if sol.converged:
                     # Post-processing phase
 

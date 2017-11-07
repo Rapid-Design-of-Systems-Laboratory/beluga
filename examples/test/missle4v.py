@@ -21,14 +21,18 @@ ocp.state('xbar3', 'cos(psi3)', 'nd')   \
    .state('psi3', '10*abar3', 'nd')
 ocp.control('abar3','nd')
 
+ocp.state('xbar4', 'cos(psi4)', 'nd')   \
+   .state('ybar4', 'sin(psi4)', 'nd')   \
+   .state('psi4', '10*abar4', 'nd')
+ocp.control('abar4','nd')
 
 # Define constants
 ocp.constant('V',300,'m/s')
 ocp.constant('tfreal',50,'s')
 
 # Define costs
-ocp.path_cost('abar^2 + abar2^2 + abar3^2','nd')
-# ocp.path_cost('abar^2','nd')
+ocp.path_cost('abar^2 + abar2^2 + abar3^2 + abar4^2','nd')
+# ocp.path_cost('1','nd')
 
 # Define constraints
 ocp.constraints() \
@@ -42,7 +46,8 @@ ocp.constraints() \
 ocp.constraints() \
     .path('u1','abar','<>',1,'nd',start_eps=1e-3) \
     .path('u2','abar2','<>',1,'nd',start_eps=1e-3)\
-    .path('u3','abar3','<>',1,'nd',start_eps=1e-3)
+    .path('u3','abar3','<>',1,'nd',start_eps=1e-3)\
+    .path('u4','abar4','<>',1,'nd',start_eps=1e-3)
 
 ocp.constraints() \
     .initial('xbar2-xbar2_0','nd')    \
@@ -58,6 +63,14 @@ ocp.constraints() \
     .terminal('ybar3-ybar3_f','nd') \
     .terminal('psi3 - psi3_f', 'nd') \
 
+ocp.constraints() \
+    .initial('xbar4-xbar4_0','nd')    \
+    .initial('ybar4-ybar4_0','nd')    \
+    .terminal('xbar4-xbar4_f','nd')   \
+    .terminal('ybar4-ybar4_f','nd') \
+    .terminal('psi4 - psi4_f', 'nd') \
+
+# 68 seconds for 3 vehicle with u constraints
 # 106(14) seconds for 3 vehicle unconstrained (with u constraints)
 # 75(10) seconds for 2 vehicle unconstrainted  (with u constraints)
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
@@ -77,10 +90,10 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[-0.8,0,0.0,-0.8,0.1,0.0,-0.8,0.2,0.0],          # Starting values for states in order
+                start=[-0.8,0,0.0,-0.8,0.1,0.0,-0.8,0.2,0.0, -0.8,-0.3,0.0],          # Starting values for states in order
                 direction='forward',
                 costate_guess = [0.0, 0.0, 0.1]*3,
-                control_guess = [-0.05, -0.05, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                control_guess = [-0.05, -0.05, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 time_integrate=1.0
 )
 
@@ -110,7 +123,12 @@ continuation_steps.add_step('bisection') \
                 .initial('ybar3', 0.2) \
                 .terminal('xbar3', 0.0)\
                 .terminal('ybar3', 0.0) \
-                .terminal('psi3', -pi/2)
+                .terminal('psi3', -pi/2)\
+                .initial('xbar4', -0.8) \
+                .initial('ybar4', 0.3) \
+                .terminal('xbar4', 0.0)\
+                .terminal('ybar4', 0.0) \
+                .terminal('psi4', -120*pi/180)
 
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(21) \
