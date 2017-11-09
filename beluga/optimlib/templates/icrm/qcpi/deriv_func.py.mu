@@ -118,8 +118,12 @@ def deriv_func_nojit(_t,_X,_p,_const):
     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1))
     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}))
 
-    dgdX[:] = np.array({{dgdX}}).reshape(({{dae_var_num}},{{num_states}}-1))
-    dgdU[:] = np.array({{dgdU}}).reshape(({{dae_var_num}},{{dae_var_num}}))
+{{#dgdX}}
+    {{.}}
+{{/dgdX}}
+{{#dgdU}}
+    {{.}}
+{{/dgdU}}
 
     udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
     return np.hstack((Xdot, udot))*tf
