@@ -360,6 +360,18 @@ def generate_problem_data(workspace):
 
     tf_var = sympify('tf') #TODO: Change to independent var?
 
+    dgdX = []
+    for i, row in enumerate(workspace['dgdX'].tolist()):
+        for j, expr in enumerate(row):
+            if expr != 0:
+                dgdX.append(f'dgdX[{i},{j}] = {expr}')
+
+    dgdU = []
+    for i, row in enumerate(workspace['dgdU'].tolist()):
+        for j, expr in enumerate(row):
+            if expr != 0:
+                dgdU.append(f'dgdU[{i},{j}] = {expr}')
+
     problem_data = {
     'method':'icrm',
     'problem_name': workspace['problem_name'],
@@ -415,8 +427,8 @@ def generate_problem_data(workspace):
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
      'bc_free_mask': workspace['bc_free_mask'],
-     'dgdX': str(workspace['dgdX'][:]),
-     'dgdU': str(workspace['dgdU'][:]),
+     'dgdX': dgdX,#str(workspace['dgdX'][:]),
+     'dgdU': dgdU,#str(workspace['dgdU'][:]),
     }
     # from beluga.utils import keyboard
     # keyboard()

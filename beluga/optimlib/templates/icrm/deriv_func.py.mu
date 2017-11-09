@@ -119,8 +119,12 @@ def deriv_func(_t,_X,_p,_aux,arc_idx=0):
     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1))
     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}))
 
-    dgdX[:] = np.array({{dgdX}}).reshape(({{dae_var_num}},{{num_states}}-1))
-    dgdU[:] = np.array({{dgdU}}).reshape(({{dae_var_num}},{{dae_var_num}}))
+{{#dgdX}}
+    {{.}}
+{{/dgdX}}
+{{#dgdU}}
+    {{.}}
+{{/dgdU}}
 
     udot = scipy.linalg.solve(dgdU, -dgdX @ Xdot[:{{num_states}}-1])
     return np.hstack((Xdot, udot))*tf
