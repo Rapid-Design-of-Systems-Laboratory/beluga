@@ -110,8 +110,8 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
     #if v < 10:
     #    v = 10.0
-    Xdot = np.array([{{#deriv_list}}{{.}},
-                     {{/deriv_list}}])/tf
+    #Xdot = np.array([{{#deriv_list}}{{.}},
+    #                 {{/deriv_list}}])/tf
     #dg     = compute_jacobian_fd(_X, _const)
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
