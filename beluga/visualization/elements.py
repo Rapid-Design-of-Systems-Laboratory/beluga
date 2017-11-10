@@ -63,6 +63,15 @@ class Plot(object):
         self.plot_data.append({'type':'line_series', 'x':x_expr, 'y':y_expr, 'style':style, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
         return self
 
+    def line3d(self, x_expr, y_expr, z_expr, label=None, style=None, step = None, sol = None, datasource = None):
+        if datasource is None:
+            datasource = self.datasource
+        if style is None:
+            style = {}
+        # TODO: Datatype sanity checks needed here
+        self.plot_data.append({'type':'line3d', 'x':x_expr, 'y':y_expr, 'z':z_expr, 'style':style, 'label':label, 'step':step, 'sol':sol, 'datasource': datasource})
+        return self
+
     def preprocess(self):
         """
         Evaluates the expressions using the supplied data
@@ -73,13 +82,14 @@ class Plot(object):
 
             step_idx = line['step'] if line['step'] is not None else self.step_index
             line['data'] = []
-            if line['type'] == 'line':
+            if line['type'] == 'line' or line['type'] == 'line3d':
                 sol_idx = line['sol'] if line['sol'] is not None else self.sol_index
                 sol = solution[step_idx][sol_idx]
 
                 sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
                 line['data'].append({'x_data': sol.evaluate(line['x']),
-                                     'y_data': sol.evaluate(line['y'])})
+                                     'y_data': sol.evaluate(line['y']),
+                                     'z_data': sol.evaluate(line.get('z','0'))})
             elif line['type'] == 'line_series':
                 sol_set = solution[step_idx]
                 line['end'] = len(sol_set) if line['end'] == -1 else line['end']
