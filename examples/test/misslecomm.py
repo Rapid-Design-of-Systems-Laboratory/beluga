@@ -23,16 +23,21 @@ ocp.state('xbar2', 'xbar2dot', 'nd')\
 ocp.control('abar2','nd')
 
 # Jammer location
-ocp.constant('xc',-0.6,'nd')
-ocp.constant('yc',0.0,'nd')
-ocp.constant('rc',0.2,'nd')
-ocp.constant('rj',0.8,'nd')
+ocp.constant('xc1',-0.4,'nd')
+ocp.constant('xc2',-0.2,'nd')
+ocp.constant('rc',0.1,'nd')
+ocp.constant('rj',0.5,'nd')
 ocp.constant('rsep',10,'nd')
 
-ocp.quantity('S2C','((xbar2-xc)**2 + (ybar2-yc)**2)')
-ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
+ocp.quantity('S2C1','((xbar2-xc1)**2)')
+ocp.quantity('S2C2','((xbar2-xc2)**2)')
+ocp.quantity('u21','(1/(1+exp(-10*(rc**2-S2C1)/rc**2)))')#' + 1/(1+exp(-10*(rc**2-S2C2)/rc**2)))')
 ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
-ocp.constraints().path('comm1','((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit','<',1,'nd',start_eps=1e-1)
+ocp.constraints().path('comm1','((xbar-xbar2)**2+(ybar-ybar2)**2)/commLimit','<',1,'nd',start_eps=1e-1)
+# ocp.quantity('S2C','((xbar2-xc)**2 + (ybar2-yc)**2)')
+# ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
+# ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
+# ocp.constraints().path('comm1','((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit','<',1,'nd',start_eps=1e-1)
 
 
 # ocp.state('xbar3', 'cos(psi3)', 'nd')\
@@ -130,7 +135,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-3,
                     max_iterations=250,
                     verbose = True,
-                    N=31
+                    N=11
 )
 #
 # guess_maker = beluga.guess_generator('auto',
@@ -142,11 +147,12 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 # )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[-.8,0.,pi/12]+[-.8,.1,0.0,1.0],
+                start=[-0.8,0.,-pi/12]+[-0.8,.0,pi/12,1.0],
                 direction='forward',
                 costate_guess = [0.0, 0.0, -0.01]+[0.0,0.0,0.01,0.0]+[0.01,0.01],#+[0,0]*2,
-                control_guess = [+0.005, -0.005]+[0.00,0.0],
-                time_integrate=0.1
+                control_guess = [+0.005, -0.005]+[0.0,0.0],
+                time_integrate=0.1,
+                use_control_guess=True
 )
 
 continuation_steps = beluga.init_continuation()
@@ -186,7 +192,8 @@ beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             guess_generator=guess_maker)
+             guess_generator=guess_maker,
+             output_file='data2.dill')
 
 # beluga.solve(problem)
 #     # from timeit import timeit
