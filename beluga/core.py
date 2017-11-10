@@ -204,7 +204,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
 
                 # Note: sol is the same object as sol_guess
                 sol = bvp_algo.solve(sol_guess)
-
+                
                 # if step.ctr == 5:
                 #     print('end of first set')
                 #     from beluga.utils import keyboard
