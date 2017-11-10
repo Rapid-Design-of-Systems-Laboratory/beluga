@@ -26,7 +26,7 @@ ocp.control('alfa','rad')
 
 # Define constants
 ocp.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
-ocp.constant('rho0', 1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
+ocp.constant('rho0', 0.1*1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
 ocp.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
 
 ocp.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
@@ -45,14 +45,14 @@ ocp.constraints() \
     .terminal('theta-theta_f','rad') \
     # .initial('gam - gam_0', 'rad')
 
-ocp.scale(m='h', s='h/v', kg='mass', rad=1)
-# ocp.scale(m=160e3, s=1, kg='mass', rad=1)
+# ocp.scale(m='h', s='h/v', kg='mass', rad=1)
+ocp.scale(m=160e3, s=40, kg='mass', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
-                        tolerance=1e-4,
+                        tolerance=1e-6,
                         max_iterations=250,
                         verbose = True,
-                        N = 101,
+                        N = 201,
                         max_error=100
              )
 
@@ -66,22 +66,18 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(11) \
                 .terminal('h',15e3) \
                 .terminal('theta',0.01*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
                 .terminal('theta',5.0*pi/180) \
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(41) \
-#                 .const('rho0',1.2) \
 
 # continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .initial('h',80e3) \
-#                 .initial('v',4e3)
+#                 .num_cases(21, spacing='log') \
+#                 .const('rho0',1.2) \
+
 
 beluga.solve(ocp,
              method='icrm',
