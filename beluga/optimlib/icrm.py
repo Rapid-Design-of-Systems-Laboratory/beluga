@@ -427,8 +427,10 @@ def generate_problem_data(workspace):
      'ham_expr': str(workspace['ham']),
      'quantity_list': workspace['quantity_list'],
      'bc_free_mask': workspace['bc_free_mask'],
+     #'dgdX': str(workspace['dgdX'][:]),
      'dgdX': dgdX,#str(workspace['dgdX'][:]),
-     'dgdU': dgdU,#str(workspace['dgdU'][:]),
+     # 'dgdU': str(workspace['dgdU'][:]),
+     'dgdU': dgdU,
     }
     # from beluga.utils import keyboard
     # keyboard()

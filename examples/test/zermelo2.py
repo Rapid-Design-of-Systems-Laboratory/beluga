@@ -27,7 +27,7 @@ ocp.constraints().initial('x2-x2_0','m')\
                  .terminal('x2-x2_f','m')\
                  .terminal('y2-y2_f','m')
 
-ocp.constraints().path('c1','sqrt((x2-xc2)**2 + (y2-yc2)**2)','>','rc2','m',start_eps=1e-6) \
+ocp.constraints().path('c1','sqrt((x2-xc2)**2 + (y2-yc2)**2)','>','rc2','m',start_eps=1e-2) \
                 #  .path('c2','sqrt((x2-xc2)**2 + (y2-yc2)**2)','>','rc2','m',start_eps=1e-6) \
 # ocp.constraints().path('c1','y','>',-1,'nd',start_eps=1e-6)
                 # .path('thr1','thr','<>',1,'nd',start_eps=1e-6)
@@ -36,9 +36,9 @@ ocp.constant('xc1',1.75,'m') # 1
 ocp.constant('yc1',3.5,'m') # 6
 ocp.constant('rc1',1.0,'m')
 
-ocp.constant('xc2',5.75,'m') # 7.5
-ocp.constant('yc2',4.0,'m') # 3.5
-ocp.constant('rc2',0.2,'m')
+ocp.constant('xc2',7.5,'m') # 7.5, 5.75
+ocp.constant('yc2',3.5,'m') # 3.5, 4.0
+ocp.constant('rc2',1.0,'m')
 
 ocp.constant('xc3',6.0,'m') # 6
 ocp.constant('yc3',9.0,'m') # 9
@@ -87,9 +87,8 @@ continuation_steps.add_step('bisection').num_cases(21)           \
 
 # guess_maker = beluga.guess_generator(mode='file', filename='data-3s.dill', step=-1, iteration=-1)
 continuation_steps.add_step('bisection').num_cases(21)\
-                        .const('rc2',1.5)
-                        # .const('xc2',5.25) \
-                        # .const('yc2',4.5) \
+                        .const('xc2',5.75) \
+                        .const('yc2',4.0) \
                         # .const('xc1',2.25) \
                         # .const('yc1',2.5) \
                         # .const('xc3',7.5) \

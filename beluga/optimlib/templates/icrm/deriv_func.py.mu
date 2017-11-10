@@ -119,9 +119,11 @@ def deriv_func(_t,_X,_p,_aux,arc_idx=0):
     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1))
     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}))
 
+    dgdX[:] = 0.0 # Fix for numba bug
 {{#dgdX}}
     {{.}}
 {{/dgdX}}
+    dgdU[:] = 0.0 # Fix for numba bug
 {{#dgdU}}
     {{.}}
 {{/dgdU}}
