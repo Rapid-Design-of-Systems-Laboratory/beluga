@@ -16,31 +16,30 @@ ocp.state('xbar', 'xbardot', 'nd')\
 ocp.control('abar','nd')
 ocp.control('gam','nd')
 
-ocp.quantity('xbar2dot','cos(psi2)*cos(gam2)')
-ocp.quantity('ybar2dot','sin(psi2)*cos(gam2)')
-ocp.quantity('zbar2dot','-sin(gam2)')
+ocp.quantity('xbar2dot','vbar2*cos(psi2)*cos(gam2)')
+ocp.quantity('ybar2dot','vbar2*sin(psi2)*cos(gam2)')
+ocp.quantity('zbar2dot','-vbar2*sin(gam2)')
 ocp.state('xbar2', 'xbar2dot', 'nd')\
    .state('ybar2', 'ybar2dot', 'nd')\
    .state('zbar2', 'zbar2dot', 'nd')\
-   .state('psi2', '10*abar2', 'nd')
+   .state('psi2', '10*abar2', 'nd')\
+   .state('vbar2', '0', 'nd/s')
 
 ocp.control('abar2','nd')
 ocp.control('gam2','nd')
 
 # Jammer location
-ocp.constant('xc',-0.6,'nd')
+ocp.constant('xc',-0.4,'nd')
 ocp.constant('yc',0.0,'nd')
 ocp.constant('rc',0.2,'nd')
-ocp.constant('rj',0.5,'nd')
+ocp.constant('rj',0.10,'nd')
 ocp.constant('rsep',10,'nd')
 
-ocp.state('S1C','2*(xbar-xc)*xbardot+2*(ybar-yc)*ybardot','nd^2')
-ocp.state('S2C','2*(xbar2-xc)*xbar2dot+2*(ybar2-yc)*ybar2dot','nd^2')
-ocp.state('S21','2*(xbar2-xbar)*(xbar2dot-xbardot) + 2*(ybar2-ybar)*(ybar2dot-ybardot)','nd^2')
-
+ocp.quantity('S2C','((xbar2-xc)**2 + (ybar2-yc)**2)')
 ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
-ocp.quantity('commLimit','u21*rj + (1-u21)*rsep')
-ocp.constraints().path('comm1','sqrt(S21)','<','commLimit','nd',start_eps=1e-4)
+ocp.quantity('S21','(xbar2-xbar)**2 + (ybar2-ybar)**2')
+ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
+ocp.constraints().path('comm1','S21/commLimit','<',1,'nd',start_eps=1e-1)
 # ocp.state('xbar3', 'cos(psi3)', 'nd')\
 #    .state('ybar3', 'sin(psi3)', 'nd')\
 #    .state('psi3', '10*abar3', 'nd')
@@ -74,9 +73,6 @@ ocp.constraints() \
     .terminal('ybar-ybar_f','nd') \
     .terminal('zbar-zbar_f','nd') \
     .terminal('psi - psi_f', 'nd') \
-    .initial('S1C - ((xbar_0-xc)**2 + (ybar_0 - yc)**2)','nd^2')\
-    .initial('S2C - ((xbar_0-xc)**2 + (ybar2_0 - yc)**2)','nd^2')\
-    .initial('S21 - ((xbar_0-xbar2_0)**2 + (ybar_0 - ybar2_0)**2)','nd^2')
     # .independent('tf - 1', 'nd')
 
 # ocp.constraints() \
@@ -139,12 +135,12 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         max_error=100,
              )
 
-# bvp_solver = beluga.bvp_algorithm('qcpi',
-#                     tolerance=1e-3,
-#                     max_iterations=250,
-#                     verbose = True,
-#                     N=41
-# )
+bvp_solver = beluga.bvp_algorithm('qcpi',
+                    tolerance=1e-2,
+                    max_iterations=350,
+                    verbose = True,
+                    N=101
+)
 #
 # guess_maker = beluga.guess_generator('auto',
 #                 start=[-.8,0.,-.1,-pi/12]+[-.8,.1,-.1,0.]+[0.16,0.17,0.01],
@@ -153,55 +149,63 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 #                 control_guess = [+0.005, -0.1, -0.005, -0.1],#+[0.1,0.1],
 #                 time_integrate=1.0
 # )
+#
+# guess_maker = beluga.guess_generator('auto',
+#                 start=[-.8,0.,-.1,-pi/12]+[-.8,.1,-.1,0.,1.],
+#                 direction='forward',
+#                 costate_guess = [0.0, 0.0, 0.0, -0.01]+[0.0,0.0,0.0,0.01,0.0]+[0.0],#+[0,0]*2,
+#                 control_guess = [+0.005, -0.1, -0.005, -0.1]+[0.00,0.0],
+#                 time_integrate=0.1
+# )
+#
+# continuation_steps = beluga.init_continuation()
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(21) \
+#                 .terminal('xbar', 0.0)\
+#                 .terminal('ybar', 0.0) \
+#                 .terminal('zbar', 0.0) \
+#                 .terminal('psi', +15*pi/180) \
+#                 .terminal('xbar2', 0.0)\
+#                 .terminal('ybar2', 0.0) \
+#                 .terminal('zbar2', 0.0) \
+#                 .terminal('psi2', -30*pi/180) \
+#                 # .initial('xbar2', -0.8) \
+#                 # .initial('ybar2', 0.1) \
+#                 # .terminal('xbar2', 0.0)\
+#                 # .terminal('ybar2', 0.0) \
+#                 # .terminal('psi2', -60*pi/180) \
+#                 # .initial('xbar3', -0.8) \
+#                 # .initial('ybar3', 0.2) \
+#                 # .terminal('xbar3', 0.0)\
+#                 # .terminal('ybar3', 0.0) \
+#                 # .terminal('psi3', -pi/2)\
+#                 # .initial('xbar4', -0.8) \
+#                 # .initial('ybar4', 0.25) \
+#                 # .terminal('xbar4', 0.0)\
+#                 # .terminal('ybar4', 0.0) \
+#                 # .terminal('psi4', -120*pi/180)\
+#                 # .initial('xbar5', -0.8) \
+#                 # .initial('ybar5', -0.1) \
+#                 # .terminal('xbar5', 0.0)\
+#                 # .terminal('ybar5', 0.0) \
+#                 # .terminal('psi5', 30*pi/180)
 
-guess_maker = beluga.guess_generator('auto',
-                start=[-.8,0.,-.1,-pi/12]+[-.8,.1,-.1,0.]+[0.16,0.17,0.01],
-                direction='forward',
-                costate_guess = [0.0, 0.0, 0.0, -0.01]+[0.0,0.0,0.0,0.01]+[0.0,0.0,0.0]+[0.0],#+[0,0]*2,
-                control_guess = [+0.005, -0.1, -0.005, -0.1]+[0.00,0.0],
-                time_integrate=0.1
-)
+guess_maker = beluga.guess_generator('file',filename='data-3d2v-rj03.dill', iteration=-1, step=-1)
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .terminal('xbar', 0.0)\
-                .terminal('ybar', 0.0) \
-                .terminal('zbar', 0.0) \
-                .terminal('psi', +15*pi/180) \
-                .terminal('xbar2', 0.0)\
-                .terminal('ybar2', 0.0) \
-                .terminal('zbar2', 0.0) \
-                .terminal('psi2', -30*pi/180) \
-                # .initial('xbar2', -0.8) \
-                # .initial('ybar2', 0.1) \
-                # .terminal('xbar2', 0.0)\
-                # .terminal('ybar2', 0.0) \
-                # .terminal('psi2', -60*pi/180) \
-                # .initial('xbar3', -0.8) \
-                # .initial('ybar3', 0.2) \
-                # .terminal('xbar3', 0.0)\
-                # .terminal('ybar3', 0.0) \
-                # .terminal('psi3', -pi/2)\
-                # .initial('xbar4', -0.8) \
-                # .initial('ybar4', 0.25) \
-                # .terminal('xbar4', 0.0)\
-                # .terminal('ybar4', 0.0) \
-                # .terminal('psi4', -120*pi/180)\
-                # .initial('xbar5', -0.8) \
-                # .initial('ybar5', -0.1) \
-                # .terminal('xbar5', 0.0)\
-                # .terminal('ybar5', 0.0) \
-                # .terminal('psi5', 30*pi/180)
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(21) \
+                .num_cases(5) \
+                .const('rj',0.2)
+
 
 beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             guess_generator=guess_maker)
+             guess_generator=guess_maker,
+             output_file='data2.dill')
 
 # beluga.solve(problem)
 #     # from timeit import timeit
