@@ -28,8 +28,8 @@ ocp.constraints() \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m')
 
-# ocp.scale(m='x', s='x/v', kg=1, rad=1)
-# ocp.scale(m='y', s='y/v', kg=1, rad=1)
+#ocp.scale(m='x', s='x/v', kg=1, rad=1)
+#ocp.scale(m='y', s='y/v', kg=1, rad=1)
 ocp.scale(m=1, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
@@ -37,7 +37,7 @@ bvp_solver = beluga.bvp_algorithm('QCPI',
                         max_iterations=100,
                         verbose = True,
                         max_error=100,
-                        N = 21,
+                        N = 11,
              )
 #
 # bvp_solver = beluga.bvp_algorithm('MultipleShooting',
@@ -58,7 +58,7 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(6) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
