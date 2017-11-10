@@ -1,12 +1,14 @@
 from beluga.visualization import BelugaPlot
 import matplotlib.pyplot as plt
-plots = BelugaPlot('./data-3s3-202.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+# plots = BelugaPlot('./data-3s3-202.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 # plots.add_plot().line('x*V*tfreal','y*V*tfreal')\
 #                 .xlabel('x(t)').ylabel('y(t)')\
 #                 .title('Trajectory')
 
 plots.add_plot().line('x','y',label='traj1')\
+                .line('x2','y2',label='traj2')\
                 .line('xc1+rc1*cos(2*pi*t/tf)','yc1+rc1*sin(2*pi*t/tf)')\
                 .line('xc2+rc2*cos(2*pi*t/tf)','yc2+rc2*sin(2*pi*t/tf)')\
                 .line('xc3+rc3*cos(2*pi*t/tf)','yc3+rc3*sin(2*pi*t/tf)')\

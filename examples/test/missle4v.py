@@ -49,8 +49,10 @@ ocp.constraints() \
     .independent('tf - 1', 'nd')
 
 ocp.constraints() \
-    .path('l1','ybar2/0.5','<',1,'m',start_eps=1e-2)\
-    .path('l2','ybar3/0.5','<',1,'m',start_eps=1e-2)\
+    .path('l1','ybar1/0.5','<',1,'m',start_eps=1e-2)\
+    .path('l2','ybar2/0.5','<',1,'m',start_eps=1e-2)\
+    .path('l3','ybar3/0.5','<',1,'m',start_eps=1e-2)\
+    .path('l4','ybar4/0.5','<',1,'m',start_eps=1e-2)\
     # .path('l3','ybar3','<',0.3,'m',start_eps=1e-8)\
     # .path('l4','ybar4','<',0.3,'m',start_eps=1e-8)
 #     .path('u1','abar','<>',1,'nd',start_eps=1e-6) \
@@ -130,7 +132,7 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(11) \
                 .initial('xbar', -0.8) \
                 .initial('ybar', 0.0) \
                 .terminal('xbar', 0.0)\

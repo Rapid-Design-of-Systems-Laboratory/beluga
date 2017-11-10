@@ -168,6 +168,9 @@ def make_perf_idx(bc_left_fn, bc_right_fn):
         return P
     return perf_idx
 
+import os
+import cloudpickle
+import pickle
 
 class QCPI(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, N=21, verbose=True):
@@ -176,10 +179,18 @@ class QCPI(BaseAlgorithm):
         self.verbose = verbose
         self.max_error = max_error
         self.N = N
+        self.saved_deriv_func = False
 
 
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
+
+        if os.path.isfile('codecache.pkl'):
+            with open('codecache.pkl','rb') as f:
+                deriv_func_bck = pickle.load(f)
+
+        else:
+            deriv_func_bck = None
         out_ws = QCPICodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
         print(out_ws['deriv_func_code'])
@@ -196,7 +207,13 @@ class QCPI(BaseAlgorithm):
         self.bc_left_fn = out_ws['code_module'].bc_func_left
         self.bc_right_fn  = out_ws['code_module'].bc_func_right
         # self.deriv_func = njit(parallel=True)(out_ws['code_module'].deriv_func_mcpi)
+        # if deriv_func_bck is not None:
+        #     print('Loaded deriv_func from cache')
+        #     self.deriv_func = deriv_func_bck
+        #     self.saved_deriv_func = True
+        # else:
         self.deriv_func = out_ws['code_module'].deriv_func_mcpi
+
         self.mcpi_eom = make_mcpi_eom(self.deriv_func)
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
@@ -442,6 +459,11 @@ class QCPI(BaseAlgorithm):
 
         # Return initial guess if it failed to converge
         sol = solinit
+        if not self.saved_deriv_func:
+            with open('codecache.pkl','wb') as f:
+                f.write(cloudpickle.dumps(self.deriv_func))
+            self.saved_deriv_func = True
+            print('Saved deriv_func to file')
         if converged:
             if len(tspan) > 2:
                 _, x_out = mcpi(self.mcpi_eom, tspan, x_new[-1, :nOdes], args=(const,))
