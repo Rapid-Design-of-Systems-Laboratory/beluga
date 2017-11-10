@@ -14,16 +14,10 @@ plots.add_plot().line('xbar','ybar',label='traj1') \
 plots.add_plot().line('t','sqrt((xbar-xbar2)**2 + (ybar-ybar2)**2)',label='Actual S21') \
                 .line('t','sqrt((xbar-xc)**2 + (ybar-yc)**2)',label='Actual S1C') \
                 .line('t','sqrt((xbar2-xc)**2 + (ybar2-yc)**2)',label='Actual S2C') \
-                .line('t','sqrt(S21)',label='sqrt(S21)',style='o')\
-                .line('t','sqrt(S1C)',label='sqrt(S1C)',style='o')\
-                .line('t','sqrt(S2C)',label='sqrt(S2C)',style='o')\
-                .line('t','0.2*t/t',label='rc')\
+                .line('t','rj',label='rj')\
                 .xlabel('t').ylabel('Distance')
 
-u21 = '(1/(1+exp(-20*(rc**2-S2C)/rc**2)))'
-commLim = f'{u21}*rj + (1-{u21})*rsep'
-plots.add_plot().line('t',f'sqrt(S21)/commLimit',label='constraint')\
-                .line('t',commLim,label='commLimit')\
+plots.add_plot().line('t','((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit',label='constraint')
 
 # plots.add_plot().line('t',u21,label='u21')
 #
