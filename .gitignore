@@ -1,3 +1,4 @@
+codecache.pkl
 *.pyc
 __pycache__
 *.html
