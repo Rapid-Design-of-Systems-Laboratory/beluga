@@ -1,23 +1,31 @@
+import matplotlib
+matplotlib.use('TkAgg')
 from beluga.visualization import BelugaPlot
 import matplotlib.pyplot as plt
-plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot('./data3.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+
+# data3.dill in 2815.9161 seconds (full traj with rj=0.15, eps=1e-6)
 
 # plots.add_plot().line('x*V*tfreal','y*V*tfreal')                    \
 #                 .xlabel('x(t)').ylabel('y(t)')      \
 #                 .title('Trajectory')
-plots.add_plot().line('xbar','ybar',label='traj1') \
-                .line('xbar2','ybar2',label='traj2') \
+plots.add_plot().line3d('xbar','ybar','-zbar',label='traj1') \
+                .line3d('xbar2','ybar2','-zbar2',label='traj2') \
                 .xlabel('x(t)').ylabel('y(t)')      \
                 .title('Trajectory') \
                 .postprocess(lambda a,b,c: plt.axis('equal'))
 
-plots.add_plot().line('t','sqrt((xbar-xbar2)**2 + (ybar-ybar2)**2)',label='Actual S21') \
-                .line('t','sqrt((xbar-xc)**2 + (ybar-yc)**2)',label='Actual S1C') \
-                .line('t','sqrt((xbar2-xc)**2 + (ybar2-yc)**2)',label='Actual S2C') \
+plots.add_plot().line('t','eps_comm1')
+
+plots.add_plot().line('t','sqrt((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit',label='Actual constraint val') \
+                .line('t','commLimit',label='commLimit') \
                 .line('t','rj',label='rj')\
                 .xlabel('t').ylabel('Distance')
-
-plots.add_plot().line('t','((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit',label='constraint')
+# S2C1 = '((xbar2--0.6)**2)'
+# S2C2 = '((xbar2--0.2)**2)'
+# u212 = f'( (1/(1+exp(-20*(0.05**2-{S2C1})/0.05**2)) + 1/(1+exp(-20*(0.05**2-{S2C2})/0.05**2))) )'
+# # plots.add_plot().line('t','((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit',label='constraint')
+# plots.add_plot().line('xbar',f'{u212}',label='lim')
 
 # plots.add_plot().line('t',u21,label='u21')
 #
