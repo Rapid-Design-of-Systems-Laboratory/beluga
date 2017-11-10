@@ -75,7 +75,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-3,
                     max_iterations=250,
                     verbose = True,
-                    N=101
+                    N=121,
 )
 
 guess_maker = beluga.guess_generator('file',filename='data-2d2v-rj08.dill', iteration=-1, step=-1)
@@ -84,7 +84,18 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(4) \
-                .const('rj',0.5)
+                .const('rj',0.15)\
+                .const('xc',-0.4)
+
+# 995 econds to go from 0.8 to 0.15
+
+guess_maker = beluga.guess_generator('file',filename='data-2d2v-rj015.dill', iteration=-1, step=-1)
+
+continuation_steps = beluga.init_continuation()
+
+continuation_steps.add_step('bisection') \
+                .num_cases(4) \
+                .const('rj',0.10)
 
 
 beluga.solve(ocp,
