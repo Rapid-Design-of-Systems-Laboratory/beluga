@@ -2,6 +2,8 @@ from beluga.visualization.renderers import BaseRenderer
 from matplotlib.pyplot import *
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 class MatPlotLib(BaseRenderer):
@@ -65,11 +67,17 @@ class MatPlotLib(BaseRenderer):
             colors = [None]*num_lines
 
         i = 0
+        ax3d = None
         for line in p.plot_data:
             has_legend = has_legend or (line['label'] is not None)
             override_color = None
             if isinstance(line['style'], dict):
                 override_color = line['style'].pop('color', None)
+
+            if line['type'] == 'line3d':
+                fig = self._get_figure(f)
+                if ax3d is None:
+                    ax3d = fig.add_subplot(111, projection='3d')
 
             for dataset in line['data']:
                 # Allow overriding colormap fom style vector
@@ -78,12 +86,22 @@ class MatPlotLib(BaseRenderer):
                 else:
                     line_color = colors[i]
 
-                if(len(dataset['x_data'])!=len(dataset['y_data'])):
-                    continue
-                if isinstance(line['style'], str):
-                    plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh, color=line_color,)
-                elif isinstance(line['style'], dict):
-                    plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh, color=line_color,**line['style'])
+                if line['type'] == 'line3d':
+                    if(len(dataset['x_data'])!=len(dataset['y_data'])):
+                        continue
+
+                    if isinstance(line['style'], str):
+                        ax3d.plot3D(dataset['x_data'],dataset['y_data'],dataset['z_data'],line['style'],label=line['label'],figure=fh, color=line_color,)
+                    elif isinstance(line['style'], dict):
+                        ax3d.plot3D(dataset['x_data'],dataset['y_data'],dataset['z_data'],label=line['label'],figure=fh, color=line_color,**line['style'])
+                else:
+                    if(len(dataset['x_data'])!=len(dataset['y_data'])):
+                        continue
+
+                    if isinstance(line['style'], str):
+                        plot(dataset['x_data'],dataset['y_data'],line['style'],label=line['label'],figure=fh, color=line_color,)
+                    elif isinstance(line['style'], dict):
+                        plot(dataset['x_data'],dataset['y_data'],label=line['label'],figure=fh, color=line_color,**line['style'])
                 i += 1
         if has_legend:
             fh.gca().legend()
