@@ -154,8 +154,12 @@ class Solution(object):
             self.qvars = {q['name']:q['expr'] for q in problem_data['quantity_list']}
         else:
             self.qvars = problem_data.get('quantity_vars', {})
-        variables += [(str(q_k), ne.evaluate(str(q_v), dict(variables)))
-                      for q_k, q_v in self.qvars.items()]
+
+        qvars = []
+        for q_k, q_v in self.qvars.items():
+            qvars.append((str(q_k), ne.evaluate(str(q_v), dict(variables+qvars))))
+
+        variables += qvars
         self.var_dict = dict(variables)
         self.var_dict['pi'] = math.pi
 
