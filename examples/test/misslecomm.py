@@ -13,11 +13,12 @@ ocp.state('xbar', 'xbardot', 'nd')\
    .state('psi', '10*abar', 'nd')
 ocp.control('abar','nd')
 
-ocp.quantity('xbar2dot','cos(psi2)')
-ocp.quantity('ybar2dot','sin(psi2)')
+ocp.quantity('xbar2dot','vbar2*cos(psi2)')
+ocp.quantity('ybar2dot','vbar2*sin(psi2)')
 ocp.state('xbar2', 'xbar2dot', 'nd')\
    .state('ybar2', 'ybar2dot', 'nd')\
-   .state('psi2', '10*abar2', 'nd')
+   .state('psi2', '10*abar2', 'nd')\
+   .state('vbar2', '0', 'nd/s')
 
 ocp.control('abar2','nd')
 
@@ -25,17 +26,15 @@ ocp.control('abar2','nd')
 ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.0,'nd')
 ocp.constant('rc',0.2,'nd')
-ocp.constant('rj',1.0,'nd')
+ocp.constant('rj',0.8,'nd')
 ocp.constant('rsep',10,'nd')
-
-# ocp.state('S1C','2*(xbar-xc)*xbardot+2*(ybar-yc)*ybardot','nd^2')
-# ocp.state('S2C','2*(xbar2-xc)*xbar2dot+2*(ybar2-yc)*ybar2dot','nd^2')
-# ocp.state('S21','2*(xbar2-xbar)*(xbar2dot-xbardot) + 2*(ybar2-ybar)*(ybar2dot-ybardot)','nd^2')
 
 ocp.quantity('S2C','((xbar2-xc)**2 + (ybar2-yc)**2)')
 ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
 ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
-ocp.constraints().path('comm1','((xbar-xbar2)**2 + (ybar-ybar2)**2)','<','commLimit','nd',start_eps=1e-1)
+ocp.constraints().path('comm1','((xbar-xbar2)**2 + (ybar-ybar2)**2)/commLimit','<',1,'nd',start_eps=1e-1)
+
+
 # ocp.state('xbar3', 'cos(psi3)', 'nd')\
 #    .state('ybar3', 'sin(psi3)', 'nd')\
 #    .state('psi3', '10*abar3', 'nd')
@@ -51,9 +50,6 @@ ocp.constraints().path('comm1','((xbar-xbar2)**2 + (ybar-ybar2)**2)','<','commLi
 #    .state('psi5', '10*abar5', 'nd')
 # ocp.control('abar5','nd')
 
-# Define constants
-ocp.constant('V',300,'m/s')
-ocp.constant('tfreal',50,'s')
 
 # Define costs
 # ocp.path_cost('abar^2 + abar2^2 + abar3^2 + abar4^2 + 0^2','nd')
@@ -121,33 +117,34 @@ ocp.constraints() \
 # 106(14) seconds for 3 vehicle unconstrained (with u constraints)
 # 75(10) seconds for 2 vehicle unconstrainted  (with u constraints)
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
-
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        tolerance=1e-3,
-                        max_iterations=50,
-                        verbose = True,
-                        derivative_method='fd',
-                        max_error=100,
-             )
+#
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+#                         tolerance=1e-3,
+#                         max_iterations=50,
+#                         verbose = True,
+#                         derivative_method='fd',
+#                         max_error=100,
+#              )
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-3,
-                    max_iterations=200,
+                    max_iterations=250,
                     verbose = True,
-                    N=41
+                    N=31
 )
+#
+# guess_maker = beluga.guess_generator('auto',
+#                 start=[-.8,0.,0]+[-.8,.1,0.0,1.0],
+#                 direction='forward',
+#                 costate_guess = [0.0, 0.0, -0.01]+[0.0,0.0,0.01,0.0],#+[0.01,0.01],#+[0,0]*2,
+#                 control_guess = [+0.005, -0.005],#+[0.00,0.0],
+#                 time_integrate=0.1
+# )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[-.8,0.,-pi/12]+[-.8,.1,0.]+[0.16,0.17,0.01],
+                start=[-.8,0.,pi/12]+[-.8,.1,0.0,1.0],
                 direction='forward',
-                costate_guess = [0.0, 0.0, -0.01]+[0.0,0.0,0.01]+[0.0,0.0,0.0],#+[0.01,0.01],#+[0,0]*2,
-                control_guess = [+0.005, -0.005],#+[0.00,0.0],
-                time_integrate=0.1
-)
-guess_maker = beluga.guess_generator('auto',
-                start=[-.8,0.,-pi/12]+[-.8,.1,0.],#+[0.16,0.17,0.01],
-                direction='forward',
-                costate_guess = [0.0, 0.0, -0.01]+[0.0,0.0,0.01]+[0.01,0.01],#+[0,0]*2,
+                costate_guess = [0.0, 0.0, -0.01]+[0.0,0.0,0.01,0.0]+[0.01,0.01],#+[0,0]*2,
                 control_guess = [+0.005, -0.005]+[0.00,0.0],
                 time_integrate=0.1
 )
@@ -155,13 +152,13 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(21) \
                 .terminal('xbar', 0.0)\
                 .terminal('ybar', 0.0) \
-                .terminal('psi', +15*pi/180) \
+                .terminal('psi', +30*pi/180) \
                 .terminal('xbar2', 0.0)\
                 .terminal('ybar2', 0.0) \
-                .terminal('psi2', -30*pi/180) \
+                .terminal('psi2', -60*pi/180) \
                 # .initial('xbar2', -0.8) \
                 # .initial('ybar2', 0.1) \
                 # .terminal('xbar2', 0.0)\
