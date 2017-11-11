@@ -2,7 +2,7 @@ import numpy as np
 from math import *
 
 import scipy.linalg
-from math import *
+import numba
 
 def im(Z):
     return Z.imag
@@ -90,18 +90,14 @@ def get_dhdu_func(_t,_X,_p,_aux):
 
     return dHdu
 
-def deriv_func(_t,_X,_p,_aux,arc_idx=0):
+def deriv_func_nojit(_t,_X,_p,_const,arc_idx=0):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
     # Declare all auxiliary variables
-{{#aux_list}}
-{{#vars}}
-    {{.}} = _aux['{{type}}']['{{.}}']
-{{/vars}}
-{{/aux_list}}
+    {{#aux_list}}{{#vars}}{{.}},{{/vars}}{{/aux_list}} = _const
 
     # Declare all predefined expressions
 {{#quantity_list}}
@@ -132,5 +128,6 @@ def deriv_func(_t,_X,_p,_aux,arc_idx=0):
        {{/dae_eom_list}}]
     )
 
-
-deriv_func_ode45 = deriv_func
+deriv_func = numba.jit(nopython=True, parallel=True)(deriv_func_nojit)
+def deriv_func_ode45(_t,_X,_p,_aux):
+    return deriv_func(_t,_X,_p,list(_aux['const'].values()))
