@@ -26,7 +26,7 @@ ocp.constraints() \
     .initial('v-v_0','m/s')  \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m') \
-    .path('constraint1','y + x','>',-1.0,'m',start_eps=1.0)
+    .path('constraint1','y + x','>',-1.0,'m',start_eps=1e-1)
     # .path('constraint2','y + 0.75*x','>',-2,'m')  #\
 
 
@@ -56,7 +56,7 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-continuation_steps.add_step('bisection').num_cases(21,spacing='log') \
+continuation_steps.add_step('bisection').num_cases(5,spacing='log') \
                  .const('eps_constraint1', 1e-5)
 
 beluga.solve(ocp,

@@ -22,7 +22,7 @@ ocp.quantity('zbar2dot','-vbar2*sin(gam2)')
 ocp.state('xbar2', 'xbar2dot', 'nd')\
    .state('ybar2', 'ybar2dot', 'nd')\
    .state('zbar2', 'zbar2dot', 'nd')\
-   .state('psi2', '10*abar2/vbar2', 'nd')\
+   .state('psi2', '10*abar2', 'nd')\
    .state('vbar2', '0', 'nd/s')
 
 ocp.control('abar2','nd')
@@ -37,9 +37,8 @@ ocp.constant('rc',.1,'nd')
 # ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
 # ocp.quantity('S21','(xbar2-xbar)**2 + (ybar2-ybar)**2')
 # ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
-ocp.constraints().path('u1','abar','<>',1,'nd',start_eps=1e-4)\
-                 .path('u2','abar2','<>',1,'nd',start_eps=1e-4)\
-                 # .path('comm1','S21/commLimit','<',1,'nd',start_eps=1e-4)
+ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-2)\
+                 .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-2)
 
 # Define constants
 ocp.constant('V',300,'m/s')
@@ -77,10 +76,10 @@ ocp.constraints() \
 # 114(20) seconds for 4 vehicles with u constraint
 # 106(14) seconds for 3 vehicle unconstrained (with u constraints)
 # 75(10) seconds for 2 vehicle unconstrainted  (with u constraints)
-ocp.scale(m=1, s=1, kg=1, rad=1, nd='xbar')
+ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        tolerance=1e-3,
+                        tolerance=1e-4,
                         max_iterations=50,
                         verbose = True,
                         derivative_method='fd',
@@ -90,23 +89,31 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 guess_maker = beluga.guess_generator('auto',
                 start=[-.8,0.,-.1,-pi/12]+[-.8,.1,-.1,0.,1.],
                 direction='forward',
-                costate_guess = [0., 0., 0., -0.]+[0.,0.,0.,0.,0.1],#+[0.]
-                control_guess = [+0.0, -.1, -0.0, -.1]+[0.1,0.1,0.1,0.1],
-                time_integrate=.1
+                costate_guess = [0., 0., 0., -0.1]+[0.,0.,0.,0.1,0.]+[0.,0.],
+                control_guess = [0.05, -.0, -0.05, -.0]+[0.0,0.0]*2,
+                time_integrate=.1,
+                use_control_guess=True,
 )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
+                .num_cases(5) \
+                .terminal('xbar', -0.4)\
+                .terminal('ybar', -.25) \
+                .terminal('zbar', 0.) \
+                .terminal('psi', +15*pi/180) \
+                .terminal('xbar2', -.4)\
+                .terminal('ybar2', .25) \
+                .terminal('zbar2', 0.) \
+                .terminal('psi2', -15*pi/180) \
+
+continuation_steps.add_step('bisection') \
                 .num_cases(21) \
                 .terminal('xbar', 0.)\
                 .terminal('ybar', 0.) \
-                .terminal('zbar', 0.) \
-                .terminal('psi', +15*pi/180) \
                 .terminal('xbar2', 0.)\
-                .terminal('ybar2', 0.) \
-                .terminal('zbar2', 0.) \
-                .terminal('psi2', -15*pi/180) \
+                .terminal('ybar2', 0.)
 
 
 beluga.solve(ocp,

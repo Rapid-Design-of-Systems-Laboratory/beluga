@@ -1,4 +1,5 @@
 # from autodiff import Function, Gradient
+import sys
 import numpy as np
 
 import beluga
@@ -258,8 +259,10 @@ class MultipleShooting(BaseAlgorithm):
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
 
-        self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
+        # self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
+        self.stm_ode_func = self.make_stmode(self.bvp.deriv_func, problem_data['nOdes'])
         self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
+        sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
 
     def bc_jac_params():
@@ -327,37 +330,38 @@ class MultipleShooting(BaseAlgorithm):
         J[:,nOdes*num_arcs:] = P
         return J
 
+    def make_stmode(self, odefn, nOdes):
+        @numba.njit(parallel=True)
+        def _stmode_fd(x, y, p, aux, arc_idx, StepSize=1e-7):
+            "Finite difference version of state transition matrix"
+            # N = y.shape[0]
+            # nOdes = int(0.5*(sqrt(4*N+1)-1))
+            F = np.zeros((nOdes,nOdes))
+            # phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+            phi = y[nOdes:].reshape((nOdes,nOdes))
+            Y = y[0:nOdes]  # Just states
 
-    def _stmode_fd(self, x, y, p, aux, arc_idx, odefn, StepSize=1e-7,show=False):
-        "Finite difference version of state transition matrix"
-        N = y.shape[0]
-        nOdes = int(0.5*(sqrt(4*N+1)-1))
 
-        phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-        Y = np.array(y[0:nOdes], copy=True)  # Just states
-        F = np.zeros((nOdes,nOdes))
+            # Compute Jacobian matrix, F using finite difference
+            fx = odefn(x,Y,p,aux,arc_idx)
+            # if np.any(np.isnan(fx)):
+            #     print('NAAAAAAAAAAAN')
+            #     raise ValueError('NAAAN')
+                # from beluga.utils import keyboard
+                # keyboard()
 
-        # Compute Jacobian matrix, F using finite difference
-        fx = odefn(x,Y,p,aux,arc_idx)
-        # if show:
-        #     print(x, fx, self.bvp.deriv_func(x,Y,p,aux,arc_idx))
-        #     from beluga.utils import keyboard
-        #     keyboard()
-        if np.any(np.isnan(fx)):
-            print('NAAAAAAAAAAAN')
-            raise ValueError('NAAAN')
-            # from beluga.utils import keyboard
-            # keyboard()
+            Yh = np.eye(nOdes)*StepSize
+            for i in numba.prange(nOdes):
+                y_h = Y + Yh[i,:]
+                fxh = odefn(x, y_h, p,aux,arc_idx)
+                F[:,i] = (fxh-fx)/StepSize
 
-        Yh = y[:nOdes] + np.eye(nOdes)*StepSize
-        for i,y_h in enumerate(Yh):
-            # Y[i] = Y[i] + StepSize
-            F[:,i] = (odefn(x, y_h, p,aux,arc_idx)-fx)/StepSize
-            # Y[i] = Y[i] - StepSize
+            # Phidot = F*Phi (matrix product)
+            phiDot = F @ phi
+            # return np.hstack( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
+            return np.hstack( (fx, phiDot.reshape(nOdes*nOdes)) )
 
-        # Phidot = F*Phi (matrix product)
-        phiDot = F @ phi
-        return np.hstack( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
+        return _stmode_fd
 
     def solve(self,solinit):
         """Solve a two-point boundary value problem
@@ -380,6 +384,7 @@ class MultipleShooting(BaseAlgorithm):
         bc_func = self.bvp.bc_func
 
         aux = solinit.aux
+        const =[np.float64(_) for _ in aux['const'].values()]
         # Only the start and end times are required for ode45
         arcs = solinit.arcs
 
@@ -428,8 +433,8 @@ class MultipleShooting(BaseAlgorithm):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
-
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
+                        # t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-6, reltol=1e-4)
                         y_list.append(yy[:,:nOdes].T)
                         x_list.append(t)
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
@@ -538,6 +543,7 @@ class MultipleShooting(BaseAlgorithm):
             timestep_ctr = 0
             for arc_idx, tt in enumerate(x_list):
             #     tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+            #     tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
             #     y_list.append(yy.T)
             #     x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
