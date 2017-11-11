@@ -13,13 +13,15 @@ else:
 
 def add_cylinder(r,f,p):
     ax = plt.gca()
-    ax.set_zlabel('z(t)')
+    ax.set_zlabel('z(t) [km]')
     # Cylinder
-    x_center = -0.4
-    y_center = 0.0
-    radius = 0.1
-    elevation = 0.0
-    height = 0.1
+    ax.invert_zaxis()
+
+    x_center = -0.6*300*50/1e3
+    y_center = 0.0*300*50/1e3
+    radius = 0.1*300*50/1e3
+    elevation = -0.1*300*50/1e3
+    height = 0.1*300*50/1e3
     resolution = 20
     x = np.linspace(x_center-radius, x_center+radius, resolution)
     z = np.linspace(elevation, elevation+height, resolution)
@@ -34,21 +36,33 @@ def add_cylinder(r,f,p):
 
 # plots = BelugaPlot('./data-3s3-202.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 plots = BelugaPlot(filename,default_sol=-1,default_step=-1, renderer='matplotlib')
-#
-# plots.add_plot().line('xbar','ybar',label='traj1')\
-#                 .line('xbar2','ybar2',label='traj2')\
-#                 .line('xc+rc*cos(2*pi*t/tf)','yc+rc*sin(2*pi*t/tf)')\
-#                 .xlabel('x(t)').ylabel('y(t)')\
-#                 .title('Trajectory') \
-#                 .postprocess(lambda a,b,c: plt.axis('equal'))
 
-plots.add_plot().line3d('xbar','ybar','-zbar',label='traj1')\
-                .line3d('xbar2','ybar2','-zbar2',label='traj2')\
+plots.add_plot().line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',label='traj1')\
+                .line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',label='traj2')\
+                .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)')\
                 .xlabel('x(t)').ylabel('y(t)')\
+                .title('Trajectory') \
+                .postprocess(lambda a,b,c: plt.axis('equal'))
+
+plots.add_plot().line3d('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3','zbar*V*tfreal/1e3',label='traj1')\
+                .line3d('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3',label='traj2')\
+                .xlabel('x(t) [km]').ylabel('y(t) [km]')\
                 .postprocess(add_cylinder)
 
-# plots.add_plot().line('t','xi11',label='xi11')\
-#                 .line('t','xi21',label='xi21')\
+# S1C =f'(xbar--0.3)'
+S2C =f'(xbar2--0.3)'
+# u1c =f'(1/(1+exp(-40*{S1C})))'
+u2c =f'(1/(1+exp(-40*{S2C})))'
+#
+S21 =f'(ybar2-ybar)'
+sLimit = f'{u1c}*0.1 + (1-{u1c})*1.0'
+#
+plots.add_plot().line('xbar',sLimit,label='constr')\
+                .line('xbar',S21,label='dist')\
+                .xlabel('x(t) [km]').ylabel('y(t) [km]')\
+
+plots.add_plot().line('t','xbar',label='xi11')\
+                .line('t','xbar2',label='xi21')\
 #                 .line('t','xi31',label='xi31')
 #                 .line('x2','y2',label='traj2')\
 #                 .line('xc+rc*cos(2*pi*t/tf)','yc+rc*sin(2*pi*t/tf)')\

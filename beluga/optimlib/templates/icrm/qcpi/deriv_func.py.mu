@@ -137,3 +137,6 @@ def deriv_func_nojit(_t,_X,_p,_const):
 
 num_dae_vars = {{dae_var_num}}
 deriv_func = numba.njit(parallel=True,cache=False)(deriv_func_nojit)
+
+#{{#state_list}}{{.}},{{/state_list}}]
+#{{#dae_var_list}}{{.}},{{/dae_var_list}}]

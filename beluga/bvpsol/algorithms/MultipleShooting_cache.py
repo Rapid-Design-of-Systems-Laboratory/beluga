@@ -1,6 +1,5 @@
 # from autodiff import Function, Gradient
 import sys
-import os
 import numpy as np
 
 import beluga
@@ -15,11 +14,12 @@ import numba
 from math import *
 import logging
 import imp
+import os
 import functools as ft
 import itertools as it
 import sympy as sym
 import pystache
-
+import cloudpickle
 import simplepipe as sp
 import math
 
@@ -216,7 +216,7 @@ def compile_code_py(code_string, module, function_name):
     # For security
     module.__dict__.update({'__builtin__':{}})
     exec(code_string, module.__dict__)
-    return getattr(module,function_name,None)
+    return getattr(module,function_name)
 
 PythonCodeGen = sp.Workflow([
     # Create module for holding compiled code
@@ -243,6 +243,8 @@ PythonCodeGen = sp.Workflow([
 ], description='Generates and compiles the required BVP functions from problem data')
 
 import pickle
+from inspect import signature
+
 class MultipleShooting(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True):
         self.tolerance = tolerance
@@ -250,7 +252,7 @@ class MultipleShooting(BaseAlgorithm):
         self.verbose = verbose
         self.max_error = max_error
         self.derivative_method = derivative_method
-        self.cached = cached
+        self.cached = False
         self.saved_code = True
         if derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
@@ -264,42 +266,38 @@ class MultipleShooting(BaseAlgorithm):
 
     def save_code(self):
         logging.info('Saving compiled code ...')
-        bvp_data = {'deriv_fn': self.out_ws['code_module'].deriv_func}
+        bvp_data = {'deriv_fn': self.out_ws['code_module'].deriv_func
+                    }#'stmode_fn': self.stm_ode_func}
         with open('codecache.pkl','wb') as f:
-            pickle.dump(bvp_data,f,pickle.HIGHEST_PROTOCOL)
+            f.write(pickle.dumps(bvp_data))
 
     def deriv_func_ode45(self,_t,_X,_p,_aux):
         return self.out_ws['code_module'].deriv_func(_t,_X,_p,list(_aux['const'].values()),0)
 
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
-        out_ws = PythonCodeGen({'problem_data': problem_data})
-        print(out_ws['bc_func_code'])
-        print(out_ws['deriv_func_code'])
         cache_exists = os.path.isfile('codecache.pkl')
+        out_ws = PythonCodeGen({'problem_data': problem_data})
         if not self.cached or not cache_exists:
             print(out_ws['bc_func_code'])
             print(out_ws['deriv_func_code'])
-            deriv_func = numba.njit(parallel=True)(out_ws['code_module'].deriv_func_nojit)
-            out_ws['deriv_func_fn'] = deriv_func
-            out_ws['code_module'].deriv_func = deriv_func
+            self.stm_ode_func = self.make_stmode(out_ws['deriv_func_fn'], problem_data['nOdes'])
             self.saved_code = False
         else:
             bvp_data = self.load_code()
-            print('deriv func',id(bvp_data['deriv_fn']))
-            # del out_ws['code_module'].deriv_func
-            # del out_ws['code_module'].deriv_func_nojit
             out_ws['deriv_func_fn'] = bvp_data['deriv_fn']
             out_ws['code_module'].deriv_func = bvp_data['deriv_fn']
+            # self.stm_ode_func = bvp_data['stmode_fn']
+            self.stm_ode_func = self.make_stmode(bvp_data['deriv_fn'], problem_data['nOdes'])
 
+
+        out_ws['code_module'].deriv_func_ode45 = self.deriv_func_ode45
         self.out_ws = out_ws
-        # self.stm_ode_func = self.make_stmode(out_ws['deriv_func_fn'], problem_data['nOdes'])
         self.bvp = BVP(out_ws['deriv_func_fn'],
                        out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
-
         # self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
-        self.stm_ode_func = self.make_stmode(self.bvp.deriv_func, problem_data['nOdes'])
         self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
+
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
 
@@ -370,38 +368,35 @@ class MultipleShooting(BaseAlgorithm):
 
     def make_stmode(self, odefn, nOdes, StepSize=1e-7):
         @numba.njit(parallel=True)
-        def _stmode_fd(t, _X, p, const, arc_idx):
+        def _stmode_fd(x, y, p, aux, arc_idx):
             "Finite difference version of state transition matrix"
             # N = y.shape[0]
             # nOdes = int(0.5*(sqrt(4*N+1)-1))
             F = np.zeros((nOdes,nOdes))
             # phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
-            phi = _X[nOdes:].reshape((nOdes,nOdes))
-            X = _X[0:nOdes]  # Just states
+            phi = y[nOdes:].reshape((nOdes,nOdes))
+            Y = y[0:nOdes]  # Just states
 
 
             # Compute Jacobian matrix, F using finite difference
-            fx = odefn(t,X,p,const,arc_idx)
+            fx = odefn(x,Y,p,aux,arc_idx)
             # if np.any(np.isnan(fx)):
             #     print('NAAAAAAAAAAAN')
             #     raise ValueError('NAAAN')
                 # from beluga.utils import keyboard
                 # keyboard()
 
-            Xh = np.eye(nOdes)*StepSize
+            Yh = np.eye(nOdes)*StepSize
             for i in numba.prange(nOdes):
-                x_h = X + Xh[i,:]
-                fxh = odefn(t, x_h, p,const,arc_idx)
+                y_h = Y + Yh[i,:]
+                fxh = odefn(x, y_h, p,aux,arc_idx)
                 F[:,i] = (fxh-fx)/StepSize
 
             # Phidot = F*Phi (matrix product)
             phiDot = F @ phi
-            # return np.hstack( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
             return np.hstack( (fx, phiDot.reshape(nOdes*nOdes)) )
 
-        def wrapper(t, _X, p, const, arc_idx): # needed for scipy
-            return _stmode_fd(t, _X, p, const, arc_idx)
-        return wrapper
+        return _stmode_fd
 
     def solve(self,solinit):
         """Solve a two-point boundary value problem
@@ -468,6 +463,7 @@ class MultipleShooting(BaseAlgorithm):
                 phi_list = []
                 x_list = []
                 y_list = []
+
                 with timeout(seconds=1000):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
@@ -482,6 +478,7 @@ class MultipleShooting(BaseAlgorithm):
                         yb[:,arc_idx] = yy[-1,:nOdes]
                         phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
                         phi_list.append(np.copy(phi))
+
                 if n_iter == 1:
                     if not self.saved_code:
                         self.save_code()
@@ -502,8 +499,8 @@ class MultipleShooting(BaseAlgorithm):
 
                 # r1 = np.linalg.norm(res)
                 r1 = max(abs(res))
-                # if r0 is not None and r1 > self.tolerance*10 and abs(r1-r0)<self.tolerance:
-                #     raise RuntimeError('Not enough change in residual. Stopping ...')
+                if r0 is not None and r1 > self.tolerance*10 and abs(r1-r0)<self.tolerance:
+                    raise RuntimeError('Not enough change in residual. Stopping ...')
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
 
