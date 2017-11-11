@@ -37,8 +37,10 @@ ocp.constant('rc',.1,'nd')
 # ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
 # ocp.quantity('S21','(xbar2-xbar)**2 + (ybar2-ybar)**2')
 # ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
-ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-2)\
-                 .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-2)
+ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
+                 .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
+                 .path('u1','abar','<>',1,start_eps=1e-6)\
+                 .path('u2','abar2','<>',1,start_eps=1e-6)\
 
 # Define constants
 ocp.constant('V',300,'m/s')
@@ -47,7 +49,7 @@ ocp.constant('tfreal',50,'s')
 # Define costs
 # ocp.path_cost('abar^2 + abar2^2 + abar3^2 + abar4^2 + 0^2','nd')
 ocp.path_cost('abar^2 + gam^2 + abar2^2 + gam2^2', 'nd')
-# ocp.path_cost('1','s')
+ocp.path_cost('1','s')
 
 # Define constraints
 ocp.constraints() \
@@ -79,7 +81,7 @@ ocp.constraints() \
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        tolerance=1e-4,
+                        tolerance=1e-3,
                         max_iterations=50,
                         verbose = True,
                         derivative_method='fd',
@@ -90,7 +92,7 @@ guess_maker = beluga.guess_generator('auto',
                 start=[-.8,0.,-.1,-pi/12]+[-.8,.1,-.1,0.,1.],
                 direction='forward',
                 costate_guess = [0., 0., 0., -0.1]+[0.,0.,0.,0.1,0.]+[0.,0.],
-                control_guess = [0.05, -.0, -0.05, -.0]+[0.0,0.0]*2,
+                control_guess = [0.05, -.0, -0.05, -.0]+[0.0,0.0]*4,
                 time_integrate=.1,
                 use_control_guess=True,
 )
