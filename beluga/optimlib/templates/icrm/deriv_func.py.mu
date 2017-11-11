@@ -90,7 +90,7 @@ def get_dhdu_func(_t,_X,_p,_aux):
 
     return dHdu
 
-def deriv_func_nojit(_t,_X,_p,_const,arc_idx=0):
+def deriv_func_nojit(_t,_X,_p,_const,arc_idx):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
@@ -104,30 +104,30 @@ def deriv_func_nojit(_t,_X,_p,_const,arc_idx=0):
     {{name}} = {{expr}}
 {{/quantity_list}}
 
-    #Xdot = np.array([{{#deriv_list}}{{.}},
-    #                 {{/deriv_list}}])/tf
-    #dg     = compute_jacobian_fd(_X, _const)
-    #dgdX   = dg[:,:{{num_states}}]
-    #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-    #     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}),dtype=np.float64)
-    #     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1),dtype=np.float64)
-    #     dgdX[:] = 0.0 # Fix for numba bug
-    # {{#dgdX}}
-    #     {{.}}
-    # {{/dgdX}}
-    #     dgdU[:] = 0.0 # Fix for numba bug
-    # {{#dgdU}}
-    #     {{.}}
-    # {{/dgdU}}
-
-    # udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
-    # return np.hstack((Xdot, udot))*tf
+#     Xdot = np.array([{{#deriv_list}}{{.}},
+#                     {{/deriv_list}}])/tf
+#     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}),dtype=np.float64)
+#     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1),dtype=np.float64)
+#     dgdX[:] = 0.0 # Fix for numba bug
+# {{#dgdX}}
+#     {{.}}
+# {{/dgdX}}
+#     dgdU[:] = 0.0 # Fix for numba bug
+# {{#dgdU}}
+#     {{.}}
+# {{/dgdU}}
+#
+#     udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
+#     return np.hstack((Xdot, udot))*tf
     return np.array([{{#deriv_list}}{{.}},
        {{/deriv_list}}]+
        [{{#dae_eom_list}}{{.}},
        {{/dae_eom_list}}]
     )
 
-deriv_func = numba.jit(nopython=True, parallel=True)(deriv_func_nojit)
+#deriv_func = numba.jit(nopython=True, parallel=True)(deriv_func_nojit)
 def deriv_func_ode45(_t,_X,_p,_aux):
-    return deriv_func(_t,_X,_p,list(_aux['const'].values()))
+    return deriv_func(_t,_X,_p,list(_aux['const'].values()),0)
+
+#{{#state_list}}{{.}},{{/state_list}}]
+#{{#dae_var_list}}{{.}},{{/dae_var_list}}]

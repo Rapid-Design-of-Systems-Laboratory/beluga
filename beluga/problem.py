@@ -18,7 +18,7 @@ from itertools import zip_longest
 
 from beluga.bvpsol import Scaling
 from beluga.integrators import ode45
-from beluga.utils import sympify
+from beluga.utils import sympify, tic, toc
 from beluga.continuation import ContinuationList
 
 
@@ -355,7 +355,7 @@ class GuessGenerator(object):
 
         sol = out['solution'][self.step][self.iteration]
         sol.extra = None
-        
+
         fp.close()
 
         logging.info('Initial guess loaded')
@@ -433,13 +433,17 @@ class GuessGenerator(object):
             print('dae_x0',dae_x0)
             x0 = np.append(x0, dae_x0)  # Add dae states
 
+        print('guess ode',id(bvp_fn.deriv_func))
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
 
         if self.direction =='reverse':
             tspan = [0, -1]
-        [t, x] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
 
+        tic()
+        [t, x] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
+        elapsed_time = toc()
+        logging.debug('Propagated initial guess in %.2f seconds'%elapsed_time)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
         solinit.x = t
         solinit.y = x.T

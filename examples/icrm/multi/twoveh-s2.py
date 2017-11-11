@@ -32,15 +32,25 @@ ocp.control('gam2','nd')
 ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.,'nd')
 ocp.constant('rc',.1,'nd')
-#
-# ocp.quantity('S2C','((xbar2-xc)**2 + (ybar2-yc)**2)')
-# ocp.quantity('u21','(1/(1+exp(-20*(rc**2-S2C)/rc**2)))')
-# ocp.quantity('S21','(xbar2-xbar)**2 + (ybar2-ybar)**2')
-# ocp.quantity('commLimit','u21*rj**2 + (1-u21)*rsep**2')
+
+ocp.constant('xc2',-0.30,'nd')
+ocp.constant('yc2',-0.0,'nd')
+
+ocp.constant('Smin',0.1,'nd')
+ocp.constant('Smax',1.0,'nd')
+
+ocp.quantity('S1C','(xbar-xc2)')
+ocp.quantity('S2C','(xbar2-xc2)')
+ocp.quantity('u1c','(1/(1+exp(-40*S1C)))')
+ocp.quantity('u2c','(1/(1+exp(-40*S2C)))')
+ocp.quantity('S21','(ybar2-ybar)')
+ocp.quantity('distLimit','u2c*Smin + (1-u2c)*Smax')
+
 ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
                  .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
-                 .path('u1','abar','<>',1,'nd',start_eps=1e-6)\
-                 .path('u2','abar2','<>',1,'nd',start_eps=1e-6)\
+                 .path('dist21','S21/distLimit','<',1,'nd',start_eps=1e-6)\
+                 # .path('u1','abar','<>',1,'nd',start_eps=1e-6)\
+                 # .path('u2','abar2','<>',1,'nd',start_eps=1e-6)\
 
 # Define constants
 ocp.constant('V',300,'m/s')
@@ -82,17 +92,17 @@ ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         tolerance=1e-3,
-                        max_iterations=50,
+                        max_iterations=55,
                         verbose = True,
                         derivative_method='fd',
                         max_error=100,
              )
-
+# 338 seconds to compile
 guess_maker = beluga.guess_generator('auto',
                 start=[-.8,0.,-.1,-pi/12]+[-.8,.1,-.1,0.,1.],
                 direction='forward',
-                costate_guess = [0., 0., 0., -0.1]+[0.,0.,0.,0.1,0.]+[0.,0.],
-                control_guess = [0.05, -.0, -0.05, -.0]+[0.0,0.0]*4,
+                costate_guess = [0., 0., 0., -0.1]+[0.,0.,0.,0.1,0.]+[0.,0.,0.],
+                control_guess = [0.05, -.0, -0.05, -.0]+[0.0,0.0]*3,
                 time_integrate=.1,
                 use_control_guess=True,
 )
@@ -111,11 +121,13 @@ continuation_steps.add_step('bisection') \
                 .terminal('psi2', -15*pi/180) \
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
+                .num_cases(41) \
                 .terminal('xbar', 0.)\
                 .terminal('ybar', 0.) \
+                .terminal('psi', +15*pi/180) \
                 .terminal('xbar2', 0.)\
-                .terminal('ybar2', 0.)
+                .terminal('ybar2', 0.)\
+                .terminal('psi2', -15*pi/180) \
 
 
 beluga.solve(ocp,
