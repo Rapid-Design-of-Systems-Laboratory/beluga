@@ -12,7 +12,7 @@ ocp.quantity('zbardot','-sin(gam)')
 ocp.state('xbar', 'xbardot', 'nd')\
    .state('ybar', 'ybardot', 'nd')\
    .state('zbar', 'zbardot', 'nd')\
-   .state('psi', '10*abar', 'nd')
+   .state('psi', '15*abar', 'nd')
 ocp.control('abar','nd')
 ocp.control('gam','nd')
 
@@ -22,7 +22,7 @@ ocp.quantity('zbar2dot','-vbar2*sin(gam2)')
 ocp.state('xbar2', 'xbar2dot', 'nd')\
    .state('ybar2', 'ybar2dot', 'nd')\
    .state('zbar2', 'zbar2dot', 'nd')\
-   .state('psi2', '10*abar2', 'nd')\
+   .state('psi2', '15*abar2', 'nd')\
    .state('vbar2', '0', 'nd/s')
 
 ocp.control('abar2','nd')
@@ -33,22 +33,20 @@ ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.,'nd')
 ocp.constant('rc',.1,'nd')
 
-ocp.constant('xc2',-0.30,'nd')
+ocp.constant('xc2',-0.1,'nd')
 ocp.constant('yc2',-0.0,'nd')
 
 ocp.constant('Smin',0.1,'nd')
 ocp.constant('Smax',1.0,'nd')
-
-ocp.quantity('S1C','(xbar-xc2)')
+ocp.constant('slope',10,'nd')
+# ocp.quantity('S1C','(xbar-xc2)')
 ocp.quantity('S2C','(xbar2-xc2)')
-ocp.quantity('u1c','(1/(1+exp(-40*S1C)))')
-ocp.quantity('u2c','(1/(1+exp(-40*S2C)))')
-ocp.quantity('S21','(ybar2-ybar)')
+# ocp.quantity('u1c','(1/(1+exp(-40*S1C)))')
+ocp.quantity('u2c','(1/(1+exp(-slope*S2C)))')
 ocp.quantity('distLimit','u2c*Smin + (1-u2c)*Smax')
 
 ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
                  .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
-                 .path('dist21','S21/distLimit','<',1,'nd',start_eps=1e-6)\
                  # .path('u1','abar','<>',1,'nd',start_eps=1e-6)\
                  # .path('u2','abar2','<>',1,'nd',start_eps=1e-6)\
 
@@ -91,7 +89,7 @@ ocp.constraints() \
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        tolerance=1e-3,
+                        tolerance=5e-4,
                         max_iterations=55,
                         verbose = True,
                         derivative_method='fd',
@@ -110,24 +108,29 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .terminal('xbar', -0.6)\
-                .terminal('ybar', -.25) \
+                .num_cases(21) \
+                .terminal('xbar', -0.4)\
+                .terminal('ybar', -.2) \
                 .terminal('zbar', 0.) \
-                .terminal('psi', +15*pi/180) \
-                .terminal('xbar2', -.6)\
-                .terminal('ybar2', .25) \
+                .terminal('xbar2', -.4)\
+                .terminal('ybar2', .2) \
                 .terminal('zbar2', 0.) \
+                # .terminal('psi2', -15*pi/180) \
+                # .terminal('psi', +15*pi/180) \
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .terminal('xbar', -.2)\
+                .terminal('ybar', 0.) \
+                .terminal('psi', +15*pi/180) \
+                .terminal('xbar2', -.2)\
+                .terminal('ybar2', 0.)\
                 .terminal('psi2', -15*pi/180) \
 
 continuation_steps.add_step('bisection') \
-                .num_cases(41) \
+                .num_cases(21) \
                 .terminal('xbar', 0.)\
-                .terminal('ybar', 0.) \
-                .terminal('psi', +15*pi/180) \
-                .terminal('xbar2', 0.)\
-                .terminal('ybar2', 0.)\
-                .terminal('psi2', -15*pi/180) \
+                .terminal('xbar2',0.)\
 
 
 beluga.solve(ocp,
