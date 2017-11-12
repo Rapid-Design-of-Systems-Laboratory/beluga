@@ -39,6 +39,8 @@ def ode45(f,tspan,y0,*args,**kwargs):
         dt = t - tspan[ctr-1]
         y_out[ctr, :] = r.integrate(r.t+dt)
         # ctr += 1
+    if not r.successful():
+        raise RuntimeError('Integration failed!')
     return tspan, y_out
 
 
