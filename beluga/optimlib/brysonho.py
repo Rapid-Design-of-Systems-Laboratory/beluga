@@ -588,6 +588,7 @@ def generate_problem_data(workspace):
         'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
         'ham_expr': str(workspace['ham']),
         'quantity_list': workspace['quantity_list'],
+        'nOdes': 2*len(workspace['states']) + 1
     }
 
     return problem_data

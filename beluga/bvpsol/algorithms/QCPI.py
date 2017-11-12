@@ -169,7 +169,6 @@ def make_perf_idx(bc_left_fn, bc_right_fn):
     return perf_idx
 
 import os
-import cloudpickle
 import pickle
 
 class QCPI(BaseAlgorithm):
@@ -461,7 +460,7 @@ class QCPI(BaseAlgorithm):
         sol = solinit
         if not self.saved_deriv_func:
             with open('codecache.pkl','wb') as f:
-                f.write(cloudpickle.dumps(self.deriv_func))
+                f.write(pickle.dumps(self.deriv_func))
             self.saved_deriv_func = True
             print('Saved deriv_func to file')
         if converged:
