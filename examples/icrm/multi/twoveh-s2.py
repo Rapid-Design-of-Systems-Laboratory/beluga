@@ -1,6 +1,5 @@
-"""Brachistochrone example."""
 from math import pi
-ocp = beluga.OCP('missle')
+ocp = beluga.OCP('twoveh_s2')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -33,9 +32,9 @@ ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.,'nd')
 ocp.constant('rc',.1,'nd')
 
-ocp.constant('xc2',-0.2,'nd')
+ocp.constant('xc2',-0.3,'nd')
 ocp.constant('yc2',0.25,'nd')
-ocp.constant('rc2',.1,'nd')
+ocp.constant('rc2',.125,'nd')
 
 ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
                  .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
@@ -55,16 +54,7 @@ ocp.path_cost('abar^2 + gam^2 + abar2^2 + gam2^2', 'nd')
 # Define constraints
 ocp.constraints() \
     .initial('xbar-xbar_0','nd')\
-    .initial('ybar-ybar_0','nd')\
-    .initial('zbar-zbar_0','nd')\
-    .terminal('xbar-xbar_f','nd')\
-    .terminal('ybar-ybar_f','nd') \
-    .terminal('zbar-zbar_f','nd') \
-    .terminal('psi - psi_f', 'nd') \
-    # .independent('tf - 1', 'nd')
-
-ocp.constraints() \
-    .initial('xbar2-xbar2_0','nd')\
+    .initial('ybar-ybarar2_0','nd')\
     .initial('ybar2-ybar2_0','nd')\
     .terminal('xbar2-xbar2_f','nd')\
     .terminal('ybar2-ybar2_f','nd') \
@@ -126,13 +116,12 @@ guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',ite
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
                 .constant('yc2', 0.15)\
-
-# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
-continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .constant('rc2',0.125)\
-                .constant('xc',-0.3)
-
+#
+# # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(21) \
+#                 .constant('xc',-0.3)
+#
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(41) \
