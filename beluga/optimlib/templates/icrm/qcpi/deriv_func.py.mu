@@ -115,25 +115,29 @@ def deriv_func_nojit(_t,_X,_p,_const):
     #dg     = compute_jacobian_fd(_X, _const)
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-#    dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}),dtype=np.float64)
-#    dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1),dtype=np.float64)
-#    dgdX[:] = 0.0 # Fix for numba bug
-#{{#dgdX}}
-#    {{.}}
-#{{/dgdX}}
-#    dgdU[:] = 0.0 # Fix for numba bug
-#{{#dgdU}}
-#    {{.}}
-#{{/dgdU}}
 
-#    udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
-#    return np.hstack((Xdot, udot))*tf
+#     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}),dtype=np.float64)
+#     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1),dtype=np.float64)
+#     dgdX[:] = 0.0 # Fix for numba bug
+# {{#dgdX}}
+#     {{.}}
+# {{/dgdX}}
+#     dgdU[:] = 0.0 # Fix for numba bug
+# {{#dgdU}}
+#     {{.}}
+# {{/dgdU}}
+
+    # udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
+    # return np.hstack((Xdot, udot))*tf
     return np.array([{{#deriv_list}}{{.}},
-        {{/deriv_list}}]+
-        [{{#dae_eom_list}}{{.}},
-        {{/dae_eom_list}}]
+       {{/deriv_list}}]+
+       [{{#dae_eom_list}}{{.}},
+       {{/dae_eom_list}}]
     )
 
 
 num_dae_vars = {{dae_var_num}}
 deriv_func = numba.njit(parallel=True,cache=False)(deriv_func_nojit)
+
+#{{#state_list}}{{.}},{{/state_list}}]
+#{{#dae_var_list}}{{.}},{{/dae_var_list}}]

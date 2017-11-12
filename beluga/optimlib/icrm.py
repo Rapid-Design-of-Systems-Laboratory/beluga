@@ -431,6 +431,7 @@ def generate_problem_data(workspace):
      'dgdX': dgdX,#str(workspace['dgdX'][:]),
      # 'dgdU': str(workspace['dgdU'][:]),
      'dgdU': dgdU,
+     'nOdes':2*len(workspace['states']) + len(workspace['dae_states'])+ 1,
     }
     # from beluga.utils import keyboard
     # keyboard()

@@ -2,7 +2,7 @@ import numpy as np
 from math import *
 
 import scipy.linalg
-from math import *
+import numba
 
 def im(Z):
     return Z.imag
@@ -90,50 +90,44 @@ def get_dhdu_func(_t,_X,_p,_aux):
 
     return dHdu
 
-def deriv_func(_t,_X,_p,_aux,arc_idx=0):
+def deriv_func_nojit(_t,_X,_p,_const,arc_idx):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]
     [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
 
     [{{#parameter_list}}{{.}},{{/parameter_list}}] = _p
 
     # Declare all auxiliary variables
-{{#aux_list}}
-{{#vars}}
-    {{.}} = _aux['{{type}}']['{{.}}']
-{{/vars}}
-{{/aux_list}}
+    {{#aux_list}}{{#vars}}{{.}},{{/vars}}{{/aux_list}} = _const
 
     # Declare all predefined expressions
 {{#quantity_list}}
     {{name}} = {{expr}}
 {{/quantity_list}}
 
-    Xdot = np.array([{{#deriv_list}}{{.}},
-                     {{/deriv_list}}])/tf
-    #dg     = compute_jacobian_fd(compute_g, _X, args=(_p, _aux))
-    #dgdX   = dg[:,:{{num_states}}]
-    #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-    #udot   = scipy.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
+#     Xdot = np.array([{{#deriv_list}}{{.}},
+#                     {{/deriv_list}}])/tf
+#     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}),dtype=np.float64)
+#     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1),dtype=np.float64)
+#     dgdX[:] = 0.0 # Fix for numba bug
+# {{#dgdX}}
+#     {{.}}
+# {{/dgdX}}
+#     dgdU[:] = 0.0 # Fix for numba bug
+# {{#dgdU}}
+#     {{.}}
+# {{/dgdU}}
+#
+#     udot = np.linalg.solve(dgdU, -np.dot(dgdX, Xdot[:{{num_states}}-1]))
+#     return np.hstack((Xdot, udot))*tf
+    return np.array([{{#deriv_list}}{{.}},
+       {{/deriv_list}}]+
+       [{{#dae_eom_list}}{{.}},
+       {{/dae_eom_list}}]
+    )
 
-    #return np.hstack((Xdot, udot))*tf
-    dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1))
-    dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}))
+#deriv_func = numba.jit(nopython=True, parallel=True)(deriv_func_nojit)
+def deriv_func_ode45(_t,_X,_p,_aux):
+    return deriv_func(_t,_X,_p,list(_aux['const'].values()),0)
 
-    dgdX[:] = 0.0 # Fix for numba bug
-{{#dgdX}}
-    {{.}}
-{{/dgdX}}
-    dgdU[:] = 0.0 # Fix for numba bug
-{{#dgdU}}
-    {{.}}
-{{/dgdU}}
-
-    udot = scipy.linalg.solve(dgdU, -dgdX @ Xdot[:{{num_states}}-1])
-    return np.hstack((Xdot, udot))*tf
-    #return np.array([{{#deriv_list}}{{.}},
-    #    {{/deriv_list}}]+
-    #    [{{#dae_eom_list}}{{.}},
-    #    {{/dae_eom_list}}]
-    #)
-
-deriv_func_ode45 = deriv_func
+#{{#state_list}}{{.}},{{/state_list}}]
+#{{#dae_var_list}}{{.}},{{/dae_var_list}}]

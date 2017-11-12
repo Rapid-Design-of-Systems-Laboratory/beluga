@@ -17,7 +17,7 @@ class Plot(object):
         self.datasource = datasource
         self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
-        self.postprocess_fn = None
+        self.postprocess_list = []
         self.colormap = colormap
 
     def xlabel(self, label):
@@ -103,7 +103,8 @@ class Plot(object):
                 raise ValueError('Invalid plot type specified')
 
     def postprocess(self, fn):
-        self.postprocess_fn = fn
+        self.postprocess_list.append(fn)
+        return self
 
 class PlotList(list):
     """
