@@ -250,7 +250,7 @@ class MultipleShooting(BaseAlgorithm):
         self.verbose = verbose
         self.max_error = max_error
         self.derivative_method = derivative_method
-        self.cached = cached
+        self.cached = False
         self.saved_code = True
         if derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
