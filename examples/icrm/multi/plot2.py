@@ -46,6 +46,8 @@ plots.add_plot(colormap=cmx.viridis).line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1
                 .title('Trajectory') \
                 .postprocess(lambda a,b,c: plt.axis('equal'))
 
+plots.add_plot().line('t','yc2')
+
 plots.add_plot(colormap=cmx.jet).line('t','V',label='Vehicle 1',style='r')\
                 .line_series('t','vbar2*V',skip=2)\
                 .xlabel('t [s]').ylabel('v(t) [m/s]')\
