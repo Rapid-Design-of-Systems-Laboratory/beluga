@@ -368,36 +368,28 @@ class MultipleShooting(BaseAlgorithm):
         J[:,nOdes*num_arcs:] = P
         return J
 
-    def make_stmode(self, odefn, nOdes, StepSize=1e-7):
-        @numba.njit(parallel=True)
+    def make_stmode(self, odefn, nOdes, StepSize=1e-6):
+        Xh = np.eye(nOdes)*StepSize
+        @numba.jit(looplift=True)
         def _stmode_fd(t, _X, p, const, arc_idx):
             "Finite difference version of state transition matrix"
-            # N = y.shape[0]
-            # nOdes = int(0.5*(sqrt(4*N+1)-1))
-            F = np.zeros((nOdes,nOdes))
-            # phi = y[nOdes:].reshape((nOdes, nOdes)) # Convert STM terms to matrix form
+            F = np.empty((nOdes,nOdes))
+            # nrt_mstats(alloc=14082696, free=13545502, mi_alloc=9439609, mi_free=8940786)
+            # nrt_mstats(alloc=14005954, free=13468760, mi_alloc=9362867, mi_free=8864044)
             phi = _X[nOdes:].reshape((nOdes,nOdes))
             X = _X[0:nOdes]  # Just states
 
-
             # Compute Jacobian matrix, F using finite difference
             fx = odefn(t,X,p,const,arc_idx)
-            # if np.any(np.isnan(fx)):
-            #     print('NAAAAAAAAAAAN')
-            #     raise ValueError('NAAAN')
-                # from beluga.utils import keyboard
-                # keyboard()
 
-            Xh = np.eye(nOdes)*StepSize
             for i in numba.prange(nOdes):
-                x_h = X + Xh[i,:]
-                fxh = odefn(t, x_h, p,const,arc_idx)
+                fxh = odefn(t, X + Xh[i,:], p,const,arc_idx)
                 F[:,i] = (fxh-fx)/StepSize
 
             # Phidot = F*Phi (matrix product)
             phiDot = F @ phi
-            # return np.hstack( (fx, np.reshape(phiDot, (nOdes*nOdes) )) )
-            return np.hstack( (fx, phiDot.reshape(nOdes*nOdes)) )
+            Xdot = np.hstack( (fx, phiDot.reshape(nOdes**2)) )
+            return Xdot
 
         def wrapper(t, _X, p, const, arc_idx): # needed for scipy
             return _stmode_fd(t, _X, p, const, arc_idx)
@@ -511,7 +503,7 @@ class MultipleShooting(BaseAlgorithm):
                     raise RuntimeError('Error exceeded max_error')
 
                 # Solution converged if BCs are satisfied to tolerance
-                if r1 <= self.tolerance:
+                if r1 <= self.tolerance and n_iter > 1:
                     if self.verbose:
                         logging.info("Converged in "+str(n_iter)+" iterations.")
                     converged = True

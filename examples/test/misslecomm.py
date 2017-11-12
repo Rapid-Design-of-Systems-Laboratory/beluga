@@ -26,7 +26,7 @@ ocp.control('abar2','nd')
 ocp.constant('xc1',-0.4,'nd')
 ocp.constant('xc2',-0.2,'nd')
 ocp.constant('rc',0.1,'nd')
-ocp.constant('rj',0.25,'nd')
+ocp.constant('rj',0.5,'nd')
 ocp.constant('rsep',10,'nd')
 
 ocp.quantity('S2C1','((xbar2-xc1)**2)')
@@ -135,7 +135,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                     tolerance=1e-3,
                     max_iterations=250,
                     verbose = True,
-                    N=41
+                    N=11
 )
 #
 # guess_maker = beluga.guess_generator('auto',
@@ -164,7 +164,7 @@ continuation_steps.add_step('bisection') \
                 .terminal('psi', +30*pi/180) \
                 .terminal('xbar2', 0.0)\
                 .terminal('ybar2', 0.0) \
-                .terminal('psi2', -30*pi/180) \
+                .terminal('psi2', -60*pi/180) \
                 # .initial('xbar2', -0.8) \
                 # .initial('ybar2', 0.1) \
                 # .terminal('xbar2', 0.0)\

@@ -115,7 +115,6 @@ def deriv_func_nojit(_t,_X,_p,_const):
     #dg     = compute_jacobian_fd(_X, _const)
     #dgdX   = dg[:,:{{num_states}}]
     #dgdU   = dg[:,{{num_states}}:({{num_states}}+{{dae_var_num}})]
-
 #     dgdU = np.zeros(({{dae_var_num}},{{dae_var_num}}),dtype=np.float64)
 #     dgdX = np.zeros(({{dae_var_num}},{{num_states}}-1),dtype=np.float64)
 #     dgdX[:] = 0.0 # Fix for numba bug
