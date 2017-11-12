@@ -88,16 +88,20 @@ plots.add_plot().line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',datasource=two_pat
                 .line('xc2*V*tfreal/1e3+rc2*V*tfreal/1e3*cos(2*pi*t/tf)','yc2*V*tfreal/1e3+rc2*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=two_path_ds,label='Zone 2',style={'color':'yellow'})\
                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
                 .postprocess(lambda r,f,p: plt.axis('equal'))\
-                .postprocess(ft.partial(save_pic, suffix='s2_xy'))
+                # .postprocess(ft.partial(save_pic, suffix='s2_xy'))
+
+plots.add_plot().line('t*tfreal','psi*180/pi',datasource=two_path_ds,label='Vehicle 1',style={'color':'blue','lw':2.0})\
+                .line('t*tfreal','psi2*180/pi',datasource=two_path_ds,label='Vehicle 2',style={'color':'green','lw':2.0})\
+                .xlabel('$t$ [s]').ylabel('$\\psi(t)$ [deg]')\
 
 plots.add_plot(mesh_size=200).line('t*tfreal','abar',datasource=two_path_ds,label='Vehicle 1',style={'color':'blue','lw':2.0})\
                 .line('t*tfreal','abar2',datasource=two_path_ds,label='Vehicle 2',style={'color':'green','lw':2.0})\
                 .xlabel('$t$ [s]').ylabel('$\\bar{u}(t)$')\
-                .postprocess(ft.partial(save_pic, suffix='s2_u'))
+                # .postprocess(ft.partial(save_pic, suffix='s2_u'))
 
 plots.add_plot().line3d('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3','zbar*V*tfreal/1e3',datasource=two_path_ds,label='Vehicle 1',style={'color':'blue','lw':2.0})\
                 .line3d('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3',datasource=two_path_ds,label='Vehicle 2',style={'color':'green','lw':2.0})\
                 .postprocess(ft.partial(add_cylinder,params=Zone1,color='red'))\
                 .postprocess(ft.partial(add_cylinder,params=Zone2,color='yellow',invert=True))\
-                .postprocess(ft.partial(save_pic, suffix='s2_xyz'))
+                # .postprocess(ft.partial(save_pic, suffix='s2_xyz'))
 plots.render()
