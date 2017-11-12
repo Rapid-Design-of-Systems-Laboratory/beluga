@@ -32,7 +32,7 @@ ocp.control('gam2','nd')
 ocp.constant('xc',-0.4,'nd')
 ocp.constant('yc',0.0,'nd')
 ocp.constant('rc',0.2,'nd')
-ocp.constant('rj',0.16,'nd')
+ocp.constant('rj',0.10,'nd')
 ocp.constant('rsep',10,'nd')
 
 ocp.quantity('S2C','((xbar2-xc)**2 + (ybar2-yc)**2)')
@@ -120,21 +120,26 @@ ocp.constraints() \
 
 # 1191 (45) - 5 vehicles with 4 path constraints
 # 911 seconds for 5 v and one path constraint
-# 247(31) seconds for 5 vehicle with GPO constraint
+# 247(31) seconds for 5 vehicle with GPOPS in background
+# 68(14) seconds for 3 vehicle with u constraints
+# 114(20) seconds for 4 vehicles with u constraint
 # 106(14) seconds for 3 vehicle unconstrained (with u constraints)
 # 75(10) seconds for 2 vehicle unconstrainted  (with u constraints)
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
-
-# 1191 (45) - 5 vehicles with 4 path constraints
-# 911 seconds for 5 v and one path constraint
-# 247(31) seconds for 5 vehicle with GPO
+bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+                        tolerance=1e-3,
+                        max_iterations=50,
+                        verbose = True,
+                        derivative_method='fd',
+                        max_error=100,
+             )
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
-                    tolerance=1e-3,
+                    tolerance=1e-2,
                     max_iterations=350,
                     verbose = True,
-                    N=251
+                    N=101
 )
 #
 # guess_maker = beluga.guess_generator('auto',
@@ -186,23 +191,13 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 #                 # .terminal('ybar5', 0.0) \
 #                 # .terminal('psi5', 30*pi/180)
 
-# guess_maker = beluga.guess_generator('file',filename='data-3d2v-rj03.dill', iteration=-1, step=-1)
-#
-# continuation_steps = beluga.init_continuation()
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(5) \
-#                 .const('rj',0.24)
-#
-#
-
-guess_maker = beluga.guess_generator('file',filename='data-3d2v-rj024.dill', iteration=-1, step=-1)
+guess_maker = beluga.guess_generator('file',filename='data-3d2v-rj03.dill', iteration=-1, step=-1)
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(2) \
-                .const('rj',0.15)
+                .num_cases(5) \
+                .const('rj',0.2)
 
 
 beluga.solve(ocp,
@@ -210,7 +205,7 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data4.dill')
+             output_file='data2.dill')
 
 # beluga.solve(problem)
 #     # from timeit import timeit
