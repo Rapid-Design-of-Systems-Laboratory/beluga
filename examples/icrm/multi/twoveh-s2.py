@@ -1,6 +1,5 @@
-"""Brachistochrone example."""
 from math import pi
-ocp = beluga.OCP('missle')
+ocp = beluga.OCP('twoveh_s2')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -55,16 +54,7 @@ ocp.path_cost('abar^2 + gam^2 + abar2^2 + gam2^2', 'nd')
 # Define constraints
 ocp.constraints() \
     .initial('xbar-xbar_0','nd')\
-    .initial('ybar-ybar_0','nd')\
-    .initial('zbar-zbar_0','nd')\
-    .terminal('xbar-xbar_f','nd')\
-    .terminal('ybar-ybar_f','nd') \
-    .terminal('zbar-zbar_f','nd') \
-    .terminal('psi - psi_f', 'nd') \
-    # .independent('tf - 1', 'nd')
-
-ocp.constraints() \
-    .initial('xbar2-xbar2_0','nd')\
+    .initial('ybar-ybar2_0','nd')\
     .initial('ybar2-ybar2_0','nd')\
     .terminal('xbar2-xbar2_f','nd')\
     .terminal('ybar2-ybar2_f','nd') \
@@ -83,10 +73,10 @@ ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         tolerance=1e-3,
-                        max_iterations=50,
+                        max_iterations=75,
                         verbose = True,
                         derivative_method='fd',
-                        max_error=100,
+                        max_error=20,
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -99,41 +89,46 @@ guess_maker = beluga.guess_generator('auto',
 )
 
 continuation_steps = beluga.init_continuation()
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .terminal('xbar', -0.6)\
+                .terminal('ybar', -.25) \
+                .terminal('zbar', 0.) \
+                .terminal('psi', +15*pi/180) \
+                .terminal('xbar2', -.6)\
+                .terminal('ybar2', .25) \
+                .terminal('zbar2', 0.) \
+                .terminal('psi2', -15*pi/180) \
+
+continuation_steps.add_step('bisection') \
+                .num_cases(21) \
+                .terminal('xbar', 0.)\
+                .terminal('ybar', 0.) \
+                .terminal('xbar2', -0.25)\
+                .terminal('ybar2', 0.)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(5) \
+                .terminal('xbar2', -0.0)
 #
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .terminal('xbar', -0.6)\
-#                 .terminal('ybar', -.25) \
-#                 .terminal('zbar', 0.) \
-#                 .terminal('psi', +15*pi/180) \
-#                 .terminal('xbar2', -.6)\
-#                 .terminal('ybar2', .25) \
-#                 .terminal('zbar2', 0.) \
-#                 .terminal('psi2', -15*pi/180) \
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(21) \
-#                 .terminal('xbar', 0.)\
-#                 .terminal('ybar', 0.) \
-#                 .terminal('xbar2', -0.25)\
-#                 .terminal('ybar2', 0.)
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(5) \
-#                 .terminal('xbar2', -0.0)
-# #
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                .num_cases(21) \
 #                .terminal('psi2', -pi/2)\
 
-guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
+# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .constant('xc2',-0.25)\
-                .constant('yc2',0.25)
+                .constant('yc2',0.20)
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .constant('yc2',0.20)
+
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
 #                 .terminal('psi', 60*pi/180)
