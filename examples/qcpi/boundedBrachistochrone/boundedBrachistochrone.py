@@ -31,7 +31,7 @@ ocp.constraints() \
 
 
 # ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
-ocp.scale(m=25, s=1, kg=1, rad=1, nd=1)
+ocp.scale(m=10, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('QCPI',
                     tolerance=1e-4,
@@ -52,7 +52,7 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
+                .num_cases(11) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
