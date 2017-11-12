@@ -127,7 +127,11 @@ def deriv_func_nojit(_t,_X,_p,_const,arc_idx):
 
 #deriv_func = numba.jit(nopython=True, parallel=True)(deriv_func_nojit)
 def deriv_func_ode45(_t,_X,_p,_aux):
-    return deriv_func(_t,_X,_p,list(_aux['const'].values()),0)
+    try:
+        return deriv_func(_t,_X,_p,list(_aux['const'].values()),0)
+    except Exception as e:
+        from beluga.utils import keyboard
+        keyboard()
 
 #{{#state_list}}{{.}},{{/state_list}}]
 #{{#dae_var_list}}{{.}},{{/dae_var_list}}]
