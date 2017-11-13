@@ -39,7 +39,7 @@ def add_cylinder(r,f,p):
 plots = BelugaPlot(filename,default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot(colormap=cmx.viridis).line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',label='Vehicle 2',style={'color':'red'})\
-                .line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',skip=2)\
+                .line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',label='Vehicle 1')\
                 .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',label='c1')\
                 .line('xc2*V*tfreal/1e3+rc2*V*tfreal/1e3*cos(2*pi*t/tf)','yc2*V*tfreal/1e3+rc2*V*tfreal/1e3*sin(2*pi*t/tf)',label='c2')\
                 .xlabel('x(t) [km]').ylabel('y(t) [km]')\
@@ -48,10 +48,10 @@ plots.add_plot(colormap=cmx.viridis).line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1
 
 plots.add_plot().line('t','yc2')
 
-plots.add_plot(colormap=cmx.jet).line('t','V',label='Vehicle 1',style='r')\
-                .line_series('t','vbar2*V',skip=2)\
-                .xlabel('t [s]').ylabel('v(t) [m/s]')\
-                .title('Speed') \
+plots.add_plot(colormap=cmx.jet).line('t','xbar',label='Vehicle 1',style='r')\
+                .line('t','xbar2')\
+                .xlabel('t [s]').ylabel('x(t)')\
+                .title('x') \
 
 # plots.add_plot().line('xbar','ybar',label='traj1')\
 #                 .line('xbar2','ybar2',label='traj2')\
