@@ -76,7 +76,7 @@ class Plot(object):
         """
         Evaluates the expressions using the supplied data
         """
-        for line in self.plot_data:
+        for line_id, line in enumerate(self.plot_data):
             solution = line['datasource'].get_solution()
             problem_data  = line['datasource'].get_problem()
 
@@ -93,6 +93,7 @@ class Plot(object):
             elif line['type'] == 'line_series':
                 sol_set = solution[step_idx]
                 line['end'] = len(sol_set) if line['end'] == -1 else line['end']
+                line['id'] = line_id
                 for ind in range(line['start'], line['end'], line['skip']+1):
                     sol = sol_set[ind]
                     sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
