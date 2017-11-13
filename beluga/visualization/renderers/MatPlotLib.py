@@ -76,7 +76,7 @@ class MatPlotLib(BaseRenderer):
             if isinstance(line['style'], dict):
                 override_color = line['style'].pop('color', None)
 
-            if line['type'] == 'line3d':
+            if line['type'] == 'line3d' or line['type'] == 'line3d_series':
                 fig = self._get_figure(f)
                 if ax3d is None:
                     ax3d = fig.add_subplot(111, projection='3d')
@@ -99,8 +99,10 @@ class MatPlotLib(BaseRenderer):
                     else:
                         line_color = colors[i]
 
-                if line['type'] == 'line3d':
+                if line['type'][:6] == 'line3d':
                     if(len(dataset['x_data'])!=len(dataset['y_data'])):
+                        continue
+                    if(len(dataset['x_data'])!=len(dataset['z_data'])):
                         continue
 
                     if isinstance(line['style'], str):
