@@ -60,14 +60,7 @@ def add_colorbar3d(r,f,p,lb,ub,label,cmap,pos='right',orient='vertical'):
     m = mpl.cm.ScalarMappable(cmap=cmap, norm=norm)
     m.set_array([])
     clb = plt.colorbar(m)
-
-    try:
-        clb.ax.set_ylabel(label)
-        # clb.ax.get_xaxis().set_visible(False)
-        # clb.ax.get_yaxis().set_visible(False)
-        # clb.ax.set_title(label)
-    except Exception as e:
-        print(e)
+    clb.ax.set_ylabel(label)
 
 def add_colorbar(r,f,p,lb,ub,label,cmap,pos='right',orient='vertical'):
     norm = mpl.colors.Normalize(vmin=lb, vmax=ub)
@@ -196,29 +189,56 @@ plots.add_plot().line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',datasource=two_pat
 #                 .postprocess(ft.partial(save_pic, suffix='s2_xyz', rasterized=True, format='pdf'))
 
 two_path_middle_ds = Dill('data-twoveh-s2-yc02.dill')
-# Zone2c = np.array([-0.25, 0.2, 0.2])*scale
+Zone2c = np.array([-0.25, 0.2, 0.2])*scale
+def add_zone2_plot(renderer, fig, plot):
+    solution = two_path_middle_ds.get_solution()
+    sol_set = solution[0]
 
-plots.add_plot(colormap=cmx.viridis).line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',datasource=two_path_middle_ds,style={'lw':2.0},step=0,skip=5)\
-                .line_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=two_path_middle_ds,style={'lw':2.0},step=0,skip=4)\
-                .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=two_path_middle_ds,label='Zone 1',style={'color':'red'})\
-                .line('xc2*V*tfreal/1e3+rc2*V*tfreal/1e3*cos(2*pi*t/tf)','yc2*V*tfreal/1e3+rc2*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=two_path_middle_ds,label='Zone 2',style={'color':'black'})\
-                .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
-                .postprocess(lambda r,f,p: plt.axis('equal'))\
-                .postprocess(ft.partial(add_colorbar,label='$y_{c1}$ [km]',lb=4.5, ub=3.0,cmap=cmx.viridis_r))\
-                .postprocess(ft.partial(save_pic, suffix='s2_zone2_xy'))
+    V = sol_set[0].aux['const']['V']
+    tfreal = sol_set[0].aux['const']['tfreal']
+    yc2 = np.array([sol.aux['const']['yc2'] for sol in sol_set])*V*tfreal
+
+    vbar2 = np.array([sol.y[8,0] for sol in sol_set])*V
+
+    ax = plt.gca()
+    ax.plot(yc2/1e3, vbar2, lw=2.0, color='b')
+    ax.set_xlabel('$y_{c2}$ [km]')
+    ax.set_ylabel('$v_2$ [m/s]')
+    # ax.tick_params('y', colors='b')
+
+    # ax2 = ax.twinx()
+    # ax2.plot(psi2f*180/pi, psi10*180/pi, lw=2.0, color='r')
+    # ax2.set_ylabel('$\\psi_1(0)$ [deg]', color='r')
+    # ax2.tick_params('y', colors='r')
+
+    plt.grid(True)
+
+
+# plots.add_plot(colormap=cmx.viridis).line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',datasource=two_path_middle_ds,style={'lw':2.0},step=0,skip=5)\
+#                 .line_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=two_path_middle_ds,style={'lw':2.0},step=0,skip=4)\
+#                 .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=two_path_middle_ds,label='Zone 1',style={'color':'red'})\
+#                 .line('xc2*V*tfreal/1e3+rc2*V*tfreal/1e3*cos(2*pi*t/tf)','yc2*V*tfreal/1e3+rc2*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=two_path_middle_ds,label='Zone 2',style={'color':'black'})\
+#                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
+#                 .postprocess(lambda r,f,p: plt.axis('equal'))\
+#                 .postprocess(ft.partial(add_colorbar,label='$y_{c2}$ [km]',lb=4.5, ub=3.375,cmap=cmx.viridis_r))\
+#                 .postprocess(ft.partial(save_pic, suffix='s2_zone2_xy'))
 
 # plots.add_plot(colormap=cmx.viridis) \
 #                 .line3d_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3','zbar*V*tfreal/1e3',datasource=two_path_middle_ds,style={'lw':2.0},step=0,skip=5)\
 #                 .line3d_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3',datasource=two_path_middle_ds,style={'lw':2.0},step=0,skip=5)\
 #                 .postprocess(ft.partial(add_cylinder,params=Zone1,color='red',opacity=0.05))\
-#                 .postprocess(ft.partial(add_cylinder,params=Zone2b,color='black',opacity=0.05,invert=True))\
+#                 .postprocess(ft.partial(add_cylinder,params=Zone2c,color='black',opacity=0.05,invert=True))\
 #                 .postprocess(lambda r,f,p: plt.gca().view_init(elev=20, azim=-48))\
 #                 .postprocess(ft.partial(add_colorbar3d,label='$\\psi_2(T)$ [deg]',lb=-15, ub=-109,cmap=cmx.viridis_r,pos='bottom',orient='horizontal'))\
 #                 .postprocess(ft.partial(save_pic, suffix='s2_zone2_xyz', rasterized=True, format='pdf'))
 
-plots.add_plot(mesh_size=200).line('t*tfreal','abar',datasource=two_path_middle_ds,label='Vehicle 1',style={'color':'blue','lw':2.0})\
-                .line('t*tfreal','abar2',datasource=two_path_middle_ds,label='Vehicle 2',style={'color':'green','lw':2.0})\
-                .xlabel('$t$ [s]').ylabel('$\\bar{u}(t)$')\
-                .postprocess(ft.partial(save_pic, suffix='s2_zone2_u'))
+plots.add_plot().postprocess(add_zone2_plot)\
+                .postprocess(ft.partial(save_pic, suffix='s2_zone2_v'))
+
+#
+# plots.add_plot(colormap=cmx.viridis).line_series('t*tfreal','abar2',datasource=two_path_middle_ds,style={'lw':2.0}, step=0, skip=4)\
+#                 .xlabel('$t$ [s]').ylabel('$\\bar{u}_2(t)$')\
+#                 .postprocess(ft.partial(add_colorbar,label='$y_{c2}$ [km]',lb=4.5, ub=3.375,cmap=cmx.viridis_r))\
+#                 .postprocess(ft.partial(save_pic, suffix='s2_zone2_u2'))
 
 plots.render()
