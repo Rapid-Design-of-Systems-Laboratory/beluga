@@ -120,26 +120,32 @@ continuation_steps = beluga.init_continuation()
 #                 .num_cases(41) \
 #                 .terminal('xbar2', -0.0)
 #
+
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                .num_cases(41) \
-#                .terminal('psi2', -pi/2)\
+#                .terminal('psi2', -pi/2)\ # save as s2-a-psi2
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a-psi2.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(41) \
-#                 .terminal('psi2', -109*pi/180)\
-guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
-continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .constant('yc2',0.25)
-                # .constant('xc2',-0.25)\
-#
-# # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
-#
+#                 .terminal('psi2', -109*pi/180)\ # save as s2-a-psi2-110
+
+# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
-#                 .constant('yc2',0.20)
+#                 .constant('yc2',0.225)\
+#                 .constant('xc2',-0.25)\ # Save as s2-b
+
+guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11) \
+#                 .constant('psi_f',0.0)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(21) \
+                .constant('rc2',0.45) # save as s2-b-rc2
 
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
