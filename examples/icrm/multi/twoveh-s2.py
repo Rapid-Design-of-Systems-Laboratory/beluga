@@ -54,6 +54,7 @@ ocp.path_cost('abar^2 + gam^2 + abar2^2 + gam2^2', 'nd')
 # Define constraints
 ocp.constraints() \
     .initial('xbar-xbar_0','nd')\
+    .initial('xbar2-xbar2_0','nd')\
     .initial('ybar-ybar2_0','nd')\
     .initial('ybar2-ybar2_0','nd')\
     .terminal('xbar2-xbar2_f','nd')\
@@ -73,10 +74,10 @@ ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         tolerance=1e-3,
-                        max_iterations=75,
+                        max_iterations=50,
                         verbose = True,
                         derivative_method='fd',
-                        max_error=20,
+                        max_error=10,
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -91,7 +92,7 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
+                .num_cases(101) \
                 .terminal('xbar', -0.6)\
                 .terminal('ybar', -.25) \
                 .terminal('zbar', 0.) \
@@ -102,14 +103,14 @@ continuation_steps.add_step('bisection') \
                 .terminal('psi2', -15*pi/180) \
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
+                .num_cases(41) \
                 .terminal('xbar', 0.)\
                 .terminal('ybar', 0.) \
                 .terminal('xbar2', -0.25)\
                 .terminal('ybar2', 0.)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(41) \
                 .terminal('xbar2', -0.0)
 #
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
@@ -119,14 +120,14 @@ continuation_steps.add_step('bisection') \
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
+                .num_cases(41) \
                 .constant('xc2',-0.25)\
                 .constant('yc2',0.20)
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
+                .num_cases(41) \
                 .constant('yc2',0.20)
 
 # continuation_steps.add_step('bisection') \
