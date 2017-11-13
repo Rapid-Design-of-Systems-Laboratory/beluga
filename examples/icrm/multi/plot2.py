@@ -46,10 +46,10 @@ plots.add_plot(colormap=cmx.viridis).line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1
                 .title('Trajectory') \
                 .postprocess(lambda a,b,c: plt.axis('equal'))
 
-plots.add_plot().line('t','yc2')
+plots.add_plot().line('t','abar2')
 
-plots.add_plot(colormap=cmx.jet).line('t','xbar',label='Vehicle 1',style='r')\
-                .line('t','xbar2')\
+plots.add_plot(colormap=cmx.jet).line('t','psi2*180/pi',label='Vehicle 1',style='r')\
+                .line('t','psi*180/pi')\
                 .xlabel('t [s]').ylabel('x(t)')\
                 .title('x') \
 
