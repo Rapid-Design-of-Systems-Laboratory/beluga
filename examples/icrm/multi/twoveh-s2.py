@@ -98,44 +98,44 @@ guess_maker = beluga.guess_generator('auto',
 
 continuation_steps = beluga.init_continuation()
 
-continuation_steps.add_step('bisection') \
-                .num_cases(101) \
-                .terminal('xbar', -0.6)\
-                .terminal('ybar', -.25) \
-                .terminal('zbar', 0.) \
-                .terminal('psi', +15*pi/180) \
-                .terminal('xbar2', -.6)\
-                .terminal('ybar2', .25) \
-                .terminal('zbar2', 0.) \
-                .terminal('psi2', -15*pi/180) \
-
-continuation_steps.add_step('bisection') \
-                .num_cases(41) \
-                .terminal('xbar', 0.)\
-                .terminal('ybar', 0.) \
-                .terminal('xbar2', -0.25)\
-                .terminal('ybar2', 0.)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(41) \
-                .terminal('xbar2', -0.0)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .terminal('xbar', -0.6)\
+#                 .terminal('ybar', -.25) \
+#                 .terminal('zbar', 0.) \
+#                 .terminal('psi', +15*pi/180) \
+#                 .terminal('xbar2', -.6)\
+#                 .terminal('ybar2', .25) \
+#                 .terminal('zbar2', 0.) \
+#                 .terminal('psi2', -15*pi/180) \
 #
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .terminal('xbar', 0.)\
+#                 .terminal('ybar', 0.) \
+#                 .terminal('xbar2', -0.25)\
+#                 .terminal('ybar2', 0.)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .terminal('xbar2', -0.0)
+# #
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                .num_cases(21) \
 #                .terminal('psi2', -pi/2)\
 
-# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .constant('xc2',-0.25)\
-#                 .constant('yc2',0.20)
+guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
+continuation_steps.add_step('bisection') \
+                .num_cases(41) \
+                .constant('xc2',-0.25)\
+                .constant('yc2',0.20)
 #
 # # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
 #
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .constant('yc2',0.20)
+continuation_steps.add_step('bisection') \
+                .num_cases(41) \
+                .constant('yc2',0.20)
 
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
