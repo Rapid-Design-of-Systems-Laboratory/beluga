@@ -90,7 +90,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 guess_maker = beluga.guess_generator('auto',
                 start=[-.8,0.,-.1,-pi/12.]+[-.8,.1,-.1,0.,1.],
                 direction='forward',
-                costate_guess = [0., 0., 0., -0.0]+[0.,0.,0.,0.0,0.]+[0.,0.,0.],
+                costate_guess = [0., 0., 0., -0.]+[0.,0.,0.,0.,0.]+[0.,0.,0.],
                 control_guess = [0.00, -.0, -0.00, -.0]+[0.0,0.0]*5,
                 time_integrate=.1,
                 use_control_guess=True,
@@ -123,43 +123,38 @@ continuation_steps = beluga.init_continuation()
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
-#                .num_cases(41) \
-#                .terminal('psi2', -pi/2)\ # save as s2-a-psi2
-
-# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a-psi2.dill',iteration=-1,step=-1)
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(41) \
-#                 .terminal('psi2', -109*pi/180)\ # save as s2-a-psi2-110
-
+#                 .num_cases(81) \
+#                 .terminal('psi2', -109*pi/180) # save as s2-a-psi2-110
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
 #                 .constant('yc2',0.225)\
-#                 .constant('xc2',-0.25)\ # Save as s2-b
+#                 .constant('xc2',-0.25) # Save as s2-b
+
+# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .constant('xc2',-0.25)\
+#                 .constant('yc2',0.20)  # save as s2-yc02
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
-
-
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .constant('rc2',0.45) # save as s2-b-rc2
-
-guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
-continuation_steps.add_step('bisection') \
-                .num_cases(41) \
-                .constant('xc2',-0.25)\
-                .constant('yc2',0.20)  # save as s2-yc02
-
-
+#
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
-#                 .terminal('psi', 60*pi/180)
+#                 .constant('yc2',0.0) # save as s2-b-yc2
 
-# from pympler.tracker import SummaryTracker
-# tracker = SummaryTracker()
+
+guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .constant('xc',-0.4)\
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .constant('rc',0.2)\
 
 # -109 deg
 beluga.solve(ocp,
@@ -167,12 +162,4 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data.dill')
-
-# tracker.print_diff()
-
-# beluga.solve(problem)
-#     # from timeit import timeit
-#
-#     # print(timeit("get_problem()","from __main__ import get_problem",number=10))
-#     beluga.run(get_problem())
+             output_file='data3.dill')

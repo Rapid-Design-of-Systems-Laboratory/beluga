@@ -1,6 +1,5 @@
-"""Brachistochrone example."""
 from math import pi
-ocp = beluga.OCP('missle')
+ocp = beluga.OCP('twoveh_s2')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -34,8 +33,8 @@ ocp.constant('yc',0.,'nd')
 ocp.constant('rc',.1,'nd')
 
 ocp.constant('xc2',-0.2,'nd')
-ocp.constant('yc2',0.25,'nd')
-ocp.constant('rc2',.1,'nd')
+ocp.constant('yc2',0.30,'nd')
+ocp.constant('rc2',.2,'nd')
 
 ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
                  .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
@@ -55,21 +54,21 @@ ocp.path_cost('abar^2 + gam^2 + abar2^2 + gam2^2', 'nd')
 # Define constraints
 ocp.constraints() \
     .initial('xbar-xbar_0','nd')\
+    .initial('ybar-ybar_0','nd')\
     .initial('zbar-zbar_0','nd')\
-    .initial('psi-psi_0','nd')\
     .terminal('xbar-xbar_f','nd')\
-    .terminal('zbar-zbar_f','nd') \
+    .terminal('ybar-ybar_f','nd')\
+    .terminal('zbar-zbar_f','nd')\
     .terminal('psi - psi_f', 'nd') \
 
 ocp.constraints() \
     .initial('xbar2-xbar2_0','nd')\
     .initial('ybar2-ybar2_0','nd')\
-    .terminal('xbar2-xbar2_f','nd')\
-    .initial('psi2-psi2_0','nd')\
-    .terminal('ybar2-ybar2_f','nd') \
-    .terminal('psi2 - psi2_f', 'nd') \
     .initial('zbar2-zbar2_0','nd')\
-    .terminal('zbar2-zbar2_f','nd')
+    .terminal('xbar2-xbar2_f','nd')\
+    .terminal('ybar2-ybar2_f','nd') \
+    .terminal('zbar2-zbar2_f','nd')\
+    .terminal('psi2 - psi2_f', 'nd') \
 
 # 1191 (45) - 5 vehicles with 4 path constraints
 # 911 seconds for 5 v and one path constraint
@@ -85,71 +84,78 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         max_iterations=75,
                         verbose = True,
                         derivative_method='fd',
-                        max_error=100,
+                        max_error=10,
              )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[-.8,0.,-.1,0.]+[-.8,.1,-.1,0.,1.],
+                start=[-.8,0.,-.1,-pi/12.]+[-.8,.1,-.1,0.,1.],
                 direction='forward',
-                costate_guess = [0., 0., 0., -0.0]+[0.,0.,0.,0.0,0.]+[0.,0.,0.],
+                costate_guess = [0., 0., 0., -0.]+[0.,0.,0.,0.,0.]+[0.,0.,0.],
                 control_guess = [0.00, -.0, -0.00, -.0]+[0.0,0.0]*5,
-                time_integrate=.05,
+                time_integrate=.1,
                 use_control_guess=True,
 )
 
 continuation_steps = beluga.init_continuation()
-
-continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .terminal('xbar', -0.6)\
-                .terminal('ybar', -.25) \
-                .terminal('zbar', 0.) \
-                .terminal('psi', +15*pi/180) \
-                .terminal('xbar2', -.6)\
-                .terminal('ybar2', .25) \
-                .terminal('zbar2', 0.) \
-                .terminal('psi2', -15*pi/180) \
-
-continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .terminal('xbar', 0.)\
-                .terminal('ybar', 0.) \
-                .terminal('xbar2', -0.25)\
-                .terminal('ybar2', 0.)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(5) \
-                .terminal('xbar2', -0.0)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(101) \
+#                 .terminal('xbar', -0.6)\
+#                 .terminal('ybar', -.25) \
+#                 .terminal('zbar', 0.) \
+#                 .terminal('psi', +15*pi/180) \
+#                 .terminal('xbar2', -.6)\
+#                 .terminal('ybar2', .25) \
+#                 .terminal('zbar2', 0.) \
+#                 .terminal('psi2', -15*pi/180) \
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .terminal('xbar', 0.)\
+#                 .terminal('ybar', 0.) \
+#                 .terminal('xbar2', -0.25)\
+#                 .terminal('ybar2', 0.)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .terminal('xbar2', -0.0)
+#
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
-#                .num_cases(21) \
-#                .terminal('psi2', -pi/2)\
+#                 .num_cases(81) \
+#                 .terminal('psi2', -109*pi/180) # save as s2-a-psi2-110
 
-# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
-#                 .constant('xc2',-0.25)
+#                 .constant('yc2',0.225)\
+#                 .constant('xc2',-0.25) # Save as s2-b
+
+# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .constant('xc2',-0.25)\
+#                 .constant('yc2',0.20)  # save as s2-yc02
 
 # guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .constant('yc2',0.0) # save as s2-b-yc2
+
+#
+# guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-b.dill',iteration=-1,step=-1)
+#
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
-#                 .terminal('psi', 60*pi/180)
+#                 .constant('rc',0.20) # save as s2-b-rc1
 
-# from pympler.tracker import SummaryTracker
-# tracker = SummaryTracker()
-
+# -109 deg
 beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data-both.dill')
-
-# tracker.print_diff()
-
-# beluga.solve(problem)
-#     # from timeit import timeit
-#
-#     # print(timeit("get_problem()","from __main__ import get_problem",number=10))
-#     beluga.run(get_problem())
+             output_file='data.dill')
