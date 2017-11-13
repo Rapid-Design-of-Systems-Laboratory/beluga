@@ -60,6 +60,7 @@ class MatPlotLib(BaseRenderer):
         fh = self._get_figure(f);
         has_legend = False
         num_lines = sum(1 for line in p.plot_data for d in line['data'] )
+
         if p.colormap is not None:
             cm_subsection = np.linspace(0.0, 1.0, num_lines)
             colors = [ p.colormap(x) for x in cm_subsection ]
@@ -69,6 +70,7 @@ class MatPlotLib(BaseRenderer):
         i = 0
         ax3d = None
         for line in p.plot_data:
+            line_id = line.get('id',0)
             has_legend = has_legend or (line['label'] is not None)
             override_color = None
             if isinstance(line['style'], dict):
@@ -79,12 +81,23 @@ class MatPlotLib(BaseRenderer):
                 if ax3d is None:
                     ax3d = fig.add_subplot(111, projection='3d')
 
-            for dataset in line['data']:
+            is_line_series = len(line['data']) > 1
+            if is_line_series:
+                if p.colormap is not None:
+                    cm_subsection = np.linspace(0.0, 1.0, len(line['data']))
+                    line_series_colors = [ p.colormap(x) for x in cm_subsection ]
+                else:
+                    line_series_colors = [None]*len(line['data'])
+
+            for element_id,dataset in enumerate(line['data']):
                 # Allow overriding colormap fom style vector
                 if override_color is not None:
                     line_color = override_color
                 else:
-                    line_color = colors[i]
+                    if is_line_series:
+                        line_color = line_series_colors[element_id]
+                    else:
+                        line_color = colors[i]
 
                 if line['type'] == 'line3d':
                     if(len(dataset['x_data'])!=len(dataset['y_data'])):
