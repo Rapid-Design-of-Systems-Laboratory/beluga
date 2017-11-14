@@ -137,6 +137,14 @@ plots.add_plot().line('xbar','ybar',label='traj1')\
                 .xlabel('x(t)').ylabel('y(t)')\
                 .title('Trajectory') \
                 .postprocess(lambda a,b,c: plt.axis('equal'))
+
+plots.add_plot().line_series('xbar','ybar')\
+                .line_series('xbar2','ybar2')\
+                .line('xc+rc*cos(2*pi*t/tf)','yc+rc*sin(2*pi*t/tf)')\
+                .xlabel('x(t)').ylabel('y(t)')\
+                .title('Trajectory') \
+                .postprocess(lambda a,b,c: plt.axis('equal'))
+
 #
 # plots.add_plot().line3d('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3','zbar*V*tfreal/1e3',label='traj1')\
 #                 .line3d('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3',label='traj2')\
