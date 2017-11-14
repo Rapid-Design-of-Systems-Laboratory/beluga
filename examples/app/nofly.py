@@ -87,7 +87,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                         max_iterations=500,
                         verbose = True,
                         max_error=20,
-                        N=241
+                        N=81
              )
 
 guess_maker = beluga.guess_generator('auto',

@@ -13,11 +13,11 @@ ocp.control('abar','nd')
 ocp.control('gam','nd')
 
 import numpy as np
-n = 3
+n = 4
 
 path_cost = 'abar^2 + gam^2'
-y_pos = np.array([0.0, 0.1, -0.1]) #np.linspace(-0.3, 0.3, n+1)
-psi_vec = np.array([+15*pi/180, -15*pi/180, 30*pi/180]) #np.linspace(45*pi/180, -45*pi/180, n+1)
+y_pos = np.array([0.0, 0.1, 0.15, -0.1]) #np.linspace(-0.3, 0.3, n+1)
+psi_vec = np.array([+15*pi/180, -15*pi/180, -30*pi/180, 30*pi/180]) #np.linspace(45*pi/180, -45*pi/180, n+1)
 # psi_vec = np.linspace(15*pi/180, -15*pi/180, n+1)
 # y_pos = np.linspace(0.0, 0.2, n+1)
 guess_start = [-0.8,y_pos[0],-.1,0.]
@@ -86,7 +86,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                         max_iterations=200,
                         verbose = True,
                         max_error=20,
-                        N=61
+                        N=101
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -98,6 +98,7 @@ guess_maker = beluga.guess_generator('auto',
                 # use_control_guess=True,
 )
 
+# 1848 seconds with 4 vehicles, N = 101
 continuation_steps = beluga.init_continuation()
 
 step1 = continuation_steps.add_step('bisection') \
@@ -109,10 +110,9 @@ step1.terminal('xbar', -0.6)\
     .terminal('psi', psi_vec[0]) \
 
 step2 = continuation_steps.add_step('bisection') \
-                .num_cases(21)
-
-step2.terminal('xbar',0.0)\
-    .terminal('xbar2',0.0)\
+                .num_cases(21)\
+                .terminal('xbar',0.0)\
+                .terminal('ybar',0.0)
 
 for i in range(2,n+1):
     y_sign = y_pos[i-1]/abs(y_pos[i-1])
