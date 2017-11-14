@@ -31,10 +31,10 @@ ocp.constant('ymax',0.2,'nd')
 ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.0,'nd')
 ocp.constant('zc',-0.15,'nd')
-ocp.constant('rc',0.05,'nd')
+ocp.constant('rc',0.1,'nd')
 
-ocp.constraints().path('alt1','sqrt((xbar-xc)**2 + (zbar-zc)**2)/rc','>',1,'nd',start_eps=1e-6)\
-                 .path('alt2','sqrt((xbar2-xc)**2 + (zbar2-zc)**2)/rc','>',1,'nd',start_eps=1e-6)
+ocp.constraints().path('alt1','sqrt((xbar-xc)**2 + (ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-4)\
+                 .path('alt2','sqrt((xbar2-xc)**2 + (ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-4)
 
 # Define constants
 ocp.constant('V',300,'m/s')
@@ -84,7 +84,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                         tolerance=1e-3,
-                        max_iterations=300,
+                        max_iterations=500,
                         verbose = True,
                         max_error=20,
                         N=141
@@ -100,28 +100,35 @@ guess_maker = beluga.guess_generator('auto',
 )
 
 continuation_steps = beluga.init_continuation()
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(101) \
-#                 .terminal('xbar', -0.)\
-#                 .terminal('ybar', .0) \
-#                 .terminal('zbar', 0.) \
-#                 .terminal('psi', +0*pi/180) \
-#                 .terminal('xbar2', -0.)\
-#                 .terminal('ybar2', .0) \
-#                 .terminal('zbar2', 0.) \
-#                 .terminal('psi2', -0*pi/180) \
+
+continuation_steps.add_step('bisection') \
+                .num_cases(21) \
+                .terminal('xbar', -0.6)\
+                .terminal('ybar', -.25) \
+                .terminal('zbar', 0.) \
+                .terminal('psi', +15*pi/180) \
+                .terminal('xbar2', -0.6)\
+                .terminal('ybar2', .25) \
+                .terminal('zbar2', 0.) \
+                .terminal('psi2', -15*pi/180) \
+
+continuation_steps.add_step('bisection') \
+                .num_cases(21) \
+                .terminal('xbar',0.0)\
+                .terminal('xbar2',0.0)\
+                .terminal('ybar',0.0)\
+                .terminal('ybar2',0.0)\
 #
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(11) \
 #                 .terminal('psi',15*pi/180)\
-#                 .terminal('psi2',-30*pi/180)
+#                 .terminal('psi2',-15*pi/180)
 
-guess_maker = beluga.guess_generator('file',filename='data-zs-unc-qcpi.dill',iteration=-1,step=-1)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(101) \
-                .constant('zc',-0.125)
+# guess_maker = beluga.guess_generator('file',filename='data-zs-unc-qcpi.dill',iteration=-1,step=-1)
+#
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(101) \
+#                 .constant('zc',-0.125)
 
 beluga.solve(ocp,
              method='icrm',

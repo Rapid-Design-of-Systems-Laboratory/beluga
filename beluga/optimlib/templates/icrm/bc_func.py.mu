@@ -25,6 +25,7 @@ def bc_func_left(_ya, _p, _aux):
     _H = compute_hamiltonian(0,_ya,_p,_aux,[{{#control_list}}{{.}},{{/control_list}}])
     res_left = np.array([{{#bc_initial}}{{.}},
                     {{/bc_initial}} ])
+
     return res_left
 
 def bc_func_right(_yb, _p, _aux):

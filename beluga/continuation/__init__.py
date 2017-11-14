@@ -306,9 +306,6 @@ class ManualStrategy(object):
                 self.sol.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
                 total_change += abs(self.vars[var_type][var_name].steps[self.ctr])
 
-        if total_change < 1e-4:
-            raise RuntimeError('Continuation step too small. Stopping')
-        
         self.ctr += 1
         self.last_sol = self.sol
         return self.sol.aux

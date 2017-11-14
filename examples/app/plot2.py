@@ -20,11 +20,11 @@ def add_cylinder(r,f,p):
     # Cylinder
     ax.invert_zaxis()
 
-    x_center = -0.6*300*50/1e3
-    y_center = 0.0*300*50/1e3
-    radius = 0.1*300*50/1e3
-    elevation = -0.1*300*50/1e3
-    height = 0.1*300*50/1e3
+    x_center = -0.6
+    y_center = 0.0
+    radius = 0.05
+    elevation = -0.1
+    height = 0.1
     resolution = 20
     x = np.linspace(x_center-radius, x_center+radius, resolution)
     z = np.linspace(elevation, elevation+height, resolution)
@@ -97,9 +97,9 @@ def add_colorbar(r,f,p,lb,ub,label,cmap,pos='right',orient='vertical'):
 
 plots = BelugaPlot(filename,default_sol=-1,default_step=-1, renderer='matplotlib')
 
-plots.add_plot().line3d('xbar','ybar','zbar',label='Vehicle 1',style={'color':'blue','lw':2.0})\
-                .line3d('xbar2','ybar2','zbar2',label='Vehicle 2',style={'color':'green','lw':2.0})\
-                .postprocess(add_cylinder2)
+# plots.add_plot().line3d('xbar','ybar','zbar',label='Vehicle 1',style={'color':'blue','lw':2.0})\
+#                 .line3d('xbar2','ybar2','zbar2',label='Vehicle 2',style={'color':'green','lw':2.0})\
+#                 .postprocess(add_cylinder)
 
 # plots.add_plot(colormap=cmx.viridis).line_series('xbar2','ybar2',style={'color':'red'})\
 #                 .line_series('xbar','ybar')\
@@ -107,9 +107,9 @@ plots.add_plot().line3d('xbar','ybar','zbar',label='Vehicle 1',style={'color':'b
 #                 .title('Trajectory') \
 #                 .postprocess(lambda a,b,c: plt.axis('equal'))
 #
-plots.add_plot(colormap=cmx.viridis).line_series('xbar','zbar')\
-                .line('rc*cos(2*pi*t/tf)+xc','rc*sin(2*pi*t/tf)+zc')\
-                .postprocess(lambda r,f,p: plt.gca().invert_yaxis())
+# plots.add_plot(colormap=cmx.viridis).line_series('xbar','zbar')\
+#                 .line('rc*cos(2*pi*t/tf)+xc','rc*sin(2*pi*t/tf)+zc')\
+#                 .postprocess(lambda r,f,p: plt.gca().invert_yaxis())
 #
 # plots.add_plot(colormap=cmx.viridis).line_series('xbar','ybar2-ybar')\
 #                 .line_series('xbar','sqrt(minSeparation2)')\
@@ -124,19 +124,19 @@ plots.add_plot(colormap=cmx.viridis).line_series('xbar','zbar')\
 # .line('xc1*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','',label='c1')\
 # .line('xc2*V*tfreal/1e3+rc2*V*tfreal/1e3*cos(2*pi*t/tf)','yc2*V*tfreal/1e3+rc2*V*tfreal/1e3*sin(2*pi*t/tf)',label='c2')\
 
-# plots.add_plot().line('t','rc2')
+plots.add_plot().line('t','rc')
 
 # plots.add_plot(colormap=cmx.jet).line('t','psi2*180/pi',label='Vehicle 1',style='r')\
 #                 .line('t','psi*180/pi')\
 #                 .xlabel('t [s]').ylabel('x(t)')\
 #                 .title('x') \
 
-# plots.add_plot().line('xbar','ybar',label='traj1')\
-#                 .line('xbar2','ybar2',label='traj2')\
-#                 .line('xc+rc*cos(2*pi*t/tf)','yc+rc*sin(2*pi*t/tf)')\
-#                 .xlabel('x(t)').ylabel('y(t)')\
-#                 .title('Trajectory') \
-#                 .postprocess(lambda a,b,c: plt.axis('equal'))
+plots.add_plot().line('xbar','ybar',label='traj1')\
+                .line('xbar2','ybar2',label='traj2')\
+                .line('xc+rc*cos(2*pi*t/tf)','yc+rc*sin(2*pi*t/tf)')\
+                .xlabel('x(t)').ylabel('y(t)')\
+                .title('Trajectory') \
+                .postprocess(lambda a,b,c: plt.axis('equal'))
 #
 # plots.add_plot().line3d('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3','zbar*V*tfreal/1e3',label='traj1')\
 #                 .line3d('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3',label='traj2')\
