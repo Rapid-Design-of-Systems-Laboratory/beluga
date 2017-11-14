@@ -260,7 +260,7 @@ class QCPI(BaseAlgorithm):
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*1e-6   # Remove duplicates
-        A_j0 = np.vstack((np.zeros(nOdes), np.eye(nOdes, dtype=np.float64)*1e-6))
+        A_j0 = np.vstack((np.zeros(nOdes), np.eye(nOdes, dtype=np.float64)*1e-5))
 
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
