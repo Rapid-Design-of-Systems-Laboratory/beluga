@@ -184,12 +184,12 @@ class QCPI(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
 
-        if os.path.isfile('codecache.pkl'):
-            with open('codecache.pkl','rb') as f:
-                deriv_func_bck = pickle.load(f)
-
-        else:
-            deriv_func_bck = None
+        # if os.path.isfile('codecache.pkl'):
+        #     with open('codecache.pkl','rb') as f:
+        #         deriv_func_bck = pickle.load(f)
+        #
+        # else:
+        #     deriv_func_bck = None
         out_ws = QCPICodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
         print(out_ws['deriv_func_code'])
