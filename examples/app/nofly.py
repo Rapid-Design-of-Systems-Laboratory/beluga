@@ -1,5 +1,5 @@
 from math import pi
-ocp = beluga.OCP('jammer')
+ocp = beluga.OCP('nofly')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -87,7 +87,7 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
                         max_iterations=500,
                         verbose = True,
                         max_error=20,
-                        N=141
+                        N=241
              )
 
 guess_maker = beluga.guess_generator('auto',

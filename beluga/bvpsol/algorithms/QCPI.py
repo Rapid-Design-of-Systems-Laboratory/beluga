@@ -260,7 +260,7 @@ class QCPI(BaseAlgorithm):
         # A_j0 = np.eye(nOdes)
         # A_j0[np.diag_indices(nOdes)] = self.left_bc_mask
         # A_j0 = np.unique(A_j0, axis=0)*1e-6   # Remove duplicates
-        A_j0 = np.vstack((np.zeros(nOdes), np.eye(nOdes, dtype=np.float64)*1e-5))
+        A_j0 = np.vstack((np.zeros(nOdes), np.eye(nOdes, dtype=np.float64)*1e-6))
 
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
@@ -330,7 +330,8 @@ class QCPI(BaseAlgorithm):
         err1 = 1000
         err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
-        for ctr in range(max_iter):
+        ctr = 0
+        while ctr < max_iter:
             try:
                 pert_eom(t_arr, x_guess, g_arr, const)
             except Exception as e:
@@ -360,7 +361,7 @@ class QCPI(BaseAlgorithm):
                 from beluga.utils import keyboard
                 keyboard()
 
-            if ctr > 0 and err1 < 1*min(self.tolerance,1e-4) or abs(err0-err1)<min(self.tolerance,1e-4):
+            if err1 < 1*min(self.tolerance,1e-4) or abs(err0-err1)<min(self.tolerance,1e-4):
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
@@ -369,13 +370,13 @@ class QCPI(BaseAlgorithm):
                 res_left = left_bc_jac_fn(x_t0, left_jac, aux)
 
                 # if ctr > -90:
-                print('Residue : '+str(res_norm_0))
+                print('Residual : '+str(res_norm_0))
 
                 if res_norm_0 > self.max_error:
                     x_new = x_guess # Reset to old version in case of NaN
                     logging.error('Error exceeded max error')
                     break
-                if res_norm_0 < self.tolerance and np.amax(np.abs(res_left)) < self.tolerance:
+                if ctr > 0 and res_norm_0 < self.tolerance and np.amax(np.abs(res_left)) < self.tolerance:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
@@ -452,6 +453,7 @@ class QCPI(BaseAlgorithm):
                 # xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
                 # xpm_0 = np.reshape(xp_0, (q+2, nOdes))  # Matrix 'view' of xp_0
                 # x0_twice = 2*x_new[-1,:]
+                ctr += 1
 
             x_guess = x_new
             err0 = err1
