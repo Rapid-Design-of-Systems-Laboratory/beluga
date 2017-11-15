@@ -315,6 +315,7 @@ class QCPI(BaseAlgorithm):
             x_guess = np.flipud(x_guess2)
             # print('nsoododoshds')
 
+        x_guess_orig = np.copy(x_guess)
         x0_twice = 2*x_guess[-1]
         g_arr = np.empty_like(x_guess)
 
@@ -331,6 +332,7 @@ class QCPI(BaseAlgorithm):
         err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
         ctr = 0
+        total_iter = 0
         while ctr < max_iter:
             try:
                 pert_eom(t_arr, x_guess, g_arr, const)
@@ -355,12 +357,16 @@ class QCPI(BaseAlgorithm):
             #     logging.error('Error exceeded max error')
             #     break
             if np.isnan(err1):
-                x_new = x_guess
+                x_new = x_guess_orig
                 print('NaaaaaN')
                 break
                 from beluga.utils import keyboard
                 keyboard()
 
+            if total_iter > 5000:
+                print('Total integration iterations exceeded!')
+                x_new = x_guess_orig
+                break
             if err1 < 1*min(self.tolerance,1e-4) or abs(err0-err1)<min(self.tolerance,1e-4):
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
@@ -373,7 +379,7 @@ class QCPI(BaseAlgorithm):
                 print('Residual : '+str(res_norm_0))
 
                 if res_norm_0 > self.max_error:
-                    x_new = x_guess # Reset to old version in case of NaN
+                    x_new = x_guess_orig # Reset to old version in case of NaN
                     logging.error('Error exceeded max error')
                     break
                 if ctr > 0 and res_norm_0 < self.tolerance and np.amax(np.abs(res_left)) < self.tolerance:
@@ -382,7 +388,7 @@ class QCPI(BaseAlgorithm):
                     break
 
                 if np.isnan(res).any():
-                    x_new = x_guess # Reset to old version in case of NaN
+                    x_new = x_guess_orig # Reset to old version in case of NaN
                     # from beluga.utils import keyboard
                     # keyboard()
                     print('NaaaaaN')
