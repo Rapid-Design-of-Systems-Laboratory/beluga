@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib2tikz import save as tikz_save
 import matplotlib as mpl
 
 mpl.rcParams['axes.labelsize'] = 'x-large'
@@ -21,6 +20,15 @@ plt.grid(True)
 plt.xlabel('$x$')
 plt.ylabel('$T_k(x)$')
 plt.legend()
-# tikz_save(output_dir+'satfcn_onesided.tex', figureheight='\\figureheight', figurewidth='\\figurewidth')
-plt.savefig('cheby.eps')
+# plt.savefig('cheby.eps')
+
+N = 20
+k = np.arange(N+1)
+xk = np.cos(k*np.pi/N)
+
+plt.figure()
+plt.plot(xk, np.zeros_like(xk), marker='x',lw=0.0)
+plt.grid(True)
+plt.xlabel('$x$')
+plt.savefig('cgl_nodes.eps')
 plt.show()

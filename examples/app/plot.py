@@ -23,14 +23,21 @@ def add_colorbar(r,f,p,lb,ub,label,cmap,pos='right',orient='vertical'):
 if len(sys.argv) < 2:
     print('Usage: python plot.py <n>')
     sys.exit(1)
+else:
+    if len(sys.argv) > 2:
+        filename = sys.argv[2]
+    else:
+        filename = 'data.dill'
 
 # plots = BelugaPlot('./data-3v-s15.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
-plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
+plots = BelugaPlot(filename,default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plot1 = plots.add_plot().line('xbar','ybar',label='traj1')
 plot2 = plots.add_plot().line3d('xbar','ybar','zbar',label='traj1')
 plot3 = plots.add_plot(colormap=cmx.viridis).line3d_series('xbar','ybar','zbar')
-plot4 = plots.add_plot(colormap=cmx.viridis).line_series('xbar','ybar')
+plot4 = plots.add_plot(colormap=cmx.viridis).line_series('t*tf','psi5*180/pi')\
+             .xlabel('t').ylabel('psi5')
+plot5 = plots.add_plot(colormap=cmx.viridis).line('t*tfreal','abar',label='$u_1$')
 
 n = int(sys.argv[1])
 
@@ -38,7 +45,8 @@ for i in range(2, n+1):
     plot1.line(f'xbar{i}',f'ybar{i}',label=f'traj{i}')
     plot2.line3d(f'xbar{i}',f'ybar{i}',f'zbar{i}',label=f'traj{i}')
     plot3.line3d_series(f'xbar{i}',f'ybar{i}',f'zbar{i}')
-    plot4.line_series(f'xbar{i}',f'ybar{i}')
+    plot5.line('t*tfreal',f'abar{i}',label=f'$u_{i}$')
+    # plot4.line_series(f't*tf',f'psi{i}')
 
 plot1.line('xc+rc*cos(2*pi*t/tf)','yc+rc*sin(2*pi*t/tf)')
 plot1.postprocess(lambda r,f,p: plt.axis('equal'))
