@@ -54,6 +54,10 @@ ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.0,'nd')
 ocp.constant('rc',0.1,'nd')
 
+ocp.constant('xc2',-0.25'nd')
+ocp.constant('yc2',0.2,'nd')
+ocp.constant('rc2',0.1,'nd')
+
 # Define constants
 ocp.constant('V',300,'m/s')
 ocp.constant('tfreal',50,'s')
@@ -76,7 +80,8 @@ ocp.constraints() \
 ocp.constraints()\
     .path(f'zone10',f'sqrt((xbar-xc)**2 + (ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-4)\
     .path('u1','abar','<>',1,'nd',start_eps=1e-3)
-    # .path(f'zone21',f'ybar','<',0.30,'nd',start_eps=1e-4)\
+    .path(f'zone21',f'sqrt((xbar2-xc2)**2 + (ybar2-yc2)**2)/rc2','<',1,'nd',start_eps=1e-4)\
+    .path(f'zone21',f'sqrt((xbar3-xc2)**2 + (ybar3-yc2)**2)/rc2','<',1,'nd',start_eps=1e-4)\
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
@@ -110,29 +115,29 @@ guess_maker = beluga.guess_generator('auto',
 # 2540.27 seconds with 5 vehicles, N = 101
 continuation_steps = beluga.init_continuation()
 
-# step1 = continuation_steps.add_step('bisection') \
-#                 .num_cases(21)
-#
-# step1.terminal('xbar', -0.6)\
-#     .terminal('ybar', -0.25) \
-#     .terminal('zbar', 0.) \
-#     .terminal('psi', psi_vec[0]) \
-#
-# step2 = continuation_steps.add_step('bisection') \
-#                 .num_cases(51)\
-#                 .terminal('xbar',0.0)\
-#                 .terminal('ybar',yf_pos[0])
-#
-# for i in range(2,n+1):
-#     y_sign = y0_pos[i-1]/abs(y0_pos[i-1])
-#     step1.terminal(f'xbar{i}', -0.6)\
-#         .terminal(f'ybar{i}', y_sign*0.25) \
-#         .terminal(f'zbar{i}', 0) \
-#         .terminal(f'psi{i}', psi_vec[i-1]) \
-#
-#     step2.terminal(f'xbar{i}', 0.)\
-#         .terminal(f'ybar{i}', yf_pos[i-1]) \
-#
+step1 = continuation_steps.add_step('bisection') \
+                .num_cases(21)
+
+step1.terminal('xbar', -0.6)\
+    .terminal('ybar', -0.25) \
+    .terminal('zbar', 0.) \
+    .terminal('psi', psi_vec[0]) \
+
+step2 = continuation_steps.add_step('bisection') \
+                .num_cases(51)\
+                .terminal('xbar',0.0)\
+                .terminal('ybar',yf_pos[0])
+
+for i in range(2,n+1):
+    y_sign = y0_pos[i-1]/abs(y0_pos[i-1])
+    step1.terminal(f'xbar{i}', -0.6)\
+        .terminal(f'ybar{i}', y_sign*0.25) \
+        .terminal(f'zbar{i}', 0) \
+        .terminal(f'psi{i}', psi_vec[i-1]) \
+
+    step2.terminal(f'xbar{i}', 0.)\
+        .terminal(f'ybar{i}', yf_pos[i-1]) \
+
 # guess_maker = beluga.guess_generator('file',filename='data-qcpi-ulim-5v.dill', iteration=-1, step=-1)
 #
 # continuation_steps.add_step('bisection') \
@@ -153,11 +158,11 @@ continuation_steps = beluga.init_continuation()
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(41) \
 #                 .constant('yc',0.15)\
-
-guess_maker = beluga.guess_generator('file',filename='data-5v-nominal.dill', iteration=-1, step=-1)
-continuation_steps.add_step('bisection') \
-                .num_cases(41) \
-                .constant('rc',0.25)\
+#
+# guess_maker = beluga.guess_generator('file',filename='data-5v-nominal.dill', iteration=-1, step=-1)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .constant('rc',0.25)\
 
 # guess_maker = beluga.guess_generator('file',filename='data-qcpi-5v-psi3-179-psi5-120.dill', iteration=-1, step=-1)
 # continuation_steps.add_step('bisection') \
@@ -170,4 +175,4 @@ beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data.dill')
+             output_file='data2s.dill')

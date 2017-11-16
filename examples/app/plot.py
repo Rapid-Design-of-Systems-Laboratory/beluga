@@ -1,5 +1,5 @@
 import matplotlib as mpl
-mpl.use('TkAgg')
+mpl.use('MacOSX')
 from beluga.visualization import BelugaPlot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt

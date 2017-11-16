@@ -1,1 +1,4 @@
-*qcpi*.dill
+plots/
+data-qcpi*.dill
+data-5v*.dill
+
