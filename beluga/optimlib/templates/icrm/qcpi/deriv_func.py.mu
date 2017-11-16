@@ -141,3 +141,5 @@ deriv_func = numba.njit(parallel=True,cache=False)(deriv_func_nojit)
 
 #{{#state_list}}{{.}},{{/state_list}}]
 #{{#dae_var_list}}{{.}},{{/dae_var_list}}]
+#{{num_states}} = num_odes
+#{{dae_var_num}} = num_controls
