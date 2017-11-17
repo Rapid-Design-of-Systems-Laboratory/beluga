@@ -54,7 +54,7 @@ ocp.constant('xc',-0.6,'nd')
 ocp.constant('yc',0.0,'nd')
 ocp.constant('rc',0.1,'nd')
 
-ocp.constant('xc2',-0.25'nd')
+ocp.constant('xc2',-0.25,'nd')
 ocp.constant('yc2',0.2,'nd')
 ocp.constant('rc2',0.1,'nd')
 
@@ -79,9 +79,8 @@ ocp.constraints() \
 
 ocp.constraints()\
     .path(f'zone10',f'sqrt((xbar-xc)**2 + (ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-4)\
-    .path('u1','abar','<>',1,'nd',start_eps=1e-3)
-    .path(f'zone21',f'sqrt((xbar2-xc2)**2 + (ybar2-yc2)**2)/rc2','<',1,'nd',start_eps=1e-4)\
-    .path(f'zone21',f'sqrt((xbar3-xc2)**2 + (ybar3-yc2)**2)/rc2','<',1,'nd',start_eps=1e-4)\
+    .path('u1','abar','<>',1,'nd',start_eps=1e-3)\
+    .path(f'zone22',f'sqrt((xbar3-xc2)**2 + (ybar3-yc2)**2)/rc2','<',1,'nd',start_eps=1e-4)\
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
@@ -105,8 +104,8 @@ bvp_solver = beluga.bvp_algorithm('qcpi',
 guess_maker = beluga.guess_generator('auto',
                 start=guess_start,
                 direction='forward',
-                costate_guess = [0., 0., 0.,0.]+[0.,0.,0.,0.,0.]*(n-1)+[0.]*n,
-                control_guess = [0.00, .0]*n+[0.0,0.0]*n*2,
+                costate_guess = [0., 0., 0.,0.]+[0.,0.,0.,0.,0.]*(n-1)+[0.]*(n+2),
+                control_guess = [0.00, .0]*n+[0.0,0.0]*(n*2+2),
                 time_integrate=.05,
                 # use_control_guess=True,
 )
