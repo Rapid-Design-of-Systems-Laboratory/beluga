@@ -155,9 +155,9 @@ continuation_steps = beluga.init_continuation()
 #                 .constant('yc',0.15)\
 
 guess_maker = beluga.guess_generator('file',filename='data-5v-nominal.dill', iteration=-1, step=-1)
-continuation_steps.add_step('bisection') \
+continuation_steps.add_step('bisection', num_divisions=3) \
                 .num_cases(41) \
-                .constant('rc',0.25)\
+                .constant('rc',0.16)\
 
 # guess_maker = beluga.guess_generator('file',filename='data-qcpi-5v-psi3-179-psi5-120.dill', iteration=-1, step=-1)
 # continuation_steps.add_step('bisection') \
