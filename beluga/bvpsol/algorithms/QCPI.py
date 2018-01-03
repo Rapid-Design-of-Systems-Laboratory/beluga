@@ -124,13 +124,13 @@ def make_pert_eom(nOdes, q, eom_fn, eom2):
 
     global pert_eom_bck
     pert_eom_bck = pert_eom
-    return njit(parallel=True)(pert_eom)
+    return njit(parallel=False)(pert_eom)
 
 @ft.lru_cache(maxsize=16)
 def make_mcpi_eom(eom_fn):
     """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
 
-    # @njit(parallel=True)
+    @njit(parallel=False)
     def mcpi_eom(t, X_, dXdt_, *args):
         # One timestep at a time
         for j in range(len(t)):

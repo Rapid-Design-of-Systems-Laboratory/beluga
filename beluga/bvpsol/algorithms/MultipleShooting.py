@@ -280,7 +280,7 @@ class MultipleShooting(BaseAlgorithm):
         if not self.cached or not cache_exists:
             # print(out_ws['bc_func_code'])
             # print(out_ws['deriv_func_code'])
-            deriv_func = numba.njit(parallel=True)(out_ws['code_module'].deriv_func_nojit)
+            deriv_func = numba.njit(parallel=False)(out_ws['code_module'].deriv_func_nojit)
             out_ws['deriv_func_fn'] = deriv_func
             out_ws['code_module'].deriv_func = deriv_func
             self.saved_code = False
