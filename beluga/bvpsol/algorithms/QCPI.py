@@ -108,7 +108,7 @@ QCPICodeGen = sp.Workflow([
 
 pert_eom_bck = None
 @ft.lru_cache(maxsize=16)
-def make_pert_eom(nOdes, q, eom_fn):
+def make_pert_eom(nOdes, q, eom_fn, eom2):
     """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
     def pert_eom(t, X, dXdt, *args):
         for i in range(q+2):
@@ -117,7 +117,10 @@ def make_pert_eom(nOdes, q, eom_fn):
             dXdt_ = dXdt[:,i*nOdes:(i+1)*nOdes]
             # One timestep at a time
             for j in range(len(t)):
-                eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
+                dXdt_[j,:] = eom2(t[j], X_[j,:nOdes], X_[j,nOdes:nOdes], *args)
+                # dXdt_[{{num_states}}+{{dae_var_num}}:]
+                # print(X_[j,:].shape, dXdt_[j,:].shape, retval.shape)
+                # eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
 
     global pert_eom_bck
     pert_eom_bck = pert_eom
@@ -212,6 +215,7 @@ class QCPI(BaseAlgorithm):
         #     self.saved_deriv_func = True
         # else:
         self.deriv_func = out_ws['code_module'].deriv_func_mcpi
+        self.deriv_func_1 = out_ws['code_module'].deriv_func
 
         self.mcpi_eom = make_mcpi_eom(self.deriv_func)
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
@@ -265,7 +269,8 @@ class QCPI(BaseAlgorithm):
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
         q = len(A_j0) - 1
-
+        # from beluga.utils import keyboard
+        # keyboard()
         # Set up perturbed ICs
         xp_0 = np.hstack((x_0, A_j0.flat)) # Add perturbed ICs as extra states
         xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
@@ -285,7 +290,7 @@ class QCPI(BaseAlgorithm):
         C_a = w1 * C_a
         t_arr = tau*w1 + w2
         # Make functions
-        pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
+        pert_eom = make_pert_eom(nOdes, q, self.deriv_func, self.deriv_func_1)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
         perf_idx_fn = make_perf_idx(self.bc_left_fn, self.bc_right_fn)
 

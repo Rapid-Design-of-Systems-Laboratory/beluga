@@ -59,7 +59,7 @@ ax.set_ylim([0,45])
 plt.grid(True)
 plt.tight_layout()
 plt.savefig('plots/qcpi_benchmark_run_time.eps')
-plt.show()
+# plt.show()
 
 
 # # data to plot
@@ -153,10 +153,10 @@ box = ax.get_position()
 # ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
 plt.xticks(x,labels,rotation=30)
 
-ax.plot(x, qcpi_data[0,1:],'*-', lw=1.5, label='QCPI n=25')
-ax.plot(x, qcpi_data[1,1:],'o-', lw=1.5, label='QCPI n=10')
-ax.plot(x, shoot_data[0,1:],'d-',lw=1.5, label='Shooting n=25')
-ax.plot(x, shoot_data[1,1:],'h-',lw=1.5, label='Shooting n=10')
+ax.plot(x, qcpi_data[0,1:],'*-', lw=1.5, ms=7, label='QCPI n=25')
+ax.plot(x, qcpi_data[1,1:],'o-', lw=1.5, ms=7, label='QCPI n=10')
+ax.plot(x, shoot_data[0,1:],'d-',lw=1.5, ms=7, label='Shooting n=25')
+ax.plot(x, shoot_data[1,1:],'h-',lw=1.5, ms=7, label='Shooting n=10')
 ax.set_ylabel('Runtime [sec]')
 ax.tick_params('y')
 plt.subplots_adjust(bottom=0.18,right=0.85)
@@ -169,38 +169,34 @@ fig, ax = plt.subplots()
 box = ax.get_position()
 plt.xticks(x,labels,rotation=30)
 
-ax.plot(x, shoot_data[0,1:]/qcpi_data[0,1:],'*-', lw=1.5, label='n=25')
-ax.plot(x, shoot_data[1,1:]/qcpi_data[1,1:],'o-', lw=1.5, label='n=10')
-ax.set_ylabel('QCPI Speedup [x]')
+ax.plot(x, qcpi_data[0,1]/qcpi_data[0,1:],'*-', lw=1.5, ms=7, label='QCPI n=25')
+ax.plot(x, qcpi_data[1,1]/qcpi_data[1,1:],'o-', lw=1.5, ms=7, label='QCPI n=10')
+ax.plot(x, shoot_data[0,1]/shoot_data[0,1:],'D-',lw=1.5, ms=7, label='Shooting n=25')
+ax.plot(x, shoot_data[1,1]/shoot_data[1,1:],'h-',lw=1.5, ms=7, label='Shooting n=10')
+ax.set_ylim([0,11])
+# ax.plot(x, shoot_data[0,1:]/qcpi_data[0,1:],'*-', lw=1.5, label='n=25')
+# ax.plot(x, shoot_data[1,1:]/qcpi_data[1,1:],'o-', lw=1.5, label='n=10')
+ax.set_ylabel('Speedup against single-core [x]')
 ax.tick_params('y')
 plt.subplots_adjust(bottom=0.15)
 # Put a legend to the right of the current axis
-ax.legend(loc='lower right')
+ax.legend(loc='upper left')
 plt.grid(True)
 plt.savefig('plots/qcpi_benchmark_cores_speedup.eps')
 plt.show()
-#
-# fig, ax = plt.subplots()
-# n_groups = 4
-# bar_width=0.2
-# index = np.arange(n_groups)
-#
-# rects1 = plt.bar(index, qcpi_data[0,1:], bar_width,
-#                  alpha=opacity,
-#                  label='QCPI n=25')
-#
-# rects2 = plt.bar(index + bar_width, qcpi_data[1,1:], bar_width,
-#                  alpha=opacity,
-#                  label='QCPI n=10')
-#
-# rects3 = plt.bar(index + 2*bar_width, shoot_data[0,1:], bar_width,
-#                  alpha=opacity,
-#                  label='Shooting n=25')
-#
-# rects4 = plt.bar(index + 3*bar_width, shoot_data[1,1:], bar_width,
-#                  alpha=opacity,
-#                  label='Shooting n=10')
-#
-# plt.xticks(index + bar_width,labels,rotation=30)
-#
-# plt.show()
+
+import tabulate
+tbl1 = tabulate.tabulate(
+                [('QCPI',*qcpi_time), ('Shooting',*shooting_time)],
+                headers=['Solver','$n=1$ [sec]','$n=2$ [sec]','$n=5$ [sec]','$n=10$ [sec]','$n=25$ [sec]',],
+                tablefmt='latex_raw')
+print(tbl1,end='\n\n')
+
+tbl2 = tabulate.tabulate(
+                [('QCPI',*qcpi_data[0,:]),
+                 ('QCPI',*qcpi_data[1,:]),
+                 ('Shooting',*shoot_data[0,:]),
+                 ('Shooting',*shoot_data[1,:])],
+                headers=['Solver','$n$','Single core [sec]','Two cores [sec]','Four cores [sec]','Eight cores [sec]'],
+                tablefmt='latex_raw')
+print(tbl2,end='\n\n')

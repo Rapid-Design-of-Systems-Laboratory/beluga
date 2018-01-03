@@ -29,13 +29,20 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        derivative_method='fd',
-                        tolerance=1e-4,
-                        max_iterations=100,
-                        verbose = True,
-                        max_error=100
-             )
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+#                         derivative_method='fd',
+#                         tolerance=1e-4,
+#                         max_iterations=100,
+#                         verbose = True,
+#                         max_error=100
+#              )
+
+
+bvp_solver = beluga.bvp_algorithm('ParallelShooting',
+                    tolerance=1e-4,
+                    max_iterations=50,
+                    verbose = True,
+)
 
 # bvp_solver = beluga.bvp_algorithm('SingleShooting',
 #                     derivative_method='fd',
