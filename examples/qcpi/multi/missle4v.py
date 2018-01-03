@@ -89,6 +89,8 @@ for i in range(2,n+1):
         .terminal(f'ybar{i}', 0.0) \
         .terminal(f'psi{i}', psi_vec[i-1]) \
 
+import numba
+print(f'Using {numba.config.NUMBA_NUM_THREADS} threads.')
 beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,

@@ -117,7 +117,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     solinit.aux['initial'] = initial_bc
     solinit.aux['terminal'] = terminal_bc
-
+    solinit2= copy.deepcopy(solinit)
     tic()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?
@@ -129,7 +129,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     ocp_ws['scaling'] = ocp._scaling
 
     out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit)
-    total_time = toc();
+    total_time = toc()
+
+    tic()
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit2)
+    total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
 
