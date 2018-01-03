@@ -108,7 +108,7 @@ QCPICodeGen = sp.Workflow([
 
 pert_eom_bck = None
 @ft.lru_cache(maxsize=16)
-def make_pert_eom(nOdes, q, eom_fn):
+def make_pert_eom(nOdes, q, eom_fn, eom2):
     """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
     def pert_eom(t, X, dXdt, *args):
         for i in range(q+2):
@@ -117,7 +117,10 @@ def make_pert_eom(nOdes, q, eom_fn):
             dXdt_ = dXdt[:,i*nOdes:(i+1)*nOdes]
             # One timestep at a time
             for j in range(len(t)):
-                eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
+                dXdt_[j,:] = eom2(t[j], X_[j,:nOdes], X_[j,nOdes:nOdes], *args)
+                # dXdt_[{{num_states}}+{{dae_var_num}}:]
+                # print(X_[j,:].shape, dXdt_[j,:].shape, retval.shape)
+                # eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
 
     global pert_eom_bck
     pert_eom_bck = pert_eom
@@ -184,12 +187,12 @@ class QCPI(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
 
-        if os.path.isfile('codecache.pkl'):
-            with open('codecache.pkl','rb') as f:
-                deriv_func_bck = pickle.load(f)
-
-        else:
-            deriv_func_bck = None
+        # if os.path.isfile('codecache.pkl'):
+        #     with open('codecache.pkl','rb') as f:
+        #         deriv_func_bck = pickle.load(f)
+        #
+        # else:
+        #     deriv_func_bck = None
         out_ws = QCPICodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
         print(out_ws['deriv_func_code'])
@@ -212,6 +215,7 @@ class QCPI(BaseAlgorithm):
         #     self.saved_deriv_func = True
         # else:
         self.deriv_func = out_ws['code_module'].deriv_func_mcpi
+        self.deriv_func_1 = out_ws['code_module'].deriv_func
 
         self.mcpi_eom = make_mcpi_eom(self.deriv_func)
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
@@ -265,7 +269,8 @@ class QCPI(BaseAlgorithm):
         # A_j0 = np.vstack((np.zeros(nOdes), 0.01*np.eye(nOdes)))
 
         q = len(A_j0) - 1
-
+        # from beluga.utils import keyboard
+        # keyboard()
         # Set up perturbed ICs
         xp_0 = np.hstack((x_0, A_j0.flat)) # Add perturbed ICs as extra states
         xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
@@ -285,7 +290,7 @@ class QCPI(BaseAlgorithm):
         C_a = w1 * C_a
         t_arr = tau*w1 + w2
         # Make functions
-        pert_eom = make_pert_eom(nOdes, q, self.deriv_func)
+        pert_eom = make_pert_eom(nOdes, q, self.deriv_func, self.deriv_func_1)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
         perf_idx_fn = make_perf_idx(self.bc_left_fn, self.bc_right_fn)
 
@@ -315,6 +320,7 @@ class QCPI(BaseAlgorithm):
             x_guess = np.flipud(x_guess2)
             # print('nsoododoshds')
 
+        x_guess_orig = np.copy(x_guess)
         x0_twice = 2*x_guess[-1]
         g_arr = np.empty_like(x_guess)
 
@@ -330,7 +336,9 @@ class QCPI(BaseAlgorithm):
         err1 = 1000
         err0 = 9999
         np.set_printoptions(precision=4, linewidth=160)
-        for ctr in range(max_iter):
+        ctr = 0
+        total_iter = 0
+        while ctr < max_iter:
             try:
                 pert_eom(t_arr, x_guess, g_arr, const)
             except Exception as e:
@@ -354,13 +362,17 @@ class QCPI(BaseAlgorithm):
             #     logging.error('Error exceeded max error')
             #     break
             if np.isnan(err1):
-                x_new = x_guess
+                x_new = x_guess_orig
                 print('NaaaaaN')
                 break
                 from beluga.utils import keyboard
                 keyboard()
 
-            if ctr > 0 and err1 < 1*min(self.tolerance,1e-4) or abs(err0-err1)<min(self.tolerance,1e-4):
+            if total_iter > 5000:
+                print('Total integration iterations exceeded!')
+                x_new = x_guess_orig
+                break
+            if err1 < 1*min(self.tolerance,1e-4) or abs(err0-err1)<min(self.tolerance,1e-4):
                 x_tf = x_new[0,:]       # x_new is reverse time history
                 res = bc_jac_fn(x_tf[:nOdes], psi_jac, aux) # Compute residue and jacobian
                 res_norm_0 = np.amax(np.abs((res)))
@@ -369,19 +381,19 @@ class QCPI(BaseAlgorithm):
                 res_left = left_bc_jac_fn(x_t0, left_jac, aux)
 
                 # if ctr > -90:
-                print('Residue : '+str(res_norm_0))
+                print('Residual : '+str(res_norm_0))
 
                 if res_norm_0 > self.max_error:
-                    x_new = x_guess # Reset to old version in case of NaN
+                    x_new = x_guess_orig # Reset to old version in case of NaN
                     logging.error('Error exceeded max error')
                     break
-                if res_norm_0 < self.tolerance and np.amax(np.abs(res_left)) < self.tolerance:
+                if ctr > 0 and res_norm_0 < self.tolerance and np.amax(np.abs(res_left)) < self.tolerance:
                     converged = True
                     print('Converged in %d iterations.' % ctr)
                     break
 
                 if np.isnan(res).any():
-                    x_new = x_guess # Reset to old version in case of NaN
+                    x_new = x_guess_orig # Reset to old version in case of NaN
                     # from beluga.utils import keyboard
                     # keyboard()
                     print('NaaaaaN')
@@ -452,6 +464,7 @@ class QCPI(BaseAlgorithm):
                 # xp_0[nOdes:] = np.tile(xp_0[:nOdes], (q+1,)) + A_j0.flat  # Add perturbations to ICs
                 # xpm_0 = np.reshape(xp_0, (q+2, nOdes))  # Matrix 'view' of xp_0
                 # x0_twice = 2*x_new[-1,:]
+                ctr += 1
 
             x_guess = x_new
             err0 = err1
