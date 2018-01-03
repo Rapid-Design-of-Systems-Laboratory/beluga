@@ -460,13 +460,13 @@ class MultipleShooting(BaseAlgorithm):
                 phi_list = []
                 x_list = []
                 y_list = []
-                with timeout(seconds=1000):
+                with timeout(seconds=5):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
                         # t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-6)
+                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
                         y_list.append(yy[:,:nOdes].T)
                         x_list.append(t)
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
@@ -522,7 +522,7 @@ class MultipleShooting(BaseAlgorithm):
                     if beta < 0:
                         beta = 1
                 if r1>1:
-                    alpha = 1/(2*r1)
+                    alpha = 1./(5*r1)
                 else:
                     alpha = 1
                 r0 = r1
