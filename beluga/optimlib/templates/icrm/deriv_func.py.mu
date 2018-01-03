@@ -135,3 +135,4 @@ def deriv_func_ode45(_t,_X,_p,_aux):
 
 #{{#state_list}}{{.}},{{/state_list}}]
 #{{#dae_var_list}}{{.}},{{/dae_var_list}}]
+num_bc = {{num_bc}}

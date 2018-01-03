@@ -175,13 +175,13 @@ def make_functions(problem_data, module):
     quantity_vars = problem_data['quantity_vars']
     ham = problem_data['ham']
 
-    print('Making unconstrained control')
+    logging.info('Making unconstrained control')
     control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars,ham)
 
     # problem_data['ham_fn'] = ham_fn
     module.ham_fn = ham_fn
     control_fns = [control_fn] # Also makethiss
-    print('Processing constraints')
+    logging.info('Processing constraints')
     for arc_type, s in enumerate(problem_data['s_list'],1):
         u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
         control_fns.append(u_fn)
@@ -274,12 +274,12 @@ class MultipleShooting(BaseAlgorithm):
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
         out_ws = PythonCodeGen({'problem_data': problem_data})
-        print(out_ws['bc_func_code'])
-        print(out_ws['deriv_func_code'])
+        logging.debug(out_ws['bc_func_code'])
+        logging.debug(out_ws['deriv_func_code'])
         cache_exists = os.path.isfile('codecache.pkl')
         if not self.cached or not cache_exists:
-            print(out_ws['bc_func_code'])
-            print(out_ws['deriv_func_code'])
+            # print(out_ws['bc_func_code'])
+            # print(out_ws['deriv_func_code'])
             deriv_func = numba.njit(parallel=True)(out_ws['code_module'].deriv_func_nojit)
             out_ws['deriv_func_fn'] = deriv_func
             out_ws['code_module'].deriv_func = deriv_func
@@ -460,7 +460,7 @@ class MultipleShooting(BaseAlgorithm):
                 phi_list = []
                 x_list = []
                 y_list = []
-                with timeout(seconds=5):
+                with timeout(seconds=5000):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]

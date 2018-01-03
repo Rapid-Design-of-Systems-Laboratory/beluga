@@ -300,9 +300,11 @@ class ManualStrategy(object):
             raise StopIteration
 
         # Update auxiliary variables using previously calculated step sizes
+        total_change = 0.0
         for var_type in self.vars:
             for var_name in self.vars[var_type]:
                 self.sol.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
+                total_change += abs(self.vars[var_type][var_name].steps[self.ctr])
 
         self.ctr += 1
         self.last_sol = self.sol

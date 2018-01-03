@@ -16,7 +16,7 @@ ocp.constant('V',300,'m/s')
 ocp.constant('tfreal',50,'s')
 
 import numpy as np
-n = 10
+n = 25
 
 psi_vec = np.linspace(45*pi/180, -45*pi/180, n+1)
 

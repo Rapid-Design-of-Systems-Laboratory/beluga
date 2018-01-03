@@ -1,46 +1,40 @@
 from math import pi
-ocp = beluga.OCP('twoveh_s2')
+ocp = beluga.OCP('jammer')
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.quantity('xbardot','cos(psi)*cos(gam)')
-ocp.quantity('ybardot','sin(psi)*cos(gam)')
-ocp.quantity('zbardot','-sin(gam)')
-ocp.state('xbar', 'xbardot', 'nd')\
-   .state('ybar', 'ybardot', 'nd')\
-   .state('zbar', 'zbardot', 'nd')\
+ocp.state('xbar', 'cos(psi)*cos(gam)', 'nd')\
+   .state('ybar', 'sin(psi)*cos(gam)', 'nd')\
+   .state('zbar', '-sin(gam)', 'nd')\
    .state('psi', '10*abar', 'nd')
 ocp.control('abar','nd')
 ocp.control('gam','nd')
 
-ocp.quantity('xbar2dot','vbar2*cos(psi2)*cos(gam2)')
-ocp.quantity('ybar2dot','vbar2*sin(psi2)*cos(gam2)')
-ocp.quantity('zbar2dot','-vbar2*sin(gam2)')
-ocp.state('xbar2', 'xbar2dot', 'nd')\
-   .state('ybar2', 'ybar2dot', 'nd')\
-   .state('zbar2', 'zbar2dot', 'nd')\
+ocp.state('xbar2', 'vbar2*cos(psi2)*cos(gam2)', 'nd')\
+   .state('ybar2', 'vbar2*sin(psi2)*cos(gam2)', 'nd')\
+   .state('zbar2', '-vbar2*sin(gam2)', 'nd')\
    .state('psi2', '10*abar2', 'nd')\
    .state('vbar2', '0', 'nd/s')
 
 ocp.control('abar2','nd')
 ocp.control('gam2','nd')
 
-# Jammer location
+ocp.constant('xc1',-0.1,'nd')
+ocp.constant('slope',40,'nd')
+ocp.constant('safeDist',0.02,'nd')
+ocp.constant('unsafeDist',0.000001,'nd') # Near target
+ocp.constant('ymax',0.2,'nd')
+
+
 ocp.constant('xc',-0.6,'nd')
-ocp.constant('yc',0.,'nd')
-ocp.constant('rc',.1,'nd')
+ocp.constant('yc',0.0,'nd')
+ocp.constant('zc',-0.15,'nd')
+ocp.constant('rc',0.05,'nd')
 
-ocp.constant('xc2',-0.2,'nd')
-ocp.constant('yc2',0.30,'nd')
-ocp.constant('rc2',.2,'nd')
-
-ocp.constraints().path('comm1','sqrt((xbar-xc)**2+(ybar-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
-                 .path('comm2','sqrt((xbar2-xc)**2+(ybar2-yc)**2)/rc','>',1,'nd',start_eps=1e-6)\
-                 .path('u1','abar','<>',1,'nd',start_eps=1e-6)\
-                 .path('u2','abar2','<>',1,'nd',start_eps=1e-6)\
-                 .path('comm3','sqrt((xbar2-xc2)**2+(ybar2-yc2)**2)/rc2','>',1,'nd',start_eps=1e-6)\
+ocp.constraints().path('alt1','sqrt((xbar-xc)**2 + (zbar-zc)**2)/rc','>',1,'nd',start_eps=1e-6)\
+                 .path('alt2','sqrt((xbar2-xc)**2 + (zbar2-zc)**2)/rc','>',1,'nd',start_eps=1e-6)
 
 # Define constants
 ocp.constant('V',300,'m/s')
@@ -81,17 +75,26 @@ ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         tolerance=1e-3,
-                        max_iterations=75,
+                        max_iterations=200,
                         verbose = True,
                         derivative_method='fd',
-                        max_error=10,
+                        max_error=20,
+             )
+
+
+bvp_solver = beluga.bvp_algorithm('qcpi',
+                        tolerance=1e-3,
+                        max_iterations=300,
+                        verbose = True,
+                        max_error=20,
+                        N=141
              )
 
 guess_maker = beluga.guess_generator('auto',
                 start=[-.8,0.,-.1,-pi/12.]+[-.8,.1,-.1,0.,1.],
                 direction='forward',
-                costate_guess = [0., 0., 0., -0.]+[0.,0.,0.,0.,0.]+[0.,0.,0.],
-                control_guess = [0.00, -.0, -0.00, -.0]+[0.0,0.0]*5,
+                costate_guess = [0., 0., 0., -0.]+[0.,0.,0.,0.,0.]+[0.]*2,
+                control_guess = [0.00, .01, -0.00, .01]+[0.0,0.0]*2,
                 time_integrate=.1,
                 use_control_guess=True,
 )
@@ -100,41 +103,29 @@ continuation_steps = beluga.init_continuation()
 #
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(101) \
-#                 .terminal('xbar', -0.6)\
-#                 .terminal('ybar', -.25) \
+#                 .terminal('xbar', -0.)\
+#                 .terminal('ybar', .0) \
 #                 .terminal('zbar', 0.) \
-#                 .terminal('psi', +15*pi/180) \
-#                 .terminal('xbar2', -.6)\
-#                 .terminal('ybar2', .25) \
+#                 .terminal('psi', +0*pi/180) \
+#                 .terminal('xbar2', -0.)\
+#                 .terminal('ybar2', .0) \
 #                 .terminal('zbar2', 0.) \
-#                 .terminal('psi2', -15*pi/180) \
+#                 .terminal('psi2', -0*pi/180) \
 #
 # continuation_steps.add_step('bisection') \
-#                 .num_cases(41) \
-#                 .terminal('xbar', 0.)\
-#                 .terminal('ybar', 0.) \
-#                 .terminal('xbar2', -0.25)\
-#                 .terminal('ybar2', 0.)
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(41) \
-#                 .terminal('xbar2', -0.0)
-#
+#                 .num_cases(11) \
+#                 .terminal('psi',15*pi/180)\
+#                 .terminal('psi2',-30*pi/180)
 
-guess_maker = beluga.guess_generator('file',filename='data-twoveh-s2-a.dill',iteration=-1,step=-1)
+guess_maker = beluga.guess_generator('file',filename='data-zs-unc-qcpi.dill',iteration=-1,step=-1)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .constant('xc',-0.4)\
+                .num_cases(101) \
+                .constant('zc',-0.125)
 
-continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .constant('rc',0.2) # Store as s2-zone1
-
-# -109 deg
 beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
-             output_file='data1.dill')
+             output_file='data.dill')
