@@ -2,7 +2,7 @@ from .BaseAlgorithm import BaseAlgorithm
 from .SingleShooting import SingleShooting
 from .MultipleShooting import MultipleShooting
 from .ParallelShooting import ParallelShooting
-from .MultipleShooting_mike import MultipleShooting_mike
+#from .MultipleShooting_mike import MultipleShooting_mike
 from .QCPI import QCPI
 
 # from ScikitsBVPSolver import ScikitsBVPSolver
