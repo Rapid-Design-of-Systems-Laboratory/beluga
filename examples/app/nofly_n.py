@@ -110,33 +110,34 @@ guess_maker = beluga.guess_generator('auto',
 # 2540.27 seconds with 5 vehicles, N = 101
 continuation_steps = beluga.init_continuation()
 
+step1 = continuation_steps.add_step('bisection') \
+                .num_cases(21)
+
+step1.terminal('xbar', -0.6)\
+    .terminal('ybar', -0.25) \
+    .terminal('zbar', 0.) \
+    .terminal('psi', psi_vec[0]) \
+
+step2 = continuation_steps.add_step('bisection') \
+                .num_cases(51)\
+                .terminal('xbar',0.0)\
+                .terminal('ybar',yf_pos[0])
+
+for i in range(2,n+1):
+    y_sign = y0_pos[i-1]/abs(y0_pos[i-1])
+    step1.terminal(f'xbar{i}', -0.6)\
+        .terminal(f'ybar{i}', y_sign*0.25) \
+        .terminal(f'zbar{i}', 0) \
+        .terminal(f'psi{i}', psi_vec[i-1]) \
+
+    step2.terminal(f'xbar{i}', 0.)\
+        .terminal(f'ybar{i}', yf_pos[i-1]) \
+
 # Test for decreasing eps with N = 201
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .const('eps_zone10',1e-5)\
 
-# step1 = continuation_steps.add_step('bisection') \
-#                 .num_cases(21)
-#
-# step1.terminal('xbar', -0.6)\
-#     .terminal('ybar', -0.25) \
-#     .terminal('zbar', 0.) \
-#     .terminal('psi', psi_vec[0]) \
-#
-# step2 = continuation_steps.add_step('bisection') \
-#                 .num_cases(51)\
-#                 .terminal('xbar',0.0)\
-#                 .terminal('ybar',yf_pos[0])
-#
-# for i in range(2,n+1):
-#     y_sign = y0_pos[i-1]/abs(y0_pos[i-1])
-#     step1.terminal(f'xbar{i}', -0.6)\
-#         .terminal(f'ybar{i}', y_sign*0.25) \
-#         .terminal(f'zbar{i}', 0) \
-#         .terminal(f'psi{i}', psi_vec[i-1]) \
-#
-#     step2.terminal(f'xbar{i}', 0.)\
-#         .terminal(f'ybar{i}', yf_pos[i-1]) \
 #
 # guess_maker = beluga.guess_generator('file',filename='data-qcpi-ulim-5v.dill', iteration=-1, step=-1)
 #
