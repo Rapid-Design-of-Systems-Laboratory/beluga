@@ -136,6 +136,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
+    bvp_algorithm.close()
 
     # Save data
     # del out['problem_data']['s_list']
@@ -148,6 +149,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     with open(output_file, 'wb') as outfile:
         dill.settings['recurse'] = True
         dill.dump(out, outfile) # Dill Beluga object only
+
+
 
 
 # TODO: Refactor how code deals with initial guess

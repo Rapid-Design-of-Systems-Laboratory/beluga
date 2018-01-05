@@ -90,11 +90,11 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
-                        tolerance=1e-3,
+                        tolerance=1e-6,
                         max_iterations=200,
                         verbose = True,
                         max_error=20,
-                        N=101
+                        N=201
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -109,6 +109,11 @@ guess_maker = beluga.guess_generator('auto',
 # 1848 seconds with 4 vehicles, N = 101
 # 2540.27 seconds with 5 vehicles, N = 101
 continuation_steps = beluga.init_continuation()
+
+# Test for decreasing eps with N = 201
+continuation_steps.add_step('bisection') \
+                .num_cases(11) \
+                .const('eps_zone10',1e-5)\
 
 # step1 = continuation_steps.add_step('bisection') \
 #                 .num_cases(21)
@@ -154,16 +159,21 @@ continuation_steps = beluga.init_continuation()
 #                 .num_cases(41) \
 #                 .constant('yc',0.15)\
 
-guess_maker = beluga.guess_generator('file',filename='data-5v-nominal.dill', iteration=-1, step=-1)
-continuation_steps.add_step('bisection', num_divisions=3) \
-                .num_cases(41) \
-                .constant('rc',0.16)\
+# guess_maker = beluga.guess_generator('file',filename='data-5v-nominal.dill', iteration=-1, step=-1)
+# continuation_steps.add_step('bisection', num_divisions=3) \
+#                 .num_cases(41) \
+#                 .constant('rc',0.16)\
 
 # guess_maker = beluga.guess_generator('file',filename='data-qcpi-5v-psi3-179-psi5-120.dill', iteration=-1, step=-1)
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(41) \
 #                 .terminal('psi5',179*pi/180)\
 
+# Test for decreasing eps with N = 1001
+# guess_maker = beluga.guess_generator('file',filename='data-5v-nominal.dill', iteration=-1, step=-1)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(41) \
+#                 .const('eps_zone10',1e-4)\
 
 beluga.solve(ocp,
              method='icrm',

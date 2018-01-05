@@ -8,3 +8,6 @@ class BaseAlgorithm(object):
     def solve(self,bvp):
         """Method to solve the bvp with given arguments"""
         raise NotImplementedError()
+
+    def close(self):
+        pass
