@@ -108,24 +108,37 @@ QCPICodeGen = sp.Workflow([
 
 pert_eom_bck = None
 @ft.lru_cache(maxsize=16)
-def make_pert_eom(nOdes, nParams, q, eom_fn):
+def make_pert_eom(nOdes, q, eom_fn, executor):
     """Makes EOM that evaluates perturbed & unperturbed states at all time steps"""
+
+    @njit
+    def pert_eom_inner(idx, all_args):
+        t, X, dXdt, args = all_args
+        i, j = idx
+        X_ = X[:,i*nOdes:(i+1)*nOdes]
+        dXdt_ = dXdt[:,i*nOdes:(i+1)*nOdes]
+        dXdt_[j,:] = eom_fn(t[j], X_[j,:nOdes], X_[j,nOdes:nOdes], *args)
+
     def pert_eom(t, X, dXdt, *args):
-        for i in range(q+2):
-            # Extract only relevant states
-            X_ = X[:,i*nOdes:(i+1)*nOdes]
-            dXdt_ = dXdt[:,i*nOdes:(i+1)*nOdes]
-            # One timestep at a time
-            for j in range(len(t)):
-                dXdt_[j,:nOdes-nParams] = eom_fn(t[j], X_[j,:nOdes-nParams], X_[j,nOdes-nParams:], *args)
-                dXdt_[j,nOdes-nParams:] = 0
-                # dXdt_[{{num_states}}+{{dae_var_num}}:]
-                # print(X_[j,:].shape, dXdt_[j,:].shape, retval.shape)
-                # eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
+        # executor.map(ft.partial(pert_eom_inner, all_args=(t, X, dXdt, args)),
+        #              np.ndindex(q+2, len(t)))
+        # for i,j in np.ndindex(q+2, len(t)):
+        #     pert_eom_inner((i, j), (t, X, dXdt, args))
+
+        # for i in range(q+2):
+        #     # Extract only relevant states
+        #     X_ = X[:,i*nOdes:(i+1)*nOdes]
+        #     dXdt_ = dXdt[:,i*nOdes:(i+1)*nOdes]
+        #     # One timestep at a time
+        #     for j in range(len(t)):
+        #         dXdt_[j,:] = eom_fn(t[j], X_[j,:nOdes], X_[j,nOdes:nOdes], *args)
+        #         # dXdt_[{{num_states}}+{{dae_var_num}}:]
+        #         # print(X_[j,:].shape, dXdt_[j,:].shape, retval.shape)
+        #         # eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
 
     global pert_eom_bck
     pert_eom_bck = pert_eom
-    return njit(parallel=False)(pert_eom)
+    return pert_eom
 
 @ft.lru_cache(maxsize=16)
 def make_mcpi_eom(eom_fn):
@@ -135,8 +148,7 @@ def make_mcpi_eom(eom_fn):
     def mcpi_eom(t, X_, dXdt_, *args):
         # One timestep at a time
         for j in range(len(t)):
-            # Will fail due to typo
-            dXdt_[j,:] = eom_fn(t[j], X_[j,:nOdes], X_[j,nOdes:nOdes+nParams], *args)
+            eom_fn(t[j], X_[j,:], dXdt_[j,:], *args)
 
     return mcpi_eom
 
@@ -175,8 +187,9 @@ def make_perf_idx(bc_left_fn, bc_right_fn):
 
 import os
 import pickle
+import concurrent.futures
 
-class QCPI(BaseAlgorithm):
+class QCPI_Parallel(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, N=21, verbose=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
@@ -184,17 +197,14 @@ class QCPI(BaseAlgorithm):
         self.max_error = max_error
         self.N = N
         self.saved_deriv_func = False
+        self.executor = concurrent.futures.ProcessPoolExecutor()
 
+    def close(self):
+        self.executor.shutdown()
 
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
 
-        # if os.path.isfile('codecache.pkl'):
-        #     with open('codecache.pkl','rb') as f:
-        #         deriv_func_bck = pickle.load(f)
-        #
-        # else:
-        #     deriv_func_bck = None
         out_ws = QCPICodeGen({'problem_data': problem_data})
         print(out_ws['bc_func_code'])
         print(out_ws['deriv_func_code'])
@@ -219,6 +229,7 @@ class QCPI(BaseAlgorithm):
         # self.deriv_func = out_ws['code_module'].deriv_func_mcpi
         self.deriv_func = out_ws['code_module'].deriv_func
 
+        self.mcpi_eom = make_mcpi_eom(self.deriv_func)
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
 
@@ -291,7 +302,7 @@ class QCPI(BaseAlgorithm):
         C_a = w1 * C_a
         t_arr = tau*w1 + w2
         # Make functions
-        pert_eom = make_pert_eom(nOdes, nParams, q, self.deriv_func)
+        pert_eom = make_pert_eom(nOdes, q, self.deriv_func, self.executor)
         bc_jac_fn = make_bc_jac(self.bc_right_fn, nOdes)
         perf_idx_fn = make_perf_idx(self.bc_left_fn, self.bc_right_fn)
 
@@ -472,11 +483,7 @@ class QCPI(BaseAlgorithm):
 
         # Return initial guess if it failed to converge
         sol = solinit
-        if not self.saved_deriv_func:
-            with open('codecache.pkl','wb') as f:
-                f.write(pickle.dumps(self.deriv_func))
-            self.saved_deriv_func = True
-            print('Saved deriv_func to file')
+
         if converged:
             if len(tspan) > 2:
                 _, x_out = mcpi(self.mcpi_eom, tspan, x_new[-1, :nOdes], args=(const,))

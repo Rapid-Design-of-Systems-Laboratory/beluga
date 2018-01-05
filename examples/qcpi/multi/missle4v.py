@@ -16,7 +16,7 @@ ocp.constant('V',300,'m/s')
 ocp.constant('tfreal',50,'s')
 
 import numpy as np
-n = 25
+n = 10
 
 psi_vec = np.linspace(45*pi/180, -45*pi/180, n+1)
 
@@ -60,7 +60,7 @@ ocp.constraints() \
 # 75(10) seconds for 2 vehicle unconstrainted  (with u constraints)
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('qcpi',
+bvp_solver = beluga.bvp_algorithm('qcpi_parallel',
                     tolerance=1e-4,
                     max_iterations=100,
                     verbose = True,
