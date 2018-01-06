@@ -80,21 +80,21 @@ ocp.constraints()\
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
-                        tolerance=1e-3,
-                        max_iterations=200,
-                        verbose = True,
-                        derivative_method='fd',
-                        max_error=20,
-             )
-
+# bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+#                         tolerance=1e-3,
+#                         max_iterations=200,
+#                         verbose = True,
+#                         derivative_method='fd',
+#                         max_error=20,
+#              )
+#
 
 bvp_solver = beluga.bvp_algorithm('qcpi',
                         tolerance=1e-6,
                         max_iterations=200,
                         verbose = True,
                         max_error=20,
-                        N=201
+                        N=31
              )
 
 guess_maker = beluga.guess_generator('auto',
@@ -133,10 +133,31 @@ for i in range(2,n+1):
     step2.terminal(f'xbar{i}', 0.)\
         .terminal(f'ybar{i}', yf_pos[i-1]) \
 
-# Test for decreasing eps with N = 201
-continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .const('eps_zone10',1e-5)\
+# # Test for decreasing all eps to 1e-5 with N = 150
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(111) \
+#                 .const('eps_zone10',1e-5)\
+#                 .const('eps_zone12',1e-5) \
+#                 .const('eps_zone13',1e-5) \
+#                 .const('eps_zone14',1e-5) \
+#                 .const('eps_zone15',1e-5)
+
+# eps to 1e-6 with N=80
+# guess_maker = beluga.guess_generator('file',filename='data-5v-eps5-all-2hrs.dill', iteration=-1, step=-1)
+
+# tol = 1e-6
+# 31 - 1e-4
+# 81 - 1e-5
+# 151 - 1e-6
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(201) \
+#                 .const('eps_zone10',1e-6)\
+#                 .const('eps_zone12',1e-6) \
+#                 .const('eps_zone13',1e-6) \
+#                 .const('eps_zone14',1e-6) \
+#                 .const('eps_zone15',1e-6)
+#
+
 
 #
 # guess_maker = beluga.guess_generator('file',filename='data-qcpi-ulim-5v.dill', iteration=-1, step=-1)
