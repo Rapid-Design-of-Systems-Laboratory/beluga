@@ -303,17 +303,20 @@ class QCPI(BaseAlgorithm):
             x_guess2 = None
 
         # x_guess2 = None
-        # if solinit.extra is None or solinit.extra.shape[0] != (N+1):
-        #     try:
-        #         if solinit.extra is not None:
-        #             print('Propagating eqns as',solinit.extra.shape[0],'!=',N+1)
-        #         else:
-        #             print('solinit.extra is None')
-        #         _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
-        #     except:
-        #         x_guess2 = None
+        
+        if solinit.extra is None or solinit.extra.shape[0] != (N+1):
+            try:
+                if solinit.extra is not None:
+                    print('Propagating eqns as',solinit.extra.shape[0],'!=',N+1)
+                else:
+                    print('solinit.extra is None')
+                _, x_guess2 = mcpi(pert_eom, tspan, xp_0, N=N, args=(const,))
+            except:
+                x_guess2 = None
         if x_guess2 is None or np.isnan(x_guess2.flat).any():
-            if solinit.extra is not None and not np.isnan(solinit.extra.flat).any():
+            if solinit.extra is not None\
+                and not np.isnan(solinit.extra.flat).any() \
+                and solinit.extra.shape[0] == N+1:
                 x_guess = solinit.extra
             else:
                 x_guess = np.tile(xp_0, (N+1, 1))  # Each column -> time history of one state
