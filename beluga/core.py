@@ -131,9 +131,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit)
     total_time = toc()
 
-    tic()
-    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit2)
-    total_time = toc()
+    # tic()
+    # out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit2)
+    # total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
