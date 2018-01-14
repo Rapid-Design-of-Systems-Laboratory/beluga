@@ -449,7 +449,7 @@ class ParallelShooting(BaseAlgorithm):
         for ctr in range(self.max_iterations):
             Xstm0[:,:nOdes] = x_guess
             propagate_stm(stmode45, Xstm0, nArcs, nOdes, xf, G, args=(paramGuess, const, 0))
-            
+
             ya = x_guess[0,:]
             yb = xf[-1,:]
             res, J = bcjac(G, ya, yb, paramGuess, aux)
