@@ -2,6 +2,7 @@ from beluga.visualization import BelugaPlot
 from matplotlib2tikz import save as tikz_save
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.cm as cmx
 
 mpl.rcParams['axes.labelsize'] = 'x-large'
 mpl.rcParams['legend.fontsize'] = 'x-large'
@@ -51,12 +52,26 @@ def postprocess_theta_plot(renderer, fig, plot):
     plt.savefig(output_dir+'brachisto_mpbvp_theta.eps')
 
 
-plots.add_plot().line_series('x','y', step=2, start=0, style={'lw': 2.5}) \
-                .line('x','-1.0-x',label='x + y + 1 = 0',step=-1,sol=-1) \
+def add_colorbar(r,f,p,lb,ub,label,cmap,pos='right',orient='vertical'):
+    norm = mpl.colors.Normalize(vmin=lb, vmax=ub)
+
+    fig = r._get_figure(f)
+    # cax = fig.add_axes([0.125, 0.925, 0.775, 0.0725])
+
+    ax = plt.gca()
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes(pos, size="5%", pad=0.05)
+
+    cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, orientation=orient)
+    cb.set_label(label)
+
+
+plots.add_plot(colormap=cmx.jet).line_series('x','y', step=2, start=0, style={'lw': 2.5}) \
+                .line('x','-1.0-x',label='x + y + 1 = 0',step=-1,sol=-1, style={'ls':'--', 'color':'green', 'lw':2.0}) \
                 .xlabel('$x(t)$ [m]').ylabel('$y(t)$ [m]')      \
                 .postprocess(postprocess_xy_plot)
 
-plots.add_plot().line_series('t','-theta*180/3.14', step=2, start=0) \
+plots.add_plot(colormap=cmx.jet).line_series('t','-theta*180/3.14', step=2, start=0) \
                 .xlabel('$t$ [s]').ylabel('$\\theta(t)$ [deg]')      \
                 .postprocess(postprocess_theta_plot)
 
