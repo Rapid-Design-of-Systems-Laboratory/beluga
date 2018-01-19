@@ -1,4 +1,4 @@
-*.img
+codecache.pkl
 *.pyc
 __pycache__
 *.html
@@ -72,15 +72,7 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+site/
 
 # PyBuilder
 target/
-
-<<<<<<< HEAD
-.idea/workspace.xml
-
-beluga/optim/NecessaryConditions.py
-=======
-# PyCharm configuration files
-.idea/
->>>>>>> RDSL/master

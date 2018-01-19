@@ -29,7 +29,7 @@
 
 ##### 03 Jun 2015 #####
 - Added scaling
-- Added sympify2
+- Added sympify
   - carets work as expected
   - 're' works now
 - Planar hypersonic problem now functional

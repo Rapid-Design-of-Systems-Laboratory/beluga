@@ -7,7 +7,7 @@ class BelugaPlot:
     """
     Manages the plotting framework
     """
-    def __init__(self, filename='data.dill', renderer = 'matplotlib', default_step = -1, default_sol = -1, mesh_size=None):
+    def __init__(self, filename = None, datasource='dill', renderer = 'matplotlib', default_step = -1, default_sol = -1):
         """
         Initializes plotting framework with given data file
         """
@@ -18,7 +18,28 @@ class BelugaPlot:
         self.filename = filename
         self.default_step_idx = default_step
         self.default_sol_idx = default_sol
-        self.mesh_size = mesh_size
+
+        # Load datasource by filename unless one is specified directly
+        if filename is not None:
+            fname, file_ext = os.path.splitext(filename)
+        else:
+            file_ext = None
+
+        # TODO: Get default datasource information from global configuration
+        if isinstance(datasource, BaseDataSource):
+            # Use custom renderer object
+            self.datasource = datasource
+        else:
+            # Load renderer from the list of existing classes
+            self.datasource = None
+            for name, obj in inspect.getmembers(datasources):
+                if inspect.isclass(obj) and issubclass(obj, BaseDataSource):
+                    if (isinstance(datasource, str) and name.lower() == datasource.lower()) \
+                        or file_ext in obj.valid_exts:
+                        # Renderer initialized with its default settings
+                        self.datasource = obj(filename)
+            if self.datasource is None:
+                raise ValueError('Datasource "'+datasource+'" not found')
 
         # TODO: Get default renderer information from global configuration
         if isinstance(renderer, BaseRenderer):
@@ -35,7 +56,7 @@ class BelugaPlot:
             if self.renderer is None:
                 raise ValueError('Renderer '+renderer+' not found')
 
-    def add_plot(self, step = None, sol = None):
+    def add_plot(self, step = None, sol = None, datasource = None, colormap=None, mesh_size=None):
         """
         Adds a new plot
             (alias for add_plot() in PlotList)
@@ -44,7 +65,10 @@ class BelugaPlot:
             step = self.default_step_idx
         if sol is None:
             sol = self.default_sol_idx
-        plot = Plot(step, sol, self.mesh_size)
+        if datasource is None:
+            datasource = self.datasource
+
+        plot = Plot(step, sol, mesh_size, datasource, colormap)
         self._plots.append(plot)
         return plot
 
@@ -55,10 +79,12 @@ class BelugaPlot:
             logging.info("Loaded "+str(len(out['solution']))+" solution sets from "+self.filename)
 
         for plot in self._plots:
-            plot.preprocess(out['solution'],out['problem_data'])
+            plot.preprocess()
             fig = self.renderer.create_figure()
-            self.renderer.render_plot(fig,plot)
+            self.renderer.render_plot(fig, plot)
             self._figures.append(fig)
+            for fn in plot.postprocess_list:
+                fn(self.renderer, fig, plot)
         if show:
             self.show()
 
