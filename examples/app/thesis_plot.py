@@ -96,7 +96,7 @@ def add_circle(r,f,p,pos,rad):
     ax = plt.gca()
     ax.add_patch(Circle(pos, radius=rad, fill=False, hatch='/', color='r'))
 
-#
+# 
 # plots.add_plot()\
 #                 .line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',step=0,sol=-1,label='Vehicle 1',style={'lw':2.0})\
 #                 .line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',step=0,sol=-1,label='Vehicle 2',style={'lw':2.0})\
@@ -145,7 +145,7 @@ def add_circle(r,f,p,pos,rad):
 #     plt.grid(True)
 #
 #
-# plots.add_plot(colormap=cmx.viridis)\
+# plots.add_plot(colormap=cmx.jet)\
 #                 .line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_yc, style={'lw':2.0}, skip=5)\
 #                 .line_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_yc, style={'lw':2.0}, skip=5)\
 #                 .line_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_yc, style={'lw':2.0}, skip=5)\
@@ -155,7 +155,7 @@ def add_circle(r,f,p,pos,rad):
 #                 .postprocess(add_vehicle_labels)\
 #                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
 #                 .postprocess(lambda r,f,p: plt.axis('equal'))\
-#                 .postprocess(ft.partial(add_colorbar, lb=0.0, ub=2.25, label='$y_c$ [km]',cmap=cmx.viridis))\
+#                 .postprocess(ft.partial(add_colorbar, lb=0.0, ub=2.25, label='$y_c$ [km]',cmap=cmx.jet))\
 #                 .postprocess(ft.partial(save_pic, suffix='yc_evol_xy'))
 #
 # plots.add_plot()\
@@ -192,10 +192,10 @@ def add_circle(r,f,p,pos,rad):
 #                 .postprocess(lambda r,f,p: plt.gca().view_init(azim=-5,elev=10))\
 #                 .postprocess(lambda r,f,p: plt.axis('equal'))\
 #                 .postprocess(ft.partial(save_pic, suffix='yc_xyz',format='pdf'))
-
-# # Psi3 stuff
-# ds_psi3 = Dill('data-5v-psi3-189.dill')
-ds_psi3 = Dill('data-qcpi-5v-psi3-179.dill')
+#
+# # # Psi3 stuff
+# # ds_psi3 = Dill('data-5v-psi3-189.dill')
+# ds_psi3 = Dill('data-qcpi-5v-psi3-179.dill')
 #
 # def v_psi3_plot(r,f,p):
 #     out = ds_psi3.get_solution()
@@ -219,7 +219,7 @@ ds_psi3 = Dill('data-qcpi-5v-psi3-179.dill')
 #     plt.legend()
 #     plt.grid(True)
 #
-# plots.add_plot(colormap=cmx.viridis)\
+# plots.add_plot(colormap=cmx.jet)\
 #                 .line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_psi3,style={'lw':1.5}, skip=5)\
 #                 .line_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_psi3,style={'lw':1.5}, skip=5)\
 #                 .line_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_psi3,style={'lw':1.5}, skip=5)\
@@ -229,17 +229,17 @@ ds_psi3 = Dill('data-qcpi-5v-psi3-179.dill')
 #                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
 #                 .postprocess(add_vehicle_labels)\
 #                 .postprocess(lambda r,f,p: plt.axis('equal'))\
-#                 .postprocess(ft.partial(add_colorbar, lb=15, ub=189, label='$\psi_3(T)$ [deg]',cmap=cmx.viridis))\
+#                 .postprocess(ft.partial(add_colorbar, lb=15, ub=189, label='$\psi_3(T)$ [deg]',cmap=cmx.jet))\
 #                 .postprocess(ft.partial(save_pic, suffix='psi3_evol_xy'))
 #
-# plots.add_plot(colormap=cmx.viridis,mesh_size=400)\
+# plots.add_plot(colormap=cmx.jet,mesh_size=400)\
 #                 .line3d_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3', 'zbar*V*tfreal/1e3', datasource=ds_psi3, skip=5, style={'lw':1.5})\
 #                 .line3d_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3', datasource=ds_psi3, skip=5, style={'lw':1.5})\
 #                 .line3d_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3','zbar3*V*tfreal/1e3', datasource=ds_psi3, skip=5, style={'lw':1.5})\
 #                 .line3d_series('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3','zbar4*V*tfreal/1e3', datasource=ds_psi3, skip=5, style={'lw':1.5})\
 #                 .line3d_series('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3','zbar5*V*tfreal/1e3', datasource=ds_psi3, skip=5, style={'lw':1.5})\
 #                 .postprocess(ft.partial(add_cylinder,params=Zone1, opacity=0.2, invert=True))\
-#                 .postprocess(ft.partial(add_colorbar3d, lb=15, ub=189, label='$\psi_3(T)$ [deg]',cmap=cmx.viridis))\
+#                 .postprocess(ft.partial(add_colorbar3d, lb=15, ub=189, label='$\psi_3(T)$ [deg]',cmap=cmx.jet))\
 #                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
 #                 .postprocess(lambda r,f,p: plt.gca().view_init(azim=50,elev=20))\
 #                 .postprocess(lambda r,f,p: plt.axis('equal'))\
@@ -264,85 +264,98 @@ ds_psi3 = Dill('data-qcpi-5v-psi3-179.dill')
 #                 .postprocess(lambda r,f,p: plt.axis('equal'))\
 #                 .postprocess(ft.partial(save_pic, suffix='psi3_xyz',format='pdf'))
 # # Psi3 stuff
-ds_psi5 = Dill('data-qcpi-5v-psi3-179-psi5-125.dill')
-def v_psi5_plot(r,f,p):
-    out = ds_psi5.get_solution()
-    sol_set = out[-1]
-    # from beluga.utils import keyboard
-    # keyboard()
-    v2 = np.array([sol.y[8,0] for sol in sol_set])*V
-    v3 = np.array([sol.y[13,0] for sol in sol_set])*V
-    v4 = np.array([sol.y[18,0] for sol in sol_set])*V
-    v5 = np.array([sol.y[23,0] for sol in sol_set])*V
-    psi5T = np.array([sol.y[22,-1] for sol in sol_set])*180/pi
-    v1 = np.ones_like(psi5T)*V
+# ds_psi5 = Dill('data-qcpi-5v-psi3-179-psi5-125.dill')
+# def v_psi5_plot(r,f,p):
+#     out = ds_psi5.get_solution()
+#     sol_set = out[-1]
+#     # from beluga.utils import keyboard
+#     # keyboard()
+#     v2 = np.array([sol.y[8,0] for sol in sol_set])*V
+#     v3 = np.array([sol.y[13,0] for sol in sol_set])*V
+#     v4 = np.array([sol.y[18,0] for sol in sol_set])*V
+#     v5 = np.array([sol.y[23,0] for sol in sol_set])*V
+#     psi5T = np.array([sol.y[22,-1] for sol in sol_set])*180/pi
+#     v1 = np.ones_like(psi5T)*V
+#
+#     plt.plot(psi5T, v1, label='$v_1$')
+#     plt.plot(psi5T, v2, label='$v_2$')
+#     plt.plot(psi5T, v3, label='$v_3$')
+#     plt.plot(psi5T, v4, label='$v_4$')
+#     plt.plot(psi5T, v5, label='$v_5$')
+#     plt.xlabel('$\\psi_3(T)$ [deg]')
+#     plt.ylabel('$v$ [m/s]')
+#     plt.legend()
+#     plt.grid(True)
+#
+# plots.add_plot(colormap=cmx.jet)\
+#                 .line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_psi5,style={'lw':1.5}, skip=5)\
+#                 .line_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
+#                 .line_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
+#                 .line_series('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
+#                 .line_series('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
+#                 .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=ds_psi5, label='No-Fly Zone',style={'color':'k'})\
+#                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
+#                 .postprocess(add_vehicle_labels)\
+#                 .postprocess(lambda r,f,p: plt.axis('equal'))\
+#                 .postprocess(ft.partial(add_colorbar, lb=45, ub=125, label='$\psi_5(T)$ [deg]',cmap=cmx.jet))\
+#                 .postprocess(ft.partial(save_pic, suffix='psi5_evol_xy'))
+#
+# plots.add_plot(colormap=cmx.jet,mesh_size=400)\
+#                 .line3d_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3', 'zbar*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
+#                 .line3d_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
+#                 .line3d_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3','zbar3*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
+#                 .line3d_series('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3','zbar4*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
+#                 .line3d_series('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3','zbar5*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
+#                 .postprocess(ft.partial(add_cylinder,params=Zone1, opacity=0.2, invert=True))\
+#                 .postprocess(ft.partial(add_colorbar3d, lb=45, ub=125, label='$\psi_5(T)$ [deg]',cmap=cmx.jet))\
+#                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
+#                 .postprocess(lambda r,f,p: plt.gca().view_init(azim=-25,elev=35))\
+#                 .postprocess(lambda r,f,p: plt.axis('equal'))\
+#                 .postprocess(ft.partial(save_pic, suffix='psi5_evol_xyz',format='pdf'))
+#
+# plots.add_plot()\
+#                 .line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_psi5, label='Vehicle 1',style={'lw':2.0})\
+#                 .line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 2',style={'lw':2.0})\
+#                 .line('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 3',style={'lw':2.0})\
+#                 .line('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 4',style={'lw':2.0})\
+#                 .line('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 5',style={'lw':2.0})\
+#                 .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=ds_psi5, label='No-Fly Zone',style={'color':'k'})\
+#                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
+#                 .postprocess(lambda r,f,p: plt.axis('equal'))\
+#                 .postprocess(ft.partial(save_pic, suffix='psi5_xy'))
+#
+# plots.add_plot()\
+#                 .line3d('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3', 'zbar*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 1',style={'lw':2.0})\
+#                 .line3d('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 2',style={'lw':2.0})\
+#                 .line3d('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3','zbar3*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 3',style={'lw':2.0})\
+#                 .line3d('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3','zbar4*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 4',style={'lw':2.0})\
+#                 .line3d('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3','zbar5*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 5',style={'lw':2.0})\
+#                 .postprocess(ft.partial(add_cylinder,params=Zone1, opacity=0.2, invert=True))\
+#                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
+#                 .postprocess(lambda r,f,p: plt.gca().view_init(azim=-35,elev=30))\
+#                 .postprocess(lambda r,f,p: plt.axis('equal'))\
+#                 .postprocess(ft.partial(save_pic, suffix='psi5_xyz',format='pdf'))
+#
+#
+# plots.add_plot(colormap=cmx.jet).line_series('t*tfreal','gam5*180/pi',  datasource=ds_psi5,style={'lw':1.5})\
+#                 .xlabel('$t$ [s]').ylabel('$\\gamma_5(t)$ [deg]')\
+#                 .postprocess(ft.partial(add_colorbar, lb=45, ub=125, label='$\psi_5(T)$ [deg]',cmap=cmx.jet))\
+#                 .postprocess(ft.partial(save_pic, suffix='psi5_gam'))
+#
+# plots.add_plot().postprocess(v_psi5_plot)\
+#                 .postprocess(ft.partial(save_pic, suffix='psi5_v'))
 
-    plt.plot(psi5T, v1, label='$v_1$')
-    plt.plot(psi5T, v2, label='$v_2$')
-    plt.plot(psi5T, v3, label='$v_3$')
-    plt.plot(psi5T, v4, label='$v_4$')
-    plt.plot(psi5T, v5, label='$v_5$')
-    plt.xlabel('$\\psi_3(T)$ [deg]')
-    plt.ylabel('$v$ [m/s]')
-    plt.legend()
-    plt.grid(True)
-
-plots.add_plot(colormap=cmx.viridis)\
-                .line_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_psi5,style={'lw':1.5}, skip=5)\
-                .line_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
-                .line_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
-                .line_series('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
-                .line_series('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3',datasource=ds_psi5,style={'lw':1.5}, skip=5)\
-                .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=ds_psi5, label='No-Fly Zone',style={'color':'k'})\
-                .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
-                .postprocess(add_vehicle_labels)\
-                .postprocess(lambda r,f,p: plt.axis('equal'))\
-                .postprocess(ft.partial(add_colorbar, lb=45, ub=125, label='$\psi_5(T)$ [deg]',cmap=cmx.viridis))\
-                .postprocess(ft.partial(save_pic, suffix='psi5_evol_xy'))
-
-plots.add_plot(colormap=cmx.viridis,mesh_size=400)\
-                .line3d_series('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3', 'zbar*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
-                .line3d_series('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
-                .line3d_series('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3','zbar3*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
-                .line3d_series('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3','zbar4*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
-                .line3d_series('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3','zbar5*V*tfreal/1e3', datasource=ds_psi5, skip=5, style={'lw':1.5})\
-                .postprocess(ft.partial(add_cylinder,params=Zone1, opacity=0.2, invert=True))\
-                .postprocess(ft.partial(add_colorbar3d, lb=45, ub=125, label='$\psi_5(T)$ [deg]',cmap=cmx.viridis))\
-                .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
-                .postprocess(lambda r,f,p: plt.gca().view_init(azim=-25,elev=35))\
-                .postprocess(lambda r,f,p: plt.axis('equal'))\
-                .postprocess(ft.partial(save_pic, suffix='psi5_evol_xyz',format='pdf'))
-
+# Eps6 plots`
+ds_eps6 = Dill('data-5v-eps6-14ks-N150.dill')
 plots.add_plot()\
-                .line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_psi5, label='Vehicle 1',style={'lw':2.0})\
-                .line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 2',style={'lw':2.0})\
-                .line('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 3',style={'lw':2.0})\
-                .line('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 4',style={'lw':2.0})\
-                .line('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3',datasource=ds_psi5, label='Vehicle 5',style={'lw':2.0})\
-                .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=ds_psi5, label='No-Fly Zone',style={'color':'k'})\
+                .line('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3',  datasource=ds_eps6, label='Vehicle 1',style={'lw':2.0})\
+                .line('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3',datasource=ds_eps6, label='Vehicle 2',style={'lw':2.0})\
+                .line('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3',datasource=ds_eps6, label='Vehicle 3',style={'lw':2.0})\
+                .line('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3',datasource=ds_eps6, label='Vehicle 4',style={'lw':2.0})\
+                .line('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3',datasource=ds_eps6, label='Vehicle 5',style={'lw':2.0})\
+                .line('xc*V*tfreal/1e3+rc*V*tfreal/1e3*cos(2*pi*t/tf)','yc*V*tfreal/1e3+rc*V*tfreal/1e3*sin(2*pi*t/tf)',datasource=ds_eps6, label='No-Fly Zone',style={'color':'k'})\
                 .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
                 .postprocess(lambda r,f,p: plt.axis('equal'))\
-                .postprocess(ft.partial(save_pic, suffix='psi5_xy'))
-
-plots.add_plot()\
-                .line3d('xbar*V*tfreal/1e3','ybar*V*tfreal/1e3', 'zbar*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 1',style={'lw':2.0})\
-                .line3d('xbar2*V*tfreal/1e3','ybar2*V*tfreal/1e3','zbar2*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 2',style={'lw':2.0})\
-                .line3d('xbar3*V*tfreal/1e3','ybar3*V*tfreal/1e3','zbar3*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 3',style={'lw':2.0})\
-                .line3d('xbar4*V*tfreal/1e3','ybar4*V*tfreal/1e3','zbar4*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 4',style={'lw':2.0})\
-                .line3d('xbar5*V*tfreal/1e3','ybar5*V*tfreal/1e3','zbar5*V*tfreal/1e3', datasource=ds_psi5, label='Vehicle 5',style={'lw':2.0})\
-                .postprocess(ft.partial(add_cylinder,params=Zone1, opacity=0.2, invert=True))\
-                .xlabel('$x(t)$ [km]').ylabel('$y(t)$ [km]')\
-                .postprocess(lambda r,f,p: plt.gca().view_init(azim=-35,elev=30))\
-                .postprocess(lambda r,f,p: plt.axis('equal'))\
-                .postprocess(ft.partial(save_pic, suffix='psi5_xyz',format='pdf'))
-
-
-plots.add_plot(colormap=cmx.viridis).line_series('t*tfreal','gam5*180/pi',  datasource=ds_psi5,style={'lw':1.5})\
-                .xlabel('$t$ [s]').ylabel('$\\gamma_5(t)$ [deg]')\
-                .postprocess(ft.partial(add_colorbar, lb=45, ub=125, label='$\psi_5(T)$ [deg]',cmap=cmx.viridis))\
-                .postprocess(ft.partial(save_pic, suffix='psi5_gam'))
-
-plots.add_plot().postprocess(v_psi5_plot)\
-                .postprocess(ft.partial(save_pic, suffix='psi5_v'))
+                .postprocess(ft.partial(save_pic, suffix='eps6_xy'))
 
 plots.render()
