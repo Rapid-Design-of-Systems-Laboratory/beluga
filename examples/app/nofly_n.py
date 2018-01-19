@@ -156,7 +156,16 @@ for i in range(2,n+1):
 #                 .const('eps_zone13',1e-6) \
 #                 .const('eps_zone14',1e-6) \
 #                 .const('eps_zone15',1e-6)
-#
+
+guess_maker = beluga.guess_generator('file',filename='data-5v-eps5-all-2hrs.dill', iteration=-1, step=-1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(201) \
+                .const('eps_zone10',1e-6)\
+                .const('eps_zone12',1e-6) \
+                .const('eps_zone13',1e-6) \
+                .const('eps_zone14',1e-6) \
+                .const('eps_zone15',1e-6)
 
 
 #
