@@ -27,8 +27,8 @@ ocp.constraints() \
     .terminal('x-x_f','m')   \
     .terminal('y-y_f','m')
 
-# ocp.scale(m='y', s='y/v', kg=1, rad=1)
-ocp.scale(m=1, s=1, kg=1, rad=1)
+ocp.scale(m='y', s='y/v', kg=1, rad=1)
+# ocp.scale(m=1, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         derivative_method='fd',
@@ -55,7 +55,7 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(11) \
+                .num_cases(21) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 

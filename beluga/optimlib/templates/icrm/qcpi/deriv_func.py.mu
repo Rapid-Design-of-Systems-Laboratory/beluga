@@ -6,44 +6,6 @@ import scipy.linalg
 def im(Z):
     return Z.imag
 
-# Complex step jacobian
-def compute_jacobian(f, X, indices=None, StepSize=1e-100, args=()):
-    I = np.eye({{num_states}}+{{dae_var_num}})*1j*StepSize
-    if indices is None:
-        indices = range({{num_states}}+{{dae_var_num}})
-
-    return np.array([f(X[:({{num_states}}+{{dae_var_num}})]+ih, *args).imag/StepSize
-                for index, ih in enumerate(I)
-                if index in indices],order='F').T
-
-@numba.njit
-def compute_jacobian_fd(X, _const, step_size=1e-7):
-    jac = np.zeros(({{dae_var_num}}, {{num_states}}+{{dae_var_num}}))
-    fx = compute_g(X, _const)
-    x = X[:{{num_states}}+{{dae_var_num}}]
-    steps = np.eye({{num_states}}+{{dae_var_num}})*step_size
-    for i in numba.prange({{num_states}}+{{dae_var_num}}):
-        fxh = compute_g(steps[i]+x, _const)
-        jac[:,i] = (fxh - fx)/step_size
-
-    return jac
-
-@numba.njit
-def compute_g(_X, _const):
-    I = 1j
-    [{{#state_list}}{{.}},{{/state_list}}] = _X[:({{num_states}})]
-    [{{#dae_var_list}}{{.}},{{/dae_var_list}}] = _X[{{num_states}}:({{num_states}}+{{dae_var_num}})]
-
-    # Declare all auxiliary variables
-    {{#aux_list}}{{#vars}}{{.}},{{/vars}}{{/aux_list}} = _const
-
-    # Declare all quantities
-    {{#quantity_list}}
-    {{name}} = {{expr}}
-    {{/quantity_list}}
-
-    return np.array([{{#dHdu}}{{.}},
-            {{/dHdu}}])
 
 def compute_hamiltonian(_t,_X,_p,_const,_u):
     [{{#state_list}}{{.}},{{/state_list}}] = _X[:{{num_states}}]

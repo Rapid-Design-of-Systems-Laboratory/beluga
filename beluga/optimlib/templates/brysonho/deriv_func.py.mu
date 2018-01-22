@@ -22,7 +22,7 @@ def compute_control(_t, _X, _p, _aux, arc_idx=None):
 
 
 
-def deriv_func(_t, _X, _p, _aux, arc_idx=None):
+def deriv_func_nojit(_t, _X, _p, _aux, arc_idx=None):
     _arc_seq = _aux.get('arc_seq', (0,))
     _pi_seq = _aux.get('pi_seq',(None,))
     if arc_idx is None:
@@ -59,4 +59,4 @@ def deriv_func(_t, _X, _p, _aux, arc_idx=None):
 
     return np.hstack((state_eom, lam_eom, [0]))
 
-deriv_func_ode45 = deriv_func
+deriv_func_ode45 = deriv_func_nojit
