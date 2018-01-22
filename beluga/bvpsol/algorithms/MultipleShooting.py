@@ -39,7 +39,7 @@ def make_sympy_fn(args, fn_expr):
     if output_shape is not None:
         jit_fns = [make_njit_fn(args, expr) for expr in fn_expr]
         len_output = len(fn_expr)
-        # @numba.njit(parallel=True)
+
         @numba.jit(parallel=True)
         def vector_fn(*args):
             output = np.zeros(output_shape)
@@ -244,12 +244,13 @@ PythonCodeGen = sp.Workflow([
 
 import pickle
 class MultipleShooting(BaseAlgorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True, use_numba=False):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
         self.max_error = max_error
         self.derivative_method = derivative_method
+        self.use_numba = use_numba
         self.cached = False
         self.saved_code = True
         if derivative_method not in ['fd']:
@@ -276,21 +277,14 @@ class MultipleShooting(BaseAlgorithm):
         out_ws = PythonCodeGen({'problem_data': problem_data})
         logging.debug(out_ws['bc_func_code'])
         logging.debug(out_ws['deriv_func_code'])
-        cache_exists = os.path.isfile('codecache.pkl')
-        if not self.cached or not cache_exists:
-            # print(out_ws['bc_func_code'])
-            # print(out_ws['deriv_func_code'])
+
+        if self.use_numba:
             deriv_func = numba.njit(parallel=False)(out_ws['code_module'].deriv_func_nojit)
-            out_ws['deriv_func_fn'] = deriv_func
-            out_ws['code_module'].deriv_func = deriv_func
-            self.saved_code = False
         else:
-            bvp_data = self.load_code()
-            print('deriv func',id(bvp_data['deriv_fn']))
-            # del out_ws['code_module'].deriv_func
-            # del out_ws['code_module'].deriv_func_nojit
-            out_ws['deriv_func_fn'] = bvp_data['deriv_fn']
-            out_ws['code_module'].deriv_func = bvp_data['deriv_fn']
+            deriv_func = out_ws['code_module'].deriv_func_nojit
+        out_ws['deriv_func_fn'] = deriv_func
+        out_ws['code_module'].deriv_func = deriv_func
+        self.saved_code = False
 
         self.out_ws = out_ws
         # self.stm_ode_func = self.make_stmode(out_ws['deriv_func_fn'], problem_data['nOdes'])
@@ -466,7 +460,10 @@ class MultipleShooting(BaseAlgorithm):
                         y0stm[nOdes:] = stm0[:]
                         # print(arc_idx, tspan, ya[:,arc_idx])
                         # t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
-                        t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
+                        if self.use_numba:
+                            t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
+                        else:
+                            t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                         y_list.append(yy[:,:nOdes].T)
                         x_list.append(t)
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)

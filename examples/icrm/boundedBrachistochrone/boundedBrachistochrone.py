@@ -40,6 +40,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                     max_iterations=20,
                     verbose = True,
                     max_error=50,
+                    use_numba=True,
                     # N = 30,
 )
 
@@ -52,7 +53,7 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(6) \
+                .num_cases(21) \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
