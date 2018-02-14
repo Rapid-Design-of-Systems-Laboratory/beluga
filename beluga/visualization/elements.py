@@ -14,6 +14,7 @@ class Plot(object):
         self.step_index = step
         self.sol_index = sol
         self.mesh_size = mesh_size
+        self.datasource = datasource
         self.plot_data = []
         self._title = self._xlabel = self._ylabel = None
         self.postprocess_list = []
@@ -33,18 +34,6 @@ class Plot(object):
 
     def solution(self, _sol):
         self.sol_index = _sol
-        return self
-
-    def grid_on(self, _grid_on):
-        self._grid_on = _grid_on
-        return self
-
-    def xlim(self, _xlim):
-        self._xlim = _xlim
-        return self
-
-    def ylim(self, _ylim):
-        self._ylim = _ylim
         return self
 
     def title(self, title_txt):
@@ -83,39 +72,33 @@ class Plot(object):
         self.plot_data.append({'type':'line3d', 'x':x_expr, 'y':y_expr, 'z':z_expr, 'style':style, 'label':label, 'step':step, 'sol':sol, 'datasource': datasource})
         return self
 
-    def line3d_series(self, x_expr, y_expr, z_expr, label=None, style=None, step = None, start = 0, skip = 0, end = -1, datasource = None):
-        if datasource is None:
-            datasource = self.datasource
-        if style is None:
-            style = {}
-        self.plot_data.append({'type':'line3d_series', 'x':x_expr, 'y':y_expr, 'z':z_expr, 'style':style, 'label':label, 'step':step, 'start':start, 'skip':skip, 'end': end, 'datasource': datasource})
-        return self
-
-    def preprocess(self, solution, problem_data):
+    def preprocess(self):
         """
         Evaluates the expressions using the supplied data
         """
         for line in self.plot_data:
+            solution = line['datasource'].get_solution()
+            problem_data  = line['datasource'].get_problem()
+
             step_idx = line['step'] if line['step'] is not None else self.step_index
             line['data'] = []
             if line['type'] == 'line' or line['type'] == 'line3d':
                 sol_idx = line['sol'] if line['sol'] is not None else self.sol_index
                 sol = solution[step_idx][sol_idx]
 
-                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=False)
+                sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
                 line['data'].append({'x_data': sol.evaluate(line['x']),
                                      'y_data': sol.evaluate(line['y']),
                                      'z_data': sol.evaluate(line.get('z','0'))})
-            elif line['type'] == 'line_series' or line['type'] == 'line3d_series':
+            elif line['type'] == 'line_series':
                 sol_set = solution[step_idx]
                 line['end'] = len(sol_set) if line['end'] == -1 else line['end']
                 for ind in range(line['start'], line['end'], line['skip']+1):
                     sol = sol_set[ind]
-                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=False)
+                    sol.prepare(problem_data, mesh_size=self.mesh_size, overwrite=True)
                     # sol.prepare(problem_data)
                     line['data'].append({'x_data': sol.evaluate(line['x']),
-                                         'y_data': sol.evaluate(line['y']),
-                                         'z_data': sol.evaluate(line.get('z','0'))})
+                                         'y_data': sol.evaluate(line['y'])})
             else:
                 raise ValueError('Invalid plot type specified')
 

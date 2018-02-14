@@ -1,8 +1,9 @@
-from . import renderers
+from . import renderers, datasources
 from .elements import PlotList,Plot
 from .renderers import BaseRenderer
+from .datasources import BaseDataSource
 import dill, inspect, logging
-
+import os
 class BelugaPlot:
     """
     Manages the plotting framework
@@ -54,7 +55,7 @@ class BelugaPlot:
                         # Renderer initialized with its default settings
                         self.renderer = obj()
             if self.renderer is None:
-                raise ValueError('Renderer '+renderer+' not found')
+                raise ValueError('Renderer "'+renderer+'" not found')
 
     def add_plot(self, step = None, sol = None, datasource = None, colormap=None, mesh_size=None):
         """
@@ -73,11 +74,6 @@ class BelugaPlot:
         return plot
 
     def render(self,show=True):
-        with open(self.filename,'rb') as f:
-            logging.info("Loading datafile ...")
-            out = dill.load(f)
-            logging.info("Loaded "+str(len(out['solution']))+" solution sets from "+self.filename)
-
         for plot in self._plots:
             plot.preprocess()
             fig = self.renderer.create_figure()
