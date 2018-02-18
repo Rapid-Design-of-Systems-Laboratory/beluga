@@ -83,7 +83,7 @@ rects6 = plt.bar(index + bar_width*5, qcpi_time, bar_width,
 
 plt.xlabel('Number of Vehicles',fontsize=13)
 plt.ylabel('Runtime [sec]',fontsize=13)
-plt.xticks(index*2+bar_width*2.5, ('n=1', 'n=2', 'n=5', 'n=10', 'n=25'))
+plt.xticks(index+bar_width*2.5, ('n=1', 'n=2', 'n=5', 'n=10', 'n=25'))
 plt.legend(loc='upper left')
 
 autolabel(rects1)
