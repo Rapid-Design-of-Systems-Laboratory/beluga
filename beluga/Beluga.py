@@ -288,7 +288,7 @@ class Beluga(object):
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                     else:
-                        solution_set[step_idx].append(copy.deepcopy(bvp.solution)) #Append failed solution objects as well
+                        # solution_set[step_idx].append(copy.deepcopy(bvp.solution)) #Append failed solution objects as well
                         elapsed_time = toc()
                         logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
         except Exception as e:
