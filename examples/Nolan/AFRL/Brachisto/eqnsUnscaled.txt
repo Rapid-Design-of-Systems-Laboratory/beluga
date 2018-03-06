@@ -1,9 +1,0 @@
-v*cos(theta)
--v*sin(theta)
-g*sin(theta)
-2*p13*cos(theta)
--p13*sin(theta) + p23*cos(theta)
-p33*cos(theta)
--2*p23*sin(theta)
--p33*sin(theta)
-sigv**2
