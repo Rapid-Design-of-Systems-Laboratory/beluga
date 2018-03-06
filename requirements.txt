@@ -1,0 +1,15 @@
+dill
+numpy
+sympy
+scipy
+pytest
+pytest-cov
+pytest-describe
+coverage
+mock
+matplotlib
+numexpr
+pystache
+docopt
+simplepipe
+multiprocessing_on_dill
