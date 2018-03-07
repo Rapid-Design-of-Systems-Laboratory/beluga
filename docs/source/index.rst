@@ -12,6 +12,9 @@ Contents:
    :maxdepth: 2
 
    install.rst
+   testproblem.rst
+   features.rst
+   unittests.rst
 
 Indices and tables
 ==================
