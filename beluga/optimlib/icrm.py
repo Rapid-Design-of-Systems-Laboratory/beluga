@@ -10,6 +10,7 @@ from beluga.utils import sympify2, keyboard
 from beluga.problem import SymVar
 import logging
 
+
 def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
     # var -> varible inside saturation function
     if ubound is None and lbound is None:
@@ -33,6 +34,7 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
         s = 4*slopeAtZero/(ubound - lbound)
         print('Using two sided saturation function')
         return ubound - ( ubound - lbound )/( 1 + sym.exp(s*var) )
+
 
 def make_bc(constraints,
              states,
@@ -61,6 +63,7 @@ def make_bc(constraints,
             bc_list.append(str(costate - derivative_fn(cost_expr, state)))
 
     return bc_list
+
 
 def make_bc_mask(states,
              controls,
@@ -97,6 +100,7 @@ def add_equality_constraints(ham, constraints):
 
     return ham
 
+
 def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_cost, derivative_fn):
     """simplepipe task for creating the hamiltonian and costates
 
@@ -114,6 +118,7 @@ def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_
     ham = add_equality_constraints(ham, constraints)
     yield ham
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
+
 
 def process_path_constraints(workspace):
     states = workspace['states']
@@ -316,6 +321,7 @@ def process_path_constraints(workspace):
     #     problem.constant(str(eps_const), 1, str(eps_unit))
     return ocp
 
+
 def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
     equality_constraints = constraints.get('equality', [])
     if len(equality_constraints) > 0:
@@ -432,13 +438,14 @@ def generate_problem_data(workspace):
      'dgdX': dgdX,#str(workspace['dgdX'][:]),
      # 'dgdU': str(workspace['dgdU'][:]),
      'dgdU': dgdU,
-     'nOdes':2*len(workspace['states']) + len(workspace['dae_states'])+ 1,
+     'nOdes':2*len(workspace['states']) + len(workspace['dae_states']) + 1,
     }
     # from beluga.utils import keyboard
     # keyboard()
     # print(sympy.latex(udot[0], symbol_names={sympy.Symbol('lamX'):r'\lambda_x', sympy.Symbol('lamY'):r'\lambda_y', sympy.Symbol('lamV'):r'\lambda_v', sympy.Symbol('lamXI11'):r'\lambda_{\xi_1}'}))
 
     return problem_data
+
 # Implement workflow using simplepipe and functions defined above
 ICRM = sp.Workflow([
     sp.Task(init_workspace, inputs=('problem',), outputs='*'),
