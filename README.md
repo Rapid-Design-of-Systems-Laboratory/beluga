@@ -94,7 +94,9 @@ https://docs.python.org/3/howto/logging.html
     
     c. `git merge --no-ff origin/I#` Merge the task into **master** and preserving branch history. All changes in **master** will show up as a single commit keeping the log simpler. The complete commit history will be preserved in **I#**.
     
-    d. `git push origin :I#` Delete **I#** from the server. It will still remain in the history along with every individual commit to it that was pushed, but it won't be cluttering up the workspace.
+    d. `git push` Push any changes to **master** to the server.
+    
+    e. `git push origin :I#` Delete **I#** from the server. It will still remain in the history along with every individual commit to it that was pushed, but it won't be cluttering up the workspace.
 
 ## Running unit tests
 
