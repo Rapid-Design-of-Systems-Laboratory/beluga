@@ -1,4 +1,6 @@
 """Brachistochrone example."""
+import beluga
+import logging
 
 ocp = beluga.OCP('brachisto')
 
@@ -47,7 +49,7 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
 # )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[0,0,1],          # Starting values for states in order
+                start=[0,0,0],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1
 )
@@ -59,14 +61,10 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
+beluga.setup_beluga(logging_level=logging.DEBUG)
+
 beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
-
-# beluga.solve(problem)
-#     # from timeit import timeit
-#
-#     # print(timeit("get_problem()","from __main__ import get_problem",number=10))
-#     beluga.run(get_problem())
