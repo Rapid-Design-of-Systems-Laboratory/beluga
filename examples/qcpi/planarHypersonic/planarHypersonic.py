@@ -75,7 +75,7 @@ continuation_steps.add_step('bisection') \
                 .terminal('theta',5.0*pi/180) \
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5) \
+                .num_cases(41) \
                 .const('rho0',1.2) \
 
 

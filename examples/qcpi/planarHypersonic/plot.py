@@ -25,8 +25,6 @@ plots.add_plot().line('t','gam*180/3.14')                    \
                 .xlabel('t (s)').ylabel('fpa (degrees)')      \
                 .title('FPA vs. Time')
 
-
-
 plots.add_plot().line('t','alfa*180/3.14')                    \
                 .xlabel('t (s)').ylabel('alfa (degrees)')      \
                 .title('Angle of attack vs. Time')
