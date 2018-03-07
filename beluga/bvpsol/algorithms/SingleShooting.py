@@ -1,66 +1,145 @@
 # from autodiff import Function, Gradient
 import numpy as np
 
+import beluga
 from .. import Solution
-from beluga.utils import keyboard, timeout
-from beluga.utils.ode45 import ode45
-# from beluga.utils.propagators import ode45n as ode45
-from ..Algorithm import Algorithm
+from beluga.utils import keyboard
+from beluga.integrators import ode45
+from .BaseAlgorithm import BaseAlgorithm
+from beluga.problem import BVP
+
 from math import *
-# from beluga.utils.joblib import Memory
-# from joblib import Memory
 import logging
+import imp
+import functools as ft
 
-#TODO: reinstate klepto?
-#from klepto.archives import file_archive, dir_archive
-#from klepto import inf_cache as memoized
-#from klepto.keymaps import picklemap
-#
-#dumps = picklemap(typed=True, flat=False, serializer='dill')
+import pystache
 
-# import signal
+import simplepipe as sp
 
-# class TimeoutException(Exception):   # Custom exception class
-#     pass
+def load_eqn_template(problem_data, template_file,
+                        renderer = pystache.Renderer(escape=lambda u: u)):
+    """Loads pystache template and uses it to generate code.
 
-# def timeout_handler(signum, frame):   # Custom signal handler
-#     raise TimeoutException('ode45 exceeded maximum allowed time of 2 second')
+    Parameters
+    ----------
+        problem_data - dict
+            Workspace defining variables for template
 
-# Change the behavior of SIGALRM
-# signal.signal(signal.SIGALRM, timeout_handler)
+        template_file - str
+            Path to template file to be used
 
-# dumps = picklemap(typed=True, flat=False, serializer='dill')
-#TODO: Save time steps from ode45 and use for fixed step RK4
-class SingleShooting(Algorithm):
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='csd', cache_dir = None,verbose=False,cached=True):
+        renderer
+            Renderer used to convert template file to code
+
+    Returns
+    -------
+    Code generated from template
+    """
+    with open(template_file) as f:
+        tmpl = f.read()
+        # Render the template using the data
+        code = renderer.render(tmpl, problem_data)
+        return code
+
+def create_module(problem_data):
+    """Creates a new module for storing compiled code.
+
+    Parameters
+    ----------
+    problem_data - dict
+        Problem data dictionary
+
+    Returns
+    -------
+    New module for holding compiled code
+    """
+    problem_name = problem_data['problem_name']
+    return imp.new_module('_beluga_'+problem_name)
+
+def compile_code_py(code_string, module, function_name):
+    """
+    Compiles a function specified by template in filename and stores it in
+    self.compiled
+
+    Parameters
+    ----------
+    code_string - str
+        String containing the python code to be compiled
+
+    module - dict
+        Module in which the new functions will be defined
+
+    function_name - str
+        Name of the function being compiled (this must be defined in the
+        template with the same name)
+
+    Returns:
+        Module for compiled function
+        Compiled function
+    """
+    # For security
+    module.__dict__.update({'__builtin__':{}})
+    exec(code_string, module.__dict__)
+    return getattr(module,function_name)
+
+PythonCodeGen = sp.Workflow([
+    # Create module for holding compiled code
+    sp.Task(ft.partial(create_module), inputs='problem_data', outputs=('code_module')),
+
+    # Load equation template files and generate code
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=beluga.root()+'/optimlib/templates/brysonho/deriv_func.py.mu'),
+            inputs='problem_data',
+            outputs='deriv_func_code'),
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=beluga.root()+'/optimlib/templates/brysonho/bc_func.py.mu'),
+            inputs='problem_data',
+            outputs='bc_func_code'),
+    sp.Task(ft.partial(load_eqn_template,
+                template_file=beluga.root()+'/optimlib/templates/brysonho/compute_control.py.mu'),
+            inputs='problem_data',
+            outputs='compute_control_code'),
+
+    # Compile generated code
+    sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
+            inputs=['deriv_func_code', 'code_module'],
+            outputs='deriv_func_fn'),
+    sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
+            inputs=['bc_func_code', 'code_module'],
+            outputs='bc_func_fn'),
+    sp.Task(ft.partial(compile_code_py, function_name='compute_control'),
+            inputs=['compute_control_code', 'code_module'],
+            outputs='compute_control_fn'),
+
+    # sp.Task(make_bvp, inputs='*', outputs=['bvp'])
+], description='Generates and compiles the required BVP functions from problem data')
+
+class SingleShooting(BaseAlgorithm):
+    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True):
         self.tolerance = tolerance
         self.max_iterations = max_iterations
         self.verbose = verbose
         self.max_error = max_error
         self.derivative_method = derivative_method
-        if derivative_method == 'csd':
-            self.stm_ode_func = self.__stmode_csd
-            self.bc_jac_func  = self.__bcjac_csd
-        elif derivative_method == 'fd':
-            self.stm_ode_func = self.__stmode_fd
-            self.bc_jac_func  = self.__bcjac_fd
-        else:
+        if derivative_method not in ['csd', 'fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
-        self.cached = cached
-        if cached and cache_dir is not None:
-            self.set_cache_dir(cache_dir)
 
-    def set_cache_dir(self,cache_dir):
-        self.cache_dir = cache_dir
-        # if self.cached and cache_dir is not None:
-        #     # memory = Memory(cachedir=cache_dir, mmap_mode='r', verbose=0)
-        #     #
-        #     # self.solve = memory.cache(self.solve)
-        #     dumps = picklemap(flat=False, serializer='dill')
-        #     # dircache = file_archive()
-        #     # self.solve = memoized(cache=dircache, keymap=dumps, ignore='self')(self.solve)
+    def preprocess(self, problem_data):
+        """Code generation and compilation before running solver."""
+        out_ws = PythonCodeGen({'problem_data': problem_data})
+        self.bvp = BVP(out_ws['deriv_func_fn'],
+                       out_ws['bc_func_fn'],
+                       out_ws['compute_control_fn'])
+        if self.derivative_method == 'csd':
+            self.stm_ode_func = ft.partial(self.__stmode_csd, odefn=self.bvp.deriv_func)
+            self.bc_jac_func  = ft.partial(self.__bcjac_csd, bc_func=self.bvp.bc_func)
+        elif self.derivative_method == 'fd':
+            self.stm_ode_func = ft.partial(self.__stmode_fd, odefn=self.bvp.deriv_func)
+            self.bc_jac_func  = ft.partial(self.__bcjac_fd, bc_func=self.bvp.bc_func)
+        return self.bvp
 
-    def __bcjac_csd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-16):
+    def __bcjac_csd(self, ya, yb, phi, parameters, aux, bc_func, StepSize=1e-16):
         ya = np.array(ya, dtype=complex)
         yb = np.array(yb, dtype=complex)
         # if parameters is not None:
@@ -97,7 +176,7 @@ class SingleShooting(Algorithm):
             J = M+np.dot(N,phi)
         return J
 
-    def __bcjac_fd(self, bc_func, ya, yb, phi, parameters, aux, StepSize=1e-6):
+    def __bcjac_fd(self, ya, yb, phi, parameters, aux, bc_func, StepSize=1e-6):
 
         ya = np.array(ya, ndmin=1)
         yb = np.array(yb, ndmin=1)
@@ -139,7 +218,7 @@ class SingleShooting(Algorithm):
             J = M+np.dot(N,phi)
         return J
 
-    def __stmode_fd(self, x, y, odefn, parameters, aux, nOdes = 0, StepSize=1e-6):
+    def __stmode_fd(self, x, y, parameters, aux, odefn, nOdes = 0, StepSize=1e-6):
         "Finite difference version of state transition matrix"
         N = y.shape[0]
         nOdes = int(0.5 * (sqrt(4 * N + 1) - 1))
@@ -158,7 +237,7 @@ class SingleShooting(Algorithm):
         phiDot = np.dot(F, phi)
         return np.concatenate((fx, np.reshape(phiDot, (nOdes * nOdes))))
 
-    def __stmode_csd(self, x, y, odefn, parameters, aux, StepSize=1e-100):
+    def __stmode_csd(self, x, y, parameters, aux, odefn, StepSize=1e-50):
         "Complex step version of State Transition Matrix"
         N = y.shape[0]
         nOdes = int(0.5*(sqrt(4*N+1)-1))
@@ -174,12 +253,10 @@ class SingleShooting(Algorithm):
             Y[i] -= StepSize * 1.j
 
         # Phidot = F*Phi (matrix product)
-        phiDot = np.dot(F,phi)
-        # phiDot = np.real(np.dot(g(x,y,paameters,aux),phi))
-        return np.concatenate((odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes))))
+        phiDot = np.real(np.dot(F,phi))
+        return np.concatenate( (odefn(x,y, parameters, aux), np.reshape(phiDot, (nOdes*nOdes) )) )
 
-    # @memoized(cache=file_archive(serialized=True, cached=False), ignore='self')
-    def solve(self,bvp):
+    def solve(self,solinit):
         """Solve a two-point boundary value problem
             using the single shooting method
 
@@ -191,16 +268,15 @@ class SingleShooting(Algorithm):
             solution of TPBVP
         Raises:
         """
-        solinit = bvp.solution
-        x = solinit.x
+        x  = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
         paramGuess = solinit.parameters
 
-        deriv_func = bvp.deriv_func
-        bc_func = bvp.bc_func
+        deriv_func = self.bvp.deriv_func
+        bc_func = self.bvp.bc_func
 
-        aux = bvp.solution.aux
+        aux = solinit.aux
         # Only the start and end times are required for ode45
         t0 = x[0]
         tf = x[-1]
@@ -231,16 +307,10 @@ class SingleShooting(Algorithm):
                     logging.warn("Maximum iterations exceeded!")
                     break
                 y0 = np.concatenate( (y0g, stm0) )  # Add STM states to system
-
+                
                 # Propagate STM and original system together
-                # stm_ode45 = SingleShooting.ode_wrap(self.stm_ode_func,deriv_func, paramGuess, aux, nOdes = y0g.shape[0])
-
                 # t,yy = ode45(stm_ode45, tspan, y0)
-
-                #TODO: Make timeout configurable
-                # with timeout(2,'ode45 exceeded maximum allowed time of 2 second'):
-                t,yy = ode45(self.stm_ode_func, tspan, y0, deriv_func, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-5)
-
+                t,yy = ode45(self.stm_ode_func, tspan, y0, paramGuess, aux, nOdes = y0g.shape[0], abstol=self.tolerance/10, reltol=1e-3)
                 # Obtain just last timestep for use with correction
                 yf = yy[-1]
                 # Extract states and STM from ode45 output
@@ -248,8 +318,8 @@ class SingleShooting(Algorithm):
                 phi = np.reshape(yf[nOdes:],(nOdes, nOdes)) # STM
                 # Evaluate the boundary conditions
                 res = bc_func(y0g, yb, paramGuess, aux)
-
                 r1 = np.linalg.norm(res)
+
                 if r1 > self.max_error:
                     logging.warn('Error exceeded max_error')
                     raise RuntimeError('Error exceeded max_error')
@@ -266,7 +336,7 @@ class SingleShooting(Algorithm):
                     break
 
                 # Compute Jacobian of boundary conditions using numerical derviatives
-                J   = self.bc_jac_func(bc_func, y0g, yb, phi, paramGuess, aux)
+                J   = self.bc_jac_func(y0g, yb, phi, paramGuess, aux)
                 # Compute correction vector
 
                 if r0 is not None:
@@ -302,10 +372,10 @@ class SingleShooting(Algorithm):
                 if nParams > 0:
                     dp = dy0[nOdes:]
                     dy0 = dy0[:nOdes]
-                    paramGuess = paramGuess + dp
-                    y0g = y0g + dy0
+                    paramGuess += dp
+                    y0g += dy0
                 else:
-                    y0g = y0g + dy0
+                    y0g += dy0
 
                 iter = iter+1
                 logging.debug('Iteration #'+str(iter))
@@ -313,18 +383,20 @@ class SingleShooting(Algorithm):
             logging.warn(e)
             import traceback
             traceback.print_exc()
-        # If problem converged, propagate solution to get full trajectory
-        # Possibly reuse 'yy' from above?
+
+        # Return initial guess if it failed to converge
+        sol = solinit
         if converged:
-            # keyboard()
+            # If problem converged, propagate solution to get full trajectory
             x1, y1 = t, yy[:,:nOdes]
             # x1, y1 = ode45(deriv_func, [x[0],x[-1]], y0g, paramGuess, aux, abstol=self.tolerance, reltol=1e-3)
-            sol = Solution(x1,y1.T,paramGuess,aux)
-        else:
-            # Return initial guess if it failed to converge
-            sol = solinit
+            sol.x = x1
+            sol.y = y1.T
+            sol.parameters = paramGuess
+            # sol = Solution(x1,y1.T,paramGuess,aux)
+
+
         sol.converged = converged
-        bvp.solution = sol
         sol.aux = aux
         # logging.debug(sol.y[:,0])
         return sol

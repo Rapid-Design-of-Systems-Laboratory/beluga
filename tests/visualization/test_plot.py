@@ -1,6 +1,6 @@
 import dill, os, numpy as np, numpy.testing as npt
 from math import *
-from beluga.utils import ode45, keyboard
+from beluga.integrators import ode45
 from beluga.visualization.elements import Plot
 from beluga.visualization.datasources import Dill
 
