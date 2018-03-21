@@ -10,6 +10,7 @@ import simplepipe as sp
 import sympy
 import re as _re
 import numpy
+import logging
 np = numpy
 
 from math import *
@@ -22,6 +23,7 @@ from beluga.problem import SymVar
 import sympy as sym
 from sympy.utilities.lambdify import lambdastr
 from beluga.utils import keyboard
+
 
 def total_derivative(expr, var, dependent_vars=None):
     """
@@ -43,12 +45,14 @@ def total_derivative(expr, var, dependent_vars=None):
     out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
     return out
 
+
 def jacobian(expr_list, var_list, derivative_fn):
     jac = sympy.zeros(len(expr_list), len(var_list))
     for i, expr in enumerate(expr_list):
         for j, var in enumerate(var_list):
             jac[i, j] = derivative_fn(expr, var)
     return jac
+
 
 def process_quantities(quantities):
     """Performs preprocessing on quantity definitions. Creates a new total
@@ -87,6 +91,7 @@ def process_quantities(quantities):
     yield derivative_fn
     yield jacobian_fn
 
+
 def make_augmented_cost(cost, constraints, location):
     """Augments the cost function with the given list of constraints.
 
@@ -106,6 +111,7 @@ def make_augmented_cost(cost, constraints, location):
     return aug_cost
     # yield aug_cost
     # yield lagrange_mult
+
 
 def make_aug_params(constraints, location):
     """Make the lagrange multiplier terms for boundary conditions."""
@@ -134,8 +140,10 @@ def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivat
     yield ham
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
 
+
 def make_costate_names(states):
     return [sympify('lam'+str(s.name).upper()) for s in states]
+
 
 def make_costate_rates(ham, states, costate_names, derivative_fn):
     """Make costates."""
@@ -143,10 +151,8 @@ def make_costate_rates(ham, states, costate_names, derivative_fn):
                 for s, lam in zip(states, costate_names)]
     return costates
 
-def sanitize_constraint_expr(constraint,
-            states,
-            location, prefix_map
-            ):
+
+def sanitize_constraint_expr(constraint, states, location, prefix_map):
     """
     Checks the initial/terminal constraint expression for invalid symbols
     Also updates the constraint expression to reflect what would be in code
@@ -185,10 +191,10 @@ def make_boundary_conditions(constraints,
 
     #TODO: Fix hardcoded if conditions
     #TODO: Change to symbolic
-    bc_list += [str(costate - derivative_fn(cost_expr, state))
-                        for state, costate in zip(states, costates)]
+    bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
 
     return bc_list
+
 
 def make_time_bc(constraints, bc_terminal):
     """Makes free or fixed final time boundary conditions."""
@@ -200,7 +206,6 @@ def make_time_bc(constraints, bc_terminal):
         return bc_terminal+['_H - 0']
 
 
-
 def make_dhdu(ham, controls, derivative_fn):
     """Computes the partial of the hamiltonian w.r.t control variables."""
     dhdu = []
@@ -208,14 +213,14 @@ def make_dhdu(ham, controls, derivative_fn):
         dHdu = derivative_fn(ham, ctrl)
         custom_diff = dHdu.atoms(sympy.Derivative)
         # Substitute "Derivative" with complex step derivative
-        repl = {(d,im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
-                    for f,v in zip(d.atoms(sympy.AppliedUndef),d.atoms(Symbol))}
+        repl = {(d, im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
+                    for f,v in zip(d.atoms(sympy.AppliedUndef), d.atoms(Symbol))}
 
         dhdu.append(dHdu.subs(repl))
 
     return dhdu
 
-import logging
+
 def make_control_law(dhdu, controls):
     """Solves control equation to get control law."""
     try:
@@ -539,12 +544,13 @@ def make_constrained_arc_fns(workspace):
 #
 #     return bc_fn, xic, xfc
 
+
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
     tf_var = sympify('tf') #TODO: Change to independent var?
     problem_data = {
-        'method':'brysonho',
+        'method': 'brysonho',
         'problem_name': workspace['problem_name'],
         'aux_list': [
             {
@@ -553,16 +559,16 @@ def generate_problem_data(workspace):
             }
         ],
         'state_list':
-         [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
-         + ['tf']
+            [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
+            + ['tf']
         ,
         'parameter_list': [str(p) for p in workspace['parameters']],
         'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
         'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
         'deriv_list':
-         [str(tf_var*state.eom) for state in workspace['states']] +
-         [str(tf_var*costate.eom) for costate in workspace['costates']] +
-         [0]   # TODO: Hardcoded 'tf'
+            [str(tf_var*state.eom) for state in workspace['states']] +
+            [str(tf_var*costate.eom) for costate in workspace['costates']] +
+            [str(0)] # TODO: Hardcoded 'tf'
         ,
         'states': workspace['states'],
         'costates': workspace['costates'],
@@ -689,106 +695,3 @@ BrysonHo = sp.Workflow([
 traditional = BrysonHo
 
 
-## Unit tests ##################################################################
-from beluga.problem import ConstraintList
-from beluga.problem import SymVar
-
-def test_process_quantities():
-    quantities = [SymVar(dict(name='rho', val='rho0*exp(-h/H)')),
-                  SymVar(dict(name='D', val='0.5*rho*v^2*Cd*Aref'))]
-    qvars, qlist, _ = process_quantities(quantities)
-
-    qvars_expected = dict(rho= sympify('rho0*exp(-h/H)'),
-                          D= sympify('0.5*Aref*Cd*rho0*v**2*exp(-h/H)'))
-    qlist_expected = [{'expr': 'rho0*exp(-h/H)', 'name': 'rho'},
-                      {'expr': '0.5*Aref*Cd*rho0*v**2*exp(-h/H)', 'name': 'D'}]
-
-    assert qvars == qvars_expected
-    assert qlist == qlist_expected
-
-def test_ham_and_costates():
-    states = [SymVar({'name':'x','eom':'v*cos(theta)','unit':'m'}),
-              SymVar({'name':'y','eom':'-v*sin(theta)','unit':'m'}),
-              SymVar({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
-    path_cost = SymVar({'expr': 1}, sym_key='expr')
-
-    expected_output = (sympify('g*lamV*sin(theta) + lamX*v*cos(theta) - lamY*v*sin(theta) + 1'),
-                       [SymVar({'name':'lamX','eom':'0'}),
-                       SymVar({'name':'lamY','eom':'0'}),
-                       SymVar({'name':'lamV','eom':'-lamX*cos(theta) - lamY*sin(theta)'})])
-
-    costate_names = make_costate_names(states)
-    ham, costates = make_hamiltonian_and_costate_rates(states, costate_names, path_cost, total_derivative)
-
-    assert ham == expected_output[0]
-    assert costates == expected_output[1]
-
-def test_augmented_cost():
-    constraints = ConstraintList()
-    constraints.initial('h - h_0', 'm') # doctest:+ELLIPSIS
-    constraints.terminal('h - h_f', 'm')
-    terminal_cost = SymVar({'expr': '-v^2', 'unit': 'm^2/s^2'}, sym_key='expr')
-
-    expected_output = SymVar({'expr': 'lagrange_terminal_1*(h - h_f) - v**2',
-                       'unit': 'm**2/s**2'}, sym_key='expr')
-    expected_params = [sympify('lagrange_terminal_1')]
-    aug_cost = make_augmented_cost(terminal_cost, constraints, 'terminal')
-    params = make_aug_params(constraints, 'terminal')
-    assert aug_cost == expected_output
-    assert params == expected_params
-
-
-def test_make_boundary_conditions():
-    states = [SymVar({'name':'h','eom':'v*cos(theta)','unit':'m'}),
-              SymVar({'name':'theta','eom':'v*sin(theta)/r','unit':'rad'})]
-    path_cost = SymVar({'expr': 1}, sym_key='expr')
-    costate_names = make_costate_names(states)
-    ham, costates = make_hamiltonian_and_costate_rates(states, costate_names, path_cost, total_derivative)
-
-    constraints = ConstraintList()
-    constraints.initial('h - h_0', 'm') # doctest:+ELLIPSIS
-    constraints.terminal('theta - theta_f', 'rad') # doctest:+ELLIPSIS
-
-    initial_cost = sympify('0')
-    bc_initial = make_boundary_conditions(constraints, states, costates, initial_cost, total_derivative, 'initial')
-    assert bc_initial == ["h - _x0['h']", 'lamH', 'lamTHETA']
-
-    terminal_cost = sympify('-theta^2')
-    bc_terminal = make_boundary_conditions(constraints, states, costates, terminal_cost, total_derivative, 'terminal')
-    assert bc_terminal == ["theta - _xf['theta']", 'lamH', 'lamTHETA + 2*theta']
-
-def test_make_control_law():
-    states = [SymVar({'name':'x','eom':'v*cos(theta)','unit':'m'}),
-              SymVar({'name':'y','eom':'v*sin(theta)','unit':'m'}),
-              SymVar({'name':'v','eom':'g*sin(theta)','unit':'m/s'})]
-    path_cost = SymVar({'expr': 1}, sym_key='expr')
-    controls = [SymVar({'name':'theta','unit':'rad'})]
-    costate_names = make_costate_names(states)
-    ham, costates = make_hamiltonian_and_costate_rates(states, costate_names, path_cost, total_derivative)
-
-    dhdu = make_dhdu(ham, controls, total_derivative)
-    assert dhdu == [sympify('g*lamV*cos(theta) - lamX*v*sin(theta) + lamY*v*cos(theta)')]
-    control_law = make_control_law(dhdu, controls)
-    assert control_law == [{controls[0]._sym: sympify('-2*atan((lamX*v - sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')},
-                           {controls[0]._sym: sympify('-2*atan((lamX*v + sqrt(g**2*lamV**2 + 2*g*lamV*lamY*v + lamX**2*v**2 + lamY**2*v**2))/(g*lamV + lamY*v))')}]
-
-def test_compile_equations(tmpdir):
-    workspace = {'mult': 2}
-
-    code_mod = create_module('test_problem')
-
-    # Write test template file
-    code_file = tmpdir.mkdir("templates").join('test.py.mu')
-    test_code_tmpl = """def test(foo):
-    return foo*{{mult}}"""
-    code_file.write(test_code_tmpl)
-
-    # Check if codee generation works
-    out_code = load_eqn_template(workspace, str(code_file))
-
-    test_code_expected = """def test(foo):
-    return foo*2"""
-    assert out_code == test_code_expected
-    # Check if code compilation works
-    out_fn = compile_code_py(out_code, code_mod, 'test')
-    assert out_fn(3) == 6
