@@ -23,6 +23,8 @@ import pystache
 import simplepipe as sp
 import math
 
+import pickle
+
 def make_njit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
                                                   .replace('(([[', '[') \
@@ -218,6 +220,7 @@ def compile_code_py(code_string, module, function_name):
     exec(code_string, module.__dict__)
     return getattr(module,function_name,None)
 
+
 PythonCodeGen = sp.Workflow([
     # Create module for holding compiled code
     sp.Task(ft.partial(create_module), inputs='problem_data', outputs=('code_module')),
@@ -225,11 +228,11 @@ PythonCodeGen = sp.Workflow([
     sp.Task(make_functions, inputs=('problem_data', 'code_module'), outputs=('code_module','compute_control_fn')),
     # Load equation template files and generate code
     sp.Task(ft.partial(load_eqn_template,
-                template_file='deriv_func.py.mu'),
+            template_file='deriv_func.py.mu'),
             inputs='problem_data',
             outputs='deriv_func_code'),
     sp.Task(ft.partial(load_eqn_template,
-                template_file='bc_func.py.mu'),
+            template_file='bc_func.py.mu'),
             inputs='problem_data',
             outputs='bc_func_code'),
 
@@ -242,7 +245,7 @@ PythonCodeGen = sp.Workflow([
             outputs='bc_func_fn'),
 ], description='Generates and compiles the required BVP functions from problem data')
 
-import pickle
+
 class MultipleShooting(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True, use_numba=False):
         self.tolerance = tolerance
@@ -256,9 +259,10 @@ class MultipleShooting(BaseAlgorithm):
         if derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
-    def load_code(self):
+    @staticmethod
+    def load_code():
         logging.info('Loading compiled code ...')
-        with open('codecache.pkl','rb') as f:
+        with open('codecache.pkl', 'rb') as f:
             bvp_data = pickle.load(f)
 
         return bvp_data
@@ -266,11 +270,11 @@ class MultipleShooting(BaseAlgorithm):
     def save_code(self):
         logging.info('Saving compiled code ...')
         bvp_data = {'deriv_fn': self.out_ws['code_module'].deriv_func}
-        with open('codecache.pkl','wb') as f:
-            pickle.dump(bvp_data,f,pickle.HIGHEST_PROTOCOL)
+        with open('codecache.pkl', 'wb') as f:
+            pickle.dump(bvp_data, f, pickle.HIGHEST_PROTOCOL)
 
-    def deriv_func_ode45(self,_t,_X,_p,_aux):
-        return self.out_ws['code_module'].deriv_func(_t,_X,_p,list(_aux['const'].values()),0)
+    def deriv_func_ode45(self, _t, _X, _p, _aux):
+        return self.out_ws['code_module'].deriv_func(_t, _X, _p, list(_aux['const'].values()),0)
 
     def preprocess(self, problem_data):
         """Code generation and compilation before running solver."""
@@ -296,26 +300,6 @@ class MultipleShooting(BaseAlgorithm):
         self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
-
-    def bc_jac_params():
-        P = np.zeros((nBCs, p.size))
-        ya = np.array(ya, ndmin=1)
-        yb = np.array(yb, ndmin=1)
-
-        # if parameters is not None:
-        p  = np.array(parameters)
-        h = StepSize
-
-        nOdes = ya.shape[0]
-
-        fx = bc_func(ya,yb,p,aux)
-        nBCs = len(fx)
-        for i in range(p.size):
-            p[i] = p[i] + h
-            f = bc_func(ya,yb,p,aux)
-            P[:,i] = (f-fx)/h
-            p[i] = p[i] - h
-        J = np.hstack((M+np.dot(N,phi),P))
 
     def __bc_jac_multi(self, nBCs, phi_list, ya, yb, parameters, aux, bc_func, StepSize=1e-6):
 
@@ -346,7 +330,7 @@ class MultipleShooting(BaseAlgorithm):
 
                 yb[i, arc_idx] = yb[i, arc_idx] + h
                 f = bc_func(ya,yb,p,aux)
-                N[:,i] = (f-fx)/h
+                N[:, i] = (f-fx)/h
                 yb[i, arc_idx] = yb[i, arc_idx] - h
 
             J_i = M+N @ phi
@@ -515,11 +499,14 @@ class MultipleShooting(BaseAlgorithm):
                     # if r1/r0 > 2:
                     #     logging.error('Residue increased more than 2x in one iteration!')
                     #     break
-                    beta = (r0-r1)/(alpha*r0)
+                    # beta = (r0-r1)/(alpha*r0)
+                    beta = 1
                     if beta < 0:
                         beta = 1
                 if r1>1:
-                    alpha = 1./(5*r1)
+                    # alpha = 1./(5*r1)
+                    # alpha = 0.5
+                    alpha = 1/(2*r1)
                 else:
                     alpha = 1
                 r0 = r1
