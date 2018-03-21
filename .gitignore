@@ -76,3 +76,6 @@ site/
 
 # PyBuilder
 target/
+
+# Personal Folder
+personal/
