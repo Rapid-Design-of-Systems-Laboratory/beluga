@@ -85,7 +85,7 @@ continuation_steps.add_step('bisection') \
                 .const('rho0',1.2) \
 
 beluga.solve(ocp,
-             method='traditional',
+             method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
