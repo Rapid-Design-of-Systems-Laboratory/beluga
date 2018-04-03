@@ -1,6 +1,6 @@
 #TODO: Write test for NecessaryConditions and call it before this test
-from beluga.optim import Scaling, Problem, NecessaryConditions
-from beluga.bvpsol import BVP, Solution
+# from beluga.optim import Scaling, Problem, NecessaryConditions
+# from beluga.bvpsol import BVP, Solution
 import pytest
 import numpy as np
 import numpy.testing as npt
