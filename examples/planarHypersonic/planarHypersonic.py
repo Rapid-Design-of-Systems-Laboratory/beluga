@@ -1,5 +1,6 @@
 """Unconstrained planar hypersonic trajectory problem."""
 from math import *
+import beluga
 
 ocp = beluga.OCP('planarHypersonic')
 
@@ -84,7 +85,7 @@ continuation_steps.add_step('bisection') \
                 .const('rho0',1.2) \
 
 beluga.solve(ocp,
-             method='icrm',
+             method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)

@@ -9,8 +9,6 @@ import inspect
 import functools
 import sys
 
-import operator as op
-from beluga.utils import keyboard
 class ContinuationList(list):
     def __init__(self):
         # Create list of available strategies
