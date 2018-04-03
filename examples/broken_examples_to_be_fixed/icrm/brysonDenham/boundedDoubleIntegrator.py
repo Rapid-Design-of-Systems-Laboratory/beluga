@@ -1,6 +1,8 @@
 
 """Constrained Double integrator problem ."""
 
+import beluga
+
 # Rename this and/or move to optim package?
 ocp = beluga.OCP('brysonDenhamConstrained')
 

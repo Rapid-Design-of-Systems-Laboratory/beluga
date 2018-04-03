@@ -1,5 +1,6 @@
 """Brachistochrone example."""
 from math import pi
+import beluga
 ocp = beluga.OCP('missle')
 
 # Define independent variables

@@ -1,5 +1,7 @@
 """Ground vehicle path planning problem."""
 from math import *
+import beluga
+import logging
 
 ocp = beluga.OCP('dubin')
 
@@ -85,6 +87,8 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         verbose = True,
                         max_error=100
              )
+
+beluga.setup_beluga(logging_level=logging.DEBUG)
 
 beluga.solve(ocp,
              method='traditional',
