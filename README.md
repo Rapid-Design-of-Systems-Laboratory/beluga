@@ -1,5 +1,7 @@
 # beluga
 
+[![Build Status](https://travis-ci.org/msparapa/beluga.svg?branch=master)](https://travis-ci.org/msparapa/beluga)
+
 ## Cloning in Github Desktop
 
 If you already have Github installed on your computer, you need to go into preferences and add a new Enterprise account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Click "Add Github Enterprise" and use the following information:
