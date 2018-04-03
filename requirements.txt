@@ -1,5 +1,6 @@
 dill
 numpy
+numba
 sympy
 scipy
 pytest
