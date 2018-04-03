@@ -1,10 +1,6 @@
 import numpy as np
-import beluga.bvpsol as bvpsol
-import beluga.bvpsol.algorithms as algorithms
-import beluga.optim.Problem
-from beluga.optim.problem import *
-from beluga.continuation import *
-from beluga.continuation.strategies import BisectionStrategy
+import beluga
+import logging
 from math import *
 
 import functools
