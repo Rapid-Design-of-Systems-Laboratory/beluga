@@ -1,4 +1,6 @@
 from math import pi
+import beluga
+
 ocp = beluga.OCP('heatRate')
 
 # Define independent variables

@@ -1,6 +1,8 @@
 """Unconstrained planar hypersonic trajectory problem."""
 from math import *
+
 import beluga
+import logging
 
 ocp = beluga.OCP('planarHypersonic')
 
@@ -83,6 +85,8 @@ continuation_steps.add_step('bisection') \
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .const('rho0',1.2) \
+
+beluga.setup_beluga(logging_level=logging.DEBUG)
 
 beluga.solve(ocp,
              method='traditional',
