@@ -1,4 +1,5 @@
 from math import pi
+import beluga
 # Rename this and/or move to optim package?
 ocp = beluga.OCP('hypersonic3DOF')
 

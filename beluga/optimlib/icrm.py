@@ -10,6 +10,7 @@ from beluga.utils import sympify2, keyboard
 from beluga.problem import SymVar
 import logging
 
+
 def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
     # var -> varible inside saturation function
     if ubound is None and lbound is None:
@@ -32,42 +33,45 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
     else:
         s = 4*slopeAtZero/(ubound - lbound)
         print('Using two sided saturation function')
-        return ubound - ( ubound - lbound )/( 1 + sym.exp(s*var) )
+        return ubound - (ubound - lbound)/(1 + sym.exp(s*var))
+
 
 def make_bc(constraints,
-             states,
-             costates,
-             cost,
-             aug_cost,
-             derivative_fn,
-             location,
-             prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
-                         ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
+            states,
+            costates,
+            cost,
+            aug_cost,
+            derivative_fn,
+            location,
+            prefix_map=(('initial', (r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
+                        ('terminal', (r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
 
     prefix_map = dict(prefix_map)
     bc_list = [sanitize_constraint_expr(x, states, location, prefix_map)
-                    for x in constraints[location]]
+               for x in constraints[location]]
 
     *_, sign = dict(prefix_map)[location]
 
     cost_expr = sign * cost
     aug_cost_expr = sign * (aug_cost.expr - cost.expr)
 
-    #TODO: Fix hardcoded if conditions
-    #TODO: Change to symbolic
-    for state,costate in zip(states, costates):
+    # TODO: Fix hardcoded if conditions
+    # TODO: Change to symbolic
+    for state, costate in zip(states, costates):
         if derivative_fn(aug_cost_expr, state) == 0:
             # State not constrained -> costate = 0
             bc_list.append(str(costate - derivative_fn(cost_expr, state)))
 
     return bc_list
 
+
 def make_bc_mask(states,
-             controls,
-             mu_vars,
-             cost,
-             aug_cost,
-             derivative_fn):
+                 controls,
+                 mu_vars,
+                 cost,
+                 aug_cost,
+                 derivative_fn):
+
     """Creates mask marking free and bound variables at t=0
 
     free = 1, constrained = 0
@@ -79,13 +83,13 @@ def make_bc_mask(states,
     for state in states:
         if derivative_fn(aug_cost_expr, state) == 0:
             # State not constrained -> costate = 0
-            state_mask.append(1) # State free
-            costate_mask.append(0) # Costate fixed
+            state_mask.append(1)    # State free
+            costate_mask.append(0)  # Costate fixed
         else:
             state_mask.append(0)    # State constrained
             costate_mask.append(1)  # Costate free
 
-    return state_mask+costate_mask+[1]*(len(controls)+len(mu_vars)+1) # Add tf as free param
+    return state_mask+costate_mask+[1]*(len(controls)+len(mu_vars)+1)  # Add tf as free param
 
 
 def add_equality_constraints(ham, constraints):
@@ -96,6 +100,7 @@ def add_equality_constraints(ham, constraints):
         ham += sympify('mu'+str(i+1)) * (sympify2(equality_constraints[i].expr))
 
     return ham
+
 
 def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_cost, derivative_fn):
     """simplepipe task for creating the hamiltonian and costates
@@ -109,11 +114,11 @@ def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_
 
     Returns the hamiltonian and the list of costates
     """
-    ham = path_cost.expr + sum([lam*s.eom
-                             for s, lam in zip(states, costate_names)])
+    ham = path_cost.expr + sum([lam*s.eom for s, lam in zip(states, costate_names)])
     ham = add_equality_constraints(ham, constraints)
     yield ham
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
+
 
 def process_path_constraints(workspace):
     states = workspace['states']
@@ -137,7 +142,7 @@ def process_path_constraints(workspace):
 
     eq = constraints.get('equality', [])
     xi_init_vals = []
-    for (ind,c) in enumerate(path_constraints):
+    for (ind, c) in enumerate(path_constraints):
         # Determine order of constraint
         logging.debug('Processing path constraint: '+str(c.name))
         order = 0
@@ -175,22 +180,19 @@ def process_path_constraints(workspace):
             # TODO: Allow continuation on constraints
             # Define new hidden constant
             c_limit = sympify('_'+str(c.name))
-            constants.append(SymVar({'name':str(c_limit),'value':float(c.bound),'unit':c.unit}))
+            constants.append(SymVar({'name': str(c_limit), 'value': float(c.bound), 'unit': c.unit}))
             logging.debug('Added constant '+str(c_limit))
 
         c_lbound = c_ubound = None
         if c.direction == '>':
             c_lbound = c_limit
-            # c.ubound = -c_limit
         elif c.direction == '<':
             c_ubound = c_limit
-            # c.lbound = -c_limit
         elif c.direction == '<>':
             c_ubound = c_limit
             c_lbound = -c_limit
         else:
             raise ValueError('Invalid direction specified for constraint')
-
 
         psi = get_satfn(xi_vars[0], ubound=c_ubound, lbound=c_lbound, slopeAtZero=1)
         psi_vars = [(sympify2('psi'+str(ind+1)+'0('+str(xi_vars[0])+')'), psi)]
@@ -314,7 +316,8 @@ def process_path_constraints(workspace):
     #     eps_const = Symbol('eps_'+str(ind+1))
     #     eps_unit = (path_cost_unit/uw_unit**2)/time_unit #Unit of integrand
     #     problem.constant(str(eps_const), 1, str(eps_unit))
-    return ocp
+    # return ocp
+
 
 def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
     equality_constraints = constraints.get('equality', [])
@@ -373,72 +376,64 @@ def generate_problem_data(workspace):
                 dgdU.append(f'dgdU[{i},{j}] = {expr}')
 
     problem_data = {
-    'method':'icrm',
-    'problem_name': workspace['problem_name'],
-    'aux_list': [
+        'method': 'icrm',
+        'problem_name': workspace['problem_name'],
+        'aux_list': [
             {
             'type' : 'const',
             'vars': [str(k) for k in workspace['constants']]
             }
-     ],
-     'state_list':
-         [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
-         + ['tf']
-     ,
-    #  'parameter_list': [str(p) for p in workspace['parameters']],
-     'parameter_list': [],
-     'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
-     'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
-     'deriv_list':
-         [str(tf_var*state.eom) for state in workspace['states']] +
-         [str(tf_var*costate.eom) for costate in workspace['costates']] +
-         [0]   # TODO: Hardcoded 'tf'
-     ,
-     'states': workspace['states'],
-     'costates': workspace['costates'],
-     'constants': workspace['constants'],
-    #  'parameters': workspace['parameters'],
-     'parameters': [],
-     'controls': workspace['controls'],
-     'mu_vars': workspace['mu_vars'],
-     'quantity_vars': workspace['quantity_vars'],
-     'dae_var_list':
-         [str(dae_state) for dae_state in workspace['dae_states']],
-     'dae_eom_list':
-         ['(tf)*('+str(dae_eom)+')' for dae_eom in workspace['dae_equations']],
-     'dae_var_num': len(workspace['dae_states']),
+        ],
+        'state_list':
+            [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
+            + ['tf']
+        ,
+        'parameter_list': [],
+        'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
+        'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
+        'deriv_list':
+            [str(tf_var*state.eom) for state in workspace['states']] +
+            [str(tf_var*costate.eom) for costate in workspace['costates']] +
+            [str(0)]  # TODO: Hardcoded 'tf'
+        ,
+        'states': workspace['states'],
+        'costates': workspace['costates'],
+        'constants': workspace['constants'],
+        'parameters': [],
+        'controls': workspace['controls'],
+        'mu_vars': workspace['mu_vars'],
+        'quantity_vars': workspace['quantity_vars'],
+        'dae_var_list':
+            [str(dae_state) for dae_state in workspace['dae_states']],
+        'dae_eom_list':
+            ['(tf)*('+str(dae_eom)+')' for dae_eom in workspace['dae_equations']],
+        'dae_var_num': len(workspace['dae_states']),
 
-     'costate_eoms': [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ],
-     'ham': workspace['ham'],
+        'costate_eoms': [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ],
+        'ham': workspace['ham'],
 
-     's_list': [],
-     'bc_list': [],
-     'num_states': 2*len(workspace['states']) + 1,
-    #  'num_params': len(workspace['parameters']),
-     'num_params': 0,
-     'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
-     # 'bc_initial': [str(_) for _ in it.chain(workspace['bc_initial'], workspace['dae_bc'])],
-     # 'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
-     'bc_initial': [str(_) for _ in workspace['bc_initial']],
-     'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
-     'num_bc': len(workspace['bc_initial'])+len(workspace['bc_terminal'])+ len(workspace['dae_bc']),
-     'control_options': [],
-     'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
-     'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
-     'ham_expr': str(workspace['ham']),
-     'quantity_list': workspace['quantity_list'],
-     'bc_free_mask': workspace['bc_free_mask'],
-     #'dgdX': str(workspace['dgdX'][:]),
-     'dgdX': dgdX,#str(workspace['dgdX'][:]),
-     # 'dgdU': str(workspace['dgdU'][:]),
-     'dgdU': dgdU,
-     'nOdes':2*len(workspace['states']) + len(workspace['dae_states'])+ 1,
+        's_list': [],
+        'bc_list': [],
+        'num_states': 2*len(workspace['states']) + 1,
+        'num_params': 0,
+        'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
+        'bc_initial': [str(_) for _ in workspace['bc_initial']],
+        'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
+        'num_bc': len(workspace['bc_initial'])+len(workspace['bc_terminal'])+ len(workspace['dae_bc']),
+        'control_options': [],
+        'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
+        'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
+        'ham_expr': str(workspace['ham']),
+        'quantity_list': workspace['quantity_list'],
+        'bc_free_mask': workspace['bc_free_mask'],
+        'dgdX': dgdX,
+        'dgdU': dgdU,
+        'nOdes': 2*len(workspace['states']) + len(workspace['dae_states']) + 1,
     }
-    # from beluga.utils import keyboard
-    # keyboard()
-    # print(sympy.latex(udot[0], symbol_names={sympy.Symbol('lamX'):r'\lambda_x', sympy.Symbol('lamY'):r'\lambda_y', sympy.Symbol('lamV'):r'\lambda_v', sympy.Symbol('lamXI11'):r'\lambda_{\xi_1}'}))
 
     return problem_data
+
+
 # Implement workflow using simplepipe and functions defined above
 ICRM = sp.Workflow([
     sp.Task(init_workspace, inputs=('problem',), outputs='*'),
