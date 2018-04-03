@@ -102,6 +102,8 @@ https://docs.python.org/3/howto/logging.html
 
 ## Running unit tests
 
-*Note: As of now, it is required that you run the configuration tool before the unit tests start working. This is something to be fixed.*
+To run unit tests, do
 
-Run the shell script "run_tests.sh" to run all the unit tests in the software package.
+    py.test
+
+in the root directory. Some examples take quite some time to run.
