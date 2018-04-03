@@ -1,4 +1,6 @@
 """Brachistochrone example with path constraint."""
+import beluga
+import logging
 
 ocp = beluga.OCP('boundedBrachistochrone')
 
@@ -60,6 +62,7 @@ continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .constraint('constraint1', 0.0, index=1)
 
+beluga.setup_beluga(logging_level=logging.DEBUG)
 
 beluga.solve(ocp,
              method='traditional',

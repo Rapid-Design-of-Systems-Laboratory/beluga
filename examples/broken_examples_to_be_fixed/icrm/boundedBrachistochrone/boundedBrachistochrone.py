@@ -1,5 +1,7 @@
 """Brachistochrone example with path constraint."""
 
+import beluga
+
 ocp = beluga.OCP('brachisto')
 
 # Define independent variables

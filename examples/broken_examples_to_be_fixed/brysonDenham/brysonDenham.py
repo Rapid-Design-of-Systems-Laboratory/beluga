@@ -1,6 +1,7 @@
 
 """Constrained Double integrator problem ."""
-
+import beluga
+import logging
 # Rename this and/or move to optim package?
 ocp = beluga.OCP('brysonDenhamConstrained')
 
@@ -56,6 +57,8 @@ continuation_steps.add_step('activate_constraint', name='xlim')
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .constraint('xlim', 0.0, index=1)
+
+beluga.setup_beluga(logging_level=logging.DEBUG)
 
 beluga.solve(ocp,
              method='traditional',
