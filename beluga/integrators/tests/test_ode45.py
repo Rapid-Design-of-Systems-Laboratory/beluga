@@ -2,7 +2,6 @@ import numpy as np
 import numpy.testing as npt
 from math import *
 from beluga.integrators import ode45
-from beluga.utils import keyboard
 
 def test_ode45_1():
     """Test ode45() against analytical solution"""
@@ -14,7 +13,6 @@ def test_ode45_1():
     tspan = np.array([0, 1.0])
     [t1,x1] = ode45(odefn,tspan,y0,[],{})
     x1_expected = np.array([y*np.exp(k_*t1) for (y,k_) in zip(y0,k)]).T
-    npt.assert_almost_equal(x1,x1_expected)
     assert (x1 - x1_expected < 1e-5).all()
 
 def compute_hamiltonian(t,X,p,aux,u):
