@@ -2,14 +2,9 @@
 
 import numpy as np
 
-from .. import Solution
-from .BaseAlgorithm import BaseAlgorithm
-from math import *
-from beluga.utils import keyboard
 # from .joblib import Memory
 from .Propagator import Propagator
-from .Worker import Worker
-import logging, sys, os
+import os
 
 
 try:
@@ -20,8 +15,6 @@ except ImportError:
 
 import beluga
 from .. import Solution
-from beluga.utils import keyboard
-from beluga.integrators import ode45 as ode45_1
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 
@@ -37,7 +30,6 @@ import sympy as sym
 import pystache
 
 import simplepipe as sp
-import math
 
 
 def make_njit_fn(args, fn_expr):

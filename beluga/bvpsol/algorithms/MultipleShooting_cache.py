@@ -1,11 +1,9 @@
 # from autodiff import Function, Gradient
-import sys
 import numpy as np
 
 import beluga
-from .. import Solution
-from beluga.utils import keyboard, timeout
-from beluga.integrators import ode45
+from beluga.utils import timeout
+from beluga.ivpsol.integrators import ode45
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 from sympy.utilities.lambdify import lambdastr
@@ -19,9 +17,8 @@ import functools as ft
 import itertools as it
 import sympy as sym
 import pystache
-import cloudpickle
 import simplepipe as sp
-import math
+
 
 def make_njit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
@@ -243,7 +240,7 @@ PythonCodeGen = sp.Workflow([
 ], description='Generates and compiles the required BVP functions from problem data')
 
 import pickle
-from inspect import signature
+
 
 class MultipleShooting(BaseAlgorithm):
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True):

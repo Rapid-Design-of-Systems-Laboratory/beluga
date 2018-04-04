@@ -1,12 +1,9 @@
 # from autodiff import Function, Gradient
-import sys
-import os
 import numpy as np
 
 import beluga
-from .. import Solution
-from beluga.utils import keyboard, timeout
-from beluga.integrators import ode45
+from beluga.utils import timeout
+from beluga.ivpsol.integrators import ode45
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 from sympy.utilities.lambdify import lambdastr
@@ -21,7 +18,6 @@ import sympy as sym
 import pystache
 
 import simplepipe as sp
-import math
 
 import pickle
 
