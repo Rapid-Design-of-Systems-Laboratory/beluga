@@ -8,6 +8,7 @@ from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 from sympy.utilities.lambdify import lambdastr
 import numba
+import sys
 
 from math import *
 import logging
