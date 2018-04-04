@@ -15,6 +15,9 @@ Contents:
    testproblem.rst
    features.rst
    unittests.rst
+   nomenclature.rst
+   modules/ivpsol.rst
+
 
 Indices and tables
 ==================
