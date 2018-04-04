@@ -32,7 +32,7 @@ ocp.constraints() \
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 # ocp.scale(m=1, s=1, kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+bvp_solver = beluga.bvp_algorithm('Shooting',
                         derivative_method='fd',
                         tolerance=1e-4,
                         max_iterations=200,
@@ -40,13 +40,6 @@ bvp_solver = beluga.bvp_algorithm('MultipleShooting',
                         max_error=100,
                         # number_arcs=2
              )
-
-# bvp_solver = beluga.bvp_algorithm('SingleShooting',
-#                     derivative_method='fd',
-#                     tolerance=1e-4,
-#                     max_iterations=50,
-#                     verbose = True,
-# )
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order

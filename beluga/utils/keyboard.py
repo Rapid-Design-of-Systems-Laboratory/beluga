@@ -1,4 +1,7 @@
 # Source : http://vjethava.blogspot.com/2010/11/matlabs-keyboard-command-in-python.html
+import sys
+import code
+
 def keyboard(banner=None):
     ''' Function that mimics the matlab keyboard command '''
     # use exception trick to pick up the current frame
