@@ -1,4 +1,4 @@
-# beluga
+# beluga [![logo](https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png)](https://github.com/msparapa/beluga)
 
 [![Build Status](https://travis-ci.org/msparapa/beluga.svg?branch=master)](https://travis-ci.org/msparapa/beluga)
 
