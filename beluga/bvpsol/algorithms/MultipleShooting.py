@@ -2,7 +2,7 @@
 import numpy as np
 
 import beluga
-from beluga.utils import timeout
+from beluga.utils import timeout, keyboard
 from beluga.ivpsol.integrators import ode45
 from .BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
@@ -295,42 +295,35 @@ class MultipleShooting(BaseAlgorithm):
         # self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
         self.stm_ode_func = self.make_stmode(self.bvp.deriv_func, problem_data['nOdes'])
         self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
+        # self.bc_jac_multi = self.__bc_jac_multi
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
 
-    def __bc_jac_multi(self, nBCs, phi_list, ya, yb, parameters, aux, bc_func, StepSize=1e-6):
-
-        # if parameters is not None:
+    def __bc_jac_multi(self, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
         p  = np.array(parameters)
         h = StepSize
-
+        ya = np.array([traj.T[0] for traj in y_list]).T
+        yb = np.array([traj.T[-1] for traj in y_list]).T
         nOdes = ya.shape[0]
-        num_arcs = len(phi_list)
-
+        num_arcs = len(phi_full_list)
         fx = bc_func(ya,yb,p,aux)
         nBCs = len(fx)
 
         M = np.zeros((nBCs, nOdes))
-        N = np.zeros((nBCs, nOdes))
         P = np.zeros((nBCs, p.size))
-
         J = np.zeros((nBCs, (nOdes)*num_arcs+p.size))
-        J_num_cols = nOdes
+        dx = np.zeros((nOdes, num_arcs))
 
-        for arc_idx, phi in zip(it.count(), phi_list):
+        for arc_idx, phi in zip(it.count(), phi_full_list):
             # Evaluate for all arcs
             for i in range(nOdes):
-                ya[i, arc_idx] = ya[i, arc_idx] + h
-                f = bc_func(ya,yb,p,aux)
+                dx[i, arc_idx] = dx[i, arc_idx] + h
+                dyb = np.dot(phi[-1], dx[:])
+                f = bc_func(ya + dx[:nOdes,:], yb + dyb, p, aux)
                 M[:,i] = (f-fx)/h
-                ya[i, arc_idx] = ya[i, arc_idx] - h
+                dx[i, arc_idx] = dx[i, arc_idx] - h
 
-                yb[i, arc_idx] = yb[i, arc_idx] + h
-                f = bc_func(ya,yb,p,aux)
-                N[:, i] = (f-fx)/h
-                yb[i, arc_idx] = yb[i, arc_idx] - h
-
-            J_i = M+N @ phi
+            J_i = M
             J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
             J[:,J_slice] = J_i
 
@@ -372,7 +365,7 @@ class MultipleShooting(BaseAlgorithm):
 
     def solve(self,solinit):
         """Solve a two-point boundary value problem
-            using the single shooting method
+            using the shooting method
 
         Args:
             deriv_func: the ODE function
@@ -433,13 +426,13 @@ class MultipleShooting(BaseAlgorithm):
         try:
             while True:
                 phi_list = []
+                phi_full_list = []
                 x_list = []
                 y_list = []
                 with timeout(seconds=5000):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
-                        # print(arc_idx, tspan, ya[:,arc_idx])
                         # t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
                         if self.use_numba:
                             t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
@@ -450,6 +443,8 @@ class MultipleShooting(BaseAlgorithm):
                         # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                         # _,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-3)
                         yb[:,arc_idx] = yy[-1,:nOdes]
+                        phi_full = np.reshape(yy[:,nOdes:],(len(t), nOdes, nOdes))
+                        phi_full_list.append(np.copy(phi_full))
                         phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes)) # STM
                         phi_list.append(np.copy(phi))
                 if n_iter == 1:
@@ -466,8 +461,6 @@ class MultipleShooting(BaseAlgorithm):
 
                 if any(np.isnan(res)):
                     print(res)
-                    # from beluga.utils import keyboard
-                    # keyboard()
                     raise RuntimeError("Nan in residual")
 
                 # r1 = np.linalg.norm(res)
@@ -489,7 +482,9 @@ class MultipleShooting(BaseAlgorithm):
 
                 # Compute Jacobian of boundary conditions using numerical derviatives
                 nBCs = len(res)
-                J = self.bc_jac_multi(nBCs, phi_list, ya, yb, paramGuess, aux)
+                # keyboard()
+                # J = self.bc_jac_multi(nBCs, phi_full_list, [ya,yb], paramGuess, aux)
+                J = self.bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, aux)
                 # Compute correction vector
 
                 if r0 is not None:
