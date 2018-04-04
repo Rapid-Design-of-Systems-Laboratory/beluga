@@ -8,6 +8,9 @@ from beluga.ivpsol.integrators.ode45 import ode45
 from scipy.integrate import simps
 
 class Algorithm(object):
+    '''
+    I'm an algorithm
+    '''
     def __new__(cls, ivp=None, options='default'):
         obj = super(Algorithm, cls).__new__(cls)
         if isinstance(options, str):
@@ -38,7 +41,9 @@ class Algorithm(object):
         return []
 
 class Propagator(Algorithm):
-    # ode45(ODEFUN,TSPAN,Y0,OPTIONS)
+    '''
+    Propagator of differential equations
+    '''
     def __call__(self, ivp, tspan, y0, *args, **kwargs):
         time0 = time.time()
         # Create a deep copy to prevent corrupting original data
@@ -73,7 +78,9 @@ class Propagator(Algorithm):
         return solout
 
 class Collocation(Algorithm):
-    ''' Do some collocation stuff. '''
+    '''
+    Collocation solver of differential equations
+    '''
     def __call__(self, ivp, options):
         if options is not None:
             self.options = options

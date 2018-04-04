@@ -1,4 +1,5 @@
-from beluga.ivpsol.ivpsol import Propagator, Collocation
+from beluga.ivpsol.ivpsol import Propagator, Collocation, Algorithm
+from beluga.ivpsol.ivp import ivp, sol
 
 import os
 import glob
