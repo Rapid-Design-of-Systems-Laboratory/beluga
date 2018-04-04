@@ -6,6 +6,8 @@ from beluga.utils import timeout, keyboard
 from beluga.ivpsol.integrators import ode45
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
+from beluga.ivpsol import Propagator, ivp
+from beluga.ivpsol import sol as solivp
 from sympy.utilities.lambdify import lambdastr
 import numba
 import sys
@@ -241,7 +243,9 @@ class Shooting(BaseAlgorithm):
         alpha = 1
         beta = 1
         r0 = None
-
+        prop = Propagator()
+        ivp_problem = ivp()
+        ivp_problem.eoms = self.stm_ode_func
         y0stm = np.zeros((len(stm0)+nOdes))
         yb = np.zeros_like(ya)
         try:
@@ -254,15 +258,15 @@ class Shooting(BaseAlgorithm):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:,arc_idx]
                         y0stm[nOdes:] = stm0[:]
-                        # t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-6, reltol=1e-4)
-                        if self.use_numba:
-                            t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
-                        else:
-                            t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        sol = prop(ivp_problem, tspan, y0stm, paramGuess, aux, arc_idx)
+                        t = sol.x
+                        yy = sol.y
+                        # if self.use_numba:
+                        #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
+                        # else:
+                        #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
                         y_list.append(yy[:,:nOdes].T)
                         x_list.append(t)
-                        # tt,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
-                        # _,yy2 = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-3)
                         yb[:,arc_idx] = yy[-1,:nOdes]
                         phi_full = np.reshape(yy[:,nOdes:],(len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
