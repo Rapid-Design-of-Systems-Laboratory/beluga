@@ -17,10 +17,8 @@ from collections import namedtuple, ChainMap
 from itertools import zip_longest
 
 from beluga.bvpsol import Scaling
-from beluga.integrators import ode45
+from beluga.ivpsol.integrators import ode45
 from beluga.utils import sympify, tic, toc
-from beluga.continuation import ContinuationList
-
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
