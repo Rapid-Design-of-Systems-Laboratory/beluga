@@ -1,5 +1,3 @@
-import code
-import sys
 import time
 import sympy
 import platform
