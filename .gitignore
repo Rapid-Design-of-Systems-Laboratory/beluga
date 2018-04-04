@@ -45,6 +45,8 @@ var/
 *.dill
 *.pkl
 *.pkl2
+*.mat
+*.zip
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
