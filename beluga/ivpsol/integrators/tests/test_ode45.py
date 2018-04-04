@@ -1,7 +1,6 @@
 import numpy as np
-import numpy.testing as npt
 from math import *
-from beluga.integrators import ode45
+from beluga.ivpsol.integrators import ode45
 
 def test_ode45_1():
     """Test ode45() against analytical solution"""

@@ -1,6 +1,6 @@
 """Quasi-linear Chebyshev Picard Iteration method"""
 
-from beluga.integrators.mcpi import mcpi, mcpi_init, cheby_eval, absdiff
+from beluga.ivpsol.integrators.mcpi import mcpi, mcpi_init, absdiff
 from numba import njit, prange, jit
 from .BaseAlgorithm import BaseAlgorithm
 import pystache
@@ -173,7 +173,7 @@ def make_perf_idx(bc_left_fn, bc_right_fn):
         return P
     return perf_idx
 
-import os
+
 import pickle
 
 class QCPI(BaseAlgorithm):
