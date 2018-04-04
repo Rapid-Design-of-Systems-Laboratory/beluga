@@ -1,8 +1,3 @@
-import numpy as np
-import numpy.testing as npt
-from math import *
-from beluga.integrators.mcpi import mcpi
-
 # def test_mcpi1():
 #     """Test mcpi() against analytical solution"""
 #     k  = [-0.5, -0.2]
