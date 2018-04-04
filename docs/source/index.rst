@@ -17,6 +17,7 @@ Contents:
    unittests.rst
    nomenclature.rst
    modules/ivpsol.rst
+   modules/bvpsol.rst
 
 
 Indices and tables

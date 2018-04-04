@@ -10,8 +10,9 @@ This modules solves :eq:`ordinarydifferentialequation` of the form
 
 .. math::
     \begin{aligned}
-        \dot{x} &= f(t,x,p) \\
-        \dot{q} &= g(t,\mathbf{x},p)
+        \dot{x} &= f(t,\mathbf{x}, \mathbf{p}) \\
+        \dot{q} &= g(t,\mathbf{x}, \mathbf{p}) \\
+        \mathbf{x}(t_0) &= \mathbf{x}_0
     \end{aligned}
     :label: ordinarydifferentialequation
 
