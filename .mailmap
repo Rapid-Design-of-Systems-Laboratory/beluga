@@ -1,0 +1,68 @@
+# Before editing this file, run bin/mailmap_update.py. It will
+# inform you about the types of entries needed here. See HELP
+# below for guidance if needed.
+#
+# After making entries to .mailmap,
+#
+#    1) re-run bin/mailmap_update.py; if no further edits are needed,
+#    2) run bin/authors_update.py to update AUTHORS and see which
+#       authors are being added. If no error is raised, and no changes
+#       are desired,
+#    3) commit the results, e.g.
+#
+#         $ git commit -am 'Update .mailmap/AUTHORS. Welcome to SymPy!'
+#       or
+#         $ git commit -am 'Add Foo to AUTHORS. Welcome to SymPy!'
+#
+# HELP
+#
+# Entries in this file are made for two reasons: to merge git
+# authors that are one in the same or to simply change how the
+# name and/or address of an author appears. Either can be done
+# with an entry to this file like
+#
+#     Proper Name <Proper@email> commit name <commit@email>
+#     \-----------+------------/ \----------+-------------/
+#                 |                         |
+#              replace                     find
+#
+# The email (or name and email) in the "find" part of the entry will
+# be used in a case-insensitive way to identify a git author and
+# replace it with whatever is included in the "replace" part:
+#
+#     author                           author
+#     before    .mailmap entry         after
+#     --------- ---------------------- -----------
+#               Foo <Email>
+#     A <Email> ---------------------> Foo <Email>
+#     B <eMAIL> ---------------------> Foo <eMAIL>
+#
+#               <Email> <email>
+#     A <Email> ---------------------> A <Email>
+#     B <eMAIL> ---------------------> B <Email>
+#
+#               Foo <Email> <email>
+#     A <Email> ---------------------> Foo <Email>
+#     B <eMAIL> ---------------------> Foo <Email>
+#
+#               Foo <EMAIL> b <email>
+#     A <Email> ---------------------> same
+#     B <Email> ---------------------> Foo <EMAIL>
+#     b <eMAIL> ---------------------> Foo <EMAIL>
+#
+#               Foo <Email> b <email>
+#               Foo <Email> <liame>
+#     A <Liame> ---------------------> Foo <Email>
+#     B <Email> ---------------------> Foo <Email>
+#     b <eMAIL> ---------------------> Foo <Email>
+#     c <eMAIL> ---------------------> same
+#
+# See also: 'git shortlog --help' and 'git check-mailmap --help'.
+#
+Justin Mansell <jmansell@purdue.edu> Justin RM <justinrm@pal-nat186-129-243.itap.purdue.edu>
+Justin Mansell <jmansell@purdue.edu> Justin R Mansell <jmansell@purdue.edu>
+Michael Grant <mjgrant@purdue.edu> mjgrant <mjgrant@purdue.edu>
+Michael Grant <mjgrant@purdue.edu> Michael J Grant <mjgrant@exchange.purdue.edu>
+Michael Sparapany <msparapa@purdue.edu> msparapa <msparapa@purdue.edu>
+Michael Sparapany <msparapa@purdue.edu> Mike <msparapa@purdue.edu>
+Thomas Antony <tantony@purdue.edu> Thomas Antony <thomasantony@users.noreply.github.com>
