@@ -84,3 +84,6 @@ target/
 
 # Personal Folder
 personal/
+
+# IDE folder
+.idea/
