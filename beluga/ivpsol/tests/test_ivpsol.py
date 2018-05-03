@@ -2,6 +2,7 @@ from beluga.ivpsol.ivpsol import Collocation
 from beluga.ivpsol.ivp import ivp
 import numpy as np
 
+
 def test_Collocation():
     Col = Collocation()
     Col.number_of_odes = 3
