@@ -12,6 +12,7 @@ from sympy.utilities.lambdify import lambdastr
 import numba
 import sys
 
+
 from math import *
 import logging
 import imp
@@ -24,8 +25,9 @@ import simplepipe as sp
 
 import pickle
 
+
 class Shooting(BaseAlgorithm):
-    '''
+    """
     Shooting algorithm for solving boundary value problems.
 
     Given a system of ordinary differential equations :eq:`ordinarydifferentialequation`, define the sensitivities as
@@ -55,7 +57,7 @@ class Shooting(BaseAlgorithm):
 
     .. math::
         J = \\left[M, P, Q_0+Q_f \\right]
-    '''
+    """
 
     def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True, use_numba=False):
         self.tolerance = tolerance
@@ -93,7 +95,7 @@ class Shooting(BaseAlgorithm):
         logging.debug(out_ws['deriv_func_code'])
 
         if self.use_numba:
-            deriv_func = numba.njit(parallel=False)(out_ws['code_module'].deriv_func_nojit)
+            deriv_func = numba.njit(parallel=False, nopython=True)(out_ws['code_module'].deriv_func_nojit)
         else:
             deriv_func = out_ws['code_module'].deriv_func_nojit
         out_ws['deriv_func_fn'] = deriv_func
@@ -157,22 +159,22 @@ class Shooting(BaseAlgorithm):
     def make_stmode(self, odefn, nOdes, StepSize=1e-6):
         Xh = np.eye(nOdes)*StepSize
 
-        @numba.jit(looplift=True)
+        # @numba.jit(looplift=True, nopython=True)
         def _stmode_fd(t, _X, p, const, arc_idx):
-            "Finite difference version of state transition matrix"
+            """ Finite difference version of state transition matrix """
             nParams = p.size
-            F = np.empty((nOdes,nOdes+nParams))
+            F = np.empty((nOdes, nOdes+nParams))
             # nrt_mstats(alloc=14082696, free=13545502, mi_alloc=9439609, mi_free=8940786)
             # nrt_mstats(alloc=14005954, free=13468760, mi_alloc=9362867, mi_free=8864044)
-            phi = _X[nOdes:].reshape((nOdes,nOdes+nParams))
+            phi = _X[nOdes:].reshape((nOdes, nOdes+nParams))
             X = _X[0:nOdes]  # Just states
 
             # Compute Jacobian matrix, F using finite difference
-            fx = odefn(t,X,p,const,arc_idx)
+            fx = odefn(t, X, p, const, arc_idx)
 
             for i in numba.prange(nOdes):
-                fxh = odefn(t, X + Xh[i,:], p, const, arc_idx)
-                F[:,i] = (fxh-fx)/StepSize
+                fxh = odefn(t, X + Xh[i, :], p, const, arc_idx)
+                F[:, i] = (fxh-fx)/StepSize
 
             for i in numba.prange(nParams):
                 p[i] += StepSize
@@ -183,11 +185,11 @@ class Shooting(BaseAlgorithm):
             phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))),np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
             return np.concatenate((fx, np.reshape(phiDot, (nOdes * (nOdes + nParams)))))
 
-        def wrapper(t, _X, p, const, arc_idx): # needed for scipy
+        def wrapper(t, _X, p, const, arc_idx):  # needed for scipy
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-    def solve(self,solinit):
+    def solve(self, solinit):
         """Solve a two-point boundary value problem
             using the shooting method
 
@@ -198,7 +200,7 @@ class Shooting(BaseAlgorithm):
         Returns:
             solution of TPBVP
         """
-        x  = solinit.x
+        x = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
         paramGuess = solinit.parameters
@@ -395,12 +397,14 @@ class Shooting(BaseAlgorithm):
         sol.aux = aux
         return sol
 
+
 def make_njit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
                                                   .replace('(([[', '[') \
                                                   .replace(']]))', ']')
-    jit_fn = numba.njit(parallel=True)(eval(fn_str))
+    jit_fn = numba.njit(parallel=True, nopython=True)(eval(fn_str))
     return jit_fn
+
 
 def make_sympy_fn(args, fn_expr):
     if hasattr(fn_expr, 'shape'):
@@ -412,7 +416,7 @@ def make_sympy_fn(args, fn_expr):
         jit_fns = [make_njit_fn(args, expr) for expr in fn_expr]
         len_output = len(fn_expr)
 
-        @numba.jit(parallel=True)
+        # @numba.jit(parallel=True, nopython=True)
         def vector_fn(*args):
             output = np.zeros(output_shape)
             for i in numba.prange(len_output):
@@ -421,6 +425,7 @@ def make_sympy_fn(args, fn_expr):
         return vector_fn
     else:
         return make_njit_fn(args, fn_expr)
+
 
 def load_eqn_template(problem_data, template_file,
                         renderer = pystache.Renderer(escape=lambda u: u)):
@@ -448,6 +453,7 @@ def load_eqn_template(problem_data, template_file,
         code = renderer.render(tmpl, problem_data)
         return code
 
+
 def create_module(problem_data):
     """Creates a new module for storing compiled code.
 
@@ -470,6 +476,7 @@ def create_module(problem_data):
     # module.costate_eoms = problem_data['costate_eoms']
 
     return module
+
 
 def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, constraint_name=None):
     controls = sym.Matrix([_._sym for _ in controls])
@@ -506,6 +513,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     num_states = len(states)
     num_params = len(parameters)
     constraint_name = str(constraint_name)
+
     def compute_control_fn(t, X, p, aux):
         X = X[:(2*num_states+1)]
         C = aux['const'].values()
@@ -534,6 +542,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
 
     yield compute_control_fn
     yield ham_fn
+
 
 def make_functions(problem_data, module):
 
@@ -564,6 +573,7 @@ def make_functions(problem_data, module):
     yield module
     yield control_fns[0]
 
+
 def compile_code_py(code_string, module, function_name):
     """
     Compiles a function specified by template in filename and stores it in
@@ -586,9 +596,9 @@ def compile_code_py(code_string, module, function_name):
         Compiled function
     """
     # For security
-    module.__dict__.update({'__builtin__':{}})
+    module.__dict__.update({'__builtin__': {}})
     exec(code_string, module.__dict__)
-    return getattr(module,function_name,None)
+    return getattr(module, function_name, None)
 
 
 PythonCodeGen = sp.Workflow([

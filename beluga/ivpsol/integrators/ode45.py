@@ -1,14 +1,5 @@
 import scipy.integrate
-# Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
-from numpy import double, sign, finfo, array, zeros, dot, mod, size, inf, all, max, min, abs, mat
-from numpy.linalg import norm
 import logging
-
-
-def ode_wrap(func, *args):   # Required for odeint
-    def func_wrapper(t, y):
-        return func(y, t, *args)
-    return func_wrapper
 
 
 def ode45(f, tspan, y0, *args, **kwargs):
