@@ -1,10 +1,16 @@
 import scipy.integrate
 import numpy as np
+# Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
+from numpy import double, sign, finfo, array, zeros, dot, mod, size, inf, all, max, min, abs, mat
+from numpy.linalg import norm
+import logging
+
 
 def ode_wrap(func,*args):   # Required for odeint
     def func_wrapper(t,y):
         return func(y,t,*args)
     return func_wrapper
+
 
 def ode45(f,tspan,y0,*args,**kwargs):
     """Implements interface similar to MATLAB's ode45 using scipy"""
@@ -21,10 +27,10 @@ def ode45(f,tspan,y0,*args,**kwargs):
     #
     if len(tspan) == 2:
         # TODO: Change hardcoding?
-        tspan = np.linspace(tspan[0],tspan[1],100)
+        tspan = np.linspace(tspan[0], tspan[1], 100)
     ## Superfast option below
     abstol = kwargs.get('abstol', 1e-6)
-    reltol = kwargs.get('reltol', 1e-2)
+    reltol = kwargs.get('reltol', 1e-4)
     #r = scipy.integrate.ode(f).set_integrator('vode', method='adams', atol=abstol, rtol=reltol, order=4)
     r = scipy.integrate.ode(f).set_integrator('dopri5', atol=abstol, rtol=reltol)
     r.set_initial_value(y0, tspan[0]).set_f_params(*args)
@@ -44,17 +50,13 @@ def ode45(f,tspan,y0,*args,**kwargs):
     return tspan, y_out
 
 
-# Source : http://www.sam.math.ethz.ch/~gradinar/Teaching/NumPhys/SomeTemplates/ode45.py
-from numpy import double, sign, finfo, array, zeros, dot, mod, size, inf, all, max, min, abs, mat
-from numpy.linalg import norm
-import logging
-
-def warning(type, string):
-    logging.warning('warning: ' + type)
+def warning(err, string):
+    logging.warning('warning: ' + err)
     logging.warning(string)
 
-def error(type, string):
-    logging.error('error: ' + type)
+
+def error(err, string):
+    logging.error('error: ' + err)
     logging.error(string)
     raise RuntimeError(string)  # Raise error to notify shooting solver
     # exit
