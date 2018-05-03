@@ -7,6 +7,7 @@ from beluga.utils import keyboard
 from beluga.ivpsol.integrators.ode45 import ode45
 from scipy.integrate import simps
 
+
 class Algorithm(object):
     '''
     I'm an algorithm
@@ -40,10 +41,12 @@ class Algorithm(object):
     def _get_default_options(cls, options='default'):
         return []
 
+
 class Propagator(Algorithm):
     '''
     Propagator of differential equations
     '''
+
     def __call__(self, ivp, tspan, y0, *args, **kwargs):
         time0 = time.time()
         # Create a deep copy to prevent corrupting original data
@@ -77,10 +80,13 @@ class Propagator(Algorithm):
 
         return solout
 
+
 class Collocation(Algorithm):
+
     '''
     Collocation solver of differential equations
     '''
+
     def __call__(self, ivp, options):
         if options is not None:
             self.options = options
@@ -291,6 +297,7 @@ class Collocation(Algorithm):
                 params = vectorized[-self.number_of_params:]
 
         return X, quads, params
+
 
     def _wrap_params(self, X, quads0, params):
         return np.concatenate((X.flatten(), quads0, params))
