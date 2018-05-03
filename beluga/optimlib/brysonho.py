@@ -606,6 +606,7 @@ def init_workspace(ocp):
     All the strings in the original definition are converted into symbolic
     expressions for computation.
     """
+
     workspace = {}
     # variable_list = ['states', 'controls', 'constraints', 'quantities', 'initial_cost', 'terminal_cost', 'path_cost']
     workspace['problem_name'] = ocp.name
