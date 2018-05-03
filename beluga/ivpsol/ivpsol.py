@@ -64,7 +64,7 @@ class Propagator(Algorithm):
             stopping_condition = kwargs['stopping_condition']
             dt = 0.005*tspan[-1]
             while stopping_condition(T[-1],X[-1],params) == False:
-                Tnew,Xnew = ode45(eoms, [T[-1],T[-1]+dt], X[-1], params, AbsTol=1e-6, RelTol=1e-6)
+                Tnew, Xnew = ode45(eoms, [T[-1],T[-1]+dt], X[-1], params, AbsTol=1e-6, RelTol=1e-6)
                 T = np.hstack((T,Tnew[1:]))
                 X = np.vstack((X,Xnew[1:]))
         else:
@@ -75,7 +75,7 @@ class Propagator(Algorithm):
         solout = sol()
         solout.x = T
         solout.y = X
-        solout.quads = None # TODO: Reconstruct these above
+        solout.quads = None  # TODO: Reconstruct these above
         solout.params = solinit.params
 
         return solout

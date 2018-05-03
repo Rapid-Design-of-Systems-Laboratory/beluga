@@ -256,7 +256,7 @@ class Shooting(BaseAlgorithm):
                 y_list = []
                 with timeout(seconds=5000):
                     for arc_idx, tspan in enumerate(tspan_list):
-                        y0stm[:nOdes] = ya[:,arc_idx]
+                        y0stm[:nOdes] = ya[:, arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         sol = prop(ivp_problem, tspan, y0stm, paramGuess, aux, arc_idx)
                         t = sol.x
@@ -265,12 +265,12 @@ class Shooting(BaseAlgorithm):
                         #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
                         # else:
                         #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
-                        y_list.append(yy[:,:nOdes].T)
+                        y_list.append(yy[:nOdes, :])
                         x_list.append(t)
-                        yb[:,arc_idx] = yy[-1,:nOdes]
-                        phi_full = np.reshape(yy[:,nOdes:],(len(t), nOdes, nOdes+nParams))
+                        yb[:, arc_idx] = yy[:nOdes, -1]
+                        phi_full = np.reshape(yy[nOdes:, :].T, (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
-                        phi = np.reshape(yy[-1,nOdes:],(nOdes, nOdes+nParams)) # STM
+                        phi = np.reshape(yy[nOdes:, -1].T, (nOdes, nOdes+nParams))  # STM
                         phi_list.append(np.copy(phi))
                 if n_iter == 1:
                     if not self.saved_code:
