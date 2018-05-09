@@ -1,24 +1,32 @@
 .. _atom link: http://atom.io
 
 Installation
-------------
+============
 
 Cloning in Github Desktop
+-------------------------
 
-If you already have Github installed on your computer, you need to go into preferences and add a new Enterprise account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Click "Add Github Enterprise" and use the following information:
+If you already have Github installed on your computer, you need to go into preferences and add a new account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Use the following information::
 
-URL: https://github.rcac.purdue.edu/
-Username : Your Purdue account username
-Password : Your Purdue account password
+    URL: https://github.com/
+    Username : Your account username
+    Password : Your account password
 
 This will allow you to view all the repositories you have been given access to.
 Go to File -> Clone Repository and you should see "beluga" in the list of repositories to be cloned.
 
+Alternatively, clone using the command line with::
+
+    git clone https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
+
 Setting up the Python development environment
+---------------------------------------------
 
-1. Install [anaconda](https://www.continuum.io/downloads/ "Download Anaconda") with Python 3.x
+1. Install `anaconda <https://www.continuum.io/downloads/>`_ with Python 3.x
 
-2. Run the following commands in command line in the folder where you cloned the code::
+2. Run the following commands in command line in the folder where you cloned the code
+
+::
 
     conda update conda
     conda update --all
