@@ -4,32 +4,34 @@
 
 ## Cloning in Github Desktop
 
-If you already have Github installed on your computer, you need to go into preferences and add a new Enterprise account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Click "Add Github Enterprise" and use the following information:
+If you already have Github installed on your computer, you need to go into preferences and add a new account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Use the following information:
 
-    URL: https://github.rcac.purdue.edu/
-    Username : Your Purdue account username
-    Password : Your Purdue account password
+    URL: https://github.com/
+    Username : Your account username
+    Password : Your account password
 
 This will allow you to view all the repositories you have been given access to.
 Go to File -> Clone Repository and you should see "beluga" in the list of repositories to be cloned.
+
+Alternatively, clone using the command line with
+
+    git clone https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
 
 ## Setting up the Python development environment
 
   1. Install [anaconda](https://www.continuum.io/downloads/ "Download Anaconda") with Python 3.x
   2. Run the following commands in command line in the folder where you cloned the code
-  <pre>
+  
     conda update conda
     conda update --all
     python setup.py develop
-  </pre>
 
   In case you want to switch to another version of the code in a separate folder, run the following commands to "uninstall" the current version and switch to the new codebase. You do not have to worry about this part if you intend to work with only one version of the code at any time.
-  <pre>
-  python setup.py develop --uninstall
-  cd your_new_code_folder
-  python setup.py develop
-  beluga --config
-  </pre>
+  
+    python setup.py develop --uninstall
+    cd your_new_code_folder
+    python setup.py develop
+    beluga --config
 
   Enter all the information that is requested.
 
