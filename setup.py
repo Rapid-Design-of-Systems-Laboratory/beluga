@@ -14,19 +14,19 @@ if sys.argv[-1] == 'test':
         modules = map(__import__, test_requirements)
     except ImportError as e:
         err_msg = e.message.replace("No module named ", "")
-        msg = "%s is not installed. Install your test requirments." % err_msg
+        msg = "%s is not installed. Install your test requirements." % err_msg
         raise ImportError(msg)
     os.system('py.test tests')
     sys.exit()
 
 setup(name="beluga",
-      version="0.1",
-      description="A trajectory optimization framework",
-      author="Michael J. Grant",
-      author_email='mjgrant@purdue.edu',
+      version="0.1.0",
+      description="An indirect trajectory optimization framework",
+      author="Michael Sparapany",
+      author_email='msparapa@purdue.edu',
       platforms=["any"],  # or more specific, e.g. "win32", "cygwin", "osx"
-      license="",
-      url="http://github.rcac.purdue.edu/RDSL/beluga",
+      license="MIT",
+      url="https://github.com/Rapid-Design-of-Systems-Laboratory/beluga",
       py_modules=['beluga'],
       packages=find_packages(exclude=['docs', 'tests*', 'sandbox', 'examples']),
     #   scripts=['bin/beluga'],
@@ -34,24 +34,5 @@ setup(name="beluga",
           'console_scripts': [
               'beluga = beluga.__main__:main'
           ]
-      },
-      install_requires=[
-        "dill",
-        "numpy",
-        "sympy",
-        "scipy",
-        "pytest",
-        "pytest-cov",
-        "pytest-describe",
-        "coverage",
-    	"mock",
-        "matplotlib",
-        "numexpr",
-        "pystache",
-        "docopt",
-	"simplepipe",
-        "multiprocessing_on_dill",
-#        "toyplot",
-#        "PyQt5",
-      ]
+      }
       )
