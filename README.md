@@ -106,10 +106,10 @@ https://docs.python.org/3/howto/logging.html
 
 To run unit tests, do
 
-    pytest
+    $ python -m pytest
 
 in the root directory. Some examples take quite some time to run. Run a faster version by
 
-    pytest beluga/
+    $ python -m pytest beluga/
 
 or running the `run_tests_lite.sh` shell script.
