@@ -1,8 +1,8 @@
-beluga
-======
-
-.. image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
+.. |logo| image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
     :align: right
+
+beluga |logo|
+======
 
 Build Status
 
