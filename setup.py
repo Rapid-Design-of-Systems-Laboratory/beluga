@@ -23,21 +23,35 @@ if sys.argv[-1] == 'test':
     os.system('py.test tests')
     sys.exit()
 
+modules = ['beluga.bvpsol',
+           'beluga.continuation',
+           'beluga.ivpsol',
+           'beluga.ivpsol.integrators',
+           'beluga.optimlib',
+           'beluga.utils']
+
+tests = ['beluga.bvpsol.tests',
+         'beluga.continuation.tests',
+         'beluga.ivpsol.tests',
+         'beluga.ivpsol.integrators.tests',
+         'beluga.optimlib.tests']
+
 setup(name="beluga",
-      version="0.1.0",
-      description="An indirect trajectory optimization framework",
+      version="0.1.2",
+      description="An indirect trajectory optimization framework.",
       author="Michael Sparapany",
       author_email='msparapa@purdue.edu',
       platforms=["any"],  # or more specific, e.g. "win32", "cygwin", "osx"
       license="MIT",
       url="https://github.com/Rapid-Design-of-Systems-Laboratory/beluga",
       py_modules=['beluga'],
-      packages=find_packages(exclude=['docs', 'tests*', 'sandbox', 'examples']),
+      packages=['beluga'] + modules + tests,
     #   scripts=['bin/beluga'],
       entry_points={
           'console_scripts': [
               'beluga = beluga.__main__:main'
           ]
       },
-      install_requires=requirements
+      install_requires=requirements,
+      include_package_data = True
       )

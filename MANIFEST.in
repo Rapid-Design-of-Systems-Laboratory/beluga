@@ -1,5 +1,11 @@
 # Include the README
-include *.md
+include *.rst
 
 # Include the license file
-include LICENSE.txt
+include LICENSE
+
+# Include template files
+include beluga/optimlib/templates/brysonho/*
+include beluga/optimlib/templates/brysonho/qcpi/*
+include beluga/optimlib/templates/icrm/*
+include beluga/optimlib/templates/icrm/qcpi/*
