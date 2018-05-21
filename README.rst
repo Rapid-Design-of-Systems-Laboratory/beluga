@@ -9,7 +9,10 @@ Build Status
 .. image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
     :target: https://travis-ci.org/msparapa/beluga
 
-.. include:: ./docs/source/install.rst
+.. toctree::
+   :maxdepth: 2
+
+   install.rst
 
 Running a test problem
 ----------------------
