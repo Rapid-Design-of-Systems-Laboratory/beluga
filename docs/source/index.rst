@@ -18,6 +18,7 @@ Contents:
    nomenclature.rst
    modules/ivpsol.rst
    modules/bvpsol.rst
+   modules/continuation.rst
 
 
 Indices and tables

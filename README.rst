@@ -2,20 +2,7 @@
 
 [![Build Status](https://travis-ci.org/msparapa/beluga.svg?branch=master)](https://travis-ci.org/msparapa/beluga)
 
-## Cloning in Github Desktop
-
-If you already have Github installed on your computer, you need to go into preferences and add a new account. If this is the first time you installed Github, it should ask you for the login information when you first start it. Use the following information:
-
-    URL: https://github.com/
-    Username : Your account username
-    Password : Your account password
-
-This will allow you to view all the repositories you have been given access to.
-Go to File -> Clone Repository and you should see "beluga" in the list of repositories to be cloned.
-
-Alternatively, clone using the command line with
-
-    git clone https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
+.. include:: docs/source/install.rst
 
 ## Setting up the Python development environment
 
@@ -73,43 +60,3 @@ The default logging level is "error" and display level is "info". The logging le
 Find more information about logging and logging levels here:
 http://victorlin.me/posts/2012/08/26/good-logging-practice-in-python
 https://docs.python.org/3/howto/logging.html
-
-## Coding new features
-
-1. Start a new issue: (!) Issues on GitHub
-
-    a. `git pull` Make sure you have the latest copy of **master**.
-    
-    b. `git checkout -b I# master` Create the **I#** branch locally based upon the **master** branch.
-    
-    c. `git push -u origin I#` Create the branch on the server.
-    
-2. Write code and push commits:
-
-    a. Each commit message should begin with `Ref ##` to reference the issue number (i.e. `Ref #1` to reference issue #1)
-
-    b. `git push` Push latest commits to the server.
-    
-3. End a task: (from **master**)
-
-    a. `git checkout master` Set **master** as the working branch locally.
-    
-    b. `git branch -D I#` Delete **I#** locally. You no longer need it because everything is pushed to the server.
-    
-    c. `git merge --no-ff origin/I#` Merge the task into **master** and preserving branch history. All changes in **master** will show up as a single commit keeping the log simpler. The complete commit history will be preserved in **I#**.
-    
-    d. `git push` Push any changes to **master** to the server.
-    
-    e. `git push origin :I#` Delete **I#** from the server. It will still remain in the history along with every individual commit to it that was pushed, but it won't be cluttering up the workspace.
-
-## Running unit tests
-
-To run unit tests, do
-
-    $ python -m pytest
-
-in the root directory. Some examples take quite some time to run. Run a faster version by
-
-    $ python -m pytest beluga/
-
-or running the `run_tests_lite.sh` shell script.
