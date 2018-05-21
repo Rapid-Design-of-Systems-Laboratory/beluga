@@ -1,12 +1,13 @@
-# beluga <img align="right" src="https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png">
+# beluga .. image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
 
 [![Build Status](https://travis-ci.org/msparapa/beluga.svg?branch=master)](https://travis-ci.org/msparapa/beluga)
 
 .. include:: docs/source/install.rst
+    :literal:
 
 ## Setting up the Python development environment
 
-  1. Install [anaconda](https://www.continuum.io/downloads/ "Download Anaconda") with Python 3.x
+  1. Install `anaconda <https://www.continuum.io/downloads/>)`_ with Python 3.x
   2. Run the following commands in command line in the folder where you cloned the code
   
     conda update conda
