@@ -1,33 +1,15 @@
-# beluga .. image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
+beluga
+======
 
-[![Build Status](https://travis-ci.org/msparapa/beluga.svg?branch=master)](https://travis-ci.org/msparapa/beluga)
+.. image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
 
-.. include:: docs/source/install.rst
-    :literal:
+Build Status
+.. image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
 
-## Setting up the Python development environment
+https://travis-ci.org/msparapa/beluga
 
-  1. Install `anaconda <https://www.continuum.io/downloads/>)`_ with Python 3.x
-  2. Run the following commands in command line in the folder where you cloned the code
-  
-    conda update conda
-    conda update --all
-    python setup.py develop
-
-  In case you want to switch to another version of the code in a separate folder, run the following commands to "uninstall" the current version and switch to the new codebase. You do not have to worry about this part if you intend to work with only one version of the code at any time.
-  
-    python setup.py develop --uninstall
-    cd your_new_code_folder
-    python setup.py develop
-    beluga --config
-
-  Enter all the information that is requested.
-
-  3. Get a text editor or development environment of your choice. My favorite is [Atom](http://atom.io). Some of the recommended addons for Atom are: TODO-show, minimap, linter, linter-pep8, minimap-linter, highlight-selected, minimap-highlight-selected and many more.  [PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/). is another editor you may want to check out.
-
-  4. Start coding!
-
-## Running a test problem
+Running a test problem
+----------------------
 
 Open a terminal window and navigate to the folder where you installed beluga. Type the following commands to run the Brachistochrone problem
 
@@ -36,7 +18,9 @@ Open a terminal window and navigate to the folder where you installed beluga. Ty
 
 The solver will proceed to solve the Brachistochrone problem.
 
-### A note about logging
+A note about logging
+--------------------
+
 A logging system has been added to the solver. It is recommended that this is used instead of "print" statements in your code. Use statements such as :
 
     logging.debug('This is a random debug statement: '+some_variable)
