@@ -1,7 +1,7 @@
-.. |logo| image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
+.. image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
     :align: right
 
-beluga |logo|
+beluga
 ======
 
 Build Status
@@ -9,7 +9,7 @@ Build Status
 .. image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
     :target: https://travis-ci.org/msparapa/beluga
 
-.. include:: docs/source/install.rst
+.. include:: ./docs/source/install.rst
 
 Running a test problem
 ----------------------
