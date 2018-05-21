@@ -1,5 +1,9 @@
 from setuptools import find_packages, setup
 import os, sys
+
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 # Run tests
 # Ref: http://www.pydanny.com/python-dot-py-tricks.html
 if sys.argv[-1] == 'test':
@@ -34,5 +38,6 @@ setup(name="beluga",
           'console_scripts': [
               'beluga = beluga.__main__:main'
           ]
-      }
+      },
+      install_requires=requirements
       )

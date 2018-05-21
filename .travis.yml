@@ -3,6 +3,6 @@ python:
   - "3.6"
 cache: pip
 install:
-  - pip install -e . -r requirements.txt
+  - pip install -e .
 script:
   - python -m pytest
