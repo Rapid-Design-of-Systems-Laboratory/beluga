@@ -9,7 +9,7 @@ numba
 numexpr
 numpy
 scipy
-sympy
+sympy>=1.1
 pystache
 pytest
 pytest-cov
