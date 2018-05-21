@@ -2,11 +2,14 @@ beluga
 ======
 
 .. image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
+    :align: right
 
 Build Status
-.. image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
 
-https://travis-ci.org/msparapa/beluga
+.. image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
+    :target: https://travis-ci.org/msparapa/beluga
+
+.. include:: docs/source/install.rst
 
 Running a test problem
 ----------------------
