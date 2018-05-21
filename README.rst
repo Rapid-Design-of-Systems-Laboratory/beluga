@@ -1,7 +1,7 @@
 beluga
 ======
 
-|travis badge| |logo|
+|travis badge|
 
 .. |travis badge| image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
     :target: https://travis-ci.org/msparapa/beluga
@@ -10,7 +10,7 @@ beluga
     :align: right
 
 Installation
-============
+------------
 
 Installation using pip
 ----------------------
