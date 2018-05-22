@@ -1,6 +1,7 @@
 import numpy as np
 from math import *
-from beluga.ivpsol.integrators import ode45
+from beluga.ivpsol import Propagator
+from beluga.ivpsol import ivp
 
 
 def test_ode45_1():
@@ -12,7 +13,12 @@ def test_ode45_1():
 
     y0 = np.array([10, -50])
     tspan = np.array([0, 1.0])
-    [t1, x1] = ode45(odefn, tspan, y0, [], {})
+    problem = ivp()
+    problem.eoms = odefn
+    prop = Propagator()
+    solout = prop(problem, tspan, y0, [], {})
+    t1 = solout.x
+    x1 = solout.y
     x1_expected = np.array([y*np.exp(k_*t1) for (y, k_) in zip(y0, k)])
     assert (x1 - x1_expected < 1e-5).all()
 
@@ -100,7 +106,11 @@ def test_ode45_2():
 
     x0 = inputs[0]
     tspan = np.array([0, 1.0])
+    problem = ivp()
+    problem.eoms = brachisto_ode
+    prop = Propagator()
     aux = {'const': {'g': -9.81}}
-    [_, x1] = ode45(brachisto_ode, tspan, x0, [], aux)
+    solout = prop(problem, tspan, x0, [], aux)
+    x1 = solout.y
 
     assert (x1[:, -1] - x_end < 1e-5).all()

@@ -1,10 +1,10 @@
 import numpy as np
 from scipy.optimize import minimize
+import scipy.integrate
 import time
 from .ivp import sol
 import copy
 from beluga.utils import keyboard
-from beluga.ivpsol.integrators.ode45 import ode45
 from scipy.integrate import simps
 
 
@@ -48,35 +48,22 @@ class Propagator(Algorithm):
     '''
 
     def __call__(self, ivp, tspan, y0, *args, **kwargs):
-        time0 = time.time()
         # Create a deep copy to prevent corrupting original data
         problem_copy = copy.deepcopy(ivp)
-        solinit = problem_copy.sol
         eoms = problem_copy.eoms
 
-        use_stopping_condition = False
-        if 'stopping_condition' in kwargs and kwargs['stopping_condition'] is not None:
-            use_stopping_condition = True
+        abstol = kwargs.get('abstol', 1e-5)
+        reltol = kwargs.get('reltol', 1e-3)
+        maxstep = kwargs.get('maxstep', 0.1)
 
-        if use_stopping_condition is True:
-            T = np.array([tspan[0]])
-            X = np.array([y0])
-            stopping_condition = kwargs['stopping_condition']
-            dt = 0.005*tspan[-1]
-            while stopping_condition(T[-1],X[-1],params) == False:
-                Tnew, Xnew = ode45(eoms, [T[-1],T[-1]+dt], X[-1], params, AbsTol=1e-6, RelTol=1e-6)
-                T = np.hstack((T,Tnew[1:]))
-                X = np.vstack((X,Xnew[1:]))
-        else:
-            # T, X = ode45(eoms, tspan, y0, params, args, AbsTol=1e-6, RelTol=1e-6)
-            T, X = ode45(eoms, tspan, y0, *args, AbsTol=1e-6, RelTol=1e-6)
-            # T, X = ode45(eoms, tspan, y0, params, AbsTol=1e-8, RelTol=1e-8)
+        int_sol = scipy.integrate.solve_ivp(lambda t, y: eoms(t, y, *args), tspan, y0, rtol=reltol, atol=abstol, max_step=maxstep)
+        T = int_sol.t
+        X = int_sol.y
 
         solout = sol()
         solout.x = T
         solout.y = X
         solout.quads = None  # TODO: Reconstruct these above
-        solout.params = solinit.params
 
         return solout
 
