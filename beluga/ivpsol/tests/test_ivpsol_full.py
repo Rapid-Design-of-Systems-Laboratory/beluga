@@ -92,4 +92,4 @@ def test_ode45_2():
     solout = prop(problem, tspan, x0, q0, [], aux)
     x1 = solout.y
 
-    assert (x1[:, -1] - x_end < 1e-5).all()
+    assert (x1[-1,:] - x_end < 1e-5).all()

@@ -3,7 +3,7 @@ from beluga.ivpsol.ivp import ivp
 import numpy as np
 from math import *
 
-tol = 1e-4
+tol = 1e-3
 
 def test_propagator_1():
     k = [-0.5, -0.2]
@@ -18,17 +18,14 @@ def test_propagator_1():
     problem.equations_of_motion = odefn
     prop = Propagator()
     solout = prop(problem, tspan, y0, q0, [], {})
-    t1 = solout.x
-    x1 = solout.y
+    t1 = solout.t
+    x1 = solout.y.T
     x1_expected = np.array([y*np.exp(k_*t1) for (y, k_) in zip(y0, k)])
     assert (x1 - x1_expected < 1e-5).all()
 
 def test_propagator_2():
     def odefun(t, x, p, aux):
-        out = np.zeros((2,))
-        out[0] = -x[1]
-        out[1] = x[0]
-        return out
+        return (-x[1], x[0])
 
     def quadfun(t, x, p, aux):
         return x[0]
@@ -42,9 +39,10 @@ def test_propagator_2():
     prop = Propagator()
     solout = prop(problem, tspan, y0, q0, [], [])
 
-    assert solout.y[0][-1] < tol
-    assert solout.y[1][-1] - 1 < tol
-    assert (solout.y[1] - solout.quads < tol).all()
+    assert solout.y.T[0,-1] < tol
+    assert solout.y.T[1,-1] - 1 < tol
+    assert ((solout.y[:,1] - solout.q[:,0]) < tol).all()
+
 
 def test_trajectory():
     t = np.array([0,1,2])
@@ -61,6 +59,7 @@ def test_trajectory():
     assert y == 0
     assert q == None
     assert u == None
+
 
 def test_integrate_quads():
     # Test a 1-dim x and 1-dim q

@@ -247,7 +247,7 @@ class Shooting(BaseAlgorithm):
         r0 = None
         prop = Propagator()
         ivp_problem = ivp()
-        ivp_problem.eoms = self.stm_ode_func
+        ivp_problem.equations_of_motion = self.stm_ode_func
         y0stm = np.zeros((len(stm0)+nOdes))
         yb = np.zeros_like(ya)
         try:
@@ -260,13 +260,10 @@ class Shooting(BaseAlgorithm):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[:, arc_idx]
                         y0stm[nOdes:] = stm0[:]
-                        sol = prop(ivp_problem, tspan, y0stm, paramGuess, aux, arc_idx)
-                        t = sol.x
-                        yy = sol.y
-                        # if self.use_numba:
-                        #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
-                        # else:
-                        #     t,yy = ode45(self.stm_ode_func, tspan, y0stm, paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
+                        q0 = []
+                        sol = prop(ivp_problem, tspan, y0stm, q0, paramGuess, aux, arc_idx)
+                        t = sol.t
+                        yy = sol.y.T
                         y_list.append(yy[:nOdes, :])
                         x_list.append(t)
                         yb[:, arc_idx] = yy[:nOdes, -1]

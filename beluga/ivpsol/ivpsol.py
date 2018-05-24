@@ -22,24 +22,6 @@ class Algorithm(object):
         else:
             return obj
 
-    def _reconstruct_quads(self, quadfun, x, y, quads0, *args):
-        '''
-        Reconstructs full quadratures over a trajectory base space.
-
-        :param quadfun:
-        :param x:
-        :param y:
-        :param quads0:
-        :param args:
-        :return:
-        '''
-        # TODO: This loop, in combination with _integrate_quads loop, is really slow
-        out = quads0
-        for ii in range(len(x)-1):
-            ind = ii+2
-            out = np.hstack((out, integrate_quads(quadfun, x[0:ind], y.T[0:ind].T, quads0, *args)))
-        return out
-
 
 class Propagator(Algorithm):
     '''
@@ -56,7 +38,7 @@ class Propagator(Algorithm):
         :param q0: Initial quad position.
         :param args: Additional arguments required by EOM files.
         :param kwargs: Additional parameters accepted by the solver.
-        :return: A full reconstructed trajectory.
+        :return: A full reconstructed trajectory, :math:`\\gamma`.
         '''
         # Create a deep copy to prevent corrupting original data
         # TODO: Break up ivp() into something smarter.
@@ -70,14 +52,13 @@ class Propagator(Algorithm):
 
         int_sol = scipy.integrate.solve_ivp(lambda t, y: eomfun(t, y, *args), tspan, y0, rtol=reltol, atol=abstol, max_step=maxstep)
 
-        solout = sol()
-        solout.x = int_sol.t
-        solout.y = int_sol.y
+        gamma = trajectory(int_sol.t, int_sol.y.T)
 
         if quadfun is not None:
-            solout.quads = self._reconstruct_quads(quadfun, solout.x, solout.y, q0, *args)
+            gamma = reconstruct(quadfun, gamma, *args)
 
-        return solout
+        return gamma
+
 
 class trajectory(object):
     '''
@@ -128,7 +109,7 @@ class trajectory(object):
             dim = 1
         else:
             dim = self.y.shape[1]
-        # keyboard()
+
         if dim == 1:
             y_val = np.array([np.interp(t, self.t, self.y)])
         else:
@@ -155,6 +136,13 @@ class trajectory(object):
 
         return t_val, y_val, q_val, u_val
 
+    def __len__(self):
+        if self.t is None:
+            return 0
+        else:
+            return len(self.t)
+
+
 def reconstruct(quadfun, gamma, *args):
     '''
     Completely reconstructs a trajectory for all time in :math:`\\gamma`.
@@ -177,7 +165,7 @@ def reconstruct(quadfun, gamma, *args):
         q0 = gamma.q[0]
 
     l = len(gamma)
-    temp_q = integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args)
+    temp_q = np.array([integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args)])
 
     for ii in range(l-1):
         qf = integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii+1]], gamma, *args)
