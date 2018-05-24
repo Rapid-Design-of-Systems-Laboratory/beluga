@@ -23,14 +23,18 @@ Base Class Reference
 .. autoclass:: Algorithm
     :members:
 
-.. autoclass:: Collocation
-    :members:
-
 .. autoclass:: Propagator
-    :members:
+    :members: __call__
 
 .. autoclass:: ivp
     :members:
 
 .. autoclass:: sol
     :members:
+
+.. autoclass:: trajectory
+    :members: __call__
+
+.. autofunction:: reconstruct
+
+.. autofunction:: integrate_quads

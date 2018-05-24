@@ -1,27 +1,7 @@
+from beluga.ivpsol import Propagator
+from beluga.ivpsol.ivp import ivp
 import numpy as np
 from math import *
-from beluga.ivpsol import Propagator
-from beluga.ivpsol import ivp
-
-
-def test_ode45_1():
-    """Test ode45() against analytical solution"""
-    k = [-0.5, -0.2]
-
-    def odefn(t, x, p, aux):
-        return np.array([k[0]*x[0],k[1]*x[1]])
-
-    y0 = np.array([10, -50])
-    tspan = np.array([0, 1.0])
-    problem = ivp()
-    problem.eoms = odefn
-    prop = Propagator()
-    solout = prop(problem, tspan, y0, [], {})
-    t1 = solout.x
-    x1 = solout.y
-    x1_expected = np.array([y*np.exp(k_*t1) for (y, k_) in zip(y0, k)])
-    assert (x1 - x1_expected < 1e-5).all()
-
 
 def compute_hamiltonian(t,X,p,aux,u):
     [x,y,v,lamX,lamY,lamV,tf] = X[:7]
@@ -102,15 +82,14 @@ x_end = np.array([2.57442406e-02, -1.46160497e-01, 1.96663900e+00, -1.00000000e-
 
 
 def test_ode45_2():
-    # from beluga.utils import ode45
-
     x0 = inputs[0]
+    q0 = []
     tspan = np.array([0, 1.0])
     problem = ivp()
-    problem.eoms = brachisto_ode
+    problem.equations_of_motion = brachisto_ode
     prop = Propagator()
     aux = {'const': {'g': -9.81}}
-    solout = prop(problem, tspan, x0, [], aux)
+    solout = prop(problem, tspan, x0, q0, [], aux)
     x1 = solout.y
 
     assert (x1[:, -1] - x_end < 1e-5).all()
