@@ -1,5 +1,5 @@
 from beluga.ivpsol.ivpsol import Propagator, Algorithm, trajectory, reconstruct, integrate_quads
-from beluga.ivpsol.ivp import ivp, sol
+from beluga.ivpsol.ivp import ivp
 
 import os
 import glob

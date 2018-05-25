@@ -2,7 +2,6 @@ import numpy as np
 from scipy.optimize import minimize
 import scipy.integrate
 import time
-from .ivp import sol
 import copy
 from beluga.utils import keyboard
 from scipy.integrate import simps

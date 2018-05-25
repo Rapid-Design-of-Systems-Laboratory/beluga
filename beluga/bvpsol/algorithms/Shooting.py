@@ -3,11 +3,9 @@ import numpy as np
 
 import beluga
 from beluga.utils import timeout, keyboard
-from beluga.ivpsol.integrators import ode45
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
 from beluga.ivpsol import Propagator, ivp
-from beluga.ivpsol import sol as solivp
 from sympy.utilities.lambdify import lambdastr
 import numba
 import sys
