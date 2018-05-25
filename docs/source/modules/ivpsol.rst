@@ -26,13 +26,7 @@ Base Class Reference
 .. autoclass:: Propagator
     :members: __call__
 
-.. autoclass:: ivp
-    :members:
-
-.. autoclass:: sol
-    :members:
-
-.. autoclass:: trajectory
+.. autoclass:: Trajectory
     :members: __call__
 
 .. autofunction:: reconstruct

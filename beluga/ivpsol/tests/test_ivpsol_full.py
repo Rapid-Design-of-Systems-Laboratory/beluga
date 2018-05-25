@@ -1,5 +1,4 @@
 from beluga.ivpsol import Propagator
-from beluga.ivpsol.ivp import ivp
 import numpy as np
 from math import *
 
@@ -85,11 +84,9 @@ def test_ode45_2():
     x0 = inputs[0]
     q0 = []
     tspan = np.array([0, 1.0])
-    problem = ivp()
-    problem.equations_of_motion = brachisto_ode
     prop = Propagator()
     aux = {'const': {'g': -9.81}}
-    solout = prop(problem, tspan, x0, q0, [], aux)
+    solout = prop(brachisto_ode, None, tspan, x0, q0, [], aux)
     x1 = solout.y
 
     assert (x1[-1,:] - x_end < 1e-5).all()

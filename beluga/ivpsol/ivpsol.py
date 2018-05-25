@@ -27,11 +27,12 @@ class Propagator(Algorithm):
     Propagator of differential equations
     '''
 
-    def __call__(self, ivp, tspan, y0, q0, *args, **kwargs):
+    def __call__(self, eom_func, quad_func, tspan, y0, q0, *args, **kwargs):
         '''
         Propagates the differential equations over a defined time interval.
 
-        :param ivp: Initial value problem (will be deprecated)
+        :param eom_func: Function representing the equations of motion.
+        :param quad_func: Function representing the quadratures.
         :param tspan: Independent time interval.
         :param y0: Initial state position.
         :param q0: Initial quad position.
@@ -39,27 +40,22 @@ class Propagator(Algorithm):
         :param kwargs: Additional parameters accepted by the solver.
         :return: A full reconstructed trajectory, :math:`\\gamma`.
         '''
-        # Create a deep copy to prevent corrupting original data
-        # TODO: Break up ivp() into something smarter.
-        problem_copy = copy.deepcopy(ivp)
-        eomfun = problem_copy.equations_of_motion
-        quadfun = problem_copy.quadratures
 
         abstol = kwargs.get('abstol', 1e-5)
         reltol = kwargs.get('reltol', 1e-3)
         maxstep = kwargs.get('maxstep', 0.1)
 
-        int_sol = scipy.integrate.solve_ivp(lambda t, y: eomfun(t, y, *args), tspan, y0, rtol=reltol, atol=abstol, max_step=maxstep)
+        int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), tspan, y0, rtol=reltol, atol=abstol, max_step=maxstep)
 
-        gamma = trajectory(int_sol.t, int_sol.y.T)
+        gamma = Trajectory(int_sol.t, int_sol.y.T)
 
-        if quadfun is not None:
-            gamma = reconstruct(quadfun, gamma, *args)
+        if quad_func is not None:
+            gamma = reconstruct(quad_func, gamma, *args)
 
         return gamma
 
 
-class trajectory(object):
+class Trajectory(object):
     '''
     Class containing information for a trajectory. A trajectory
     is a curve on a manifold that is also an integral curve
@@ -69,7 +65,7 @@ class trajectory(object):
         \\gamma(t) : I \\subset \\mathbb{R} \\rightarrow B
     '''
     def __new__(cls, *args, **kwargs):
-        obj = super(trajectory, cls).__new__(cls)
+        obj = super(Trajectory, cls).__new__(cls)
         obj.t = None
         obj.y = None
         obj.q = None

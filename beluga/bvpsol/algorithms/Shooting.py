@@ -5,7 +5,7 @@ import beluga
 from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.problem import BVP
-from beluga.ivpsol import Propagator, ivp
+from beluga.ivpsol import Propagator
 from sympy.utilities.lambdify import lambdastr
 import numba
 import sys
@@ -244,8 +244,6 @@ class Shooting(BaseAlgorithm):
         beta = 1
         r0 = None
         prop = Propagator()
-        ivp_problem = ivp()
-        ivp_problem.equations_of_motion = self.stm_ode_func
         y0stm = np.zeros((len(stm0)+nOdes))
         yb = np.zeros_like(ya)
         try:
@@ -259,7 +257,7 @@ class Shooting(BaseAlgorithm):
                         y0stm[:nOdes] = ya[:, arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         q0 = []
-                        sol = prop(ivp_problem, tspan, y0stm, q0, paramGuess, aux, arc_idx)
+                        sol = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, aux, arc_idx)
                         t = sol.t
                         yy = sol.y.T
                         y_list.append(yy[:nOdes, :])
