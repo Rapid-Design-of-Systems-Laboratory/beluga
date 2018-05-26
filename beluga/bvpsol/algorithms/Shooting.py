@@ -1,27 +1,13 @@
-# from autodiff import Function, Gradient
 import numpy as np
 
 import beluga
 from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
-from beluga.problem import BVP
 from beluga.ivpsol import Propagator
-from sympy.utilities.lambdify import lambdastr
 import numba
-import sys
 
-
-from math import *
 import logging
-import imp
-import functools as ft
 import itertools as it
-import sympy as sym
-import pystache
-
-import simplepipe as sp
-
-import pickle
 
 
 class Shooting(BaseAlgorithm):
@@ -69,50 +55,12 @@ class Shooting(BaseAlgorithm):
         if derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
-    @staticmethod
-    def load_code():
-        logging.info('Loading compiled code ...')
-        with open('codecache.pkl', 'rb') as f:
-            bvp_data = pickle.load(f)
-
-        return bvp_data
-
-    def save_code(self):
-        logging.info('Saving compiled code ...')
-        bvp_data = {'deriv_fn': self.out_ws['code_module'].deriv_func}
-        with open('codecache.pkl', 'wb') as f:
-            pickle.dump(bvp_data, f, pickle.HIGHEST_PROTOCOL)
 
     def deriv_func_ode45(self, _t, _X, _p, _aux):
         return self.out_ws['code_module'].deriv_func(_t, _X, _p, list(_aux['const'].values()),0)
 
-    def preprocess(self, problem_data):
-        """Code generation and compilation before running solver."""
-        out_ws = PythonCodeGen({'problem_data': problem_data})
-        logging.debug(out_ws['bc_func_code'])
-        logging.debug(out_ws['deriv_func_code'])
 
-        if self.use_numba:
-            deriv_func = numba.njit(parallel=False, nopython=True)(out_ws['code_module'].deriv_func_nojit)
-        else:
-            deriv_func = out_ws['code_module'].deriv_func_nojit
-        out_ws['deriv_func_fn'] = deriv_func
-        out_ws['code_module'].deriv_func = deriv_func
-        self.saved_code = False
-
-        self.out_ws = out_ws
-        # self.stm_ode_func = self.make_stmode(out_ws['deriv_func_fn'], problem_data['nOdes'])
-        self.bvp = BVP(out_ws['deriv_func_fn'],
-                       out_ws['bc_func_fn'], out_ws['compute_control_fn'])#out_ws['compute_control_fn'])
-
-        # self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
-        self.stm_ode_func = self.make_stmode(self.bvp.deriv_func, problem_data['nOdes'])
-        self.bc_jac_multi  = ft.partial(self.__bc_jac_multi, bc_func=self.bvp.bc_func)
-        # self.bc_jac_multi = self.__bc_jac_multi
-        sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
-        return out_ws['code_module']
-
-    def __bc_jac_multi(self, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
+    def _bc_jac_multi(self, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
         p  = np.array(parameters)
         nParams = p.size
         h = StepSize
@@ -154,7 +102,8 @@ class Shooting(BaseAlgorithm):
         J[:,nOdes*num_arcs:] = P
         return J
 
-    def make_stmode(self, odefn, nOdes, StepSize=1e-6):
+    @staticmethod
+    def make_stmode(odefn, nOdes, StepSize=1e-6):
         Xh = np.eye(nOdes)*StepSize
 
         # @numba.jit(looplift=True, nopython=True)
@@ -187,7 +136,7 @@ class Shooting(BaseAlgorithm):
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-    def solve(self, solinit):
+    def solve(self, bvp, stm_ode_func, solinit):
         """Solve a two-point boundary value problem
             using the shooting method
 
@@ -203,8 +152,9 @@ class Shooting(BaseAlgorithm):
         y0g = solinit.y[:,0]
         paramGuess = solinit.parameters
 
-        deriv_func = self.bvp.deriv_func
-        bc_func = self.bvp.bc_func
+        # stm_ode_func = bvp.stm_ode_func
+        deriv_func = bvp.deriv_func
+        bc_func = bvp.bc_func
 
         aux = solinit.aux
         const =[np.float64(_) for _ in aux['const'].values()]
@@ -257,7 +207,7 @@ class Shooting(BaseAlgorithm):
                         y0stm[:nOdes] = ya[:, arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         q0 = []
-                        sol = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, aux, arc_idx)
+                        sol = prop(stm_ode_func, None, tspan, y0stm, q0, paramGuess, aux, arc_idx)
                         t = sol.t
                         yy = sol.y.T
                         y_list.append(yy[:nOdes, :])
@@ -304,7 +254,7 @@ class Shooting(BaseAlgorithm):
                 nBCs = len(res)
                 # keyboard()
                 # J = self.bc_jac_multi(nBCs, phi_full_list, [ya,yb], paramGuess, aux)
-                J = self.bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, aux)
+                J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, aux, bc_func)
                 # Compute correction vector
 
                 if r0 is not None:
@@ -389,231 +339,3 @@ class Shooting(BaseAlgorithm):
         sol.converged = converged
         sol.aux = aux
         return sol
-
-
-def make_njit_fn(args, fn_expr):
-    fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
-                                                  .replace('(([[', '[') \
-                                                  .replace(']]))', ']')
-    jit_fn = numba.njit(parallel=True, nopython=True)(eval(fn_str))
-    return jit_fn
-
-
-def make_sympy_fn(args, fn_expr):
-    if hasattr(fn_expr, 'shape'):
-        output_shape = fn_expr.shape
-    else:
-        output_shape = None
-
-    if output_shape is not None:
-        jit_fns = [make_njit_fn(args, expr) for expr in fn_expr]
-        len_output = len(fn_expr)
-
-        # @numba.jit(parallel=True, nopython=True)
-        def vector_fn(*args):
-            output = np.zeros(output_shape)
-            for i in numba.prange(len_output):
-                output.flat[i] = jit_fns[i](*args)
-            return output
-        return vector_fn
-    else:
-        return make_njit_fn(args, fn_expr)
-
-
-def load_eqn_template(problem_data, template_file,
-                        renderer = pystache.Renderer(escape=lambda u: u)):
-    """Loads pystache template and uses it to generate code.
-
-    Parameters
-    ----------
-        problem_data - dict
-            Workspace defining variables for template
-
-        template_file - str
-            Path to template file to be used
-
-        renderer
-            Renderer used to convert template file to code
-
-    Returns
-    -------
-    Code generated from template
-    """
-    template_path = beluga.root()+'/optimlib/templates/'+problem_data['method']+'/'+template_file
-    with open(template_path) as f:
-        tmpl = f.read()
-        # Render the template using the data
-        code = renderer.render(tmpl, problem_data)
-        return code
-
-
-def create_module(problem_data):
-    """Creates a new module for storing compiled code.
-
-    Parameters
-    ----------
-    problem_data - dict
-        Problem data dictionary
-
-    Returns
-    -------
-    New module for holding compiled code
-    """
-    problem_name = problem_data['problem_name']
-    module = imp.new_module('_beluga_'+problem_name)
-
-
-
-    # module.corner_fns = problem_data['corner_fns']
-    # module.compute_hamiltonian = problem_data['ham_fn']
-    # module.costate_eoms = problem_data['costate_eoms']
-
-    return module
-
-
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, constraint_name=None):
-    controls = sym.Matrix([_._sym for _ in controls])
-    constants = sym.Matrix([_._sym for _ in constants])
-    states = sym.Matrix([_.name for _ in states])
-    costates = sym.Matrix([_.name for _ in costates])
-    parameters = sym.Matrix(parameters)
-    tf_var = sym.sympify('tf')
-    unknowns = list(it.chain(controls, mu_vars))
-
-    ham_args = [*states, *costates, tf_var, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, tf_var, *parameters, *constants]
-
-    if constraint_name is not None:
-        ham_args.append(constraint_name)
-        u_args.append(constraint_name)
-    else:
-        ham_args.append('___dummy_arg___')
-        u_args.append('___dummy_arg___')
-    control_opt_mat = sym.Matrix([[option.get(u, '0')
-                                    for u in unknowns]
-                                    for option in control_opts])
-
-
-    # control_opt_fn = sym.lambdify(u_args, control_opt_mat)
-    # print('Making control fn with args',u_args)
-    control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
-
-    # print('Making ham fn with args', ham_args)
-    ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
-
-    num_unknowns = len(unknowns)
-    num_options = len(control_opts)
-    num_states = len(states)
-    num_params = len(parameters)
-    constraint_name = str(constraint_name)
-
-    def compute_control_fn(t, X, p, aux):
-        X = X[:(2*num_states+1)]
-        C = aux['const'].values()
-        p = p[:num_params]
-        s_val = aux['constraint'].get((constraint_name, 1), -1)
-
-        try:
-            u_list = control_opt_fn(*X, *p, *C, s_val)
-        except Exception as e:
-            # print('oh nooes')
-            # from beluga.utils import keyboard
-            # keyboard()
-            raise
-
-            # keyboard()
-        ham_val = np.zeros(num_options)
-        for i in range(num_options):
-            try:
-                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i], s_val)
-            except:
-                print(X, p, C, u_list[i])
-                raise
-        # if len(ham_val) == 0:
-        #     keyboard()
-        return u_list[np.argmin(ham_val)]
-
-    yield compute_control_fn
-    yield ham_fn
-
-
-def make_functions(problem_data, module):
-
-    unc_control_law = problem_data['control_options']
-    states = problem_data['states']
-    costates = problem_data['costates']
-    parameters = problem_data['parameters']
-    constants = problem_data['constants']
-    controls = problem_data['controls']
-    mu_vars = problem_data['mu_vars']
-    quantity_vars = problem_data['quantity_vars']
-    ham = problem_data['ham']
-
-    logging.info('Making unconstrained control')
-    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars,ham)
-
-    # problem_data['ham_fn'] = ham_fn
-    module.ham_fn = ham_fn
-    control_fns = [control_fn] # Also makethiss
-    logging.info('Processing constraints')
-    for arc_type, s in enumerate(problem_data['s_list'],1):
-        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
-        control_fns.append(u_fn)
-
-    module.control_fns = control_fns
-    module.ham_fn = ham_fn
-
-    yield module
-    yield control_fns[0]
-
-
-def compile_code_py(code_string, module, function_name):
-    """
-    Compiles a function specified by template in filename and stores it in
-    self.compiled
-
-    Parameters
-    ----------
-    code_string - str
-        String containing the python code to be compiled
-
-    module - dict
-        Module in which the new functions will be defined
-
-    function_name - str
-        Name of the function being compiled (this must be defined in the
-        template with the same name)
-
-    Returns:
-        Module for compiled function
-        Compiled function
-    """
-    # For security
-    module.__dict__.update({'__builtin__': {}})
-    exec(code_string, module.__dict__)
-    return getattr(module, function_name, None)
-
-
-PythonCodeGen = sp.Workflow([
-    # Create module for holding compiled code
-    sp.Task(ft.partial(create_module), inputs='problem_data', outputs=('code_module')),
-
-    sp.Task(make_functions, inputs=('problem_data', 'code_module'), outputs=('code_module','compute_control_fn')),
-    # Load equation template files and generate code
-    sp.Task(ft.partial(load_eqn_template,
-            template_file='deriv_func.py.mu'),
-            inputs='problem_data',
-            outputs='deriv_func_code'),
-    sp.Task(ft.partial(load_eqn_template,
-            template_file='bc_func.py.mu'),
-            inputs='problem_data',
-            outputs='bc_func_code'),
-
-    # Compile generated code
-    sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
-            inputs=['deriv_func_code', 'code_module'],
-            outputs='deriv_func_fn'),
-    sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
-            inputs=['bc_func_code', 'code_module'],
-            outputs='bc_func_fn'),
-], description='Generates and compiles the required BVP functions from problem data')

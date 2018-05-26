@@ -1,24 +1,19 @@
-from math import *
-# from beluga.utils import *
-
-import sys
 import os
 import inspect
 import warnings
 import copy
 import logging
-import math
+
+from beluga.codegen.codegen import *
 
 import dill
-import docopt
 import numpy as np
 import collections as cl
 
-# from beluga.continuation import *
 from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
-from .utils import tic, toc, keyboard
-import beluga
+from .utils import tic, toc
+from .utils.keyboard import keyboard
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='SingleShooting',
@@ -46,6 +41,7 @@ def guess_generator(*args, **kwargs):
     guess_gen.setup(*args,**kwargs)
     return guess_gen
 
+
 def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
     """Performs initial configuration on beluga."""
 
@@ -68,6 +64,7 @@ def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_
 
     # solve(problem)
     return
+
 
 def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.dill'):
     """
@@ -102,7 +99,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
                                       for i, s in enumerate(ocp_ws['problem_data']['s_list'],1))
     solinit.aux['arc_seq'] = (0,)
     solinit.aux['pi_seq'] = (None,)
-    bvp_fn = bvp_algorithm.preprocess(ocp_ws['problem_data'])
+    bvp_fn, bvp, stm_ode_func = bvp_algorithm.preprocess(ocp_ws['problem_data'])
     # The initial guess is automatically stored in the bvp object
     # solinit is just a reference to it
     solinit = ocp_ws['guess'].generate(bvp_fn, solinit)
@@ -128,7 +125,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     ocp._scaling.initialize(ocp_ws)
     ocp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit)
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit, bvp, stm_ode_func)
     total_time = toc()
 
     # tic()
@@ -151,10 +148,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
         dill.dump(out, outfile) # Dill Beluga object only
 
 
-
-
-# TODO: Refactor how code deals with initial guess
-def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
+def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp, stm_ode_func):
     # Loop through all the continuation steps
     solution_set = []
 
@@ -183,7 +177,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
                 s.scale(sol_guess)
 
                 # Note: sol is the same object as sol_guess
-                sol = bvp_algo.solve(sol_guess)
+                sol = bvp_algo.solve(bvp, stm_ode_func, sol_guess)
 
                 s.unscale(sol)
 
@@ -217,10 +211,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        logging.error('Exception : '+str(e))
+        logging.error('Exception : ' + str(e))
         logging.error('Stopping')
 
     return solution_set
-
-if __name__ == '__main__':
-    main()
