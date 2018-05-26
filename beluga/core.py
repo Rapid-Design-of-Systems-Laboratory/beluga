@@ -99,7 +99,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
                                       for i, s in enumerate(ocp_ws['problem_data']['s_list'],1))
     solinit.aux['arc_seq'] = (0,)
     solinit.aux['pi_seq'] = (None,)
-    bvp_fn, bvp, stm_ode_func = bvp_algorithm.preprocess(ocp_ws['problem_data'])
+    bvp_fn, bvp = bvp_algorithm.preprocess(ocp_ws['problem_data'])
     # The initial guess is automatically stored in the bvp object
     # solinit is just a reference to it
     solinit = ocp_ws['guess'].generate(bvp_fn, solinit)
@@ -125,7 +125,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     ocp._scaling.initialize(ocp_ws)
     ocp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit, bvp, stm_ode_func)
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit, bvp)
     total_time = toc()
 
     # tic()
@@ -148,10 +148,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
         dill.dump(out, outfile) # Dill Beluga object only
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp, stm_ode_func):
+def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
     # Loop through all the continuation steps
     solution_set = []
-
     # Initialize scaling
     s = ocp_ws['scaling']
     problem_data = ocp_ws['problem_data']
@@ -177,7 +176,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp, stm_ode_
                 s.scale(sol_guess)
 
                 # Note: sol is the same object as sol_guess
-                sol = bvp_algo.solve(bvp, stm_ode_func, sol_guess)
+                sol = bvp_algo.solve(bvp, sol_guess)
 
                 s.unscale(sol)
 

@@ -55,10 +55,13 @@ class Shooting(BaseAlgorithm):
         if derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
-
     def deriv_func_ode45(self, _t, _X, _p, _aux):
         return self.out_ws['code_module'].deriv_func(_t, _X, _p, list(_aux['const'].values()),0)
 
+    def preprocess(self, problem_data, use_numba=False):
+        obj = super().preprocess(problem_data, use_numba=use_numba)
+        self.stm_ode_func = self.make_stmode(obj[0].deriv_func, problem_data['nOdes'])
+        return obj
 
     def _bc_jac_multi(self, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
         p  = np.array(parameters)
@@ -111,8 +114,6 @@ class Shooting(BaseAlgorithm):
             """ Finite difference version of state transition matrix """
             nParams = p.size
             F = np.empty((nOdes, nOdes+nParams))
-            # nrt_mstats(alloc=14082696, free=13545502, mi_alloc=9439609, mi_free=8940786)
-            # nrt_mstats(alloc=14005954, free=13468760, mi_alloc=9362867, mi_free=8864044)
             phi = _X[nOdes:].reshape((nOdes, nOdes+nParams))
             X = _X[0:nOdes]  # Just states
 
@@ -136,7 +137,8 @@ class Shooting(BaseAlgorithm):
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-    def solve(self, bvp, stm_ode_func, solinit):
+
+    def solve(self, bvp, solinit):
         """Solve a two-point boundary value problem
             using the shooting method
 
@@ -147,10 +149,16 @@ class Shooting(BaseAlgorithm):
         Returns:
             solution of TPBVP
         """
-        x = solinit.x
+
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
+
+        # Extract number of ODEs in the system to be solved
+        nOdes = y0g.shape[0]
+
         paramGuess = solinit.parameters
+        if self.stm_ode_func is None:
+            self.stm_ode_func = self.make_stmode(bvp.deriv_func, y0g.shape[0])
 
         # stm_ode_func = bvp.stm_ode_func
         deriv_func = bvp.deriv_func
@@ -176,8 +184,7 @@ class Shooting(BaseAlgorithm):
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
-        # Extract number of ODEs in the system to be solved
-        nOdes = y0g.shape[0]
+
         if solinit.parameters is None:
             nParams = 0
         else:
@@ -207,7 +214,7 @@ class Shooting(BaseAlgorithm):
                         y0stm[:nOdes] = ya[:, arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         q0 = []
-                        sol = prop(stm_ode_func, None, tspan, y0stm, q0, paramGuess, aux, arc_idx)
+                        sol = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, aux, arc_idx)
                         t = sol.t
                         yy = sol.y.T
                         y_list.append(yy[:nOdes, :])
@@ -252,11 +259,9 @@ class Shooting(BaseAlgorithm):
 
                 # Compute Jacobian of boundary conditions using numerical derviatives
                 nBCs = len(res)
-                # keyboard()
-                # J = self.bc_jac_multi(nBCs, phi_full_list, [ya,yb], paramGuess, aux)
                 J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, aux, bc_func)
-                # Compute correction vector
 
+                # Compute correction vector
                 if r0 is not None:
                     # if r1/r0 > 2:
                     #     logging.error('Residue increased more than 2x in one iteration!')

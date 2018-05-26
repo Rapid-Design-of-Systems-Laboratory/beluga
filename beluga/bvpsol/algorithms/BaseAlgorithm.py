@@ -15,7 +15,7 @@ class BaseAlgorithm(object):
 
     # Define common interface for algorithm classes
     @abc.abstractmethod
-    def solve(self,bvp):
+    def solve(self, bvp, solinit):
         """Method to solve the bvp with given arguments"""
         raise NotImplementedError()
 
@@ -35,20 +35,13 @@ class BaseAlgorithm(object):
 
         out_ws['deriv_func_fn'] = deriv_func
         out_ws['code_module'].deriv_func = deriv_func
-        saved_code = False
 
         out_ws = out_ws
-        # self.stm_ode_func = self.make_stmode(out_ws['deriv_func_fn'], problem_data['nOdes'])
-        bvp = BVP(out_ws['deriv_func_fn'],
-                  out_ws['bc_func_fn'], out_ws['compute_control_fn'])  # out_ws['compute_control_fn'])
 
-        # self.stm_ode_func = ft.partial(self._stmode_fd, odefn=self.bvp.deriv_func)
-        # TODO: This is basically hard-coded for shooting
-        stm_ode_func = self.make_stmode(bvp.deriv_func, problem_data['nOdes'])
-        bc_jac_multi = ft.partial(self._bc_jac_multi, bc_func=bvp.bc_func)
-        # self.bc_jac_multi = self.__bc_jac_multi
+        bvp = BVP(out_ws['deriv_func_fn'], out_ws['bc_func_fn'], out_ws['compute_control_fn'])
+
         sys.modules['_beluga_' + problem_data['problem_name']] = out_ws['code_module']
-        return out_ws['code_module'], bvp, stm_ode_func
+        return out_ws['code_module'], bvp
 
     @staticmethod
     def load_code():

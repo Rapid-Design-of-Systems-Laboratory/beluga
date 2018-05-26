@@ -222,7 +222,7 @@ class QCPI(BaseAlgorithm):
         sys.modules['_beluga_'+problem_data['problem_name']] = out_ws['code_module']
         return out_ws['code_module']
 
-    def solve(self,solinit):
+    def solve(self, bvp, solinit):
         x  = solinit.x
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]

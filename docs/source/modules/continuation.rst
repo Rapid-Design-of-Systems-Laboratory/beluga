@@ -9,7 +9,7 @@ Introduction
 This module handles numerical continuation in the solver.
 
 Base Class Reference
-====================
+--------------------
 
 .. autoclass:: ContinuationList
     :members:
