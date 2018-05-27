@@ -21,5 +21,7 @@ from :math:`t_0` to :math:`t_f`.
 
 Base Class Reference
 --------------------
+.. autoclass:: BaseAlgorithm
+
 .. autoclass:: Shooting
     :members:

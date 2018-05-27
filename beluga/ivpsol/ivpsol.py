@@ -13,11 +13,11 @@ class Algorithm(object):
 
     This object serves as a base class for other algorithms.
     '''
-    def __new__(cls, ivp=None):
-        obj = super(Algorithm, cls).__new__(cls)
+    def __new__(cls, *args, **kwargs):
+        obj = super().__new__(cls, *args, **kwargs)
 
-        if ivp is not None:
-            return cls.__call__(obj, ivp)
+        if len(args) > 0:
+            return cls.__call__(obj, *args, **kwargs)
         else:
             return obj
 
@@ -168,6 +168,7 @@ def reconstruct(quadfun, gamma, *args):
 
     gamma.q = temp_q + q0
     return gamma
+
 
 def integrate_quads(quadfun, tspan, gamma, *args):
     '''

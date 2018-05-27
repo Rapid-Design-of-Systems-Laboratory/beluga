@@ -19,6 +19,7 @@ Contents:
    modules/ivpsol.rst
    modules/bvpsol.rst
    modules/continuation.rst
+   modules/codegen.rst
 
 
 Indices and tables
