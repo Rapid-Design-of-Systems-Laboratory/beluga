@@ -15,7 +15,7 @@ class BaseAlgorithm(object):
 
     # Define common interface for algorithm classes
     @abc.abstractmethod
-    def solve(self, bvp, solinit):
+    def solve(self, deriv_func, bc_func, solinit):
         """Method to solve the bvp with given arguments"""
         raise NotImplementedError()
 

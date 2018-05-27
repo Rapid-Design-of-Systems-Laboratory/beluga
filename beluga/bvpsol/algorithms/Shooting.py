@@ -138,7 +138,7 @@ class Shooting(BaseAlgorithm):
         return wrapper
 
 
-    def solve(self, bvp, solinit):
+    def solve(self, deriv_func, bc_func, solinit):
         """Solve a two-point boundary value problem
             using the shooting method
 
@@ -158,11 +158,7 @@ class Shooting(BaseAlgorithm):
 
         paramGuess = solinit.parameters
         if self.stm_ode_func is None:
-            self.stm_ode_func = self.make_stmode(bvp.deriv_func, y0g.shape[0])
-
-        # stm_ode_func = bvp.stm_ode_func
-        deriv_func = bvp.deriv_func
-        bc_func = bvp.bc_func
+            self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
         aux = solinit.aux
         const =[np.float64(_) for _ in aux['const'].values()]
