@@ -139,16 +139,14 @@ class Shooting(BaseAlgorithm):
 
 
     def solve(self, deriv_func, bc_func, solinit):
-        """Solve a two-point boundary value problem
-            using the shooting method
+        '''
+        Solve a two-point boundary value problem using the shooting method
 
-        Args:
-            deriv_func: the ODE function
-            bc_func: the boundary conditions function
-            solinit: a "Solution" object containing the initial guess
-        Returns:
-            solution of TPBVP
-        """
+        :param deriv_func: The ODE function.
+        :param bc_func: The boundary conditions function.
+        :param solinit: An initial guess for a solution to the BVP.
+        :return: A solution to the BVP.
+        '''
 
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]

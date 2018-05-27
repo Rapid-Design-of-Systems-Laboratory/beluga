@@ -10,20 +10,39 @@ from beluga.codegen import *
 
 
 class BaseAlgorithm(object):
+    '''
+    Object representing an algorithm that solves boundary valued problems.
+
+    This object serves as a base class for other algorithms.
+    '''
     # Define class as abstract class
     __metaclass__ = abc.ABCMeta
 
     # Define common interface for algorithm classes
     @abc.abstractmethod
     def solve(self, deriv_func, bc_func, solinit):
-        """Method to solve the bvp with given arguments"""
+        '''
+        Method to solve the bvp with given arguments
+
+        :param deriv_func: The ODE function.
+        :param bc_func: The boundary conditions function.
+        :param solinit: An initial guess for a solution to the BVP.
+        :return: A solution to the BVP.
+        '''
         raise NotImplementedError()
 
     def close(self):
         pass
 
     def preprocess(self, problem_data, use_numba=False):
-        """Code generation and compilation before running solver."""
+        '''
+        Code generation and compilation before running solver.
+
+        :param problem_data:
+        :param use_numba:
+        :return: Code module.
+        '''
+
         out_ws = PythonCodeGen({'problem_data': problem_data})
         logging.debug(out_ws['bc_func_code'])
         logging.debug(out_ws['deriv_func_code'])
