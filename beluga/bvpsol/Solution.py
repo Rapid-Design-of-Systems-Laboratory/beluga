@@ -18,12 +18,12 @@ class Solution(object):
         if parameters is not None:
             self.parameters = np.array(parameters, dtype=np.float64)
         else:
-            self.parameters = None
+            self.parameters = np.array([])
 
         self.y_splines = self.u_splines = None
 
         if aux is None:
-            self.aux = {"initial": [], "terminal": [], "const": [], "parameters":[]}
+            self.aux = {"initial": [], "terminal": [], "const": {}, "parameters":[], "arc_seq":(0,)}
         else:
             self.aux = aux
         self.state_list = state_list
