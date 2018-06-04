@@ -45,7 +45,7 @@ class Propagator(Algorithm):
         reltol = kwargs.get('reltol', 1e-3)
         maxstep = kwargs.get('maxstep', 0.1)
 
-        int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), tspan, y0, rtol=reltol, atol=abstol, max_step=maxstep)
+        int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0, rtol=reltol, atol=abstol, max_step=maxstep)
 
         gamma = Trajectory(int_sol.t, int_sol.y.T)
 

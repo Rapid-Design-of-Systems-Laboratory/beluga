@@ -1,7 +1,7 @@
 from .helpers import root
-from .core import bvp_algorithm, guess_generator
+from .beluga import bvp_algorithm, guess_generator
 from .continuation import ContinuationList as init_continuation
-from .core import setup_beluga, solve
+from .beluga import setup_beluga, solve
 from .problem import OCP
 
 import os

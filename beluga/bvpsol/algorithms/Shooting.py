@@ -50,6 +50,7 @@ class Shooting(BaseAlgorithm):
         self.max_error = max_error
         self.derivative_method = derivative_method
         self.use_numba = use_numba
+        self.stm_ode_func = None
         self.cached = False
         self.saved_code = True
         if derivative_method not in ['fd']:
@@ -137,7 +138,6 @@ class Shooting(BaseAlgorithm):
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-
     def solve(self, deriv_func, bc_func, solinit):
         '''
         Solve a two-point boundary value problem using the shooting method
@@ -147,10 +147,8 @@ class Shooting(BaseAlgorithm):
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         '''
-
         # Get initial states from the guess structure
         y0g = solinit.y[:,0]
-
         # Extract number of ODEs in the system to be solved
         nOdes = y0g.shape[0]
 
@@ -159,7 +157,7 @@ class Shooting(BaseAlgorithm):
             self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
         aux = solinit.aux
-        const =[np.float64(_) for _ in aux['const'].values()]
+        const = [np.float64(_) for _ in aux['const'].values()]
         # Only the start and end times are required for ode45
         arcs = solinit.arcs
 
@@ -173,8 +171,8 @@ class Shooting(BaseAlgorithm):
             raise Exception('Number of arcs must be odd!')
 
         left_idx, right_idx = map(np.array, zip(*arcs))
-        ya = solinit.y[:,left_idx]
-        yb = solinit.y[:,right_idx]
+        ya = solinit.y[:,left_idx].astype(float)
+        yb = solinit.y[:,right_idx].astype(float)
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
@@ -329,10 +327,14 @@ class Shooting(BaseAlgorithm):
             #     x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
             #     timestep_ctr += len(tt)
+            # q0 = []
+            # solo = prop(deriv_func, None, np.hstack(x_list), ya[:, arc_idx], q0, paramGuess, aux, arc_idx)
 
             # If problem converged, propagate solution to get full trajectory
             sol.x = np.hstack(x_list)
             sol.y = np.column_stack(y_list)
+            # sol.x = solo.t
+            # sol.y = solo.y.T
             sol.parameters = paramGuess
 
         sol.converged = converged
