@@ -4,6 +4,7 @@ import beluga
 from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator
+import copy
 import numba
 
 import logging
@@ -152,7 +153,7 @@ class Shooting(BaseAlgorithm):
         # Extract number of ODEs in the system to be solved
         nOdes = y0g.shape[0]
 
-        paramGuess = solinit.parameters
+        paramGuess = solinit.parameters.astype(float)
         if self.stm_ode_func is None:
             self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
@@ -174,7 +175,7 @@ class Shooting(BaseAlgorithm):
         ya = solinit.y[:,left_idx].astype(float)
         yb = solinit.y[:,right_idx].astype(float)
 
-        tmp = np.arange(num_arcs+1, dtype=np.float32)
+        tmp = np.arange(num_arcs+1, dtype=np.float32)*solinit.x[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
 
         if solinit.parameters is None:
@@ -313,7 +314,7 @@ class Shooting(BaseAlgorithm):
 
 
         # Return initial guess if it failed to converge
-        sol = solinit
+        sol = solinit #TODO: Make `sol` a copy of solinit, not a pointer. sol = copy.copy(solinit) crashes continuation
         if converged:
             # y_list = []
             # x_list = []
