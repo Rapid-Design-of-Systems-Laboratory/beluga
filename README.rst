@@ -9,7 +9,7 @@ beluga
 .. |logo| image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
     :align: right
 
-.. |coverage| image:: https://raw.githubusercontent.com/msparapa/beluga/master/coverage.svg
+.. |coverage| image:: https://rawgit.com/msparapa/beluga/master/coverage.svg
     :target: https://github.com/msparapa/beluga
 
 Installation
