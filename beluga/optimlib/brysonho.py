@@ -30,7 +30,7 @@ def make_control_law(dhdu, controls):
         logging.info("No control law found")
         from beluga.utils_old.pythematica import mathematica_solve
         logging.info("Attempting using Mathematica ...")
-        var_sol = mathematica_solve(dhdu,var_list)
+        var_sol = mathematica_solve(dhdu, var_list)
         # TODO: Extend numerical control laws to mu's
         ctrl_sol = var_sol
     logging.info('Control found')
