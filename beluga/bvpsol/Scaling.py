@@ -83,7 +83,6 @@ class Scaling(dict):
                 self.scale_func['parameters'][str(pi_var)] = self.create_scale_fn(pi_unit)
             self.scale_func['constraints'][str(s['name'])] = self.create_scale_fn(s['unit'])
 
-
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify(unit_expr))
 

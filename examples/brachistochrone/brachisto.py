@@ -54,7 +54,7 @@ continuation_steps.add_step('bisection') \
                 .terminal('x', 10) \
                 .terminal('y',-10)
 
-beluga.setup_beluga(logging_level=logging.DEBUG)
+beluga.setup_beluga(logging_level=logging.DEBUG, display_level=logging.DEBUG, output_file='data.dill')
 
 beluga.solve(ocp,
              method='traditional',

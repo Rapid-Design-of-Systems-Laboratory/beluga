@@ -20,6 +20,8 @@ config = dict(logfile='beluga.log',
               output_file='data.dill')
 
 BVP = cl.namedtuple('BVP', 'deriv_func bc_func compute_control')
+
+
 def bvp_algorithm(algo, **kwargs):
     """
     Helper method to load algorithm by name
@@ -118,7 +120,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     tic()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?
-    out = {};
+    out = dict()
 
     out['problem_data'] = ocp_ws['problem_data'];
 
@@ -141,11 +143,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     del out['problem_data']['costates']
 
     qvars = out['problem_data']['quantity_vars']
-    qvars = {str(k):str(v) for k,v in qvars.items()}
+    qvars = {str(k): str(v) for k, v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
     with open(output_file, 'wb') as outfile:
         dill.settings['recurse'] = True
-        dill.dump(out, outfile) # Dill Beluga object only
+        dill.dump(out, outfile)  # Dill Beluga object only
 
 
 def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
@@ -171,7 +173,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
-
                 s.compute_scaling(sol_guess)
                 s.scale(sol_guess)
 
@@ -188,15 +189,18 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['control_list']
 
-                    #TODO: Make control computation more efficient
+                    # TODO: Make control computation more efficient
                     # for i in range(len(sol.x)):
                     #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                     #     sol.u[:,i] = _u
 
-                    ## DAE mode
-                    # sol.u = sol.y[problem_data['num_states']:,:]
+                    # DAE mode
+                    sol.u = sol.y[problem_data['num_states']:, :]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp_fn.compute_control(_t,_X,sol.parameters,sol.aux)
+
+                    def f(_t, _X):
+                        return bvp_fn.compute_control(_t, _X, sol.parameters, sol.aux)
+
                     sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
 
                     # Copy solution object for storage and reuse `sol` in next
