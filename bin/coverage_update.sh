@@ -11,5 +11,8 @@ coverage run -m pytest beluga/
 # Display the report to the command window
 coverage report -m
 
+# Output an html version as well
+coverage html -i
+
 # Save the badge
 coverage-badge -f -o coverage.svg

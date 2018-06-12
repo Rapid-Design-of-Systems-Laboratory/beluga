@@ -159,7 +159,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
         sol = None
         for step_idx, step in enumerate(steps):
             logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
-
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
@@ -171,13 +170,13 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 tic()
 
-
                 s.compute_scaling(sol_guess)
                 s.scale(sol_guess)
 
                 # Note: sol is the same object as sol_guess
                 sol = bvp_algo.solve(bvp.deriv_func, bvp.bc_func, sol_guess)
-
+                step.last_sol.converged = sol.converged
+                # keyboard()
                 s.unscale(sol)
 
                 if sol.converged:
@@ -202,6 +201,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                     # Copy solution object for storage and reuse `sol` in next
                     # iteration
                     solution_set[step_idx].append(copy.deepcopy(sol))
+                    sol_guess = copy.deepcopy(sol)
                     elapsed_time = toc()
                     logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 else:
