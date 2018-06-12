@@ -147,6 +147,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
         dill.settings['recurse'] = True
         dill.dump(out, outfile) # Dill Beluga object only
 
+    return out['solution'][-1][-1]
+
 
 def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
     # Loop through all the continuation steps
