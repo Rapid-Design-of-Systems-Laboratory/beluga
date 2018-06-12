@@ -65,17 +65,9 @@ guess_maker = beluga.guess_generator('auto',
 
 continuation_steps = beluga.init_continuation()
 
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(11) \
-#                 .terminal('h', 0)
-#
-# continuation_steps.add_step('bisection') \
-#                 .num_cases(21)  \
-#                 .terminal('theta', 5*pi/180)
-
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .terminal('h',15e3) \
+                .terminal('h',0) \
                 .terminal('theta',0.01*pi/180)
 
 continuation_steps.add_step('bisection') \
@@ -88,7 +80,7 @@ continuation_steps.add_step('bisection') \
 
 beluga.setup_beluga(logging_level=logging.DEBUG)
 
-beluga.solve(ocp,
+sol = beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
