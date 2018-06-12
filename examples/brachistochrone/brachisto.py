@@ -61,3 +61,7 @@ sol = beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
+
+print(sol.y.T[0])
+print(sol.y.T[-1])
+print(sol.parameters)
