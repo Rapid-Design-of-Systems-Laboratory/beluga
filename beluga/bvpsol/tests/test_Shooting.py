@@ -24,6 +24,9 @@ def test_Shooting_1():
     assert out.y.T[-1][0] + 2 < tol
     assert out.y.T[-1][1] + 2.87588998 < tol
     assert out.x[-1] - 4 < tol
+    # assert out.y.T[0][0] - 0 > tol
+    assert abs(out.y.T[0][1] - solinit.y.T[0][1]) > tol
+    assert abs(out.y.T[-1][0] - solinit.y.T[-1][0]) - 2 < tol
 
 def test_Shooting_2():
     # Full 2PBVP test problem

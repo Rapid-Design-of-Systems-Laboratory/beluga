@@ -148,17 +148,24 @@ class Shooting(BaseAlgorithm):
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         '''
-        # Get initial states from the guess structure
-        y0g = solinit.y[:,0]
-        # Extract number of ODEs in the system to be solved
-        nOdes = y0g.shape[0]
 
-        paramGuess = solinit.parameters.astype(float)
+        # Instantly make a copy of sol and format inputs
+        sol = copy.copy(solinit)
+        sol.x = np.array(sol.x, dtype=np.float64)
+        sol.y = np.array(sol.y, dtype=np.float64)
+        sol.parameters = np.array(sol.parameters, dtype=np.float64)
+
+        # Extract some info from the guess structure
+        y0g = sol.y[:,0]
+        nOdes = y0g.shape[0]
+        paramGuess = solinit.parameters
+
+        # Make the state-transition ode matrix if it hasn't already been made
         if self.stm_ode_func is None:
             self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
         aux = solinit.aux
-        const = [np.float64(_) for _ in aux['const'].values()]
+        # const = [np.float64(_) for _ in aux['const'].values()]
         # Only the start and end times are required for ode45
         arcs = solinit.arcs
 
@@ -172,8 +179,8 @@ class Shooting(BaseAlgorithm):
             raise Exception('Number of arcs must be odd!')
 
         left_idx, right_idx = map(np.array, zip(*arcs))
-        ya = solinit.y[:,left_idx].astype(float)
-        yb = solinit.y[:,right_idx].astype(float)
+        ya = sol.y[:,left_idx]
+        yb = sol.y[:,right_idx]
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)*solinit.x[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
@@ -314,7 +321,7 @@ class Shooting(BaseAlgorithm):
 
 
         # Return initial guess if it failed to converge
-        sol = solinit #TODO: Make `sol` a copy of solinit, not a pointer. sol = copy.copy(solinit) crashes continuation
+        # sol = solinit #TODO: Make `sol` a copy of solinit, not a pointer. sol = copy.copy(solinit) crashes continuation
         if converged:
             # y_list = []
             # x_list = []
@@ -334,9 +341,12 @@ class Shooting(BaseAlgorithm):
             # If problem converged, propagate solution to get full trajectory
             sol.x = np.hstack(x_list)
             sol.y = np.column_stack(y_list)
+            # keyboard()
             # sol.x = solo.t
             # sol.y = solo.y.T
             sol.parameters = paramGuess
+        else:
+            sol = copy.deepcopy(solinit)
 
         sol.converged = converged
         sol.aux = aux
