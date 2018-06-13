@@ -33,7 +33,7 @@ def test_brachistochrone():
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-    bvp_solver = beluga.bvp_algorithm('Shooting', derivative_method='fd', tolerance=1e-4, max_iterations=200, verbose=True, max_error=100)
+    bvp_solver = beluga.bvp_algorithm('Shooting')
 
     guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1)
 
@@ -114,7 +114,7 @@ def test_planarhypersonic():
 
     ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-    bvp_solver = beluga.bvp_algorithm('Shooting', derivative_method='fd', tolerance=1e-4, max_iterations=100, verbose=True, max_error=100)
+    bvp_solver = beluga.bvp_algorithm('Shooting')
 
     guess_maker = beluga.guess_generator('auto', start=[80000, 0, 4000, -90 * pi / 180], direction='forward', costate_guess=-0.1)
 
@@ -142,17 +142,17 @@ def test_planarhypersonic():
     assert abs(y0[2] - 4000) < tol
     assert abs(y0[3] - 0.0195) < tol
     assert abs(y0[4] + 16.8243) < tol
-    assert abs(y0[5] - 1306472.5796) < tol
-    assert abs(y0[6] + 2834.2179) < tol
+    assert abs(y0[5] - 1212433.8085) < tol
+    assert abs(y0[6] + 2836.0620) < tol
     assert abs(y0[7] - 0) < tol
     assert abs(y0[8] - 144.5677) < tol # This is time. If it fails because time is not an EOM, delete this line
     assert abs(yf[0] - 0) < tol
     assert abs(yf[1] - 0.0873) < tol
-    assert abs(yf[2] - 2691.5778) < tol
+    assert abs(yf[2] - 2691.4733) < tol
     assert abs(yf[3] + 0.9383) < tol
-    assert abs(yf[4] - 546.5061) < tol
-    assert abs(yf[5] - 1306472.5796) < tol
-    assert abs(yf[6] + 5383.1553) < tol
-    assert abs(yf[7] - 0.3489) < tol
+    assert abs(yf[4] - 546.4540) < tol
+    assert abs(yf[5] - 1212433.8085) < tol
+    assert abs(yf[6] + 5382.9467) < tol
+    assert abs(yf[7] - 0.1842) < tol
     assert abs(yf[8] - 144.5677) < tol # This is time. If it fails because time is not an EOM, delete this line
     assert abs(y0[5] - yf[5]) < tol

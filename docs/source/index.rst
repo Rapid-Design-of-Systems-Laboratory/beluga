@@ -13,6 +13,7 @@ Contents:
 
    install.rst
    testproblem.rst
+   problemsetup.rst
    features.rst
    unittests.rst
    nomenclature.rst

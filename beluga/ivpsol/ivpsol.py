@@ -8,27 +8,50 @@ from scipy.integrate import simps
 
 
 class Algorithm(object):
-    '''
+    """
     Object representing an algorithm that solves initial valued problems.
 
     This object serves as a base class for other algorithms.
-    '''
-    def __new__(cls, *args, **kwargs):
-        obj = super().__new__(cls, *args, **kwargs)
+    """
 
-        if len(args) > 0:
-            return cls.__call__(obj, *args, **kwargs)
-        else:
-            return obj
+    def __new__(cls, *args, **kwargs):
+        obj = super().__new__(cls)
+
+        return obj
 
 
 class Propagator(Algorithm):
-    '''
-    Propagator of differential equations
-    '''
+    """
+    Propagator of differential equations.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Creates a new Propagator object.
+
+        :param args: Unused
+        :param kwargs: Additional parameters accepted by the solver.
+        :return: Propagator object.
+
+        +------------------------+-----------------+-----------------+
+        | Valid kwargs           | Default Value   | Valid Values    |
+        +========================+=================+=================+
+        | abstol                 | 1e-6            |  > 0            |
+        +------------------------+-----------------+-----------------+
+        | maxstep                | 0.1             |  > 0            |
+        +------------------------+-----------------+-----------------+
+        | reltol                 | 1e-6            |  > 0            |
+        +------------------------+-----------------+-----------------+
+        """
+
+        obj = super().__new__(cls, *args, **kwargs)
+        obj.abstol = kwargs.get('abstol', 1e-6)
+        obj.maxstep = kwargs.get('maxstep', 0.1)
+        obj.reltol = kwargs.get('reltol', 1e-6)
+        return obj
 
     def __call__(self, eom_func, quad_func, tspan, y0, q0, *args, **kwargs):
-        '''
+        """
         Propagates the differential equations over a defined time interval.
 
         :param eom_func: Function representing the equations of motion.
@@ -37,15 +60,12 @@ class Propagator(Algorithm):
         :param y0: Initial state position.
         :param q0: Initial quad position.
         :param args: Additional arguments required by EOM files.
-        :param kwargs: Additional parameters accepted by the solver.
+        :param kwargs: Unused.
         :return: A full reconstructed trajectory, :math:`\\gamma`.
-        '''
+        """
 
-        abstol = kwargs.get('abstol', 1e-5)
-        reltol = kwargs.get('reltol', 1e-3)
-        maxstep = kwargs.get('maxstep', 0.1)
-
-        int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0, rtol=reltol, atol=abstol, max_step=maxstep)
+        int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0,
+                                            rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
 
         gamma = Trajectory(int_sol.t, int_sol.y.T)
 
@@ -56,15 +76,22 @@ class Propagator(Algorithm):
 
 
 class Trajectory(object):
-    '''
-    Class containing information for a trajectory. A trajectory
-    is a curve on a manifold that is also an integral curve
-    of a vector field.
+    """
+    Class containing information for a trajectory.
 
     .. math::
         \\gamma(t) : I \\subset \\mathbb{R} \\rightarrow B
-    '''
+    """
+
     def __new__(cls, *args, **kwargs):
+        """
+        Creates a new Trajectory object.
+
+        :param args: :math:`(t, y, q, u)`
+        :param kwargs: Unused.
+        :return: Trajectory object.
+        """
+
         obj = super(Trajectory, cls).__new__(cls)
         obj.t = None
         obj.y = None
@@ -88,8 +115,9 @@ class Trajectory(object):
 
     def __call__(self, t):
         '''
+        Mapping function for a trajectory.
 
-        :param t: Time input.
+        :param t: Time as :math:`t \\in \\mathbb{R}`
         :return: Returns position values :math:`(y, q, u) \\in B`
         '''
 
@@ -139,7 +167,7 @@ class Trajectory(object):
 
 
 def reconstruct(quadfun, gamma, *args):
-    '''
+    """
     Completely reconstructs a trajectory for all time in :math:`\\gamma`.
 
     .. math::
@@ -152,7 +180,8 @@ def reconstruct(quadfun, gamma, *args):
     :param gamma: Trajectory in quotient space :math:`B/Q`.
     :param args: Additional arguments needed by quadfun.
     :return: :math:`\\gamma` - Reconstructed trajectory in total space :math:`B`.
-    '''
+    """
+
     gamma = copy.copy(gamma)
     if gamma.q is None:
         q0 = 0
@@ -171,7 +200,7 @@ def reconstruct(quadfun, gamma, *args):
 
 
 def integrate_quads(quadfun, tspan, gamma, *args):
-    '''
+    """
     Integrates quadratures over a trajectory base space. Only returns the terminal point.
 
     .. math::
@@ -185,7 +214,7 @@ def integrate_quads(quadfun, tspan, gamma, *args):
     :param gamma: Trajectory in quotient space :math:`B/Q`.
     :param args: Additional arguments needed by quadfun.
     :return: Value of the quads at :math:`t_f`.
-    '''
+    """
 
     if tspan[0] < gamma.t[0]:
         raise Exception('Time span out of integration bounds.')

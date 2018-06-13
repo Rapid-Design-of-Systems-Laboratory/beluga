@@ -19,6 +19,10 @@ class BaseAlgorithm(object):
     __metaclass__ = abc.ABCMeta
 
     # Define common interface for algorithm classes
+    def __new__(cls, *args, **kwargs):
+        obj = super(BaseAlgorithm, cls).__new__(cls)
+        return obj
+
     @abc.abstractmethod
     def solve(self, deriv_func, bc_func, solinit):
         '''

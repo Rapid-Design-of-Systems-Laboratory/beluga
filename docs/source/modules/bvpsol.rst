@@ -22,6 +22,7 @@ from :math:`t_0` to :math:`t_f`.
 Base Class Reference
 --------------------
 .. autoclass:: BaseAlgorithm
+    :members: preprocess
 
 .. autoclass:: Shooting
-    :members:
+    :members: __new__, solve
