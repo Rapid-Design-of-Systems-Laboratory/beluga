@@ -38,7 +38,7 @@ tests = ['beluga.bvpsol.tests',
          'beluga.optimlib.tests']
 
 setup(name="beluga",
-      version="0.1.3",
+      version="0.1.4",
       description="An indirect trajectory optimization framework.",
       author="Michael Sparapany",
       author_email='msparapa@purdue.edu',
