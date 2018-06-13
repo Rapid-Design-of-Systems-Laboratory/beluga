@@ -24,10 +24,10 @@ Base Class Reference
     :members:
 
 .. autoclass:: Propagator
-    :members: __call__
+    :members: __new__, __call__
 
 .. autoclass:: Trajectory
-    :members: __call__
+    :members: __new__, __call__
 
 .. autofunction:: reconstruct
 

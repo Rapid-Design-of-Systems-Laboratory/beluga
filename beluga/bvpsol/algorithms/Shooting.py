@@ -44,21 +44,62 @@ class Shooting(BaseAlgorithm):
         J = \\left[M, P, Q_0+Q_f \\right]
     """
 
-    def __init__(self, tolerance=1e-6, max_iterations=100, max_error=10, derivative_method='fd', verbose=True, cached=True, use_numba=False):
-        self.tolerance = tolerance
-        self.max_iterations = max_iterations
-        self.verbose = verbose
-        self.max_error = max_error
-        self.derivative_method = derivative_method
-        self.use_numba = use_numba
-        self.stm_ode_func = None
-        self.cached = False
-        self.saved_code = True
-        if derivative_method not in ['fd']:
-            raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
+    def __new__(cls, *args, **kwargs):
+        """
+        Creates a new Shooting object.
 
-    def deriv_func_ode45(self, _t, _X, _p, _aux):
-        return self.out_ws['code_module'].deriv_func(_t, _X, _p, list(_aux['const'].values()),0)
+        :param args: Unused
+        :param kwargs: Additional parameters accepted by the solver.
+        :return: Shooting object.
+
+        +------------------------+-----------------+-----------------+
+        | Valid kwargs           | Default Value   | Valid Values    |
+        +========================+=================+=================+
+        | cached                 | True            | Bool            |
+        +------------------------+-----------------+-----------------+
+        | derivative_method      | 'fd'            | {'fd','csd'}    |
+        +------------------------+-----------------+-----------------+
+        | ivp_args               | {}              | see `ivpsol`    |
+        +------------------------+-----------------+-----------------+
+        | tolerance              | 1e-4            | > 0             |
+        +------------------------+-----------------+-----------------+
+        | max_error              | 100             | > 0             |
+        +------------------------+-----------------+-----------------+
+        | max_iterations         | 100             | > 0             |
+        +------------------------+-----------------+-----------------+
+        | use_numba              | False           | Bool            |
+        +------------------------+-----------------+-----------------+
+        | verbose                | False           | Bool            |
+        +------------------------+-----------------+-----------------+
+        """
+
+        obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
+
+        cached = kwargs.get('cached', True)
+        derivative_method = kwargs.get('derivative_method', 'fd')
+        ivp_args = kwargs.get('ivp_args', dict())
+        tolerance = kwargs.get('tolerance', 1e-4)
+        max_error = kwargs.get('max_error', 100)
+        max_iterations = kwargs.get('max_iterations', 100)
+        use_numba = kwargs.get('use_numba', False)
+        verbose = kwargs.get('verbose', False)
+
+        obj.cached = cached
+        obj.derivative_method = derivative_method
+        obj.ivp_args = ivp_args
+        obj.tolerance = tolerance
+        obj.max_error = max_error
+        obj.max_iterations = max_iterations
+        obj.use_numba = use_numba
+        obj.verbose = verbose
+        return obj
+
+    def __init__(self, *args, **kwargs):
+        self.stm_ode_func = None
+        self.saved_code = True
+
+        if self.derivative_method not in ['fd']:
+            raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
     def preprocess(self, problem_data, use_numba=False):
         obj = super().preprocess(problem_data, use_numba=use_numba)
@@ -150,7 +191,7 @@ class Shooting(BaseAlgorithm):
         '''
 
         # Instantly make a copy of sol and format inputs
-        sol = copy.copy(solinit)
+        sol = copy.deepcopy(solinit)
         sol.x = np.array(sol.x, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
@@ -164,25 +205,19 @@ class Shooting(BaseAlgorithm):
         if self.stm_ode_func is None:
             self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
-        aux = solinit.aux
-        # const = [np.float64(_) for _ in aux['const'].values()]
-        # Only the start and end times are required for ode45
-        arcs = solinit.arcs
+        if sol.arcs is None:
+            sol.arcs = [(0, len(solinit.x)-1)]
 
-        if arcs is None:
-            arcs = [(0, len(solinit.x)-1)]
-            solinit.arcs = arcs
-
-        arc_seq = aux['arc_seq']
+        arc_seq = sol.aux['arc_seq']
         num_arcs = len(arc_seq)
-        if len(arcs) % 2 == 0:
+        if len(sol.arcs) % 2 == 0:
             raise Exception('Number of arcs must be odd!')
 
-        left_idx, right_idx = map(np.array, zip(*arcs))
+        left_idx, right_idx = map(np.array, zip(*sol.arcs))
         ya = sol.y[:,left_idx]
         yb = sol.y[:,right_idx]
 
-        tmp = np.arange(num_arcs+1, dtype=np.float32)*solinit.x[-1]
+        tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.x[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
 
         if solinit.parameters is None:
@@ -190,17 +225,17 @@ class Shooting(BaseAlgorithm):
         else:
             nParams = solinit.parameters.size
 
-        # Initial state of STM is an identity matrix
+        # Initial state of STM is an identity matrix with an additional column of zeros per parameter
         stm0 = np.hstack((np.eye(nOdes), np.zeros((nOdes,nParams)))).reshape(nOdes*(nOdes+nParams))
-        n_iter = 1            # Initialize iteraiton counter
-        converged = False   # Convergence flag
+        n_iter = 1  # Initialize iteration counter
+        converged = False  # Convergence flag
 
-        # Ref: Solving Nonlinear Equations with Newton's Method By C. T. Kelley
+        # Ref: Solving Nonlinear Equations with Newton's Method By C. T. Kelley # TODO: Reference this in the docstring
         # Global Convergence and Armijo's Rule, pg. 11
         alpha = 1
         beta = 1
         r0 = None
-        prop = Propagator()
+        prop = Propagator(**self.ivp_args)
         y0stm = np.zeros((len(stm0)+nOdes))
         yb = np.zeros_like(ya)
         try:
@@ -214,9 +249,9 @@ class Shooting(BaseAlgorithm):
                         y0stm[:nOdes] = ya[:, arc_idx]
                         y0stm[nOdes:] = stm0[:]
                         q0 = []
-                        sol = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, aux, arc_idx)
-                        t = sol.t
-                        yy = sol.y.T
+                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, arc_idx)
+                        t = sol_ivp.t
+                        yy = sol_ivp.y.T
                         y_list.append(yy[:nOdes, :])
                         x_list.append(t)
                         yb[:, arc_idx] = yy[:nOdes, -1]
@@ -229,21 +264,20 @@ class Shooting(BaseAlgorithm):
                         self.save_code()
                         self.saved_code = True
 
-                # Iterate through arcs
-                if n_iter>self.max_iterations:
-                    logging.warn("Maximum iterations exceeded!")
+                # Break cycle if it exceeds the max number of iterations
+                if n_iter > self.max_iterations:
+                    logging.warning("Maximum iterations exceeded!")
                     break
 
-                res = bc_func(ya, yb, paramGuess, aux)
+                # Determine the error vector
+                res = bc_func(ya, yb, paramGuess, sol.aux)
 
+                # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
                     print(res)
                     raise RuntimeError("Nan in residual")
 
-                # r1 = np.linalg.norm(res)
                 r1 = max(abs(res))
-                # if r0 is not None and r1 > self.tolerance*10 and abs(r1-r0)<self.tolerance:
-                #     raise RuntimeError('Not enough change in residual. Stopping ...')
                 if self.verbose:
                     logging.debug('Residue: '+str(r1))
 
@@ -257,9 +291,9 @@ class Shooting(BaseAlgorithm):
                     converged = True
                     break
 
-                # Compute Jacobian of boundary conditions using numerical derviatives
+                # Compute Jacobian of boundary conditions
                 nBCs = len(res)
-                J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, aux, bc_func)
+                J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, sol.aux, bc_func)
 
                 # Compute correction vector
                 if r0 is not None:
@@ -270,36 +304,23 @@ class Shooting(BaseAlgorithm):
                     beta = 1
                     if beta < 0:
                         beta = 1
-                if r1>1:
-                    # alpha = 1./(5*r1)
-                    # alpha = 0.5
+
+                if r1 > 1:
                     alpha = 1/(2*r1)
                 else:
                     alpha = 1
+
                 r0 = r1
 
-                # No damping if error within one order of magnitude
-                # of tolerance
+                # No damping if error within one order of magnitude of tolerance
                 if r1 < min(10*self.tolerance,1e-3):
                     alpha, beta = 1, 1
 
                 try:
-                    dy0 = alpha*beta*np.linalg.solve(J,-res)
+                    dy0 = alpha*beta*np.linalg.solve(J, -res)
                 except:
                     dy0, *_ = np.linalg.lstsq(J, -res)
                     dy0 = alpha*beta*dy0
-
-                    # # keyboard()
-                    # rank1 = np.linalg.matrix_rank(J)
-                    # rank2 = np.linalg.matrix_rank(np.c_[J,-res])
-                    # if rank1 == rank2:
-                    #     # dy0 = alpha*beta*np.dot(np.linalg.pinv(J),-res)
-                    #     dy0 = -alpha*beta*(np.linalg.inv(J @ J.T) @ J).T @ res
-                    #     # dy0 = -alpha*beta*np.dot( np.linalg.inv(np.dot(J.T,J)), J.T  )
-                    # else:
-                    #     # Re-raise exception if system is infeasible
-                    #     raise
-                # dy0 = -alpha*beta*np.dot(np.dot(np.linalg.inv(np.dot(J,J.T)),J).T,res)
 
                 # Apply corrections to states and parameters (if any)
                 d_ya = np.reshape(dy0[:nOdes*num_arcs], (nOdes, num_arcs), order='F')
@@ -312,42 +333,26 @@ class Shooting(BaseAlgorithm):
 
                 n_iter += 1
                 logging.debug('Iteration #'+str(n_iter))
-        # except KeyboardInterrupt as ke:
-        #     converged = False
+
         except Exception as e:
-            logging.warn(e)
+            logging.warning(e)
             import traceback
             traceback.print_exc()
 
-
-        # Return initial guess if it failed to converge
-        # sol = solinit #TODO: Make `sol` a copy of solinit, not a pointer. sol = copy.copy(solinit) crashes continuation
         if converged:
-            # y_list = []
-            # x_list = []
             sol.arcs = []
-            y0 = np.zeros(ya.shape[0])
             timestep_ctr = 0
             for arc_idx, tt in enumerate(x_list):
-            #     tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, aux, arc_idx, abstol=1e-8, reltol=1e-4)
-            #     tt,yy = ode45(deriv_func, tspan, ya[:,arc_idx], paramGuess, const, arc_idx, abstol=1e-8, reltol=1e-4)
-            #     y_list.append(yy.T)
-            #     x_list.append(tt)
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
-            #     timestep_ctr += len(tt)
-            # q0 = []
-            # solo = prop(deriv_func, None, np.hstack(x_list), ya[:, arc_idx], q0, paramGuess, aux, arc_idx)
 
-            # If problem converged, propagate solution to get full trajectory
             sol.x = np.hstack(x_list)
             sol.y = np.column_stack(y_list)
-            # keyboard()
-            # sol.x = solo.t
-            # sol.y = solo.y.T
             sol.parameters = paramGuess
+
         else:
+            # Return a copy of the original guess if the problem fails to converge
             sol = copy.deepcopy(solinit)
 
         sol.converged = converged
-        sol.aux = aux
+        sol.aux = solinit.aux  # TODO: I'm fairly certain this line isn't needed. But if I delete it, it crashes.
         return sol
