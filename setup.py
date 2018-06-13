@@ -24,6 +24,7 @@ if sys.argv[-1] == 'test':
     sys.exit()
 
 modules = ['beluga.bvpsol',
+           'beluga.codegen',
            'beluga.continuation',
            'beluga.ivpsol',
            'beluga.ivpsol.integrators',
@@ -37,7 +38,7 @@ tests = ['beluga.bvpsol.tests',
          'beluga.optimlib.tests']
 
 setup(name="beluga",
-      version="0.1.2",
+      version="0.1.3",
       description="An indirect trajectory optimization framework.",
       author="Michael Sparapany",
       author_email='msparapa@purdue.edu',
