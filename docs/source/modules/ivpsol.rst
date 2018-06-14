@@ -27,7 +27,7 @@ Base Class Reference
     :members: __new__, __call__
 
 .. autoclass:: Trajectory
-    :members: __new__, __call__
+    :members: __new__, __call__, set_interpolate_function
 
 .. autofunction:: reconstruct
 
