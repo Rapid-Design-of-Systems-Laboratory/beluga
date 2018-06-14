@@ -39,12 +39,24 @@ def test_propagator_2():
 
 
 def test_Trajectory():
-    t = np.array([0,1,2])
-    y1 = t * 2
+    t = np.array([0,1,2,3])
+    y1 = t ** 2
 
     gam = Trajectory(t, y1)
     y, q, u = gam(0.5)
-    assert y == 1
+    assert y == 0.5
+    assert q == None
+    assert u == None
+
+    y, q, u = gam(0.25)
+    assert y == 0.25
+    assert q == None
+    assert u == None
+
+    gam.set_interpolate_function('cubic')
+
+    y, q, u = gam(0.25)
+    assert y - 0.0625 < 1e-4
     assert q == None
     assert u == None
 

@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 import scipy.integrate
+import scipy.interpolate
 import time
 import copy
 from beluga.utils import keyboard
@@ -98,6 +99,9 @@ class Trajectory(object):
         obj.q = None
         obj.u = None
 
+        interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
+        obj.interpolation_type = interpolation_type
+
         l = len(args)
         if l >= 1:
             obj.t = args[0]
@@ -113,32 +117,52 @@ class Trajectory(object):
 
         return obj
 
+    def __init__(self, *args, **kwargs):
+        self.interpolate = None
+        self.set_interpolate_function(self.interpolation_type)
+
     def __call__(self, t):
-        '''
+        """
         Mapping function for a trajectory.
 
         :param t: Time as :math:`t \\in \\mathbb{R}`
         :return: Returns position values :math:`(y, q, u) \\in B`
-        '''
+        """
 
+        t = np.array(t, dtype=np.float64)
         y_val = None
         q_val = None
         u_val = None
 
         if len(self.t) == 0:
-            return None
+            return None, None, None
 
         if len(self.y.shape) == 1:
             dim = 1
         else:
             dim = self.y.shape[1]
 
+        # This builds the interpolation function on the most up to date data
         if dim == 1:
-            y_val = np.array([np.interp(t, self.t, self.y)])
+            f = self.interpolate(self.t, self.y)
+            y_val = np.array([f(t)])
         else:
-            y_val = np.array([np.interp(t, self.t, self.y.T[ii]) for ii in range(dim)])
+            f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(dim)]
+            y_val = np.array([f[ii](t) for ii in range(dim)]).T
 
         return y_val, q_val, u_val
+
+    def set_interpolate_function(self, func):
+        """
+        Sets the function used for interpolation.
+
+        :param func: Function for interpolation or a string for SciPy's interp1d(kind=func).
+        """
+        if callable(func):
+            self.interpolate = func
+        elif isinstance(func, str):
+            func = func.lower()
+            self.interpolate = lambda t, y: scipy.interpolate.interp1d(t, y, kind=func)
 
     def __getitem__(self, item):
         t_val = None
