@@ -2,40 +2,58 @@ import numpy as np
 import numexpr as ne
 from scipy.interpolate import InterpolatedUnivariateSpline
 import math
+from beluga.ivpsol import Trajectory
 
 
 class Solution(object):
-    x = None
+    t = None
     y = None
     p = None
     nOdes = 0
 
-    def __init__(self, x=None, y=None, parameters=None, aux=None, state_list=None, arcs=None):
-        "x,y and parameters should be vectors"
-        if x is not None and y is not None:
-            self.x = np.array(x, dtype=np.float64)
-            self.y = np.array(y, dtype=np.float64)
-        else:
-            self.x = self.y = self.u = None
-        if parameters is not None:
-            self.parameters = np.array(parameters, dtype=np.float64)
-        else:
-            self.parameters = np.array([])
+    def __new__(cls, *args, **kwargs):
+        """
+        Creates a new Solution object.
 
-        self.y_splines = self.u_splines = None
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        obj = super(Solution, cls).__new__(cls)
+
+        x = kwargs.get('x', None)
+        y = kwargs.get('y', None)
+        parameters = kwargs.get('parameters', None)
+        aux = kwargs.get('aux', None)
+        state_list = kwargs.get('state_list', None)
+        arcs = kwargs.get('arcs', None)
+
+        if x is not None and y is not None:
+            obj.x = np.array(x, dtype=np.float64)
+            obj.y = np.array(y, dtype=np.float64)
+        else:
+            obj.x = obj.y = obj.u = None
+
+        if parameters is not None:
+            obj.parameters = np.array(parameters, dtype=np.float64)
+        else:
+            obj.parameters = np.array([])
 
         if aux is None:
-            self.aux = {"initial": [], "terminal": [], "const": {}, "parameters":[], "arc_seq":(0,)}
+            obj.aux = {"initial": [], "terminal": [], "const": {}, "parameters": [], "arc_seq": (0,)}
         else:
-            self.aux = aux
-        self.state_list = state_list
-        self.var_dict = None
-        self.converged = False
-        self.arcs = arcs
+            obj.aux = aux
 
-        self.y_splines = None
-        self.u_splines = None
-        self.extra = None
+        obj.state_list = state_list
+        obj.var_dict = None
+        obj.converged = False
+        obj.arcs = arcs
+
+        obj.y_splines = None
+        obj.u_splines = None
+        obj.extra = None
+        return obj
 
     # TODO: Write test for interpolation system
     def init_interpolate(self):
