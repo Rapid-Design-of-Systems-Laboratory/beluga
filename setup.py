@@ -37,9 +37,13 @@ tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.integrators.tests',
          'beluga.optimlib.tests']
 
+with open('README.rst') as file:
+    long_description = file.read()
+
 setup(name="beluga",
       version="0.1.4",
       description="An indirect trajectory optimization framework.",
+      long_description=long_description,
       author="Michael Sparapany",
       author_email='msparapa@purdue.edu',
       platforms=["any"],  # or more specific, e.g. "win32", "cygwin", "osx"
