@@ -32,7 +32,6 @@ modules = ['beluga.bvpsol',
            'beluga.utils']
 
 tests = ['beluga.bvpsol.tests',
-         'beluga.continuation.tests',
          'beluga.ivpsol.tests',
          'beluga.ivpsol.integrators.tests',
          'beluga.optimlib.tests']
