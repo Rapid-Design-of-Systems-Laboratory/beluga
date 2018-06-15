@@ -4,9 +4,10 @@ Contains classes and functions related to Optimal Control.
 Module: optimlib
 """
 
-from .brysonho import *
+from .optimlib import *
 import sympy as sym
 from beluga.utils import sympify2, keyboard
+import simplepipe as sp
 from beluga.problem import SymVar
 import logging
 
@@ -445,13 +446,13 @@ ICRM = sp.Workflow([
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),
             outputs=('aug_initial_cost')),
-    sp.Task(ft.partial(make_aug_params, location='initial'),
+    sp.Task(ft.partial(make_augmented_params, location='initial'),
             inputs=('constraints'),
             outputs=('initial_lm_params')),
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
             inputs=('terminal_cost', 'constraints'),
             outputs=('aug_terminal_cost')),
-    sp.Task(ft.partial(make_aug_params, location='terminal'),
+    sp.Task(ft.partial(make_augmented_params, location='terminal'),
             inputs=('constraints'),
             outputs=('terminal_lm_params')),
     sp.Task(make_costate_names,
@@ -497,9 +498,3 @@ ICRM = sp.Workflow([
             inputs='*',
             outputs=('problem_data')),
 ], description='ICRM workflow')
-
-
-# Call doctest if the script is run directly
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()

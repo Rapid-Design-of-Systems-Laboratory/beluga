@@ -20,6 +20,7 @@ Contents:
    modules/ivpsol.rst
    modules/bvpsol.rst
    modules/continuation.rst
+   modules/optimlib.rst
    modules/codegen.rst
 
 

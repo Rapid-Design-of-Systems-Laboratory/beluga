@@ -1,22 +1,27 @@
-# from beluga.problem2 import *
-#
-# def test_problem():
-#     p = Problem('test_problem')
-#
-#     assert p.name == 'test_problem'
-#
-#     p.add_dynamic_element('x','v*cos(theta)','s',element_kind='states',
-#                                 element_props=['name','eom','unit'])
-#     assert p._systems['default'] == {'states':
-#                             [{'name':'x', 'eom':'v*cos(theta)','unit':'s'}]}
-#
-#
-#     assert p.state.keywords == {'element_kind':'states', 'element_props':['name', 'eom', 'unit']}
-#     assert p.control.keywords == {'element_kind':'controls', 'element_props':['name','unit']}
-#     assert p.constant.keywords == {'element_kind':'constants', 'element_props':['name','value','unit']}
-#     assert p.quantity.keywords == {'element_kind':'quantities', 'element_props':['name','value']}
-#
-#     p.add_property('path','v^2','m^2/s^2',property_name='cost', arg_list=['type','expr','unit'])
-#     assert p._properties == {'cost': {'type':'path', 'expr':'v^2', 'unit':'m^2/s^2'}}
-#
-#     assert p.independent.keywords == {'property_name': 'independent', 'arg_list': ['name', 'unit']}
+import pytest
+from beluga.optimlib import init_workspace
+
+
+def test_init_workspace():
+    from beluga.problem import OCP
+    problem = OCP('test_problem')
+
+    # Throw an error with no independent variable defined.
+    with pytest.raises(KeyError):
+        init_workspace(problem)
+
+    problem.independent('t', 's')
+    problem.state('x', 'v', 'm')
+    problem.state('v', 'g + u', 'm/s')
+    problem.control('u', 'N')
+    problem.constant('g', 9.80665, 'm/s^2')
+    problem.path_cost('1', 's')
+    problem.constraints().initial('x-x_0', 'm')
+    problem.constraints().initial('v-v_0', 'm/s')
+    problem.constraints().terminal('x-x_f', 'm')
+    problem.scale(m='x', s='x/v', N=1)
+
+    ws = init_workspace(problem)
+
+    assert isinstance(ws, dict)
+    assert ws['problem_name'] == 'test_problem'

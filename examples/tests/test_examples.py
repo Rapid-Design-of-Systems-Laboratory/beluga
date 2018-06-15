@@ -2,6 +2,7 @@ tol = 1e-3
 
 
 def test_brachistochrone():
+    from math import pi
     import beluga
 
     ocp = beluga.OCP('brachisto')
@@ -35,7 +36,7 @@ def test_brachistochrone():
 
     bvp_solver = beluga.bvp_algorithm('Shooting')
 
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1)
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
 
     continuation_steps = beluga.init_continuation()
 
@@ -62,6 +63,27 @@ def test_brachistochrone():
     assert abs(yf[4] - 0.0255) < tol
     assert abs(yf[5] - 0) < tol
     assert abs(yf[6] - 1.8433) < tol # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
+    assert abs(y0[3] - yf[3]) < tol
+    assert abs(y0[4] - yf[4]) < tol
+
+    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+
+    y0 = sol.y.T[0]
+    yf = sol.y.T[-1]
+    assert abs(y0[0] - 0) < tol
+    assert abs(y0[1] - 0) < tol
+    assert abs(y0[2] - 0) < tol
+    assert abs(y0[3] + 0.0667) < tol
+    assert abs(y0[4] - 0.0255) < tol
+    assert abs(y0[5] + 0.1019) < tol
+    assert abs(y0[6] - 1.8433) < tol  # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
+    assert abs(yf[0] - 10) < tol
+    assert abs(yf[1] + 10) < tol
+    assert abs(yf[2] - 14.0071) < tol
+    assert abs(yf[3] + 0.0667) < tol
+    assert abs(yf[4] - 0.0255) < tol
+    assert abs(yf[5] - 0) < tol
+    assert abs(yf[6] - 1.8433) < tol  # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 

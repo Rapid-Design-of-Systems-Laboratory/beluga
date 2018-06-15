@@ -4,123 +4,22 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 [1] Bryson, Arthur Earl. Applied optimal control: optimization, estimation and control. CRC Press, 1975.
 """
 
-import functools as ft
-import itertools as it
-import simplepipe as sp
-import sympy
-import re as _re
 import numpy
 import logging
 np = numpy
 
+from .optimlib import *
+
 from math import *
 import numba
 
-import beluga
+# import beluga
 from beluga.utils import sympify
 from beluga.problem import SymVar
+import simplepipe as sp
 
-import sympy as sym
 from sympy.utilities.lambdify import lambdastr
 from beluga.utils import keyboard
-
-
-def total_derivative(expr, var, dependent_vars=None):
-    """
-    Take derivative taking pre-defined quantities into consideration
-
-    dependent_variables: Dictionary containing dependent variables as keys and
-                         their expressions as values
-    """
-    if dependent_vars is None:
-        dependent_vars = {}
-
-    dep_var_names = dependent_vars.keys()
-    dep_var_expr = [(expr) for (_,expr) in dependent_vars.items()]
-
-    dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
-    dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
-
-    # Chain rule + total derivative
-    out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
-    return out
-
-
-def jacobian(expr_list, var_list, derivative_fn):
-    jac = sympy.zeros(len(expr_list), len(var_list))
-    for i, expr in enumerate(expr_list):
-        for j, var in enumerate(var_list):
-            jac[i, j] = derivative_fn(expr, var)
-    return jac
-
-
-def process_quantities(quantities):
-    """Performs preprocessing on quantity definitions. Creates a new total
-    derivative operator that takes considers these definitions.
-    """
-    # logging.info('Processing quantity expressions')
-
-    # TODO: Sanitize quantity expressions
-    # TODO: Check for circular references in quantity expressions
-
-    # Trivial case when no quantities are defined
-    if len(quantities) == 0:
-        yield {}
-        yield []
-        yield total_derivative
-        yield ft.partial(jacobian, derivative_fn=total_derivative)
-
-    quantity_subs = [(q.name, q.value) for q in quantities]
-    quantity_sym, quantity_expr = zip(*quantity_subs)
-    quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
-
-    # Use substituted expressions to recreate quantity expressions
-    quantity_subs = [(str(qty_var),qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
-    # Dictionary for substitution
-    quantity_vars = dict(quantity_subs)
-
-    # Dictionary for use with mustache templating library
-    quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
-
-    # Function partial that takes derivative while considering quantities
-    derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
-    jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
-
-    yield quantity_vars
-    yield quantity_list
-    yield derivative_fn
-    yield jacobian_fn
-
-
-def make_augmented_cost(cost, constraints, location):
-    """Augments the cost function with the given list of constraints.
-
-    Returns the augmented cost function
-    """
-
-    def make_lagrange_mult(c, ind = 1):
-        return sympify('lagrange_' + location + '_' + str(ind))
-    lagrange_mult = [make_lagrange_mult(c, ind)
-                     for (ind,c) in enumerate(constraints[location],1)]
-
-    aug_cost_expr = cost.expr + sum(nu * c
-                                    for (nu, c) in
-                                    zip(lagrange_mult, constraints[location]))
-
-    aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
-    return aug_cost
-    # yield aug_cost
-    # yield lagrange_mult
-
-
-def make_aug_params(constraints, location):
-    """Make the lagrange multiplier terms for boundary conditions."""
-
-    def make_lagrange_mult(c, ind = 1):
-        return sympify('lagrange_' + location + '_' + str(ind))
-    lagrange_mult = [make_lagrange_mult(c, ind)
-                     for (ind,c) in enumerate(constraints[location],1)]
-    return lagrange_mult
 
 
 def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivative_fn):
@@ -139,86 +38,6 @@ def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivat
                              for s, lam in zip(states, costate_names)])
     yield ham
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
-
-
-def make_costate_names(states):
-    return [sympify('lam'+str(s.name).upper()) for s in states]
-
-
-def make_costate_rates(ham, states, costate_names, derivative_fn):
-    """Make costates."""
-    costates = [SymVar({'name': lam, 'eom':derivative_fn(-1*(ham), s)})
-                for s, lam in zip(states, costate_names)]
-    return costates
-
-
-def sanitize_constraint_expr(constraint, states, location, prefix_map):
-    """
-    Checks the initial/terminal constraint expression for invalid symbols
-    Also updates the constraint expression to reflect what would be in code
-    """
-
-    if location not in prefix_map:
-        raise ValueError('Invalid constraint type')
-
-    pattern, prefix, _ = dict(prefix_map)[location]
-    m = _re.findall(pattern,str(constraint.expr))
-    invalid = [x for x in m if x not in states]
-
-    if not all(x is None for x in invalid):
-        raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
-
-    return _re.sub(pattern,prefix,str(constraint.expr))
-
-
-def make_boundary_conditions(constraints,
-                             states,
-                             costates,
-                             cost,
-                             derivative_fn,
-                             location,
-                             prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
-                                         ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
-    """simplepipe task for creating boundary conditions for initial and terminal
-    constraints."""
-    prefix_map = dict(prefix_map)
-    bc_list = [sanitize_constraint_expr(x, states, location, prefix_map)
-                    for x in constraints[location]]
-
-    *_, sign = dict(prefix_map)[location]
-
-    cost_expr = sign * cost
-
-    #TODO: Fix hardcoded if conditions
-    #TODO: Change to symbolic
-    bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
-
-    return bc_list
-
-
-def make_time_bc(constraints, bc_terminal):
-    """Makes free or fixed final time boundary conditions."""
-    time_constraints = constraints.get('independent', [])
-    if len(time_constraints) > 0:
-        return bc_terminal+['tf - 1']
-    else:
-        # Add free final time boundary condition
-        return bc_terminal+['_H - 0']
-
-
-def make_dhdu(ham, controls, derivative_fn):
-    """Computes the partial of the hamiltonian w.r.t control variables."""
-    dhdu = []
-    for ctrl in controls:
-        dHdu = derivative_fn(ham, ctrl)
-        custom_diff = dHdu.atoms(sympy.Derivative)
-        # Substitute "Derivative" with complex step derivative
-        repl = {(d, im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
-                    for f,v in zip(d.atoms(sympy.AppliedUndef), d.atoms(Symbol))}
-
-        dhdu.append(dHdu.subs(repl))
-
-    return dhdu
 
 
 def make_control_law(dhdu, controls):
@@ -359,13 +178,6 @@ def process_path_constraints(path_constraints,
     yield s_list
     yield mu_vars
 
-
-def make_parameters(initial_lm_params, terminal_lm_params, s_list):
-    all_pi_names = [p['pi_list'] for p in s_list]
-    params_list = [str(p) for p in it.chain(initial_lm_params,
-                                            terminal_lm_params)] #, *all_pi_names)]
-    parameters = sym.symbols(' '.join(params_list))
-    return parameters
 
 def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
 
@@ -600,35 +412,6 @@ def generate_problem_data(workspace):
     return problem_data
 
 
-def init_workspace(ocp):
-    """Initializes the simplepipe workspace using an OCP definition.
-
-    All the strings in the original definition are converted into symbolic
-    expressions for computation.
-    """
-
-    workspace = {}
-    # variable_list = ['states', 'controls', 'constraints', 'quantities', 'initial_cost', 'terminal_cost', 'path_cost']
-    workspace['problem_name'] = ocp.name
-    workspace['indep_var'] = SymVar(ocp._properties['independent'])
-    workspace['states'] = [SymVar(s) for s in ocp.states()]
-    workspace['controls'] = [SymVar(u) for u in ocp.controls()]
-    workspace['constants'] = [SymVar(k) for k in ocp.constants()]
-
-    constraints = ocp.constraints()
-    workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
-                                for c_type, c_list in constraints.items()
-                                if c_type != 'path'}
-    workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction', 'start_eps'))
-                                     for c_obj in constraints.get('path', [])]
-
-    workspace['quantities'] = [SymVar(q) for q in ocp.quantities()]
-    workspace['initial_cost'] = SymVar(ocp.get_cost('initial'), sym_key='expr')
-    workspace['terminal_cost'] = SymVar(ocp.get_cost('terminal'), sym_key='expr')
-    workspace['path_cost'] = SymVar(ocp.get_cost('path'), sym_key='expr')
-    return workspace
-
-
 # Implement workflow using simplepipe and functions defined above
 BrysonHo = sp.Workflow([
     sp.Task(init_workspace, inputs=('problem',), outputs='*'),
@@ -639,14 +422,14 @@ BrysonHo = sp.Workflow([
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
             inputs=('initial_cost', 'constraints'),
             outputs=('aug_initial_cost')),
-    sp.Task(ft.partial(make_aug_params, location='initial'),
+    sp.Task(ft.partial(make_augmented_params, location='initial'),
             inputs=('constraints'),
             outputs=('initial_lm_params')),
 
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
             inputs=('terminal_cost', 'constraints'),
             outputs=('aug_terminal_cost')),
-    sp.Task(ft.partial(make_aug_params, location='terminal'),
+    sp.Task(ft.partial(make_augmented_params, location='terminal'),
             inputs=('constraints'),
             outputs=('terminal_lm_params')),
     sp.Task(make_costate_names,
