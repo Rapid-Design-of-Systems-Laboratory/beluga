@@ -76,11 +76,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     logging.info("Computing the necessary conditions of optimality")
     from beluga.optimlib import methods
 
-    # TODO: Load oc method by name
     wf = methods[method]
-    # wf = brysonho.BrysonHo
-    # workspace = brysonho.init_workspace(ocp)
-    # ocp_ws = wf(workspace)
     ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
 
     solinit = Solution()

@@ -10,6 +10,7 @@ from beluga.utils import sympify2, keyboard
 import simplepipe as sp
 from beluga.problem import SymVar
 import logging
+import numpy as np
 
 
 def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
