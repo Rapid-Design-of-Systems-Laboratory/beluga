@@ -4,24 +4,8 @@ import os, sys
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
-# Run tests
-# Ref: http://www.pydanny.com/python-dot-py-tricks.html
-if sys.argv[-1] == 'test':
-    test_requirements = [
-        'pytest',
-        'pytest-cov',
-        'pytest-describe',
-        'coverage',
-	    'mock'
-    ]
-    try:
-        modules = map(__import__, test_requirements)
-    except ImportError as e:
-        err_msg = e.message.replace("No module named ", "")
-        msg = "%s is not installed. Install your test requirements." % err_msg
-        raise ImportError(msg)
-    os.system('py.test tests')
-    sys.exit()
+with open('README.rst') as file:
+    long_description = file.read()
 
 modules = ['beluga.bvpsol',
            'beluga.codegen',
@@ -35,9 +19,6 @@ tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
          'beluga.ivpsol.integrators.tests',
          'beluga.optimlib.tests']
-
-with open('README.rst') as file:
-    long_description = file.read()
 
 setup(name="beluga",
       version="0.1.4",
