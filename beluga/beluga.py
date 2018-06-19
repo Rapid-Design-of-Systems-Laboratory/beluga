@@ -14,6 +14,7 @@ from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
 from .utils import tic, toc
 from .utils.keyboard import keyboard
+# from beluga.optimlib import ocp_to_bvp
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='SingleShooting',
@@ -77,6 +78,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     from beluga.optimlib import methods
 
     wf = methods[method]
+    # ocp_ws = ocp_to_bvp(ocp, guess_generator)
     ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
 
     solinit = Solution()
@@ -110,7 +112,6 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     solinit.aux['initial'] = initial_bc
     solinit.aux['terminal'] = terminal_bc
-    solinit2= copy.deepcopy(solinit)
     tic()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?

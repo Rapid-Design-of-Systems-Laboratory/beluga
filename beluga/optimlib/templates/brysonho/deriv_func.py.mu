@@ -30,12 +30,12 @@ def deriv_func_nojit(_t, _X, _p, _aux, arc_idx=None):
     arc_type = _arc_seq[arc_idx]
 
     {{#state_list}}{{.}},{{/state_list}} = _X[:{{num_states}}]
+    {{#parameter_list}}{{.}},{{/parameter_list}} = _p[:{{num_params}}]
+
     tf = abs(tf)
-    _X[{{num_states}}-1] = tf
     u_ = compute_control(_t,_X,_p,_aux, arc_idx)
 
     {{#control_list}}{{.}},{{/control_list}} = u_
-    {{#parameter_list}}{{.}},{{/parameter_list}} = _p[:{{num_params}}]
 
     # Declare all auxiliary variables
 {{#aux_list}}
@@ -57,6 +57,6 @@ def deriv_func_nojit(_t, _X, _p, _aux, arc_idx=None):
                    {{/eom}}]
 {{/costate_eoms}}
 
-    return np.hstack((state_eom, lam_eom, [0]))
+    return np.hstack((state_eom, lam_eom))
 
 deriv_func_ode45 = deriv_func_nojit

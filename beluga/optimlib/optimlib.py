@@ -3,7 +3,7 @@ Base functions required by all optimization methods.
 """
 
 
-from beluga.utils import sympify
+from beluga.utils import sympify, keyboard
 from beluga.problem import SymVar
 import sympy
 import functools as ft
@@ -34,6 +34,9 @@ def init_workspace(ocp):
     workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
                                 for c_type, c_list in constraints.items()
                                 if c_type != 'path'}
+
+    workspace['constraints_adjoined'] = ocp.constraints().adjoined
+
     workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction', 'start_eps'))
                                      for c_obj in constraints.get('path', [])]
 
@@ -61,48 +64,50 @@ def jacobian(expr_list, var_list, derivative_fn):
     return jac
 
 
-def make_augmented_cost(cost, constraints, location):
+def make_augmented_cost(cost, constraints, constraints_adjoined, location):
     """
     Augments the cost function with the given list of constraints.
 
     :param cost: The original cost function.
     :param constraints: List of constraint to adjoin to the cost function.
+    :param constraints_adjoined: Boolean value on whether or not the adjoined method is used.
     :param location: Location of each constraint.
 
     Returns the augmented cost function
     """
 
-    # TODO: Replace the next 4 lines with make_aug_params???
-    def make_lagrange_mult(c, ind = 1):
-        return sympify('lagrange_' + location + '_' + str(ind))
-    lagrange_mult = [make_lagrange_mult(c, ind)
-                     for (ind,c) in enumerate(constraints[location],1)]
+    if not constraints_adjoined:
+        return cost
 
-    aug_cost_expr = cost.expr + sum(nu * c
-                                    for (nu, c) in
-                                    zip(lagrange_mult, constraints[location]))
+    lagrange_mult = make_augmented_params(constraints, constraints_adjoined, location)
+    aug_cost_expr = cost.expr + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
 
     aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
+
     return aug_cost
 
 
-def make_augmented_params(constraints, location):
+def make_augmented_params(constraints, constraints_adjoined, location):
     """
-    Make the lagrange multiplier terms for boundary conditions.
+    Make the lagrange multiplier terms for adjoining boundary conditions.
 
     :param constraints: List of constraints at the boundaries.
+    :param constraints_adjoined: Boolean value on whether or not the adjoined method is used.
     :param location: Location of each constraint.
     :return: Lagrange multipliers for the given constraints.
     """
+    if not constraints_adjoined:
+        return []
 
     def make_lagrange_mult(c, ind = 1):
         return sympify('lagrange_' + location + '_' + str(ind))
-    lagrange_mult = [make_lagrange_mult(c, ind)
-                     for (ind,c) in enumerate(constraints[location],1)]
+
+    lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(constraints[location], 1)]
+
     return lagrange_mult
 
 
-def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location,
+def make_boundary_conditions(constraints, constraints_adjoined, states, costates, cost, derivative_fn, location,
                              prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
                                          ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
     """
@@ -119,14 +124,17 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     """
     prefix_map = dict(prefix_map)
     bc_list = [sanitize_constraint_expr(x, states, location, prefix_map) for x in constraints[location]]
-
     *_, sign = dict(prefix_map)[location]
 
     cost_expr = sign * cost
 
     #TODO: Fix hardcoded if conditions
     #TODO: Change to symbolic
-    bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
+    if constraints_adjoined:
+        bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
+    else:
+        refd = [sum(derivative_fn(c, s) for c in constraints[location]) for s in states]
+        bc_list += [str(costate - derivative_fn(cost_expr, state)) for i, (state, costate) in enumerate(zip(states,costates)) if refd[i] == False]
 
     return bc_list
 
@@ -193,7 +201,11 @@ def make_parameters(initial_lm_params, terminal_lm_params, s_list):
     all_pi_names = [p['pi_list'] for p in s_list]
     params_list = [str(p) for p in it.chain(initial_lm_params,
                                             terminal_lm_params)] #, *all_pi_names)]
-    parameters = sympy.symbols(' '.join(params_list))
+    if len(params_list) > 0:
+        parameters = [sympy.symbols(p) for p in params_list]
+    else:
+        parameters = []
+
     return parameters
 
 

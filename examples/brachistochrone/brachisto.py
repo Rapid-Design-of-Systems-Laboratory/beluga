@@ -1,6 +1,7 @@
 """Brachistochrone example."""
 import beluga
 import logging
+from math import pi
 
 ocp = beluga.OCP('brachisto')
 
@@ -16,21 +17,23 @@ ocp.state('x', 'v*cos(theta)', 'm')   \
 ocp.control('theta','rad')
 
 # Define constants
-ocp.constant('g',-9.81,'m/s^2')
+ocp.constant('g', -9.81, 'm/s^2')
 
 # Define costs
-ocp.path_cost('1','s')
+ocp.path_cost('1', 's')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x-x_0','m')    \
-    .initial('y-y_0','m')    \
-    .initial('v-v_0','m/s')  \
-    .terminal('x-x_f','m')   \
-    .terminal('y-y_f','m')
+    .initial('x-x_0', 'm')    \
+    .initial('y-y_0', 'm') \
+    .initial('v-v_0', 'm/s')  \
+    .terminal('x-x_f', 'm')   \
+    .terminal('y-y_f', 'm')
+
+# Use the "adjoined method" to solve for the constraints.
+ocp.constraints().set_adjoined(True)
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
-# ocp.scale(m=1, s=1, kg=1, rad=1)
 
 bvp_solver = beluga.bvp_algorithm('Shooting',
                         derivative_method='fd',
@@ -44,7 +47,9 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
                 direction='forward',
-                costate_guess = -0.1
+                costate_guess = -0.1,
+                control_guess=[-pi/2],
+                use_control_guess=True,
 )
 
 continuation_steps = beluga.init_continuation()
@@ -62,6 +67,3 @@ sol = beluga.solve(ocp,
              steps=continuation_steps,
              guess_generator=guess_maker)
 
-print(sol.y.T[0])
-print(sol.y.T[-1])
-print(sol.parameters)

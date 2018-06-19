@@ -32,6 +32,8 @@ def test_brachistochrone():
         .terminal('x-x_f', 'm') \
         .terminal('y-y_f', 'm')
 
+    ocp.constraints().set_adjoined(True)
+
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
     bvp_solver = beluga.bvp_algorithm('Shooting')
@@ -55,37 +57,35 @@ def test_brachistochrone():
     assert abs(y0[3] + 0.0667) < tol
     assert abs(y0[4] - 0.0255) < tol
     assert abs(y0[5] + 0.1019) < tol
-    assert abs(y0[6] - 1.8433) < tol # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
+    assert abs(sol.parameters[0] - 1.8433) < tol
     assert abs(yf[0] - 10) < tol
     assert abs(yf[1] + 10) < tol
     assert abs(yf[2] - 14.0071) < tol
     assert abs(yf[3] + 0.0667) < tol
     assert abs(yf[4] - 0.0255) < tol
     assert abs(yf[5] - 0) < tol
-    assert abs(yf[6] - 1.8433) < tol # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
-
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
-    assert abs(y0[6] - 1.8433) < tol  # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(yf[6] - 1.8433) < tol  # This is time. If this fails because time is no longer adjoined as an EOM, remove this line
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
+    # sol = beluga.solve(ocp, method='icrm', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    #
+    # y0 = sol.y.T[0]
+    # yf = sol.y.T[-1]
+    # assert abs(y0[0] - 0) < tol
+    # assert abs(y0[1] - 0) < tol
+    # assert abs(y0[2] - 0) < tol
+    # assert abs(y0[3] + 0.0667) < tol
+    # assert abs(y0[4] - 0.0255) < tol
+    # assert abs(y0[5] + 0.1019) < tol
+    # assert abs(sol.parameters[0] - 1.8433) < tol
+    # assert abs(yf[0] - 10) < tol
+    # assert abs(yf[1] + 10) < tol
+    # assert abs(yf[2] - 14.0071) < tol
+    # assert abs(yf[3] + 0.0667) < tol
+    # assert abs(yf[4] - 0.0255) < tol
+    # assert abs(yf[5] - 0) < tol
+    # assert abs(y0[3] - yf[3]) < tol
+    # assert abs(y0[4] - yf[4]) < tol
 
 
 def test_planarhypersonic():
@@ -134,6 +134,8 @@ def test_planarhypersonic():
         .terminal('h-h_f', 'm') \
         .terminal('theta-theta_f', 'rad')
 
+    ocp.constraints().set_adjoined(True)
+
     ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
     bvp_solver = beluga.bvp_algorithm('Shooting')
@@ -159,22 +161,26 @@ def test_planarhypersonic():
 
     y0 = sol.y.T[0]
     yf = sol.y.T[-1]
-    assert abs(y0[0] - 80000) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 4000) < tol
-    assert abs(y0[3] - 0.0195) < tol
-    assert abs(y0[4] + 16.8243) < tol
-    assert abs(y0[5] - 1212433.8085) < tol
-    assert abs(y0[6] + 2836.0620) < tol
-    assert abs(y0[7] - 0) < tol
-    assert abs(y0[8] - 144.5677) < tol # This is time. If it fails because time is not an EOM, delete this line
-    assert abs(yf[0] - 0) < tol
-    assert abs(yf[1] - 0.0873) < tol
-    assert abs(yf[2] - 2691.4733) < tol
-    assert abs(yf[3] + 0.9383) < tol
-    assert abs(yf[4] - 546.4540) < tol
-    assert abs(yf[5] - 1212433.8085) < tol
-    assert abs(yf[6] + 5382.9467) < tol
-    assert abs(yf[7] - 0.1842) < tol
-    assert abs(yf[8] - 144.5677) < tol # This is time. If it fails because time is not an EOM, delete this line
-    assert abs(y0[5] - yf[5]) < tol
+
+    y0e = [80000, 0, 4000, 0.0195, -16.8243, 1212433.8085, -2836.0620, 0]
+    yfe = [0, 0.0873, 2691.4733, -0.9383, 546.4540, 1212433.8085, -5382.9467, 0.1840]
+    tfe = 144.5677
+
+    assert abs((y0[0] - y0e[0]) / y0e[0]) < tol
+    assert abs((y0[1] - y0e[1])) < tol
+    assert abs((y0[2] - y0e[2]) / y0e[2]) < tol
+    assert abs((y0[3] - y0e[3]) / y0e[3]) < tol
+    assert abs((y0[4] - y0e[4]) / y0e[4]) < tol
+    assert abs((y0[5] - y0e[5]) / y0e[5]) < tol
+    assert abs((y0[6] - y0e[6]) / y0e[6]) < tol
+    assert abs((y0[7] - y0e[7])) < tol
+    assert abs((sol.parameters[0] - tfe) / tfe) < tol
+    assert abs((yf[0] - yfe[0])) < tol
+    assert abs((yf[1] - yfe[1]) / yfe[1]) < tol
+    assert abs((yf[2] - yfe[2]) / yfe[2]) < tol
+    assert abs((yf[3] - yfe[3]) / yfe[3]) < tol
+    assert abs((yf[4] - yfe[4]) / yfe[4]) < tol
+    assert abs((yf[5] - yfe[5]) / yfe[5]) < tol
+    assert abs((yf[6] - yfe[6]) / yfe[6]) < tol
+    assert abs((yf[7] - yfe[7]) / yfe[7]) < tol
+

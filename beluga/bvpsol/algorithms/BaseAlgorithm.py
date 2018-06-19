@@ -7,6 +7,7 @@ import numba
 import sys
 import pickle
 from beluga.codegen import *
+from beluga.utils import keyboard
 
 
 class BaseAlgorithm(object):
