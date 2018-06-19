@@ -57,7 +57,7 @@ def test_brachistochrone():
     assert abs(y0[3] + 0.0667) < tol
     assert abs(y0[4] - 0.0255) < tol
     assert abs(y0[5] + 0.1019) < tol
-    assert abs(sol.parameters[0] - 1.8433) < tol
+    assert abs(sol.x[-1] - 1.8433) < tol
     assert abs(yf[0] - 10) < tol
     assert abs(yf[1] + 10) < tol
     assert abs(yf[2] - 14.0071) < tol
@@ -77,7 +77,7 @@ def test_brachistochrone():
     # assert abs(y0[3] + 0.0667) < tol
     # assert abs(y0[4] - 0.0255) < tol
     # assert abs(y0[5] + 0.1019) < tol
-    # assert abs(sol.parameters[0] - 1.8433) < tol
+    # assert abs(sol.x[-1] - 1.8433) < tol
     # assert abs(yf[0] - 10) < tol
     # assert abs(yf[1] + 10) < tol
     # assert abs(yf[2] - 14.0071) < tol
@@ -174,7 +174,7 @@ def test_planarhypersonic():
     assert abs((y0[5] - y0e[5]) / y0e[5]) < tol
     assert abs((y0[6] - y0e[6]) / y0e[6]) < tol
     assert abs((y0[7] - y0e[7])) < tol
-    assert abs((sol.parameters[0] - tfe) / tfe) < tol
+    assert abs((sol.x[-1] - tfe) / tfe) < tol
     assert abs((yf[0] - yfe[0])) < tol
     assert abs((yf[1] - yfe[1]) / yfe[1]) < tol
     assert abs((yf[2] - yfe[2]) / yfe[2]) < tol

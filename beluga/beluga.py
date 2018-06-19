@@ -132,6 +132,13 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
 
+    # Final time is appended as a parameter, so scale the output x variables to show the correct time
+    for continuation_set in out['solution']:
+        for sol in continuation_set:
+            tf_ind = [i for i, s in enumerate(out['problem_data']['parameter_list']) if s is 'tf'][0]
+            tf = sol.parameters[tf_ind]
+            sol.x = sol.x*tf
+
     # Save data
     # del out['problem_data']['s_list']
     del out['problem_data']['states']
