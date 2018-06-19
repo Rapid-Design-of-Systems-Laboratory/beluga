@@ -363,7 +363,7 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
-    tf_var = sympify('tf') #TODO: Change to independent var?
+    tf_var = sympify('tf')
 
     dgdX = []
     for i, row in enumerate(workspace['dgdX'].tolist()):
@@ -388,20 +388,18 @@ def generate_problem_data(workspace):
         ],
         'state_list':
             [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
-            + ['tf']
         ,
-        'parameter_list': [],
+        'parameter_list': [str(tf_var)] + [str(p) for p in workspace['parameters']],
         'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
         'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
         'deriv_list':
             [str(tf_var*state.eom) for state in workspace['states']] +
-            [str(tf_var*costate.eom) for costate in workspace['costates']] +
-            [str(0)]  # TODO: Hardcoded 'tf'
+            [str(tf_var*costate.eom) for costate in workspace['costates']]
         ,
         'states': workspace['states'],
         'costates': workspace['costates'],
         'constants': workspace['constants'],
-        'parameters': [],
+        'parameters': [tf_var] + workspace['parameters'],
         'controls': workspace['controls'],
         'mu_vars': workspace['mu_vars'],
         'quantity_vars': workspace['quantity_vars'],
@@ -416,8 +414,8 @@ def generate_problem_data(workspace):
 
         's_list': [],
         'bc_list': [],
-        'num_states': 2*len(workspace['states']) + 1,
-        'num_params': 0,
+        'num_states': 2*len(workspace['states']),
+        'num_params': len(workspace['parameters']) + 1,
         'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
         'bc_initial': [str(_) for _ in workspace['bc_initial']],
         'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
@@ -430,7 +428,7 @@ def generate_problem_data(workspace):
         'bc_free_mask': workspace['bc_free_mask'],
         'dgdX': dgdX,
         'dgdU': dgdU,
-        'nOdes': 2*len(workspace['states']) + len(workspace['dae_states']) + 1,
+        'nOdes': 2*len(workspace['states']) + len(workspace['dae_states']),
     }
 
     return problem_data
@@ -445,16 +443,16 @@ ICRM = sp.Workflow([
             outputs=('states', 'controls', 'constants', 'constraints', 'path_cost', 's_list', 'xi_init_vals', 'derivative_fn', 'jacobian_fn')),
 
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
-            inputs=('initial_cost', 'constraints'),
+            inputs=('initial_cost', 'constraints', 'constraints_adjoined'),
             outputs=('aug_initial_cost')),
     sp.Task(ft.partial(make_augmented_params, location='initial'),
-            inputs=('constraints'),
+            inputs=('constraints', 'constraints_adjoined'),
             outputs=('initial_lm_params')),
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
-            inputs=('terminal_cost', 'constraints'),
+            inputs=('terminal_cost', 'constraints', 'constraints_adjoined'),
             outputs=('aug_terminal_cost')),
     sp.Task(ft.partial(make_augmented_params, location='terminal'),
-            inputs=('constraints'),
+            inputs=('constraints', 'constraints_adjoined'),
             outputs=('terminal_lm_params')),
     sp.Task(make_costate_names,
             inputs=('states'),
@@ -462,17 +460,11 @@ ICRM = sp.Workflow([
     sp.Task(make_ham_lamdot_with_eq_constraint,
             inputs=('states', 'costate_names', 'constraints', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
-    # sp.Task(ft.partial(make_boundary_conditions, location='initial'),
-    #         inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
-    #         outputs=('bc_initial')),
-    sp.Task(ft.partial(make_bc, location='initial'),
-            inputs=('constraints', 'states', 'costates', 'initial_cost', 'aug_initial_cost', 'derivative_fn'),
+    sp.Task(ft.partial(make_boundary_conditions, location='initial'),
+            inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
             outputs=('bc_initial')),
-    # sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
-    #         inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
-    #         outputs=('bc_terminal')),
-    sp.Task(ft.partial(make_bc, location='terminal'),
-            inputs=('constraints', 'states', 'costates', 'terminal_cost', 'aug_terminal_cost', 'derivative_fn'),
+    sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
+            inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
             outputs=('bc_terminal')),
     sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
     sp.Task(make_dhdu,
@@ -486,15 +478,6 @@ ICRM = sp.Workflow([
     sp.Task(make_bc_mask,
             inputs=('states', 'controls', 'mu_vars', 'initial_cost', 'aug_initial_cost', 'derivative_fn'),
             outputs=('bc_free_mask')),
-
-    # sp.Task(make_dhdu,
-    #         inputs=('ham', 'controls', 'derivative_fn'),
-    #         outputs=('dhdu')),
-    #
-    # sp.Task(make_control_law,
-    #         inputs=('dhdu','controls'),
-    #         outputs=('control_law')),
-    #
     sp.Task(generate_problem_data,
             inputs='*',
             outputs=('problem_data')),

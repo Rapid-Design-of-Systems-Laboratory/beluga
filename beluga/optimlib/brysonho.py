@@ -435,7 +435,7 @@ def make_constrained_arc_fns(workspace):
 def generate_problem_data(workspace):
     """Generates the `problem_data` dictionary used for code generation."""
 
-    tf_var = sympify('tf') #TODO: Change to independent var?
+    tf_var = sympify('tf')
     problem_data = {
         'method': 'brysonho',
         'problem_name': workspace['problem_name'],
@@ -454,7 +454,6 @@ def generate_problem_data(workspace):
         'deriv_list':
             [str(tf_var*state.eom) for state in workspace['states']] +
             [str(tf_var*costate.eom) for costate in workspace['costates']]
-            # [str(0)] # TODO: Hardcoded 'tf'
         ,
         'states': workspace['states'],
         'costates': workspace['costates'],
