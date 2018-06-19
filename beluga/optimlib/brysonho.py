@@ -22,6 +22,84 @@ from sympy.utilities.lambdify import lambdastr
 from beluga.utils import keyboard
 
 
+# def ocp_to_bvp(ocp, guess_maker):
+#     """
+#     This converts a user-defined OCP to a MPBVP
+#
+#     :param ocp:
+#     :return:
+#     """
+#     ws = init_workspace(ocp)
+#     quantity_vars, quantity_list, derivative_fn, jacobian_fn = process_quantities(ws['quantities'])
+#     augmented_initial_cost = make_augmented_cost(ws['initial_cost'], ws['constraints'], 'initial')
+#     initial_lm_params = make_augmented_params(ws['constraints'], 'initial')
+#     augmented_terminal_cost = make_augmented_cost(ws['terminal_cost'], 'terminal')
+#     terminal_lm_params = make_augmented_params(ws['constraints'], 'terminal')
+#     sp.Workflow([
+#         sp.Task(init_workspace, inputs=('problem',), outputs='*'),
+#         sp.Task(process_quantities,
+#                 inputs=('quantities'),
+#                 outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
+#
+#         sp.Task(ft.partial(make_augmented_cost, location='initial'),
+#                 inputs=('initial_cost', 'constraints'),
+#                 outputs=('aug_initial_cost')),
+#         sp.Task(ft.partial(make_augmented_params, location='initial'),
+#                 inputs=('constraints'),
+#                 outputs=('initial_lm_params')),
+#
+#         sp.Task(ft.partial(make_augmented_cost, location='terminal'),
+#                 inputs=('terminal_cost', 'constraints'),
+#                 outputs=('aug_terminal_cost')),
+#         sp.Task(ft.partial(make_augmented_params, location='terminal'),
+#                 inputs=('constraints'),
+#                 outputs=('terminal_lm_params')),
+#         sp.Task(make_costate_names,
+#                 inputs=('states'),
+#                 outputs=('costate_names')),
+#         sp.Task(make_hamiltonian_and_costate_rates,
+#                 inputs=('states', 'costate_names', 'path_cost', 'derivative_fn'),
+#                 outputs=('ham', 'costates')),
+#         sp.Task(ft.partial(make_boundary_conditions, location='initial'),
+#                 inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
+#                 outputs=('bc_initial')),
+#         sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
+#                 inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
+#                 outputs=('bc_terminal')),
+#         sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
+#         sp.Task(make_dhdu,
+#                 inputs=('ham', 'controls', 'derivative_fn'),
+#                 outputs=('dhdu')),
+#
+#         sp.Task(process_path_constraints,
+#                 inputs=('path_constraints',
+#                         'states',
+#                         'costates',
+#                         'constants',
+#                         'controls',
+#                         'ham',
+#                         'quantity_vars',
+#                         'jacobian_fn',
+#                         'derivative_fn'),
+#                 outputs=['s_list', 'mu_vars']),
+#
+#         sp.Task(make_control_law,
+#                 inputs=('dhdu', 'controls'),
+#                 outputs=('control_law')),
+#
+#         sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
+#                 outputs='parameters'),
+#
+#         sp.Task(make_constrained_arc_fns, inputs='*', outputs=['costate_eoms', 'bc_list']),
+#         # sp.Task(make_odefn, inputs='*', outputs='ode_fn'),
+#         # sp.Task(make_bcfn, inputs='*', outputs='bc_fn'),
+#         sp.Task(generate_problem_data,
+#                 inputs='*',
+#                 outputs=('problem_data')),
+#     ], description='Traditional optimal control workflow')
+#
+#     return 1
+
 def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivative_fn):
     """simplepipe task for creating the hamiltonian and costates
 
@@ -43,7 +121,7 @@ def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivat
 def make_control_law(dhdu, controls):
     """Solves control equation to get control law."""
     try:
-        print(controls)
+        logging.info(controls)
         var_list = list(controls)
         logging.info("Attempting using SymPy ...")
         logging.debug("dHdu = "+str(dhdu))
@@ -58,8 +136,8 @@ def make_control_law(dhdu, controls):
         var_sol = mathematica_solve(dhdu,var_list)
         # TODO: Extend numerical control laws to mu's
         ctrl_sol = var_sol
-    print('Control found')
-    print(ctrl_sol)
+    logging.info('Control found')
+    logging.info(ctrl_sol)
     # ctrl_sol = sympy.solve(dhdu, controls, dict=True)
     # control_options = [ [{'name':str(ctrl), 'expr':str(expr)}
     #                         for (ctrl,expr) in option.items()]
@@ -116,9 +194,6 @@ def process_constraint(s,
                 mu_sol = make_control_law(dh_du[0].subs(u_sol), [mult])
                 control_law = {**u_sol, **mu_sol[0]}
                 constrained_control_law.append(control_law)
-
-            from beluga.utils import keyboard
-            # keyboard()
 
             # constrained_control_law = make_control_law(dhdu, [*controls, mult])
             constrained_costate_rates = make_costate_rates(ham_aug[0], states, costate_names, derivative_fn)
@@ -275,7 +350,7 @@ def make_constrained_arc_fns(workspace):
                                 workspace['controls'], mu_vars, workspace['quantity_vars'], workspace['ham'])
         bc = {'entry_bc': entry_bc,
               'exit_bc': exit_bc,
-              'arctype':arc_type,
+              'arctype': arc_type,
               'pi_list': pi_list,
               'name': s['name']}
         bc_list.append(bc)
@@ -372,20 +447,19 @@ def generate_problem_data(workspace):
         ],
         'state_list':
             [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
-            + ['tf']
         ,
-        'parameter_list': [str(p) for p in workspace['parameters']],
+        'parameter_list': [str(tf_var)] + [str(p) for p in workspace['parameters']],
         'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
         'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
         'deriv_list':
             [str(tf_var*state.eom) for state in workspace['states']] +
-            [str(tf_var*costate.eom) for costate in workspace['costates']] +
-            [str(0)] # TODO: Hardcoded 'tf'
+            [str(tf_var*costate.eom) for costate in workspace['costates']]
+            # [str(0)] # TODO: Hardcoded 'tf'
         ,
         'states': workspace['states'],
         'costates': workspace['costates'],
         'constants': workspace['constants'],
-        'parameters': workspace['parameters'],
+        'parameters': [tf_var] + workspace['parameters'],
         'controls': workspace['controls'],
         'mu_vars': workspace['mu_vars'],
         'quantity_vars': workspace['quantity_vars'],
@@ -393,11 +467,9 @@ def generate_problem_data(workspace):
         'costate_eoms': workspace['costate_eoms'],
         'bc_list': workspace['bc_list'],
         'ham': workspace['ham'],
-        'quantity_vars': workspace['quantity_vars'],
         's_list': workspace['s_list'],
-        'bc_list': workspace['bc_list'],
-        'num_states': 2*len(workspace['states']) + 1,
-        'num_params': len(workspace['parameters']),
+        'num_states': 2*len(workspace['states']),
+        'num_params': len(workspace['parameters']) + 1,
         'dHdu': workspace['dhdu'],
         'bc_initial': [str(_) for _ in workspace['bc_initial']],
         'bc_terminal': [str(_) for _ in workspace['bc_terminal']],
@@ -406,7 +478,7 @@ def generate_problem_data(workspace):
         'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
         'ham_expr': str(workspace['ham']),
         'quantity_list': workspace['quantity_list'],
-        'nOdes': 2*len(workspace['states']) + 1
+        'nOdes': 2*len(workspace['states'])
     }
 
     return problem_data
@@ -418,19 +490,17 @@ BrysonHo = sp.Workflow([
     sp.Task(process_quantities,
             inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
-
     sp.Task(ft.partial(make_augmented_cost, location='initial'),
-            inputs=('initial_cost', 'constraints'),
+            inputs=('initial_cost', 'constraints', 'constraints_adjoined'),
             outputs=('aug_initial_cost')),
     sp.Task(ft.partial(make_augmented_params, location='initial'),
-            inputs=('constraints'),
+            inputs=('constraints', 'constraints_adjoined'),
             outputs=('initial_lm_params')),
-
     sp.Task(ft.partial(make_augmented_cost, location='terminal'),
-            inputs=('terminal_cost', 'constraints'),
+            inputs=('terminal_cost', 'constraints', 'constraints_adjoined'),
             outputs=('aug_terminal_cost')),
     sp.Task(ft.partial(make_augmented_params, location='terminal'),
-            inputs=('constraints'),
+            inputs=('constraints', 'constraints_adjoined'),
             outputs=('terminal_lm_params')),
     sp.Task(make_costate_names,
             inputs=('states'),
@@ -439,10 +509,10 @@ BrysonHo = sp.Workflow([
             inputs=('states', 'costate_names', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
     sp.Task(ft.partial(make_boundary_conditions, location='initial'),
-            inputs=('constraints', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
+            inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
             outputs=('bc_initial')),
     sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
-            inputs=('constraints', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
+            inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
             outputs=('bc_terminal')),
     sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
     sp.Task(make_dhdu,

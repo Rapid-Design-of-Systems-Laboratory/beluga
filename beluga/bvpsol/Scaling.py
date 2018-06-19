@@ -59,15 +59,16 @@ class Scaling(dict):
                             for state, costate in zip(ws['states'],ws['costates']) }
         self.scale_func['states'].update(costate_units)
 
-        # Scaling function for the independent variable
-        # TODO: Fix hardcoding
-        self.scale_func['states']['tf'] = self.create_scale_fn(ws['indep_var'].unit)
-
         self.scale_func['initial'] = self.scale_func['states']
         self.scale_func['terminal'] = self.scale_func['states']
 
         # Scaling functions for constraint multipliers and other parameters
         self.scale_func['parameters'] = {}
+
+        # Scaling function for the independent variable
+        # TODO: Fix hardcoding
+        self.scale_func['parameters']['tf'] = self.create_scale_fn(ws['indep_var'].unit)
+
         self.scale_func['constraints'] = {}
         indices = {}
 

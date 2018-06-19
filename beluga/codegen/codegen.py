@@ -12,6 +12,7 @@ import beluga
 import sys
 import numpy as np
 from math import *
+from beluga.utils import keyboard
 
 
 def load_eqn_template(problem_data, template_file, renderer = pystache.Renderer(escape=lambda u: u)):
@@ -75,8 +76,8 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     tf_var = sym.sympify('tf')
     unknowns = list(it.chain(controls, mu_vars))
 
-    ham_args = [*states, *costates, tf_var, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, tf_var, *parameters, *constants]
+    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
+    u_args = [*states, *costates, *parameters, *constants]
 
     if constraint_name is not None:
         ham_args.append(constraint_name)

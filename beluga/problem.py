@@ -19,6 +19,7 @@ from itertools import zip_longest
 from beluga.bvpsol import Scaling
 from beluga.ivpsol.integrators import ode45
 from beluga.utils import sympify, tic, toc
+from beluga.utils import keyboard
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
@@ -169,6 +170,13 @@ class OCP(object):
 
 
 class ConstraintList(dict):
+    def __new__(cls, *args, **kwargs):
+        obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
+        obj.adjoined = False
+        return obj
+
+    def set_adjoined(self, bool):
+        self.adjoined = bool
 
     def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """
@@ -176,15 +184,13 @@ class ConstraintList(dict):
 
         Returns reference to self.constraint_aliases for chaining
         """
+
         c_list = self.get(constraint_type, [])
 
         constraint = _combine_args_kwargs(constraint_args, args, kwargs)
-        # cobj = SymVar(constraint, sym_key='expr')
-        # cobj.type = constraint_type
-        # self.append(constraint)
-        # self.append(cobj)
         c_list.append(constraint)
         self[constraint_type] = c_list
+
         return self
 
     # Aliases for defining constraints of different types
@@ -406,7 +412,7 @@ class GuessGenerator(object):
 
         # Add time of integration to states
 
-        x0 = np.append(x0, self.time_integrate)
+        # x0 = np.append(x0, self.time_integrate)
 
         # Guess zeros for missing parameters
         # TODO: Automatically generate parameter guess values
@@ -419,6 +425,8 @@ class GuessGenerator(object):
             # TODO: Write a better error message
             raise ValueError('param_guess too big. Maximum length allowed is ' +
                              len(solinit.aux['parameters']))
+
+        param_guess[0] = self.time_integrate
 
         if self.dae_num_states > 0:
             dae_guess = u0

@@ -52,3 +52,21 @@ def test_Shooting_2():
     assert out.y.T[-1][0] - 1 < tol
     assert out.y.T[-1][1] < tol
     assert out.parameters[0] - 17.09646175 < tol
+
+def test_Shooting_3():
+    # This problem contains a parameter, but it is not explicit in the BCs.
+    # Since time is buried in the ODEs, this tests if the BVP solver calculates
+    # sensitivities with respect to parameters.
+    def odefun(t, X, p, const, arc):
+        return (1 * p[0])
+
+    def bcfun(X0, Xf, p, aux):
+        return np.hstack((X0[0] - 0, Xf[0] - 2))
+
+    algo = Shooting()
+    solinit = Solution()
+    solinit.x = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0], [0]]).T
+    solinit.parameters = np.array([1])
+    out = algo.solve(odefun, bcfun, solinit)
+    assert out.parameters - 2 < tol

@@ -5,4 +5,6 @@ from .optimlib import (init_workspace, jacobian, make_augmented_cost, make_augme
                        make_costate_rates, make_dhdu, make_parameters, make_time_bc, process_quantities,
                        sanitize_constraint_expr, total_derivative)
 
+# from .brysonho import ocp_to_bvp
+
 methods = {'traditional': BrysonHo, 'icrm': ICRM, 'brysonho': BrysonHo}

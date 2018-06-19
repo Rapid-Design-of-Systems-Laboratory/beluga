@@ -126,8 +126,8 @@ class Shooting(BaseAlgorithm):
             # Evaluate for all arcs
             for i in range(nOdes):
                 dx[i, arc_idx] = dx[i, arc_idx] + h
-                dyb = np.dot(phi[-1], dx[:])
-                f = bc_func(ya + dx[:nOdes,:], yb + dyb, p, aux)
+                dy = np.dot(phi[-1], dx)
+                f = bc_func(ya + dx[:nOdes], yb + dy, p, aux)
                 M[:,i] = (f-fx)/h
                 dx[i, arc_idx] = dx[i, arc_idx] - h
 
@@ -138,14 +138,16 @@ class Shooting(BaseAlgorithm):
         for i in range(p.size):
             p[i] = p[i] + h
             j = i + nOdes
-            dx[j] = dx[j] + h
-            dy = np.dot(phi[-1],dx[:])
+            dx[j, arc_idx] = dx[j, arc_idx] + h
+            dy = np.dot(phi[-1], dx)
             f = bc_func(ya, yb + dy, p, aux)
             P[:,i] = (f-fx)/h
-            dx[j] = dx[j] - h
+            dx[j, arc_idx] = dx[j, arc_idx] - h
             p[i] = p[i] - h
 
-        J[:,nOdes*num_arcs:] = P
+        # J[:,nOdes*num_arcs:] = P
+        J = np.hstack((M,P))
+        # keyboard()
         return J
 
     @staticmethod
@@ -161,7 +163,7 @@ class Shooting(BaseAlgorithm):
             X = _X[0:nOdes]  # Just states
 
             # Compute Jacobian matrix, F using finite difference
-            fx = odefn(t, X, p, const, arc_idx)
+            fx = np.squeeze([odefn(t, X, p, const, arc_idx)])
 
             for i in numba.prange(nOdes):
                 fxh = odefn(t, X + Xh[i, :], p, const, arc_idx)
@@ -170,10 +172,10 @@ class Shooting(BaseAlgorithm):
             for i in numba.prange(nParams):
                 p[i] += StepSize
                 fxh = odefn(t, X, p, const, arc_idx)
-                F[:, i+nOdes] = (fxh - fx) / StepSize
+                F[:, i+nOdes] = (fxh - fx).real / StepSize
                 p[i] -= StepSize
 
-            phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))),np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
+            phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))), np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
             return np.concatenate((fx, np.reshape(phiDot, (nOdes * (nOdes + nParams)))))
 
         def wrapper(t, _X, p, const, arc_idx):  # needed for scipy
@@ -199,7 +201,7 @@ class Shooting(BaseAlgorithm):
         # Extract some info from the guess structure
         y0g = sol.y[:,0]
         nOdes = y0g.shape[0]
-        paramGuess = solinit.parameters
+        paramGuess = sol.parameters
 
         # Make the state-transition ode matrix if it hasn't already been made
         if self.stm_ode_func is None:
@@ -279,7 +281,7 @@ class Shooting(BaseAlgorithm):
 
                 r1 = max(abs(res))
                 if self.verbose:
-                    logging.debug('Residue: '+str(r1))
+                    logging.debug('Residual: ' + str(r1))
 
                 if r1 > self.max_error:
                     raise RuntimeError('Error exceeded max_error')
