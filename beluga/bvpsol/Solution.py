@@ -3,11 +3,13 @@ import numexpr as ne
 from scipy.interpolate import InterpolatedUnivariateSpline
 import math
 
+
 class Solution(object):
     x = None
     y = None
     p = None
     nOdes = 0
+
     def __init__(self, x=None, y=None, parameters=None, aux=None, state_list=None, arcs=None):
         "x,y and parameters should be vectors"
         if x is not None and y is not None:
@@ -81,17 +83,16 @@ class Solution(object):
             self.y = new_y
             self.u = new_u
             self.arcs = new_arcs
-        return (new_y, new_u)
 
-    def prepare(self, problem_data, mesh_size = None, overwrite=False):
+        return new_y, new_u
+
+    def prepare(self, problem_data, mesh_size=None, overwrite=False):
         """
         Creates the dictionary required to evaluate expressions over the solution
 
         mesh_size: Evaluate over new mesh
         overwrite: Overwrite existing solution with new mesh
         """
-
-        x,y,u = self.x, self.y, self.u
 
         # TODO: Test mesh_size improvement in prepare()
         # from beluga.utils import keyboard
@@ -112,9 +113,9 @@ class Solution(object):
             (new_y, new_u) = self.interpolate(new_x, new_arcs, overwrite=overwrite)
         else:
             new_x, new_y, new_u, new_arcs = self.x, self.y, self.u, self.arcs
-        x,y,u,arcs = self.x, self.y, self.u, self.arcs
+        x, y, u, p, arcs = self.x, self.y, self.u, self.parameters, self.arcs
         if not overwrite:
-            x,y,u,arcs = new_x, new_y, new_u, new_arcs
+            x, y, u, p, arcs = new_x, new_y, new_u, new_arcs
 
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
@@ -142,14 +143,14 @@ class Solution(object):
 
         # TODO: Name 'tf' is hardcoded
         t_list = []
-        tf_ind = problem_data['state_list'].index('tf')
+        tf_ind = problem_data['parameter_list'].index('tf')
         last_t = 0
         for arc_start, arc_end in arcs:
             start_x = x[arc_start]
             # from beluga.utils import keyboard
             # keyboard()
-            t_list.append(last_t+(x[arc_start:arc_end+1] - start_x)*y[tf_ind,arc_start])
-            last_t += y[tf_ind,arc_start]
+            t_list.append(last_t+(x[arc_start:arc_end+1] - start_x))
+            last_t += y[tf_ind, arc_start]
 
         variables += [('t', np.hstack(t_list))]
 

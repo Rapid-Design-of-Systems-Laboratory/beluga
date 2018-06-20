@@ -183,14 +183,14 @@ class Shooting(BaseAlgorithm):
         return wrapper
 
     def solve(self, deriv_func, bc_func, solinit):
-        '''
+        """
         Solve a two-point boundary value problem using the shooting method
 
         :param deriv_func: The ODE function.
         :param bc_func: The boundary conditions function.
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
-        '''
+        """
 
         # Instantly make a copy of sol and format inputs
         sol = copy.deepcopy(solinit)
@@ -199,7 +199,7 @@ class Shooting(BaseAlgorithm):
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
 
         # Extract some info from the guess structure
-        y0g = sol.y[:,0]
+        y0g = sol.y[:, 0]
         nOdes = y0g.shape[0]
         paramGuess = sol.parameters
 
@@ -315,7 +315,7 @@ class Shooting(BaseAlgorithm):
                 r0 = r1
 
                 # No damping if error within one order of magnitude of tolerance
-                if r1 < min(10*self.tolerance,1e-3):
+                if r1 < min(10*self.tolerance, 1e-3):
                     alpha, beta = 1, 1
 
                 try:
@@ -334,7 +334,7 @@ class Shooting(BaseAlgorithm):
                     ya = ya + d_ya
 
                 n_iter += 1
-                logging.debug('Iteration #'+str(n_iter))
+                logging.debug('Iteration #' + str(n_iter))
 
         except Exception as e:
             logging.warning(e)

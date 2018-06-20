@@ -2,6 +2,8 @@ import numbers as num# Avoid clashing with Number in sympy
 
 from sympy import *
 from beluga.utils import sympify, keyboard
+
+
 class Scaling(dict):
     excluded_aux = ['function']
 
@@ -12,7 +14,7 @@ class Scaling(dict):
         self.problem_data = {}
 
     """Defines scaling for a set of units"""
-    def unit(self,unit_str,unit_scale):
+    def unit(self, unit_str, unit_scale):
         """Adds scaling factor for a given unit
         Allows method chaining
         """
@@ -55,7 +57,7 @@ class Scaling(dict):
         self.scale_func['states'] = {}
         self.scale_func['states'] = {str(state): self.create_scale_fn(state.unit)
                             for state in ws['states']}
-        costate_units = { str(costate): self.create_scale_fn('('+cost_unit+')/('+str(state.unit)+')')
+        costate_units = {str(costate): self.create_scale_fn('('+cost_unit+')/('+str(state.unit)+')')
                             for state, costate in zip(ws['states'],ws['costates']) }
         self.scale_func['states'].update(costate_units)
 
@@ -70,7 +72,6 @@ class Scaling(dict):
         self.scale_func['parameters']['tf'] = self.create_scale_fn(ws['indep_var'].unit)
 
         self.scale_func['constraints'] = {}
-        indices = {}
 
         for c_type, c_list in ws['constraints'].items():
             for c, mul_var in zip(c_list, ws.get(c_type+'_lm_params',[])):
@@ -83,7 +84,6 @@ class Scaling(dict):
                 pi_unit = '('+cost_unit+')/('+str(s['unit'])+')'
                 self.scale_func['parameters'][str(pi_var)] = self.create_scale_fn(pi_unit)
             self.scale_func['constraints'][str(s['name'])] = self.create_scale_fn(s['unit'])
-
 
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify(unit_expr))
@@ -140,7 +140,6 @@ class Scaling(dict):
                 for var_name,var_func in var_funcs.items():
                     self.scale_vals[var_type][var_name] = var_func(*scale_factor_list)
 
-
     def scale(self, sol):
         """Scales a BVP solution"""
 
@@ -149,8 +148,8 @@ class Scaling(dict):
                   {'type':'terminal','vars':self.problem_data['state_list']}]
 
         # Scale the states and costates
-        for idx,state in enumerate(self.problem_data['state_list']):
-            sol.y[idx,:] /= self.scale_vals['states'][state]
+        for idx, state in enumerate(self.problem_data['state_list']):
+            sol.y[idx, :] /= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):
@@ -173,17 +172,16 @@ class Scaling(dict):
             scale_val = self.scale_vals['constraints'][s_name]
             sol.aux['constraint'][(s_name, arc_idx)] /= scale_val
 
-
     def unscale(self, sol):
-        """Unscales a solution object"""
+        """ Unscales a solution object"""
 
         # Additional aux entries for initial and terminal BCs
-        extras = [{'type':'initial','vars':self.problem_data['state_list']},
-                  {'type':'terminal','vars':self.problem_data['state_list']}]
+        extras = [{'type': 'initial', 'vars': self.problem_data['state_list']},
+                  {'type': 'terminal', 'vars': self.problem_data['state_list']}]
 
         # Scale the states and costates
-        for idx,state in enumerate(self.problem_data['state_list']):
-            sol.y[idx,:] *= self.scale_vals['states'][state]
+        for idx, state in enumerate(self.problem_data['state_list']):
+            sol.y[idx, :] *= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):

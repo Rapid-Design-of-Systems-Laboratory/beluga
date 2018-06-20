@@ -125,7 +125,7 @@ def make_control_law(dhdu, controls):
         var_list = list(controls)
         logging.info("Attempting using SymPy ...")
         logging.debug("dHdu = "+str(dhdu))
-        ctrl_sol = sympy.solve(dhdu, var_list, dict=True)
+        ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
 
         # raise ValueError() # Force mathematica
     except ValueError as e:  # FIXME: Use right exception name here
@@ -316,6 +316,7 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     entry_bc = [str(_) for _ in entry_bc]
     exit_bc = [str(_) for _ in exit_bc]
     return entry_bc, exit_bc
+
 
 def make_constrained_arc_fns(workspace):
     """Creates constrained arc control functions."""
