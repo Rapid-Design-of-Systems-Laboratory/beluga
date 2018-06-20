@@ -11,6 +11,9 @@ import imp
 from beluga.problem import BVP
 import sys
 import logging
+
+import beluga
+
 # def create_odefn(problem_data, module):
 #
 

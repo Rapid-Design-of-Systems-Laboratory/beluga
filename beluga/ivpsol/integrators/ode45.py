@@ -6,7 +6,7 @@ def ode45(f, tspan, y0, *args, **kwargs):
     """Implements interface similar to MATLAB's ode45 using scipy"""
 
     abstol = kwargs.get('abstol', 1e-5)
-    reltol = kwargs.get('reltol', 1e-3)
+    reltol = kwargs.get('reltol', 1e-5)
     maxstep = kwargs.get('maxstep', 0.1)
 
     sol = scipy.integrate.solve_ivp(lambda t, y: f(t, y, *args), tspan, y0, rtol=reltol, atol=abstol, max_step=maxstep)

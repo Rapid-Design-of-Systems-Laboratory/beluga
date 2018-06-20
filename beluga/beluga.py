@@ -115,7 +115,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     tic()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?
-    out = {};
+    out = dict()
 
     out['problem_data'] = ocp_ws['problem_data'];
 

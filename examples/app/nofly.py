@@ -1,4 +1,6 @@
 from math import pi
+import beluga
+
 ocp = beluga.OCP('nofly')
 
 # Define independent variables
@@ -73,7 +75,7 @@ ocp.constraints() \
 # 75(10) seconds for 2 vehicle unconstrainted  (with u constraints)
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+bvp_solver = beluga.bvp_algorithm('Shooting',
                         tolerance=1e-3,
                         max_iterations=200,
                         verbose = True,
