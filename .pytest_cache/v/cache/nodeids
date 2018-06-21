@@ -1,0 +1,14 @@
+[
+  "beluga/bvpsol/tests/test_Shooting.py::test_Shooting_1",
+  "beluga/bvpsol/tests/test_Shooting.py::test_Shooting_2",
+  "beluga/bvpsol/tests/test_Shooting.py::test_Shooting_3",
+  "beluga/ivpsol/tests/test_ivpsol.py::test_propagator_1",
+  "beluga/ivpsol/tests/test_ivpsol.py::test_propagator_2",
+  "beluga/ivpsol/tests/test_ivpsol.py::test_Trajectory",
+  "beluga/ivpsol/tests/test_ivpsol.py::test_integrate_quads",
+  "beluga/ivpsol/tests/test_ivpsol_full.py::test_ode45_2",
+  "beluga/optimlib/tests/test_optimlib.py::test_init_workspace",
+  "examples/tests/test_examples.py::test_brachistochrone",
+  "examples/tests/test_examples.py::test_brachistochrone_adjoined",
+  "examples/tests/test_examples.py::test_planarhypersonic"
+]
