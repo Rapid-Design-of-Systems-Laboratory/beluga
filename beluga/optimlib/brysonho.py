@@ -125,7 +125,7 @@ def make_control_law(dhdu, controls):
         var_list = list(controls)
         logging.info("Attempting using SymPy ...")
         logging.debug("dHdu = "+str(dhdu))
-        ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
+        ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=True, warn=True)
 
         # raise ValueError() # Force mathematica
     except ValueError as e:  # FIXME: Use right exception name here
@@ -144,6 +144,7 @@ def make_control_law(dhdu, controls):
     #                         for option in ctrl_sol]
     control_options = ctrl_sol
     return control_options
+
 
 def process_constraint(s,
                        s_idx,
