@@ -16,18 +16,33 @@ import numpy as np
 import sympy as sym
 
 
-def add_equality_constraints(ham, constraints):
+def add_equality_constraints(hamiltonian, equality_constraints):
+    """
+    Adjoins equality constraints to a Hamiltonian function.
 
-    equality_constraints = constraints.get('equality', [])
+    .. math::
+        \\begin{aligned}
+            \\text{add_equality_constraints} : C^\\infty(M) &\\rightarrow C^\\infty(M) \\\\
+            (H, f) &\\mapsto H + \\mu_i f_i \\; \\forall \\; i \\in f
+        \\end{aligned}
+
+    :param ham: A Hamiltonian function, :math:`H`.
+    :param equality_constraints: List of equality constraints, :math:`f`.
+    :return: Augmented Hamiltonian function.
+    """
     # Adjoin equality constraints
     for i in range(len(equality_constraints)):
-        ham += sympify('mu'+str(i+1)) * (sympify2(equality_constraints[i].expr))
+        hamiltonian += sympify('mu'+str(i+1)) * (sympify2(equality_constraints[i].expr))
 
-    return ham
+    return hamiltonian
 
 
 def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
-    # var -> varible inside saturation function
+    """
+    Documentation needed.
+    """
+
+    # var -> variable inside saturation function
     if ubound is None and lbound is None:
         raise ValueError('At least one bound should be specified for the constraint.')
     if ubound == lbound:
@@ -87,14 +102,21 @@ def init_workspace(ocp):
     return workspace
 
 
+# TODO: Check if this function is ever used. I don't think it's needed.
 def jacobian(expr_list, var_list, derivative_fn):
     """
-    Defines the Jacobian matrix.
+    Returns a Jacobian matrix for a given set of functions and variables.
 
-    :param expr_list: List of expressions to take the partials of.
-    :param var_list: List of variables to take the partials with respect to.
-    :param derivative_fn: Derivative function that evaluates
-    :return: The Jacobian matrix.
+    .. math::
+        \\begin{aligned}
+            \\text{jacobian} : \\Gamma^1(M) &\\rightarrow \\Gamma^2(M) \\\\
+            (f, x, d) &\\mapsto J_{ij} = d_{x_j} f_i \\; \\forall \\; i,j
+        \\end{aligned}
+
+    :param expr_list: List of expressions to take the partials of, :math:`f`.
+    :param var_list: List of variables to take the partials with respect to, :math:`x`.
+    :param derivative_fn: Derivative function, :math:`d`
+    :return: The Jacobian matrix, :math:`J_{ij}`.
     """
 
     jac = sympy.zeros(len(expr_list), len(var_list))
@@ -108,9 +130,15 @@ def make_augmented_cost(cost, constraints, constraints_adjoined, location):
     """
     Augments the cost function with the given list of constraints.
 
-    :param cost: The original cost function.
-    :param constraints: List of constraint to adjoin to the cost function.
-    :param constraints_adjoined: Boolean value on whether or not the adjoined method is used.
+    .. math::
+        \\begin{aligned}
+            \\text{make_augmented_cost} : C^\\infty(M) &\\rightarrow C^\\infty(M) \\\\
+            (f, g) &\\mapsto f + g_i \\nu_i \\; \\forall \\; i \\in g
+        \\end{aligned}
+
+    :param cost: The cost function, :math:`f`.
+    :param constraints: List of constraint to adjoin to the cost function, :math:`g`.
+    :param constraints_adjoined: Boolean value on whether or not the adjoined method is used. Skips if `False`.
     :param location: Location of each constraint.
 
     Returns the augmented cost function
@@ -123,7 +151,7 @@ def make_augmented_cost(cost, constraints, constraints_adjoined, location):
     aug_cost_expr = cost.expr + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
 
     aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
-
+    keyboard()
     return aug_cost
 
 
@@ -147,12 +175,7 @@ def make_augmented_params(constraints, constraints_adjoined, location):
     return lagrange_mult
 
 
-def make_bc_mask(states,
-                 controls,
-                 mu_vars,
-                 cost,
-                 aug_cost,
-                 derivative_fn):
+def make_bc_mask(states, controls, mu_vars, cost, aug_cost, derivative_fn):
 
     """Creates mask marking free and bound variables at t=0
 
@@ -320,8 +343,8 @@ def make_costate_names(states):
     """
     Makes a list of variables representing each costate.
 
-    :param states: List of state variables.
-    :return: List of costate variables.
+    :param states: List of state variables, :math:`x`.
+    :return: List of costate variables, :math:`\\lambda_x`.
     """
 
     return [sympify('lam'+str(s.name).upper()) for s in states]
@@ -396,7 +419,7 @@ def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_
     """
 
     ham = path_cost.expr + sum([lam*s.eom for s, lam in zip(states, costate_names)])
-    ham = add_equality_constraints(ham, constraints)
+    ham = add_equality_constraints(ham, constraints.get('equality', []))
     yield ham
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
 

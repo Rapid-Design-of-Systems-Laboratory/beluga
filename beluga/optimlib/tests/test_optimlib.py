@@ -1,6 +1,6 @@
 import pytest
 from beluga.optimlib import init_workspace
-
+from sympy import Symbol
 
 def test_init_workspace():
     from beluga.problem import OCP
@@ -25,3 +25,6 @@ def test_init_workspace():
 
     assert isinstance(ws, dict)
     assert ws['problem_name'] == 'test_problem'
+
+def test_make_augmented_cost():
+

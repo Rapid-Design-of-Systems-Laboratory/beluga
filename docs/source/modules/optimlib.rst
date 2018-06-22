@@ -25,6 +25,10 @@ ICRM
 Base Class Reference
 --------------------
 
+.. autofunction:: add_equality_constraints
+
+.. autofunction:: get_satfn
+
 .. autofunction:: init_workspace
 
 .. autofunction:: jacobian

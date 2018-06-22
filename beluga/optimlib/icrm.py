@@ -13,9 +13,6 @@ import logging
 import numpy as np
 
 
-
-
-
 def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
     equality_constraints = constraints.get('equality', [])
     if len(equality_constraints) > 0:
@@ -33,7 +30,7 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
     dgdX = sym.Matrix([[derivative_fn(g_i, x_i) for x_i in X] for g_i in g])
     dgdU = sym.Matrix([[derivative_fn(g_i, u_i) for u_i in U] for g_i in g])
 
-    udot = dgdU.LUsolve(-dgdX*xdot); # dgdU * udot + dgdX * xdot = 0
+    udot = dgdU.LUsolve(-dgdX*xdot) # dgdU * udot + dgdX * xdot = 0
 
     dae_states = U
     dae_equations = list(udot)
@@ -43,8 +40,6 @@ def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, g
         guess.start.extend(xi_init_vals)
     guess.dae_num_states = len(U)
 
-    # from beluga.utils import keyboard
-    # keyboard()
     yield mu_vars
     yield mu_lhs
     yield dae_states
