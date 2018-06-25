@@ -1,8 +1,9 @@
-import numbers as num# Avoid clashing with Number in sympy
+import numbers as num
 
 from sympy import *
 from beluga.utils import sympify, keyboard
 
+import copy
 
 class Scaling(dict):
     excluded_aux = ['function']
@@ -43,8 +44,6 @@ class Scaling(dict):
         # Scaling functions for constants
         self.scale_func['const'] = {str(const): self.create_scale_fn(const.unit)
                                     for const in ws['constants']}
-        # self.scale_func['const'] = {str(const): lambdify(self.units_sym,sympify(const.unit))
-        #                             for const in ws['constants']}
 
         # Cost function used for scaling costates
         cost_keys = ['path_cost', 'terminal_cost', 'initial_cost']
@@ -56,9 +55,9 @@ class Scaling(dict):
         # Scaling functions for states & costates (combined)
         self.scale_func['states'] = {}
         self.scale_func['states'] = {str(state): self.create_scale_fn(state.unit)
-                            for state in ws['states']}
+                                     for state in ws['states']}
         costate_units = {str(costate): self.create_scale_fn('('+cost_unit+')/('+str(state.unit)+')')
-                            for state, costate in zip(ws['states'],ws['costates']) }
+                         for state, costate in zip(ws['states'],ws['costates']) }
         self.scale_func['states'].update(costate_units)
 
         self.scale_func['initial'] = self.scale_func['states']
@@ -103,8 +102,7 @@ class Scaling(dict):
                             for idx,state in enumerate(self.problem_data['state_list'])]
 
             var_dict = dict(variables)
-            # from beluga.utils import keyboard
-            # keyboard()
+
             # Evaluate expression to get scaling factor
             return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
 
@@ -121,15 +119,7 @@ class Scaling(dict):
 
         # Find scaling factors for each entity in problem
         self.scale_vals = {}
-        # Dictionary comprehension version -- remove for lack of readability
-        # self.scale_vals = {var_type:
-        #                     var_funcs(*self.scale_factors)
-        #                     if callable(var_funcs)
-        #                     else {
-        #                         var_name: var_func(*scale_factor_list)
-        #                         for var_name,var_func in var_funcs.items()
-        #                     }
-        #                     for var_type,var_funcs in self.scale_func.items() }
+
         for var_type,var_funcs in self.scale_func.items():
             # If there are no sub items, use the scale factor directly
             if callable(var_funcs):
@@ -142,6 +132,7 @@ class Scaling(dict):
 
     def scale(self, sol):
         """Scales a BVP solution"""
+        solout = copy.deepcopy(sol)
 
         # Additional aux entries for initial and terminal BCs
         extras = [{'type':'initial','vars':self.problem_data['state_list']},
@@ -149,31 +140,27 @@ class Scaling(dict):
 
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
-            sol.y[idx, :] /= self.scale_vals['states'][state]
+            solout.y[idx, :] /= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
-                    sol.aux[aux['type']][var] /= self.scale_vals[aux['type']][var]
+                    solout.aux[aux['type']][var] /= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
-            sol.parameters[idx] /= self.scale_vals['parameters'][param]
-
-        # Scale constraint limits
-        # for s in self.problem_data['s_list']:
-        #     s_name = s['name']
-        #     scale_val = self.scale_vals['constraints'][s_name]
-        #     for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
-        #         sol.aux['constraints'][s_name]['limit'][arc_idx] /= scale_val
+            solout.parameters[idx] /= self.scale_vals['parameters'][param]
 
         for (s_name, arc_idx), s_val in sol.aux['constraint'].items():
             scale_val = self.scale_vals['constraints'][s_name]
-            sol.aux['constraint'][(s_name, arc_idx)] /= scale_val
+            solout.aux['constraint'][(s_name, arc_idx)] /= scale_val
+
+        return solout
 
     def unscale(self, sol):
         """ Unscales a solution object"""
+        solout = copy.deepcopy(sol)
 
         # Additional aux entries for initial and terminal BCs
         extras = [{'type': 'initial', 'vars': self.problem_data['state_list']},
@@ -181,25 +168,20 @@ class Scaling(dict):
 
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
-            sol.y[idx, :] *= self.scale_vals['states'][state]
+            solout.y[idx, :] *= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
-                    sol.aux[aux['type']][var] *= self.scale_vals[aux['type']][var]
+                    solout.aux[aux['type']][var] *= self.scale_vals[aux['type']][var]
 
         # Scale parameters
         for idx, param in enumerate(self.problem_data['parameter_list']):
-            sol.parameters[idx] *= self.scale_vals['parameters'][param]
+            solout.parameters[idx] *= self.scale_vals['parameters'][param]
 
-        # Scale constraint limits
-        # for s in self.problem_data['s_list']:
-        #     s_name = s['name']
-        #     scale_val = self.scale_vals['constraints'][s_name]
-        #     for arc_idx, s_val in sol.aux['constraints'][s_name]['limit'].items():
-        #         sol.aux['constraints'][s_name]['limit'][arc_idx] *= scale_val
-
-        for (s_name, arc_idx), s_val in sol.aux['constraint'].items():
+        for (s_name, arc_idx), s_val in solout.aux['constraint'].items():
             scale_val = self.scale_vals['constraints'][s_name]
-            sol.aux['constraint'][(s_name, arc_idx)] *= scale_val
+            solout.aux['constraint'][(s_name, arc_idx)] *= scale_val
+
+        return solout

@@ -356,5 +356,4 @@ class Shooting(BaseAlgorithm):
             sol = copy.deepcopy(solinit)
 
         sol.converged = converged
-        sol.aux = solinit.aux  # TODO: I'm fairly certain this line isn't needed. But if I delete it, it crashes.
         return sol
