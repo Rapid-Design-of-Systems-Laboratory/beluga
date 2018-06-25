@@ -4,44 +4,11 @@ import inspect
 import functools
 import sys
 
-class ContinuationList(list):
-    def __init__(self):
-        # Create list of available strategies
-        clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
-        self.strategy_list = {obj.strategy_name: obj
-                                for (name,obj) in clsmembers
-                                if hasattr(obj,'strategy_name')
-                              }
-
-    def add_step(self, strategy='manual', *args, **kwargs):
-        """
-        Adds a continuation step with specified strategy
-
-        Returns the strategy object to further chain calls into it
-        """
-        # Create object if strategy is specified as a string
-        if isinstance(strategy, str):
-            if strategy in self.strategy_list:
-                strategy_obj = self.strategy_list[strategy](*args, **kwargs)
-            else:
-                logging.error('Invalid strategy name')
-                raise ValueError('Continuation strategy : '+strategy+' not found.')
-        else:
-            strategy_obj = strategy
-
-        self.append(strategy_obj)
-        return strategy_obj
-
-
-class ContinuationVariable(object):
-    def __init__(self,name,target):
-        self.name = name
-        self.target = target
-        self.value = np.nan
-        self.steps = []
-
 
 class ActivateConstraint(object):
+    """
+    Continuation class activating a constraint.
+    """
     strategy_name = 'activate_constraint'
 
     def __init__(self, name):
@@ -70,7 +37,7 @@ class ActivateConstraint(object):
         current_arcs = sol.arcs
         current_arcseq = sol.aux.get('arc_seq', (0,))
         if current_arcs is None:
-            current_arcs = [(0, len(sol.x)-1)]
+            current_arcs = [(0, len(sol.t)-1)]
 
         sol.prepare(problem_data, 200, True)
         # Evaluate expr on sol
@@ -115,20 +82,20 @@ class ActivateConstraint(object):
         idx_arc_end = s_lim_i+1 - old_arc_idx[0]
 
         old_arc_idx = (old_arc_idx[0], old_arc_idx[1]+1)
-        old_arc_x = np.array(sol.x[slice(*old_arc_idx)], copy=True)
+        old_arc_t = np.array(sol.x[slice(*old_arc_idx)], copy=True)
         old_arc_y = np.array(sol.y[:,slice(*old_arc_idx)], copy=True)
         old_arc_u = np.array(sol.u[:,slice(*old_arc_idx)], copy=True)
-        original_tf = old_arc_y[-1,0]
+        original_tf = old_arc_y[-1,0] # TODO: We don't put time in as a state anymore.
 
-        t_before = old_arc_x[idx_arc_start]*original_tf
-        t_during = (old_arc_x[idx_arc_end] - old_arc_x[idx_arc_start])*original_tf
-        t_after = (old_arc_x[-1] - old_arc_x[idx_arc_end])*original_tf
+        t_before = old_arc_t[idx_arc_start]*original_tf
+        t_during = (old_arc_t[idx_arc_end] - old_arc_t[idx_arc_start])*original_tf
+        t_after = (old_arc_t[-1] - old_arc_t[idx_arc_end])*original_tf
 
         logging.info('Arc position : t='+str(sol.x[s_lim_i])+'s')
-        old_arc_x[0:idx_arc_start+1] = (old_arc_x[0:idx_arc_start+1] - old_arc_x[0])/(old_arc_x[idx_arc_start] - old_arc_x[0]) + arc_num # TODO: Fix for multi arc
-        old_arc_x[idx_arc_end:] = (old_arc_x[idx_arc_end:] - old_arc_x[idx_arc_end])/(old_arc_x[-1] - old_arc_x[idx_arc_end]) + arc_num + 2
+        old_arc_t[0:idx_arc_start+1] = (old_arc_t[0:idx_arc_start+1] - old_arc_t[0])/(old_arc_t[idx_arc_start] - old_arc_t[0]) + arc_num # TODO: Fix for multi arc
+        old_arc_t[idx_arc_end:] = (old_arc_t[idx_arc_end:] - old_arc_t[idx_arc_end])/(old_arc_t[-1] - old_arc_t[idx_arc_end]) + arc_num + 2
 
-        new_arc_x = np.hstack((old_arc_x[:idx_arc_start+1], old_arc_x[idx_arc_start:idx_arc_end+1], old_arc_x[idx_arc_end:]))
+        new_arc_t = np.hstack((old_arc_t[:idx_arc_start+1], old_arc_t[idx_arc_start:idx_arc_end+1], old_arc_t[idx_arc_end:]))
         new_arc_y = np.hstack((old_arc_y[:,:idx_arc_start+1], old_arc_y[:,idx_arc_start:idx_arc_end+1], old_arc_y[:,idx_arc_end:]))
         new_arc_u = np.hstack((old_arc_u[:,:idx_arc_start+1], old_arc_u[:,idx_arc_start:idx_arc_end+1], old_arc_u[:,idx_arc_end:]))
 
@@ -139,13 +106,13 @@ class ActivateConstraint(object):
 
         num_odes = sol.y.shape[0]
         num_controls = sol.u.shape[0]
-        sol.x = np.hstack((sol.x[:old_arc_idx[0]], new_arc_x, sol.x[old_arc_idx[1]:]))
+        sol.t = np.hstack((sol.t[:old_arc_idx[0]], new_arc_t, sol.t[old_arc_idx[1]:]))
         sol.y = np.hstack((sol.y[:,:old_arc_idx[0]], new_arc_y, sol.y[:,old_arc_idx[1]:]))
         sol.u = np.hstack((sol.u[:,:old_arc_idx[0]], new_arc_u, sol.u[:,old_arc_idx[1]:]))
 
         new_arcs = [(old_arc_idx[0], old_arc_idx[0]+idx_arc_start),
                     (old_arc_idx[0]+idx_arc_start+1, old_arc_idx[0]+idx_arc_end+1),
-                    (old_arc_idx[0]+idx_arc_end+2, old_arc_idx[0]+len(new_arc_x)-1)]
+                    (old_arc_idx[0]+idx_arc_end+2, old_arc_idx[0]+len(new_arc_t)-1)]
 
         sol.arcs = (*sol.arcs[:arc_num], *new_arcs, *sol.arcs[arc_num+1:])
         arc_seq = (*sol.aux['arc_seq'][:arc_num+1], arc_type, *sol.aux['arc_seq'][arc_num:])
@@ -177,9 +144,52 @@ class ActivateConstraint(object):
             return self.sol.aux
 
 
+class ContinuationList(list):
+    def __init__(self):
+        # Create list of available strategies
+        clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
+        self.strategy_list = {obj.strategy_name: obj
+                                for (name,obj) in clsmembers
+                                if hasattr(obj,'strategy_name')
+                              }
+
+    def add_step(self, strategy='manual', *args, **kwargs):
+        """
+        Adds a continuation step with specified strategy
+
+        Returns the strategy object to further chain calls into it
+        """
+        # Create object if strategy is specified as a string
+        if isinstance(strategy, str):
+            if strategy in self.strategy_list:
+                strategy_obj = self.strategy_list[strategy](*args, **kwargs)
+            else:
+                logging.error('Invalid strategy name')
+                raise ValueError('Continuation strategy : '+strategy+' not found.')
+        else:
+            strategy_obj = strategy
+
+        self.append(strategy_obj)
+        return strategy_obj
+
+
+class ContinuationVariable(object):
+    """
+    Class containing information for a continuation variable.
+    """
+
+    def __init__(self, name, target):
+        self.name = name
+        self.target = target
+        self.value = np.nan
+        self.steps = []
+
+
 # Can be subclassed to allow automated stepping
 class ManualStrategy(object):
-    """Defines one continuation step in continuation set"""
+    """
+    Class defining the manual continuation strategy.
+    """
     # A unique short name to select this class
     strategy_name = 'manual'
 
@@ -266,7 +276,7 @@ class ManualStrategy(object):
             self._spacing   = spacing
             return self
 
-        self.set('const',name,target)
+        self.set('const', name, target)
         return self
 
     def __str__(self):
@@ -307,8 +317,9 @@ class ManualStrategy(object):
 
 
 class BisectionStrategy(ManualStrategy):
-    """Defines one continuation step in continuation set"""
-    # A unique short name to select this class
+    """
+    Defines the bisection continuation strategy.
+    """
     strategy_name = 'bisection'
 
     def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2, vars=[], aux=None):
@@ -343,11 +354,6 @@ class BisectionStrategy(ManualStrategy):
         if self.division_ctr > self.max_divisions:
             logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
             raise RuntimeError('Exceeded max_divisions')
-
-
-        # if self._num_cases > self.orig_num_cases*3:
-        #     logging.error('Number of steps exceeded thrice the original')
-        #     raise RuntimeError('Exceeded num_cases limit')
 
         # If previous step did not converge, move back a half step
         for var_type, var_name in self.var_iterator():

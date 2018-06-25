@@ -17,7 +17,7 @@ from .utils.keyboard import keyboard
 # from beluga.optimlib import ocp_to_bvp
 
 config = dict(logfile='beluga.log',
-              default_bvp_solver='SingleShooting',
+              default_bvp_solver='Shooting',
               output_file='data.dill')
 
 BVP = cl.namedtuple('BVP', 'deriv_func bc_func compute_control')
@@ -117,7 +117,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     # TODO: Make class to store result from continuation set?
     out = dict()
 
-    out['problem_data'] = ocp_ws['problem_data'];
+    out['problem_data'] = ocp_ws['problem_data']
 
     ocp._scaling.initialize(ocp_ws)
     ocp_ws['scaling'] = ocp._scaling
@@ -177,13 +177,12 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                 tic()
 
                 s.compute_scaling(sol_guess)
-                s.scale(sol_guess)
+                sol_guess = s.scale(sol_guess)
 
                 # Note: sol is the same object as sol_guess
                 sol = bvp_algo.solve(bvp.deriv_func, bvp.bc_func, sol_guess)
                 step.last_sol.converged = sol.converged
-                # keyboard()
-                s.unscale(sol)
+                sol = s.unscale(sol)
 
                 if sol.converged:
                     # Post-processing phase

@@ -53,6 +53,7 @@ class Solution(Trajectory):
         obj.y_splines = None
         obj.u_splines = None
         obj.extra = None
+        obj.converged = False
         return obj
 
     # TODO: Remove this and use Trajectory()'s interpolation.
@@ -66,38 +67,38 @@ class Solution(Trajectory):
             y_spline_arc = []
             u_spline_arc = []
             for j,row in enumerate(self.y):
-                spline = InterpolatedUnivariateSpline(self.x[arc_start:arc_end+1], row[arc_start:arc_end+1])
+                spline = InterpolatedUnivariateSpline(self.t[arc_start:arc_end+1], row[arc_start:arc_end+1])
                 y_spline_arc.append(spline)
 
             if len(self.u.shape) ==1 :
-                spline = InterpolatedUnivariateSpline(self.x[arc_start:arc_end+1], self.u[arc_start:arc_end+1])
+                spline = InterpolatedUnivariateSpline(self.t[arc_start:arc_end+1], self.u[arc_start:arc_end+1])
                 u_spline_arc.append(spline)
             else:
                 for j,row in enumerate(self.u):
-                    spline = InterpolatedUnivariateSpline(self.x[arc_start:arc_end+1], row[arc_start:arc_end+1])
+                    spline = InterpolatedUnivariateSpline(self.t[arc_start:arc_end+1], row[arc_start:arc_end+1])
                     u_spline_arc.append(spline)
 
             self.y_splines.append(y_spline_arc)
             self.u_splines.append(u_spline_arc)
 
-    def interpolate(self, new_x, new_arcs, overwrite=False):
+    def interpolate(self, new_t, new_arcs, overwrite=False):
         """
-        Interpolates solution data over a new mesh of 'x'
+        Interpolates solution data over a new mesh of 't'
 
-        new_x : new mesh to evaluate
+        new_t : new mesh to evaluate
         overwrite: Should the current solution be overwritten?
         """
         # Account for old data files with no sol_splines
         if self.y_splines is None or self.u_splines is None:
             self.init_interpolate()
 
-        new_y = np.hstack([np.vstack([spline(new_x[arc_start:arc_end+1]) for spline in spline_arc])
+        new_y = np.hstack([np.vstack([spline(new_t[arc_start:arc_end+1]) for spline in spline_arc])
                            for (arc_start, arc_end), spline_arc in zip(new_arcs, self.y_splines)])
-        new_u = np.hstack([np.vstack([spline(new_x[arc_start:arc_end+1]) for spline in spline_arc])
+        new_u = np.hstack([np.vstack([spline(new_t[arc_start:arc_end+1]) for spline in spline_arc])
                            for (arc_start, arc_end), spline_arc in zip(new_arcs, self.u_splines)])
 
         if overwrite:
-            self.x = new_x
+            self.t = new_t
             self.y = new_y
             self.u = new_u
             self.arcs = new_arcs
@@ -113,30 +114,30 @@ class Solution(Trajectory):
         """
 
         if not hasattr(self, 'arcs'):
-            self.arcs = ((0,len(self.x)-1),)
-        if mesh_size is not None and mesh_size > len(self.x)*len(self.arcs):
+            self.arcs = ((0,len(self.t)-1),)
+        if mesh_size is not None and mesh_size > len(self.t)*len(self.arcs):
             # Update solution to use new mesh if needed
-            new_x_list = []
+            new_t_list = []
             new_arcs = []
             arc_ctr = 0
             for arc_start, arc_end in self.arcs:
-                new_x_list.append(np.linspace(self.x[arc_start], self.x[arc_end], mesh_size))
+                new_t_list.append(np.linspace(self.t[arc_start], self.t[arc_end], mesh_size))
                 new_arcs.append((arc_ctr, arc_ctr + mesh_size - 1))
                 arc_ctr += mesh_size
 
-            new_x = np.hstack(new_x_list)
-            (new_y, new_u) = self.interpolate(new_x, new_arcs, overwrite=overwrite)
+            new_t = np.hstack(new_t_list)
+            (new_y, new_u) = self.interpolate(new_t, new_arcs, overwrite=overwrite)
         else:
-            new_x, new_y, new_u, new_arcs = self.x, self.y, self.u, self.arcs
-        x, y, u, p, arcs = self.x, self.y, self.u, self.parameters, self.arcs
+            new_t, new_y, new_u, new_arcs = self.t, self.y, self.u, self.arcs
+        t, y, u, p, arcs = self.t, self.y, self.u, self.parameters, self.arcs
         if not overwrite:
-            x, y, u, p, arcs = new_x, new_y, new_u, new_arcs
+            t, y, u, p, arcs = new_t, new_y, new_u, new_arcs
 
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
 
         # Define every aux variable (such as constants) in the dictionary
-        variables = [(aux_name, np.ones_like(x)*aux_val)
+        variables = [(aux_name, np.ones_like(t)*aux_val)
                      for aux_type in self.aux
                      if isinstance(self.aux[aux_type], dict)
                      for (aux_name, aux_val) in self.aux[aux_type].items()
@@ -156,15 +157,14 @@ class Solution(Trajectory):
         # variables += [(str(constant),np.ones_like(x)*float(self.aux['const'][].value))
         #                for idx,constant in enumerate(problem_data['constants'])]
 
-        # TODO: Name 'tf' is hardcoded
         t_list = []
         tf_ind = problem_data['parameter_list'].index('tf')
         last_t = 0
         for arc_start, arc_end in arcs:
-            start_x = x[arc_start]
+            start_t = t[arc_start]
             # from beluga.utils import keyboard
             # keyboard()
-            t_list.append(last_t+(x[arc_start:arc_end+1] - start_x))
+            t_list.append(last_t+(t[arc_start:arc_end+1] - start_t))
             last_t += y[tf_ind, arc_start]
 
         variables += [('t', np.hstack(t_list))]
@@ -188,7 +188,7 @@ class Solution(Trajectory):
 
         The caller is responsible for calling the prepare() method first
         """
-        #TODO: Write test for evaluate()
+
         if callable(expr):
             # Custom plot function
             return expr(**{arg_name:self.var_dict[arg_name] for arg_name in inspect.getargspec(expr).args})
