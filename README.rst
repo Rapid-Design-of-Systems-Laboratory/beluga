@@ -1,10 +1,10 @@
 beluga
 ======
 
-|travis badge| |coverage|
+|travisbadge| |coverage|
 
-.. |travis badge| image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
-    :target: https://travis-ci.org/msparapa/beluga
+.. |travisbadge| image:: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga.svg?branch=master
+    :target: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga
 
 .. |logo| image:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
     :align: right
