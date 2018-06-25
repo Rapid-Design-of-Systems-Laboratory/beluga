@@ -6,11 +6,11 @@ beluga
 .. |travis badge| image:: https://travis-ci.org/msparapa/beluga.svg?branch=master
     :target: https://travis-ci.org/msparapa/beluga
 
-.. |logo| image:: https://raw.githubusercontent.com/msparapa/beluga/master/rdsl.png
+.. |logo| image:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
     :align: right
 
-.. |coverage| image:: https://rawgit.com/msparapa/beluga/master/coverage.svg
-    :target: https://github.com/msparapa/beluga
+.. |coverage| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/coverage.svg
+    :target: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
 
 Installation
 ------------

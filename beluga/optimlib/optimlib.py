@@ -151,7 +151,6 @@ def make_augmented_cost(cost, constraints, constraints_adjoined, location):
     aug_cost_expr = cost.expr + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
 
     aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
-    keyboard()
     return aug_cost
 
 
