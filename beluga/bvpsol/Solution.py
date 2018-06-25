@@ -2,42 +2,60 @@ import numpy as np
 import numexpr as ne
 from scipy.interpolate import InterpolatedUnivariateSpline
 import math
+from beluga.ivpsol import Trajectory
 
 
-class Solution(object):
-    x = None
-    y = None
-    p = None
-    nOdes = 0
+class Solution(Trajectory):
+    def __new__(cls, *args, **kwargs):
+        """
+        Creates a new Solution object.
 
-    def __init__(self, x=None, y=None, parameters=None, aux=None, state_list=None, arcs=None):
-        "x,y and parameters should be vectors"
-        if x is not None and y is not None:
-            self.x = np.array(x, dtype=np.float64)
-            self.y = np.array(y, dtype=np.float64)
-        else:
-            self.x = self.y = self.u = None
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        t = kwargs.get('t', None)
+        y = kwargs.get('y', None)
+        q = kwargs.get('q', None)
+        u = kwargs.get('u', None)
+        parameters = kwargs.get('parameters', None)
+        aux = kwargs.get('aux', None)
+        state_list = kwargs.get('state_list', None)
+        arcs = kwargs.get('arcs', None)
+
+        if t is not None:
+            t = np.array(t, dtype=np.float64)
+        if y is not None:
+            y = np.array(y, dtype=np.float64)
+        if q is not None:
+            q = np.array(q, dtype=np.float64)
+        if u is not None:
+            u = np.array(u, dtype=np.float64)
+
+        obj = super(Solution, cls).__new__(cls, t, y, q, u)
+
         if parameters is not None:
-            self.parameters = np.array(parameters, dtype=np.float64)
+            obj.parameters = np.array(parameters, dtype=np.float64)
         else:
-            self.parameters = np.array([])
-
-        self.y_splines = self.u_splines = None
+            obj.parameters = np.array([])
 
         if aux is None:
-            self.aux = {"initial": [], "terminal": [], "const": {}, "parameters":[], "arc_seq":(0,)}
+            obj.aux = {"initial": [], "terminal": [], "const": {}, "parameters": [], "arc_seq": (0,)}
         else:
-            self.aux = aux
-        self.state_list = state_list
-        self.var_dict = None
-        self.converged = False
-        self.arcs = arcs
+            obj.aux = aux
 
-        self.y_splines = None
-        self.u_splines = None
-        self.extra = None
+        obj.state_list = state_list
+        obj.var_dict = None
+        obj.converged = False
+        obj.arcs = arcs
 
-    # TODO: Write test for interpolation system
+        obj.y_splines = None
+        obj.u_splines = None
+        obj.extra = None
+        return obj
+
+    # TODO: Remove this and use Trajectory()'s interpolation.
     def init_interpolate(self):
         """
         Fits splines to all states in the solution data
@@ -94,9 +112,6 @@ class Solution(object):
         overwrite: Overwrite existing solution with new mesh
         """
 
-        # TODO: Test mesh_size improvement in prepare()
-        # from beluga.utils import keyboard
-        # keyboard()
         if not hasattr(self, 'arcs'):
             self.arcs = ((0,len(self.x)-1),)
         if mesh_size is not None and mesh_size > len(self.x)*len(self.arcs):

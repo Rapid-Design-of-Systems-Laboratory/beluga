@@ -137,7 +137,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
         for sol in continuation_set:
             tf_ind = [i for i, s in enumerate(out['problem_data']['parameter_list']) if s is 'tf'][0]
             tf = sol.parameters[tf_ind]
-            sol.x = sol.x*tf
+            sol.t = sol.t*tf
 
     # Save data
     # del out['problem_data']['s_list']
@@ -202,7 +202,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
                     f = lambda _t, _X: bvp_fn.compute_control(_t,_X,sol.parameters,sol.aux)
-                    sol.u = np.array(list(map(f, sol.x, list(sol.y.T)))).T
+                    sol.u = np.array(list(map(f, sol.t, list(sol.y.T)))).T
 
                     # Copy solution object for storage and reuse `sol` in next
                     # iteration
