@@ -40,6 +40,12 @@ def add_equality_constraints(hamiltonian, equality_constraints):
 def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
     """
     Documentation needed.
+
+    :param var:
+    :param ubound:
+    :param lbound:
+    :param slopeAtZero:
+    :return:
     """
 
     # var -> variable inside saturation function
@@ -228,8 +234,72 @@ def make_boundary_conditions(constraints, constraints_adjoined, states, costates
     return bc_list
 
 
-def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
+def make_constrained_arc_fns(workspace):
+    """
+    Creates constrained arc control functions.
 
+    :param workspace:
+    :return:
+    """
+    controls = workspace['controls']
+    constants = workspace['constants']
+    states = workspace['states']
+    costates = workspace['costates']
+    parameters = workspace['parameters']
+    quantity_vars = workspace['quantity_vars']
+    fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
+    # control_fns = [workspace['control_fn']]
+    tf_var = sympify('tf')
+    costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ]
+    bc_list = [] # Unconstrained arc placeholder
+
+    mu_vars = workspace['mu_vars']
+
+
+    for arc_type, s in enumerate(workspace['s_list'],1):
+        pi_list = [str(_) for _ in s['pi_list']]
+
+
+        costate_eom = {'eom':[str(_.eom*tf_var) for _ in s['lamdot']],
+                       'arctype':arc_type,
+                       'pi_list': pi_list}
+
+        entry_bc, exit_bc = make_constraint_bc(s,
+                                workspace['states'],
+                                workspace['costates'],
+                                workspace['parameters'],
+                                workspace['constants'],
+                                workspace['controls'], mu_vars, workspace['quantity_vars'], workspace['ham'])
+        bc = {'entry_bc': entry_bc,
+              'exit_bc': exit_bc,
+              'arctype': arc_type,
+              'pi_list': pi_list,
+              'name': s['name']}
+        bc_list.append(bc)
+
+        # control_fns.append(u_fn)
+        costate_eoms.append(costate_eom)
+
+    # yield control_fns
+    yield costate_eoms
+    yield bc_list
+
+
+def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
+    """
+    Documentation needed.
+
+    :param s:
+    :param states:
+    :param costates:
+    :param parameters:
+    :param constants:
+    :param controls:
+    :param mu_vars:
+    :param quantity_vars:
+    :param ham:
+    :return:
+    """
     num_states = len(states)
     costate_slice = slice(num_states, 2*num_states)
     ham_aug = s['ham']
@@ -292,52 +362,6 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
     return entry_bc, exit_bc
 
 
-def make_constrained_arc_fns(workspace):
-    """Creates constrained arc control functions."""
-    controls = workspace['controls']
-    constants = workspace['constants']
-    states = workspace['states']
-    costates = workspace['costates']
-    parameters = workspace['parameters']
-    quantity_vars = workspace['quantity_vars']
-    fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
-    # control_fns = [workspace['control_fn']]
-    tf_var = sympify('tf')
-    costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ]
-    bc_list = [] # Unconstrained arc placeholder
-
-    mu_vars = workspace['mu_vars']
-
-
-    for arc_type, s in enumerate(workspace['s_list'],1):
-        pi_list = [str(_) for _ in s['pi_list']]
-
-
-        costate_eom = {'eom':[str(_.eom*tf_var) for _ in s['lamdot']],
-                       'arctype':arc_type,
-                       'pi_list': pi_list}
-
-        entry_bc, exit_bc = make_constraint_bc(s,
-                                workspace['states'],
-                                workspace['costates'],
-                                workspace['parameters'],
-                                workspace['constants'],
-                                workspace['controls'], mu_vars, workspace['quantity_vars'], workspace['ham'])
-        bc = {'entry_bc': entry_bc,
-              'exit_bc': exit_bc,
-              'arctype': arc_type,
-              'pi_list': pi_list,
-              'name': s['name']}
-        bc_list.append(bc)
-
-        # control_fns.append(u_fn)
-        costate_eoms.append(costate_eom)
-
-    # yield control_fns
-    yield costate_eoms
-    yield bc_list
-
-
 def make_costate_names(states):
     """
     Makes a list of variables representing each costate.
@@ -388,35 +412,19 @@ def make_dhdu(ham, controls, derivative_fn):
     return dhdu
 
 
-# def make_hamiltonian_and_costate_rates(states, costate_names, path_cost, derivative_fn):
-#     """simplepipe task for creating the hamiltonian and costates
-#
-#     Workspace variables
-#     -------------------
-#     states - list of dict
-#         List of "sympified" states
-#
-#     path_cost - Object representing the path cost terminal
-#
-#     Returns the hamiltonian and the list of costates
-#     """
-#     ham = path_cost.expr + sum([lam*s.eom for s, lam in zip(states, costate_names)])
-#     yield ham
-#     yield make_costate_rates(ham, states, costate_names, derivative_fn)
+def make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivative_fn):
+    """
+    Creates a Hamiltonian function and costate rates.
 
-def make_ham_lamdot_with_eq_constraint(states, costate_names, constraints, path_cost, derivative_fn):
-    """simplepipe task for creating the hamiltonian and costates
-
-    Workspace variables
-    -------------------
-    states - list of dict
-        List of "sympified" states
-
-    path_cost - Object representing the path cost terminal
-
-    Returns the hamiltonian and the list of costates
+    :param states: A list of state variables, :math:`x`.
+    :param constraints: A set of constraints.
+    :param path_cost: The path cost to be minimized.
+    :param derivative_fn: The derivative function.
+    :return: A Hamiltonian function, :math:`H`.
+    :return: A list of costate rates, :math:`\\dot{\\lambda}_x`
     """
 
+    costate_names = make_costate_names(states)
     ham = path_cost.expr + sum([lam*s.eom for s, lam in zip(states, costate_names)])
     ham = add_equality_constraints(ham, constraints.get('equality', []))
     yield ham
@@ -459,48 +467,13 @@ def make_time_bc(constraints, bc_terminal):
         return bc_terminal+['_H - 0']
 
 
-def process_quantities(quantities):
+def process_path_constraints(workspace):
     """
-    Performs preprocessing on quantity definitions. Creates a new total
-    derivative operator that takes considers these definitions.
+    Documentation needed.
 
-    :param quantities: List of quantities.
+    :param workspace:
     :return:
     """
-
-    # TODO: Sanitize quantity expressions
-    # TODO: Check for circular references in quantity expressions
-
-    # Trivial case when no quantities are defined
-    if len(quantities) == 0:
-        yield {}
-        yield []
-        yield total_derivative
-        yield ft.partial(jacobian, derivative_fn=total_derivative)
-
-    quantity_subs = [(q.name, q.value) for q in quantities]
-    quantity_sym, quantity_expr = zip(*quantity_subs)
-    quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
-
-    # Use substituted expressions to recreate quantity expressions
-    quantity_subs = [(str(qty_var),qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
-    # Dictionary for substitution
-    quantity_vars = dict(quantity_subs)
-
-    # Dictionary for use with mustache templating library
-    quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
-
-    # Function partial that takes derivative while considering quantities
-    derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
-    jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
-
-    yield quantity_vars
-    yield quantity_list
-    yield derivative_fn
-    yield jacobian_fn
-
-
-def process_path_constraints(workspace):
     states = workspace['states']
     controls = workspace['controls']
     constants = workspace['constants']
@@ -681,6 +654,47 @@ def process_path_constraints(workspace):
     yield jacobian_fn
 
 
+def process_quantities(quantities):
+    """
+    Performs preprocessing on quantity definitions. Creates a new total
+    derivative operator that takes considers these definitions.
+
+    :param quantities: List of quantities.
+    :return:
+    """
+
+    # TODO: Sanitize quantity expressions
+    # TODO: Check for circular references in quantity expressions
+
+    # Trivial case when no quantities are defined
+    if len(quantities) == 0:
+        yield {}
+        yield []
+        yield total_derivative
+        yield ft.partial(jacobian, derivative_fn=total_derivative)
+
+    quantity_subs = [(q.name, q.value) for q in quantities]
+    quantity_sym, quantity_expr = zip(*quantity_subs)
+    quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
+
+    # Use substituted expressions to recreate quantity expressions
+    quantity_subs = [(str(qty_var),qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
+    # Dictionary for substitution
+    quantity_vars = dict(quantity_subs)
+
+    # Dictionary for use with mustache templating library
+    quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
+
+    # Function partial that takes derivative while considering quantities
+    derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
+    jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
+
+    yield quantity_vars
+    yield quantity_list
+    yield derivative_fn
+    yield jacobian_fn
+
+
 def sanitize_constraint_expr(constraint, states, location, prefix_map):
     """
     Checks the initial/terminal constraint expression for invalid symbols
@@ -746,11 +760,11 @@ BaseWorkflow = sp.Workflow([
     sp.Task(ft.partial(make_augmented_params, location='terminal'),
             inputs=('constraints', 'constraints_adjoined'),
             outputs=('terminal_lm_params')),
-    sp.Task(make_costate_names,
-            inputs=('states'),
-            outputs=('costate_names')),
+    # sp.Task(make_costate_names,
+    #         inputs=('states'),
+    #         outputs=('costate_names')),
     sp.Task(make_ham_lamdot_with_eq_constraint,
-            inputs=('states', 'costate_names', 'constraints', 'path_cost', 'derivative_fn'),
+            inputs=('states', 'constraints', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
     sp.Task(ft.partial(make_boundary_conditions, location='initial'),
             inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),

@@ -10,7 +10,13 @@ import simplepipe as sp
 
 
 def make_control_law(dhdu, controls):
-    """Solves control equation to get control law."""
+    """
+    Solves control equation to get control law.
+
+    :param dhdu:
+    :param controls:
+    :return: Control law options.
+    """
     try:
         logging.info(controls)
         var_list = list(controls)

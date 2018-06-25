@@ -1,9 +1,3 @@
-"""
-Contains classes and functions related to Optimal Control.
-
-Module: optimlib
-"""
-
 from .optimlib import *
 import sympy as sym
 from beluga.utils import sympify2, keyboard
@@ -13,7 +7,20 @@ import logging
 import numpy as np
 
 
-def make_ctrl_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
+def make_control_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
+    """
+    Make's control law for dae (ICRM) formulation.
+
+    :param states:
+    :param costates:
+    :param controls:
+    :param constraints:
+    :param dhdu:
+    :param xi_init_vals:
+    :param guess:
+    :param derivative_fn:
+    :return:
+    """
     equality_constraints = constraints.get('equality', [])
     if len(equality_constraints) > 0:
         mu_vars = [sympify('mu'+str(i+1)) for i in range(len(equality_constraints))]
@@ -127,7 +134,7 @@ def generate_problem_data(workspace):
 # Implement workflow using simplepipe and functions defined above
 ICRM = sp.Workflow()
 ICRM.add_task(BaseWorkflow)
-ICRM.add_task(make_ctrl_dae,
+ICRM.add_task(make_control_dae,
             inputs=('states', 'costates', 'controls', 'constraints', 'dhdu', 'xi_init_vals', 'guess', 'derivative_fn'),
             outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc', 'guess', 'dgdX', 'dgdU'))
 ICRM.add_task(generate_problem_data, inputs='*', outputs=('problem_data'))
