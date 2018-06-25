@@ -448,11 +448,11 @@ class GuessGenerator(object):
             tspan = [0, -1]
 
         tic()
-        [x, y] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
+        [t, y] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
         elapsed_time = toc()
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
-        solinit.x = x
+        solinit.t = t
         solinit.y = y
         solinit.parameters = param_guess
         return solinit

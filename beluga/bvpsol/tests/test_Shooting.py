@@ -16,15 +16,14 @@ def test_Shooting_1():
 
     algo = Shooting()
     solinit = Solution()
-    solinit.x = np.linspace(0,4,2)
+    solinit.t = np.linspace(0,4,2)
     solinit.y = np.array([[0,1],[0,1]]).T
     out = algo.solve(odefun, bcfun, solinit)
     assert out.y.T[0][0] < tol
     assert out.y.T[0][1] - 2.06641646 < tol
     assert out.y.T[-1][0] + 2 < tol
     assert out.y.T[-1][1] + 2.87588998 < tol
-    assert out.x[-1] - 4 < tol
-    # assert out.y.T[0][0] - 0 > tol
+    assert out.t[-1] - 4 < tol
     assert abs(out.y.T[0][1] - solinit.y.T[0][1]) > tol
     assert abs(out.y.T[-1][0] - solinit.y.T[-1][0]) - 2 < tol
 
@@ -41,12 +40,12 @@ def test_Shooting_2():
 
     algo = Shooting()
     solinit = Solution()
-    solinit.x = np.linspace(0, np.pi, 30)
-    solinit.y = np.vstack((np.cos(4 * solinit.x), -4 * np.sin(4 * solinit.x)))
+    solinit.t = np.linspace(0, np.pi, 30)
+    solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t)))
     solinit.parameters = np.array([15])
 
     out = algo.solve(odefun, bcfun, solinit)
-    assert out.x[-1] - np.pi < tol
+    assert out.t[-1] - np.pi < tol
     assert out.y.T[0][0] - 1 < tol
     assert out.y.T[0][1] < tol
     assert out.y.T[-1][0] - 1 < tol
@@ -65,7 +64,7 @@ def test_Shooting_3():
 
     algo = Shooting()
     solinit = Solution()
-    solinit.x = np.linspace(0, 1, 2)
+    solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0], [0]]).T
     solinit.parameters = np.array([1])
     out = algo.solve(odefun, bcfun, solinit)

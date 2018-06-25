@@ -194,7 +194,7 @@ class Shooting(BaseAlgorithm):
 
         # Instantly make a copy of sol and format inputs
         sol = copy.deepcopy(solinit)
-        sol.x = np.array(sol.x, dtype=np.float64)
+        sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
 
@@ -208,7 +208,7 @@ class Shooting(BaseAlgorithm):
             self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
         if sol.arcs is None:
-            sol.arcs = [(0, len(solinit.x)-1)]
+            sol.arcs = [(0, len(solinit.t)-1)]
 
         arc_seq = sol.aux['arc_seq']
         num_arcs = len(arc_seq)
@@ -219,7 +219,7 @@ class Shooting(BaseAlgorithm):
         ya = sol.y[:,left_idx]
         yb = sol.y[:,right_idx]
 
-        tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.x[-1]
+        tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
 
         if solinit.parameters is None:
@@ -244,7 +244,7 @@ class Shooting(BaseAlgorithm):
             while True:
                 phi_list = []
                 phi_full_list = []
-                x_list = []
+                t_list = []
                 y_list = []
                 with timeout(seconds=5000):
                     for arc_idx, tspan in enumerate(tspan_list):
@@ -255,7 +255,7 @@ class Shooting(BaseAlgorithm):
                         t = sol_ivp.t
                         yy = sol_ivp.y.T
                         y_list.append(yy[:nOdes, :])
-                        x_list.append(t)
+                        t_list.append(t)
                         yb[:, arc_idx] = yy[:nOdes, -1]
                         phi_full = np.reshape(yy[nOdes:, :].T, (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
@@ -344,10 +344,10 @@ class Shooting(BaseAlgorithm):
         if converged:
             sol.arcs = []
             timestep_ctr = 0
-            for arc_idx, tt in enumerate(x_list):
+            for arc_idx, tt in enumerate(t_list):
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
 
-            sol.x = np.hstack(x_list)
+            sol.t = np.hstack(t_list)
             sol.y = np.column_stack(y_list)
             sol.parameters = paramGuess
 

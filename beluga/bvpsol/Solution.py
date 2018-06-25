@@ -5,12 +5,7 @@ import math
 from beluga.ivpsol import Trajectory
 
 
-class Solution(object):
-    t = None
-    y = None
-    p = None
-    nOdes = 0
-
+class Solution(Trajectory):
     def __new__(cls, *args, **kwargs):
         """
         Creates a new Solution object.
@@ -20,20 +15,25 @@ class Solution(object):
         :return:
         """
 
-        obj = super(Solution, cls).__new__(cls)
-
-        x = kwargs.get('x', None)
+        t = kwargs.get('t', None)
         y = kwargs.get('y', None)
+        q = kwargs.get('q', None)
+        u = kwargs.get('u', None)
         parameters = kwargs.get('parameters', None)
         aux = kwargs.get('aux', None)
         state_list = kwargs.get('state_list', None)
         arcs = kwargs.get('arcs', None)
 
-        if x is not None and y is not None:
-            obj.x = np.array(x, dtype=np.float64)
-            obj.y = np.array(y, dtype=np.float64)
-        else:
-            obj.x = obj.y = obj.u = None
+        if t is not None:
+            t = np.array(t, dtype=np.float64)
+        if y is not None:
+            y = np.array(y, dtype=np.float64)
+        if q is not None:
+            q = np.array(q, dtype=np.float64)
+        if u is not None:
+            u = np.array(u, dtype=np.float64)
+
+        obj = super(Solution, cls).__new__(cls, t, y, q, u)
 
         if parameters is not None:
             obj.parameters = np.array(parameters, dtype=np.float64)
@@ -55,7 +55,7 @@ class Solution(object):
         obj.extra = None
         return obj
 
-    # TODO: Write test for interpolation system
+    # TODO: Remove this and use Trajectory()'s interpolation.
     def init_interpolate(self):
         """
         Fits splines to all states in the solution data
@@ -112,9 +112,6 @@ class Solution(object):
         overwrite: Overwrite existing solution with new mesh
         """
 
-        # TODO: Test mesh_size improvement in prepare()
-        # from beluga.utils import keyboard
-        # keyboard()
         if not hasattr(self, 'arcs'):
             self.arcs = ((0,len(self.x)-1),)
         if mesh_size is not None and mesh_size > len(self.x)*len(self.arcs):
