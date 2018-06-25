@@ -25,6 +25,10 @@ ICRM
 Base Class Reference
 --------------------
 
+.. autofunction:: add_equality_constraints
+
+.. autofunction:: get_satfn
+
 .. autofunction:: init_workspace
 
 .. autofunction:: jacobian
@@ -35,15 +39,27 @@ Base Class Reference
 
 .. autofunction:: make_boundary_conditions
 
+.. autofunction:: make_constrained_arc_fns
+
+.. autofunction:: make_constraint_bc
+
+.. autofunction:: make_control_dae
+
+.. autofunction:: make_control_law
+
 .. autofunction:: make_costate_names
 
 .. autofunction:: make_costate_rates
 
 .. autofunction:: make_dhdu
 
+.. autofunction:: make_ham_lamdot_with_eq_constraint
+
 .. autofunction:: make_parameters
 
 .. autofunction:: make_time_bc
+
+.. autofunction:: process_path_constraints
 
 .. autofunction:: process_quantities
 
@@ -51,16 +67,4 @@ Base Class Reference
 
 .. autofunction:: total_derivative
 
-.. autofunction:: make_hamiltonian_and_costate_rates
 
-.. autofunction:: make_control_law
-
-.. autofunction:: process_constraint
-
-.. autofunction:: process_path_constraints
-
-.. autofunction:: make_constraint_bc
-
-.. autofunction:: make_constrained_arc_fns
-
-.. autofunction:: generate_problem_data
