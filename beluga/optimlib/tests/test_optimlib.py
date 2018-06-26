@@ -4,12 +4,19 @@ from beluga.optimlib import make_augmented_params, make_augmented_cost
 from beluga.problem import SymVar
 
 def test_init_workspace():
+    class emptyobj(object):
+        def __new__(cls):
+            obj = super(emptyobj, cls).__new__(cls)
+            obj.dae_num_states = 0
+            return obj
+
+    guess = emptyobj()
     from beluga.problem import OCP
     problem = OCP('test_problem')
 
     # Throw an error with no independent variable defined.
     with pytest.raises(KeyError):
-        init_workspace(problem)
+        init_workspace(problem, guess)
 
     problem.independent('t', 's')
     problem.state('x', 'v', 'm')
@@ -22,7 +29,7 @@ def test_init_workspace():
     problem.constraints().terminal('x-x_f', 'm')
     problem.scale(m='x', s='x/v', N=1)
 
-    ws = init_workspace(problem)
+    ws = init_workspace(problem, guess)
 
     assert isinstance(ws, dict)
     assert ws['problem_name'] == 'test_problem'
