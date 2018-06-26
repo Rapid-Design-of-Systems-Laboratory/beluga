@@ -19,7 +19,7 @@ from itertools import zip_longest
 from beluga.bvpsol import Scaling
 from beluga.ivpsol.integrators import ode45
 from beluga.utils import sympify, tic, toc
-from beluga.utils import keyboard
+from beluga.ivpsol import Propagator
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
@@ -448,11 +448,11 @@ class GuessGenerator(object):
             tspan = [0, -1]
 
         tic()
-        [t, y] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
+        prop = Propagator()
+        solivp = prop(bvp_fn.deriv_func_ode45, None, tspan, x0, [], param_guess, solinit.aux)
         elapsed_time = toc()
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
-        # x1, y1 = ode45(SingleShooting.ode_wrap(deriv_func, paramGuess, aux), [x[0],x[-1]], y0g)
-        solinit.t = t
-        solinit.y = y
+        solinit.t = solivp.t
+        solinit.y = solivp.y
         solinit.parameters = param_guess
         return solinit
