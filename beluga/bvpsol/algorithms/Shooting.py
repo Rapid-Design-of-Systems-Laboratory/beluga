@@ -1,6 +1,5 @@
 import numpy as np
 
-import beluga
 from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator
@@ -112,6 +111,7 @@ class Shooting(BaseAlgorithm):
         h = StepSize
         ya = np.array([traj.T[0] for traj in y_list]).T
         yb = np.array([traj.T[-1] for traj in y_list]).T
+        keyboard()
         nOdes = ya.shape[0]
         num_arcs = len(phi_full_list)
         fx = bc_func(ya,yb,p,aux)
@@ -182,7 +182,7 @@ class Shooting(BaseAlgorithm):
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-    def solve(self, deriv_func, bc_func, solinit):
+    def solve(self, deriv_func, quad_func, bc_func, solinit):
         """
         Solve a two-point boundary value problem using the shooting method
 
@@ -199,7 +199,7 @@ class Shooting(BaseAlgorithm):
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
 
         # Extract some info from the guess structure
-        y0g = sol.y[:, 0]
+        y0g = sol.y[0, :]
         nOdes = y0g.shape[0]
         paramGuess = sol.parameters
 
@@ -216,8 +216,8 @@ class Shooting(BaseAlgorithm):
             raise Exception('Number of arcs must be odd!')
 
         left_idx, right_idx = map(np.array, zip(*sol.arcs))
-        ya = sol.y[:,left_idx]
-        yb = sol.y[:,right_idx]
+        ya = sol.y[left_idx, :]
+        yb = sol.y[right_idx, :]
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
@@ -248,7 +248,7 @@ class Shooting(BaseAlgorithm):
                 y_list = []
                 with timeout(seconds=5000):
                     for arc_idx, tspan in enumerate(tspan_list):
-                        y0stm[:nOdes] = ya[:, arc_idx]
+                        y0stm[:nOdes] = ya[arc_idx, :]
                         y0stm[nOdes:] = stm0[:]
                         q0 = []
                         sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, arc_idx)
@@ -256,7 +256,7 @@ class Shooting(BaseAlgorithm):
                         yy = sol_ivp.y.T
                         y_list.append(yy[:nOdes, :])
                         t_list.append(t)
-                        yb[:, arc_idx] = yy[:nOdes, -1]
+                        yb[arc_idx, :] = yy[:nOdes, -1]
                         phi_full = np.reshape(yy[nOdes:, :].T, (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
                         phi = np.reshape(yy[nOdes:, -1].T, (nOdes, nOdes+nParams))  # STM
@@ -272,6 +272,7 @@ class Shooting(BaseAlgorithm):
                     break
 
                 # Determine the error vector
+                keyboard()
                 res = bc_func(ya, yb, paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
