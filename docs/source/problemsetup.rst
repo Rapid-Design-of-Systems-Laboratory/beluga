@@ -9,7 +9,7 @@
 Optimal Control
 ---------------
 
-In optimal control theory, we wish to solve a problem of the form
+In optimal control theory, we wish to solve problems of the form
 
 .. math::
     \begin{aligned}
@@ -100,8 +100,11 @@ So when we created :code:`continuation_steps`, it behaves likes a :code:`Python 
 
     beluga.setup_beluga(logging_level=logging.DEBUG)
 
-Finally. with all of the components definedm let's solve the output::
+Finally. with all of the components defined let's solve the output::
 
     sol = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
 
-We told :code:`beluga` to use the `traditional` method of optimal control theory based on Pontryagin's Minimum Principle. There are other choices available (RST LINK TO BELUGA CHOICES). The :code:`sol` result will take in a time and give out position and the optimal control. To use :code:`sol`, see (RST LINK TO TRAJECTORY())
+We told :code:`beluga` to use the `traditional` method of optimal control theory based on Pontryagin's Minimum Principle. There are other choices available (RST LINK TO BELUGA CHOICES). The :code:`sol` result will take in a time and give out position and the optimal control. To use :code:`sol`, see (RST LINK TO TRAJECTORY()). To plot the trajectory, use :code:`matplotlib.pyplot`::
+
+    plt.plot(sol.y[0], sol.y[1])
+    plt.show()
