@@ -2,6 +2,7 @@
 import beluga
 import logging
 from math import pi
+import matplotlib.pyplot as plt
 
 ocp = beluga.OCP('brachisto')
 
@@ -31,11 +32,11 @@ ocp.constraints() \
     .terminal('y-y_f', 'm')
 
 # Use the "adjoined method" to solve for the constraints.
-ocp.constraints().set_adjoined(True)
+# ocp.constraints().set_adjoined(True)
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
+bvp_solver = beluga.bvp_algorithm('Collocation',
                         derivative_method='fd',
                         tolerance=1e-4,
                         max_iterations=200,
@@ -66,4 +67,3 @@ sol = beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
-

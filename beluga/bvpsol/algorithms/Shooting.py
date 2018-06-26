@@ -1,6 +1,5 @@
 import numpy as np
 
-import beluga
 from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator
@@ -147,7 +146,6 @@ class Shooting(BaseAlgorithm):
 
         # J[:,nOdes*num_arcs:] = P
         J = np.hstack((M,P))
-        # keyboard()
         return J
 
     @staticmethod
@@ -182,11 +180,12 @@ class Shooting(BaseAlgorithm):
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-    def solve(self, deriv_func, bc_func, solinit):
+    def solve(self, deriv_func, quad_func, bc_func, solinit):
         """
-        Solve a two-point boundary value problem using the shooting method
+        Solve a two-point boundary value problem using the shooting method.
 
         :param deriv_func: The ODE function.
+        :param quad_func: The quad func.
         :param bc_func: The boundary conditions function.
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
@@ -216,8 +215,8 @@ class Shooting(BaseAlgorithm):
             raise Exception('Number of arcs must be odd!')
 
         left_idx, right_idx = map(np.array, zip(*sol.arcs))
-        ya = sol.y[:,left_idx]
-        yb = sol.y[:,right_idx]
+        ya = sol.y[:, left_idx]
+        yb = sol.y[:, right_idx]
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]

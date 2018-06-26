@@ -19,10 +19,19 @@ This modules solves :eq:`boundarydifferentialequation` of the form
 
 from :math:`t_0` to :math:`t_f`.
 
+Shooting Methods
+----------------
+
+Collocation Methods
+-------------------
+
 Base Class Reference
 --------------------
 .. autoclass:: BaseAlgorithm
     :members: preprocess
 
 .. autoclass:: Shooting
+    :members: __new__, solve
+
+.. autoclass:: Collocation
     :members: __new__, solve
