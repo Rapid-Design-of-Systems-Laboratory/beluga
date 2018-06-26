@@ -72,7 +72,7 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
         return ubound - (ubound - lbound)/(1 + sym.exp(s*var))
 
 
-def init_workspace(ocp):
+def init_workspace(ocp, guess):
     """
     Initializes the simplepipe workspace using an OCP definition.
 
@@ -105,6 +105,7 @@ def init_workspace(ocp):
     workspace['initial_cost'] = SymVar(ocp.get_cost('initial'), sym_key='expr')
     workspace['terminal_cost'] = SymVar(ocp.get_cost('terminal'), sym_key='expr')
     workspace['path_cost'] = SymVar(ocp.get_cost('path'), sym_key='expr')
+    guess.dae_num_states = 0
     return workspace
 
 
@@ -742,7 +743,7 @@ def total_derivative(expr, var, dependent_vars=None):
 
 
 BaseWorkflow = sp.Workflow([
-    sp.Task(init_workspace, inputs=('problem',), outputs='*'),
+    sp.Task(init_workspace, inputs=('problem','guess'), outputs='*'),
     sp.Task(process_quantities,
             inputs=('quantities'),
             outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
