@@ -1,7 +1,7 @@
 tol = 1e-3
 
 
-def test_brachistochrone():
+def test_brachistochrone_shooting():
     from math import pi
     import beluga
 
@@ -39,7 +39,7 @@ def test_brachistochrone():
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-    bvp_solver = beluga.bvp_algorithm('Shooting')
+    shooting_solver = beluga.bvp_algorithm('Shooting')
 
     guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
 
@@ -50,7 +50,7 @@ def test_brachistochrone():
         .terminal('x', 10) \
         .terminal('y', -10)
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
 
     assert isinstance(sol, Trajectory)
     assert isinstance(sol, Solution)
@@ -73,7 +73,100 @@ def test_brachistochrone():
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+
+    y0 = sol.y.T[0]
+    yf = sol.y.T[-1]
+    assert abs(y0[0] - 0) < tol
+    assert abs(y0[1] - 0) < tol
+    assert abs(y0[2] - 0) < tol
+    assert abs(y0[3] + 0.0667) < tol
+    assert abs(y0[4] - 0.0255) < tol
+    assert abs(y0[5] + 0.1019) < tol
+    assert abs(sol.t[-1] - 1.8433) < tol
+    assert abs(yf[0] - 10) < tol
+    assert abs(yf[1] + 10) < tol
+    assert abs(yf[2] - 14.0071) < tol
+    assert abs(yf[3] + 0.0667) < tol
+    assert abs(yf[4] - 0.0255) < tol
+    assert abs(yf[5] - 0) < tol
+    assert abs(y0[3] - yf[3]) < tol
+    assert abs(y0[4] - yf[4]) < tol
+
+
+def test_brachistochrone_collocation():
+    from math import pi
+    import beluga
+
+    from beluga.ivpsol import Trajectory
+    from beluga.bvpsol import Solution
+
+    ocp = beluga.OCP('brachisto')
+
+    # Define independent variables
+    ocp.independent('t', 's')
+
+    # Define equations of motion
+    ocp.state('x', 'v*cos(theta)', 'm') \
+        .state('y', 'v*sin(theta)', 'm') \
+        .state('v', 'g*sin(theta)', 'm/s')
+
+    # Define controls
+    ocp.control('theta', 'rad')
+
+    # Define constants
+    ocp.constant('g', -9.81, 'm/s^2')
+
+    # Define costs
+    ocp.path_cost('1', 's')
+
+    # Define constraints
+    ocp.constraints() \
+        .initial('x-x_0', 'm') \
+        .initial('y-y_0', 'm') \
+        .initial('v-v_0', 'm/s') \
+        .terminal('x-x_f', 'm') \
+        .terminal('y-y_f', 'm')
+
+    ocp.constraints().set_adjoined(False)
+
+    ocp.scale(m='y', s='y/v', kg=1, rad=1)
+
+    shooting_solver = beluga.bvp_algorithm('Collocation')
+
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
+
+    continuation_steps = beluga.init_continuation()
+
+    continuation_steps.add_step('bisection') \
+        .num_cases(21) \
+        .terminal('x', 10) \
+        .terminal('y', -10)
+
+    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+
+    assert isinstance(sol, Trajectory)
+    assert isinstance(sol, Solution)
+
+    y0 = sol.y.T[0]
+    yf = sol.y.T[-1]
+    assert abs(y0[0] - 0) < tol
+    assert abs(y0[1] - 0) < tol
+    assert abs(y0[2] - 0) < tol
+    assert abs(y0[3] + 0.0667) < tol
+    assert abs(y0[4] - 0.0255) < tol
+    assert abs(y0[5] + 0.1019) < tol
+    assert abs(sol.t[-1] - 1.8433) < tol
+    assert abs(yf[0] - 10) < tol
+    assert abs(yf[1] + 10) < tol
+    assert abs(yf[2] - 14.0071) < tol
+    assert abs(yf[3] + 0.0667) < tol
+    assert abs(yf[4] - 0.0255) < tol
+    assert abs(yf[5] - 0) < tol
+    assert abs(y0[3] - yf[3]) < tol
+    assert abs(y0[4] - yf[4]) < tol
+
+    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
 
     y0 = sol.y.T[0]
     yf = sol.y.T[-1]

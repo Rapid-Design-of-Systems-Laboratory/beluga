@@ -56,7 +56,17 @@ class Collocation(BaseAlgorithm):
         return obj
     
     def solve(self, deriv_func, quad_func, bc_func, solinit):
+        """
+        Solve a two-point boundary value problem using the collocation method.
+
+        :param deriv_func: The ODE function.
+        :param quad_func: The quad func.
+        :param bc_func: The boundary conditions function.
+        :param solinit: An initial guess for a solution to the BVP.
+        :return: A solution to the BVP.
+        """
         sol = copy.deepcopy(solinit)
+        sol.y = sol.y.T
         sol.set_interpolate_function('cubic')
         number_of_datapoints = len(sol.t)
         if number_of_datapoints < 3:
@@ -120,13 +130,11 @@ class Collocation(BaseAlgorithm):
 
         if xopt['status'] == 0:
             sol.converged = True
-            keyboard()
-        else:
-            keyboard()
 
         # Organize the output with the sol() structure
         sol.t = self.tspan
         sol.y, sol.q, sol.parameters = self._unwrap_params(xopt['x'])
+        sol.y = sol.y.T
         return sol
 
     def reconstruct(self, time, ivp):
@@ -190,7 +198,7 @@ class Collocation(BaseAlgorithm):
         y, quads0, params = self._unwrap_params(vectorized)
         tf = self.tspan[-1]
         # dX = np.squeeze(self.eoms(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
-        dX = np.squeeze([self.eoms(ti,yi,params,self.aux) for ti,yi in zip(self.tspan, y)])
+        dX = np.squeeze([self.eoms(ti, yi, params, self.aux) for ti,yi in zip(self.tspan, y)])
         dp0 = dX[:-1]
         dp1 = dX[1:]
         p0 = y[:-1]

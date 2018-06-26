@@ -36,12 +36,11 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
+bvp_solver = beluga.bvp_algorithm('Collocation',
                         derivative_method='fd',
                         tolerance=1e-4,
                         max_iterations=200,
                         verbose = True,
-                        # number_of_nodes=10,
                         max_error=100,
                         # number_arcs=2
              )
@@ -68,8 +67,3 @@ sol = beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
-
-plt.plot(sol.y[:,0], sol.y[:,1])
-print(sol.y[-1])
-plt.show()
-

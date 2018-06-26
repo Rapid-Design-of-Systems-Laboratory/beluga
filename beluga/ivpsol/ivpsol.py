@@ -144,7 +144,7 @@ class Trajectory(object):
 
         # This builds the interpolation function on the most up to date data
         if dim == 1:
-            f = self.interpolate(self.t, self.y)
+            f = self.interpolate(self.t, self.y.T)
             y_val = np.array([f(t)])
         else:
             f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(dim)]
