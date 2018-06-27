@@ -3,8 +3,6 @@ from math import *
 
 def compute_hamiltonian(t, X, p, aux, u):
     # C = [v for k,v in aux['const'].items()]
-    #from beluga.utils import keyboard
-    #keyboard()
     return ham_fn(*X, *p[:{{num_params}}], *aux['const'].values(), *u, 0)
 
 def compute_control(_t, _X, _p, _aux, arc_idx=None):

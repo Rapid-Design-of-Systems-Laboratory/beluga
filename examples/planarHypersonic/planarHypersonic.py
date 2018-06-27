@@ -31,7 +31,6 @@ ocp.control('alfa','rad')
 ocp.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
 ocp.constant('rho0', 0.0001*1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
 ocp.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
-
 ocp.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
 ocp.constant('re',6378000,'m') # Radius of planet, m
 ocp.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
