@@ -8,12 +8,16 @@ with open('README.rst') as file:
     long_description = file.read()
 
 modules = ['beluga.bvpsol',
+           'beluga.bvpsol.algorithms',
            'beluga.codegen',
            'beluga.continuation',
+           'beluga.continuation.strategies',
            'beluga.ivpsol',
            'beluga.ivpsol.integrators',
            'beluga.optimlib',
-           'beluga.utils']
+           'beluga.utils',
+           'beluga.visualization',
+           'beluga.visualization.renderers']
 
 tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
@@ -21,7 +25,7 @@ tests = ['beluga.bvpsol.tests',
          'beluga.optimlib.tests']
 
 setup(name="beluga",
-      version="1.0.0rc1",
+      version="0.1.6",
       description="An indirect trajectory optimization framework.",
       long_description=long_description,
       author="Michael Sparapany",

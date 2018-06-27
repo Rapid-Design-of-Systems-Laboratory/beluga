@@ -5,6 +5,7 @@ include *.rst
 include LICENSE
 
 # Include template files
+include beluga/bvpsol/templates/*
 include beluga/optimlib/templates/brysonho/*
 include beluga/optimlib/templates/brysonho/qcpi/*
 include beluga/optimlib/templates/icrm/*

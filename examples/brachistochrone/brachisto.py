@@ -36,7 +36,7 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Collocation',
+bvp_solver = beluga.bvp_algorithm('Shooting',
                         derivative_method='fd',
                         tolerance=1e-4,
                         max_iterations=200,
