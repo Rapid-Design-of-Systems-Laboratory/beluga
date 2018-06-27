@@ -11,19 +11,18 @@ ocp.independent('t', 's')
 rho = 'rho0*exp(-h/H)'
 Cl = '(1.5658*alpha + -0.0000)'
 Cd = '(1.6537*alpha**2 + 0.0612)'
-
-D = f'(0.5*{rho}*v**2*{Cd}*Aref)'
-L = f'(0.5*{rho}*v**2*{Cl}*Aref)'
+D = '(0.5*{}*v**2*{}*Aref)'.format(rho, Cd)
+L = '(0.5*{}*v**2*{}*Aref)'.format(rho, Cl)
 r = '(re+h)'
 
 # Define equations of motion
 ocp \
     .state('h', 'v*sin(gam)', 'm') \
-    .state('theta', f'v*cos(gam)*cos(psi)/({r}*cos(phi))', 'rad') \
-    .state('phi', f'v*cos(gam)*sin(psi)/{r}', 'rad') \
-    .state('v', f'-{D}/mass - mu*sin(gam)/{r}**2', 'm/s') \
-    .state('gam', f'{L}*cos(bank)/(mass*v) - mu/(v*{r}**2)*cos(gam) + v/{r}*cos(gam)', 'rad') \
-    .state('psi', f'{L}*sin(bank)/(mass*cos(gam)*v) - v/{r}*cos(gam)*cos(psi)*tan(phi)', 'rad')
+    .state('theta', 'v*cos(gam)*cos(psi)/({}*cos(phi))'.format(r), 'rad') \
+    .state('phi', 'v*cos(gam)*sin(psi)/{}'.format(r), 'rad') \
+    .state('v', '-{}/mass - mu*sin(gam)/{}**2'.format(D,r), 'm/s') \
+    .state('gam', '{}*cos(bank)/(mass*v) - mu/(v*{}**2)*cos(gam) + v/{}*cos(gam)'.format(L,r,r), 'rad') \
+    .state('psi', '{}*sin(bank)/(mass*cos(gam)*v) - v/{}*cos(gam)*cos(psi)*tan(phi)'.format(L,r), 'rad')
 
 # Define controls
 ocp.control('alpha', 'rad') \

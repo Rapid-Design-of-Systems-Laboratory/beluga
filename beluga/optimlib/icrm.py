@@ -66,13 +66,13 @@ def generate_problem_data(workspace):
     for i, row in enumerate(workspace['dgdX'].tolist()):
         for j, expr in enumerate(row):
             if expr != 0:
-                dgdX.append(f'dgdX[{i},{j}] = {expr}')
+                dgdX.append('dgdX[{},{}] = {}'.format(i, j, expr))
 
     dgdU = []
     for i, row in enumerate(workspace['dgdU'].tolist()):
         for j, expr in enumerate(row):
             if expr != 0:
-                dgdU.append(f'dgdU[{i},{j}] = {expr}')
+                dgdU.append('dgdU[{},{}] = {}'.format(i, j, expr))
 
     problem_data = {
         'method': 'icrm',

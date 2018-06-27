@@ -13,6 +13,7 @@ import collections as cl
 from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
 from .utils import tic, toc
+from collections import OrderedDict
 from .utils.keyboard import keyboard
 # from beluga.optimlib import ocp_to_bvp
 
@@ -83,8 +84,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     solinit = Solution()
 
-    solinit.aux['const'] = dict((str(const.name),float(const.value))
+    solinit.aux['const'] = OrderedDict((str(const.name),float(const.value))
                                 for const in ocp_ws['constants'])
+    # keyboard()
     solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']
 
     # For path constraints

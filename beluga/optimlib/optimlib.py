@@ -89,6 +89,8 @@ def init_workspace(ocp, guess):
     workspace['indep_var'] = SymVar(ocp._properties['independent'])
     workspace['states'] = [SymVar(s) for s in ocp.states()]
     workspace['controls'] = [SymVar(u) for u in ocp.controls()]
+    # sort_map = [i[0] for i in sorted(enumerate(ocp.constants()), key=lambda x:x[1]['name'])]
+    # workspace['constants'] = [SymVar(ocp.constants()[k]) for k in sort_map]
     workspace['constants'] = [SymVar(k) for k in ocp.constants()]
 
     constraints = ocp.constraints()
@@ -595,7 +597,7 @@ def process_path_constraints(workspace):
             constraints['terminal'].append(SymVar({'expr':str(cq[i] - h[i].subs(psi_var_func)), 'unit':c.unit/(time_unit**i)}, sym_key='expr'))
 
             # Add to initial guess vector
-            print(f'Adding {xi_vars[i]} = {c_vals[i]}')
+            print('Adding {} = {}'.format(xi_vars[i], c_vals[i]))
             xi_init_vals.append(c_vals[i])
 
             dhdxi = [derivative_fn(h[i], xi_v).subs(psi_vars_deriv) for xi_v in xi_vars[:-1]]
