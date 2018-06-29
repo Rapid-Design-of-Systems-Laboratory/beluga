@@ -66,7 +66,6 @@ class Collocation(BaseAlgorithm):
         :return: A solution to the BVP.
         """
         sol = copy.deepcopy(solinit)
-        sol.y = sol.y.T
         sol.set_interpolate_function('cubic')
         number_of_datapoints = len(sol.t)
         if number_of_datapoints < 3:
@@ -134,7 +133,6 @@ class Collocation(BaseAlgorithm):
         # Organize the output with the sol() structure
         sol.t = self.tspan
         sol.y, sol.q, sol.parameters = self._unwrap_params(xopt['x'])
-        sol.y = sol.y.T
         return sol
 
     def reconstruct(self, time, ivp):
