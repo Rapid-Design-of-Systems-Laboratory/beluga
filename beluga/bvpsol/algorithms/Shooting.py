@@ -109,8 +109,8 @@ class Shooting(BaseAlgorithm):
         p  = np.array(parameters)
         nParams = p.size
         h = StepSize
-        ya = np.array([traj.T[0] for traj in y_list]).T
-        yb = np.array([traj.T[-1] for traj in y_list]).T
+        ya = np.array([traj[0] for traj in y_list]).T
+        yb = np.array([traj[-1] for traj in y_list]).T
         nOdes = ya.shape[0]
         num_arcs = len(phi_full_list)
         fx = bc_func(ya,yb,p,aux)
@@ -256,9 +256,9 @@ class Shooting(BaseAlgorithm):
                         y_list.append(yy[:, :nOdes])
                         t_list.append(t)
                         yb[arc_idx, :] = yy[-1, :nOdes]
-                        phi_full = np.reshape(yy[:, nOdes:].T, (len(t), nOdes, nOdes+nParams))
+                        phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
-                        phi = np.reshape(yy[-1, nOdes:].T, (nOdes, nOdes+nParams))  # STM
+                        phi = np.reshape(yy[-1, nOdes:], (nOdes, nOdes+nParams))  # STM
                         phi_list.append(np.copy(phi))
                 if n_iter == 1:
                     if not self.saved_code:
@@ -271,7 +271,7 @@ class Shooting(BaseAlgorithm):
                     break
 
                 # Determine the error vector
-                res = bc_func(ya, yb, paramGuess, sol.aux)
+                res = bc_func(ya.T, yb.T, paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -347,7 +347,7 @@ class Shooting(BaseAlgorithm):
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
 
             sol.t = np.hstack(t_list)
-            sol.y = np.column_stack(y_list).T
+            sol.y = np.column_stack(y_list)
             sol.parameters = paramGuess
 
         else:
