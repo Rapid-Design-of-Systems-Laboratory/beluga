@@ -107,8 +107,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     # # includes costates
     state_names = ocp_ws['problem_data']['state_list']
 
-    initial_states = solinit.y[:,0] # First column
-    terminal_states = solinit.y[:,-1] # Last column
+    initial_states = solinit.y[0, :]  # First column
+    terminal_states = solinit.y[-1, :] # Last column
+
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
 

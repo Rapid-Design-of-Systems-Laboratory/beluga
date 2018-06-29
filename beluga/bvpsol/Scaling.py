@@ -98,7 +98,7 @@ class Scaling(dict):
                     for (aux_name,aux_val) in sol.aux[aux_type].items()
                     ]
             # Have to do in this order to override state values with arrays
-            variables += [(state,max(abs(sol.y[idx,:])))
+            variables += [(state,max(abs(sol.y[:, idx])))
                             for idx,state in enumerate(self.problem_data['state_list'])]
 
             var_dict = dict(variables)
@@ -140,7 +140,7 @@ class Scaling(dict):
 
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
-            solout.y[idx, :] /= self.scale_vals['states'][state]
+            solout.y[:, idx] /= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):
@@ -168,7 +168,7 @@ class Scaling(dict):
 
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
-            solout.y[idx, :] *= self.scale_vals['states'][state]
+            solout.y[:, idx] *= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']+extras):

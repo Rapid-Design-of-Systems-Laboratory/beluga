@@ -146,7 +146,7 @@ class Solution(Trajectory):
                      ]
         # Define state variables
         # Have to do in this order to override state values with arrays
-        variables += [(state,np.array(y[idx,:], dtype=np.float64))
+        variables += [(state,np.array(y[:, idx], dtype=np.float64))
                        for idx,state in enumerate(problem_data['state_list'])]
 
         # Define control variables

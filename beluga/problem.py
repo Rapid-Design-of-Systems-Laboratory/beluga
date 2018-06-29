@@ -453,6 +453,6 @@ class GuessGenerator(object):
         elapsed_time = toc()
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
-        solinit.y = solivp.y.T # TODO: This shouldn't be transposed, but it's gonna require significant reworking.
+        solinit.y = solivp.y
         solinit.parameters = param_guess
         return solinit

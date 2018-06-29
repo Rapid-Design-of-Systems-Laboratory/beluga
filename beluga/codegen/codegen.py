@@ -75,7 +75,6 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     parameters = sym.Matrix(parameters)
     tf_var = sym.sympify('tf')
     unknowns = list(it.chain(controls, mu_vars))
-
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
     u_args = [*states, *costates, *parameters, *constants]
 

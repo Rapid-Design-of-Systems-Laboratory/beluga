@@ -50,13 +50,14 @@ def test_brachistochrone_shooting():
         .terminal('x', 10) \
         .terminal('y', -10)
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps,
+                       guess_generator=guess_maker)
 
     assert isinstance(sol, Trajectory)
     assert isinstance(sol, Solution)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -73,10 +74,10 @@ def test_brachistochrone_shooting():
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -148,8 +149,8 @@ def test_brachistochrone_collocation():
     assert isinstance(sol, Trajectory)
     assert isinstance(sol, Solution)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -168,8 +169,8 @@ def test_brachistochrone_collocation():
 
     sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -235,8 +236,8 @@ def test_brachistochrone_adjoined():
 
     sol = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -255,8 +256,8 @@ def test_brachistochrone_adjoined():
 
     sol = beluga.solve(ocp, method='icrm', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -344,8 +345,8 @@ def test_planarhypersonic():
 
     sol = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
 
-    y0 = sol.y.T[0]
-    yf = sol.y.T[-1]
+    y0 = sol.y[0]
+    yf = sol.y[-1]
 
     y0e = [80000, 0, 4000, 0.0195, -16.8243, 1212433.8085, -2836.0620, 0]
     yfe = [0, 0.0873, 2691.4733, -0.9383, 546.4540, 1212433.8085, -5382.9467, 0.1840]
