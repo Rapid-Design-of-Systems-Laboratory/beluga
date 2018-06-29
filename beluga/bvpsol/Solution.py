@@ -3,6 +3,7 @@ import numexpr as ne
 from scipy.interpolate import InterpolatedUnivariateSpline
 import math
 from beluga.ivpsol import Trajectory
+from beluga.utils import keyboard
 
 
 class Solution(Trajectory):
@@ -113,7 +114,7 @@ class Solution(Trajectory):
         overwrite: Overwrite existing solution with new mesh
         """
 
-        if not hasattr(self, 'arcs'):
+        if self.arcs is None:
             self.arcs = ((0,len(self.t)-1),)
         if mesh_size is not None and mesh_size > len(self.t)*len(self.arcs):
             # Update solution to use new mesh if needed
