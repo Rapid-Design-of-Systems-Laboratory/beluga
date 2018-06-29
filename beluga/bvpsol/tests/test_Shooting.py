@@ -17,15 +17,15 @@ def test_Shooting_1():
     algo = Shooting()
     solinit = Solution()
     solinit.t = np.linspace(0,4,2)
-    solinit.y = np.array([[0,1],[0,1]]).T
+    solinit.y = np.array([[0,1],[0,1]])
     out = algo.solve(odefun, None, bcfun, solinit)
-    assert out.y.T[0][0] < tol
-    assert out.y.T[0][1] - 2.06641646 < tol
-    assert out.y.T[-1][0] + 2 < tol
-    assert out.y.T[-1][1] + 2.87588998 < tol
+    assert out.y[0][0] < tol
+    assert out.y[0][1] - 2.06641646 < tol
+    assert out.y[-1][0] + 2 < tol
+    assert out.y[-1][1] + 2.87588998 < tol
     assert out.t[-1] - 4 < tol
-    assert abs(out.y.T[0][1] - solinit.y.T[0][1]) > tol
-    assert abs(out.y.T[-1][0] - solinit.y.T[-1][0]) - 2 < tol
+    assert abs(out.y[0][1] - solinit.y[0][1]) > tol
+    assert abs(out.y[-1][0] - solinit.y[-1][0]) - 2 < tol
 
 def test_Shooting_2():
     # Full 2PBVP test problem
@@ -41,15 +41,15 @@ def test_Shooting_2():
     algo = Shooting()
     solinit = Solution()
     solinit.t = np.linspace(0, np.pi, 30)
-    solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t)))
+    solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t))).T
     solinit.parameters = np.array([15])
 
     out = algo.solve(odefun, None, bcfun, solinit)
     assert out.t[-1] - np.pi < tol
-    assert out.y.T[0][0] - 1 < tol
-    assert out.y.T[0][1] < tol
-    assert out.y.T[-1][0] - 1 < tol
-    assert out.y.T[-1][1] < tol
+    assert out.y[0][0] - 1 < tol
+    assert out.y[0][1] < tol
+    assert out.y[-1][0] - 1 < tol
+    assert out.y[-1][1] < tol
     assert out.parameters[0] - 17.09646175 < tol
 
 def test_Shooting_3():
@@ -65,7 +65,7 @@ def test_Shooting_3():
     algo = Shooting()
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
-    solinit.y = np.array([[0], [0]]).T
+    solinit.y = np.array([[0], [0]])
     solinit.parameters = np.array([1])
     out = algo.solve(odefun, None, bcfun, solinit)
     assert out.parameters - 2 < tol

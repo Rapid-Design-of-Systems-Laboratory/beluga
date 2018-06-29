@@ -324,7 +324,7 @@ class Shooting(BaseAlgorithm):
                     dy0 = alpha*beta*dy0
 
                 # Apply corrections to states and parameters (if any)
-                d_ya = np.reshape(dy0[:nOdes*num_arcs], (nOdes, num_arcs), order='F')
+                d_ya = np.reshape(dy0[:nOdes*num_arcs], (num_arcs, nOdes), order='F')
                 if nParams > 0:
                     dp = dy0[nOdes*num_arcs:]
                     paramGuess += dp
