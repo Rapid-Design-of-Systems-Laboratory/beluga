@@ -137,7 +137,6 @@ class Shooting(BaseAlgorithm):
                 f = bc_func(ya + dx[:nOdes], yb + dy, p, aux)
                 M[:,i] = (f-fx)/h
                 dx[i, arc_idx] = dx[i, arc_idx] - h
-
             J_i = M
             J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
             J[:,J_slice] = J_i
@@ -152,12 +151,21 @@ class Shooting(BaseAlgorithm):
             dx[j, arc_idx] = dx[j, arc_idx] - h
             p[i] = p[i] - h
 
-        # J[:,nOdes*num_arcs:] = P
-        J = np.hstack((M,P))
+        J = np.hstack((J,P))
         return J
 
-    def _bc_multi_shooting(self, ya, yb, paramGuess, aux):
-        pass
+    def _bc_func_multiple_shooting(self, bc_func=None):
+        def _bc_func(ya, yb, paramGuess, aux):
+            bc1 = bc_func(ya, yb, paramGuess, aux)
+            narcs = ya.shape[1]
+            bc2 = np.squeeze([ya[:, ii + 1] - yb[:, ii] for ii in range(narcs - 1)])
+            bc = np.hstack((bc1,bc2))
+            return bc
+
+        def wrapper(ya, yb, paramGuess, aux):
+            return _bc_func(ya, yb, paramGuess, aux)
+
+        return wrapper
 
     @staticmethod
     def make_stmode(odefn, nOdes, StepSize=1e-6):
@@ -217,6 +225,9 @@ class Shooting(BaseAlgorithm):
         if self.stm_ode_func is None:
             self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
+        # Set up the boundary condition function
+        self.bc_func = self._bc_func_multiple_shooting(bc_func=bc_func)
+
         if sol.arcs is None:
             sol.arcs = [(0, len(solinit.t)-1)]
 
@@ -225,13 +236,26 @@ class Shooting(BaseAlgorithm):
         if len(sol.arcs) % 2 == 0:
             raise Exception('Number of arcs must be odd!')
 
+        # TODO: These are specific to an old implementation of path constraints see I51
         left_idx, right_idx = map(np.array, zip(*sol.arcs))
         ya = sol.y[left_idx, :]
         yb = sol.y[right_idx, :]
+        tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1] # TODO: I51
+        tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])] # TODO: I51
 
-        tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1]
-        tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
-        keyboard()
+        ya = None
+        tspan_list = []
+        t0 = sol.t[0]
+        ti = np.linspace(sol.t[0], sol.t[-1], self.num_arcs+1)
+        for ii in range(len(ti)-1):
+            tspan_list.append((t0, ti[ii+1]))
+            if ya is None:
+                ya = np.array([sol(t0)[0]])
+            else:
+                ya = np.vstack((ya, sol(t0)[0]))
+            t0 = ti[ii+1]
+
+        num_arcs = self.num_arcs
 
         if solinit.parameters is None:
             nParams = 0
@@ -262,7 +286,7 @@ class Shooting(BaseAlgorithm):
                         y0stm[:nOdes] = ya[arc_idx, :]
                         y0stm[nOdes:] = stm0[:]
                         q0 = []
-                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, arc_idx)
+                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
                         t = sol_ivp.t
                         yy = sol_ivp.y
                         y_list.append(yy[:, :nOdes])
@@ -270,7 +294,7 @@ class Shooting(BaseAlgorithm):
                         yb[arc_idx, :] = yy[-1, :nOdes]
                         phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
-                        phi = np.reshape(yy[-1, nOdes:], (nOdes, nOdes+nParams))  # STM
+                        phi = np.reshape(yy[-1, nOdes:], (nOdes, nOdes+nParams))  # STM # TODO: Chain multiply these guys
                         phi_list.append(np.copy(phi))
                 if n_iter == 1:
                     if not self.saved_code:
@@ -283,7 +307,7 @@ class Shooting(BaseAlgorithm):
                     break
 
                 # Determine the error vector
-                res = bc_func(ya.T, yb.T, paramGuess, sol.aux)
+                res = self.bc_func(ya.T, yb.T, paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -306,7 +330,7 @@ class Shooting(BaseAlgorithm):
 
                 # Compute Jacobian of boundary conditions
                 nBCs = len(res)
-                J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, sol.aux, bc_func)
+                J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, sol.aux, self.bc_func)
 
                 # Compute correction vector
                 if r0 is not None:
@@ -329,16 +353,15 @@ class Shooting(BaseAlgorithm):
                 if r1 < min(10*self.tolerance, 1e-3):
                     alpha, beta = 1, 1
 
-                try:
-                    dy0 = alpha*beta*np.linalg.solve(J, -res)
-                except:
-                    dy0, *_ = np.linalg.lstsq(J, -res)
-                    dy0 = alpha*beta*dy0
+                dy0, *_ = np.linalg.lstsq(J, -res)
+                dy0 = alpha*beta*dy0
 
                 # Apply corrections to states and parameters (if any)
-                d_ya = np.reshape(dy0[:nOdes*num_arcs], (num_arcs, nOdes), order='F')
+                d_ya = np.array([dy0[:nOdes]])
+                d_ya = np.vstack((d_ya, np.reshape(dy0[nOdes+nParams+1:], (num_arcs-1, nOdes), order='F')))
+                keyboard()
                 if nParams > 0:
-                    dp = dy0[nOdes*num_arcs:]
+                    dp = dy0[nOdes:nOdes+nParams]
                     paramGuess += dp
                     ya = ya + d_ya
                 else:
