@@ -42,8 +42,11 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                         max_iterations=200,
                         verbose = True,
                         max_error=100,
-                        # number_arcs=2
+                        num_arcs=1,
+                        num_cpus=2
              )
+# array([ 0.    ,  0.    ,  0.    ,  0.    ,  0.    , -2.1481,  0.019 ])
+# array([ 0.    ,  0.    ,  0.    ,  0.0002, -0.0021, -2.148 ,  0.019 ])
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
