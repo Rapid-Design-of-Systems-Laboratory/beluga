@@ -3,6 +3,7 @@ import numpy as np
 from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator
+from multiprocessing_on_dill import pool
 import copy
 import numba
 
@@ -99,11 +100,17 @@ class Shooting(BaseAlgorithm):
         obj.num_cpus = num_cpus
         obj.use_numba = use_numba
         obj.verbose = verbose
+
+        obj.pool = None
+
         return obj
 
     def __init__(self, *args, **kwargs):
         self.stm_ode_func = None
         self.saved_code = True
+
+        if self.num_cpus > 1:
+            self.pool = pool.Pool(processes=self.num_cpus)
 
         if self.derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
@@ -126,6 +133,7 @@ class Shooting(BaseAlgorithm):
 
         M = np.zeros((nBCs, nOdes))
         P = np.zeros((nBCs, p.size))
+        Ptemp = np.zeros((nBCs, p.size))
         J = np.zeros((nBCs, (nOdes)*num_arcs+p.size))
         dx = np.zeros((nOdes+nParams, num_arcs))
 
@@ -141,24 +149,30 @@ class Shooting(BaseAlgorithm):
             J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
             J[:,J_slice] = J_i
 
-        for i in range(p.size):
-            p[i] = p[i] + h
-            j = i + nOdes
-            dx[j, arc_idx] = dx[j, arc_idx] + h
-            dy = np.dot(phi[-1], dx)
-            f = bc_func(ya, yb + dy, p, aux)
-            P[:,i] = (f-fx)/h
-            dx[j, arc_idx] = dx[j, arc_idx] - h
-            p[i] = p[i] - h
+        for arc_idx, phi in zip(it.count(), phi_full_list):
+            for i in range(p.size):
+                p[i] = p[i] + h
+                j = i + nOdes
+                dx[j, arc_idx] = dx[j, arc_idx] + h
+                dy = np.dot(phi[-1], dx)
+                f = bc_func(ya, yb + dy, p, aux)
+                Ptemp[:,i] = (f-fx)/h
+                dx[j, arc_idx] = dx[j, arc_idx] - h
+                p[i] = p[i] - h
+            P += Ptemp
+            Ptemp = np.zeros((nBCs, p.size))
 
-        J = np.hstack((J,P))
+        J_i = P
+        J_slice = slice(nOdes * num_arcs, nOdes * num_arcs + nParams)
+        J[:, J_slice] = J_i
+
         return J
 
     def _bc_func_multiple_shooting(self, bc_func=None):
         def _bc_func(ya, yb, paramGuess, aux):
             bc1 = bc_func(ya, yb, paramGuess, aux)
             narcs = ya.shape[1]
-            bc2 = np.squeeze([ya[:, ii + 1] - yb[:, ii] for ii in range(narcs - 1)])
+            bc2 = np.array([ya[:, ii + 1] - yb[:, ii] for ii in range(narcs - 1)]).flatten()
             bc = np.hstack((bc1,bc2))
             return bc
 
@@ -233,8 +247,8 @@ class Shooting(BaseAlgorithm):
 
         arc_seq = sol.aux['arc_seq']
         num_arcs = len(arc_seq)
-        if len(sol.arcs) % 2 == 0:
-            raise Exception('Number of arcs must be odd!')
+        # if len(sol.arcs) % 2 == 0:
+        #     raise Exception('Number of arcs must be odd!')
 
         # TODO: These are specific to an old implementation of path constraints see I51
         left_idx, right_idx = map(np.array, zip(*sol.arcs))
@@ -243,6 +257,7 @@ class Shooting(BaseAlgorithm):
         tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1] # TODO: I51
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])] # TODO: I51
 
+        # sol.set_interpolate_function('cubic')
         ya = None
         tspan_list = []
         t0 = sol.t[0]
@@ -282,20 +297,41 @@ class Shooting(BaseAlgorithm):
                 t_list = []
                 y_list = []
                 with timeout(seconds=5000):
-                    for arc_idx, tspan in enumerate(tspan_list):
-                        y0stm[:nOdes] = ya[arc_idx, :]
-                        y0stm[nOdes:] = stm0[:]
+                    if self.pool is None:
+                        for arc_idx, tspan in enumerate(tspan_list):
+                            y0stm[:nOdes] = ya[arc_idx, :]
+                            y0stm[nOdes:] = stm0[:]
+                            q0 = []
+                            sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
+                            t = sol_ivp.t
+                            yy = sol_ivp.y
+                            y_list.append(yy[:, :nOdes])
+                            t_list.append(t)
+                            yb[arc_idx, :] = yy[-1, :nOdes]
+                            phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
+                            phi_full_list.append(np.copy(phi_full))
+                    else:
+                        raise NotImplementedError
+                        y0stm = [np.hstack((ya[arc_idx, :],stm0[:])) for arc_idx, tspan in enumerate(tspan_list)]
                         q0 = []
-                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
-                        t = sol_ivp.t
-                        yy = sol_ivp.y
-                        y_list.append(yy[:, :nOdes])
-                        t_list.append(t)
-                        yb[arc_idx, :] = yy[-1, :nOdes]
-                        phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
-                        phi_full_list.append(np.copy(phi_full))
-                        phi = np.reshape(yy[-1, nOdes:], (nOdes, nOdes+nParams))  # STM # TODO: Chain multiply these guys
-                        phi_list.append(np.copy(phi))
+                        sol_set = [self.pool.apply_async(prop, args=(self.stm_ode_func, None, tspan, y0s, q0, paramGuess, sol.aux, 0)) for tspan, y0s in zip(tspan_list, y0stm)]
+                        sol_ivp = [traj.get() for traj in sol_set]
+                        t_list = [s.t for s in sol_ivp]
+                        y_list = [s.y for s in sol_ivp]
+                        yb = [s.y[-1] for s in sol_ivp]
+                        keyboard() # TODO: Parallelize multiple shooting. This is as far as I got.
+                        for arc_idx, tspan in enumerate(tspan_list):
+                            y0stm[:nOdes] = ya[arc_idx, :]
+                            y0stm[nOdes:] = stm0[:]
+                            q0 = []
+                            sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0)
+                            t = sol_ivp.t
+                            yy = sol_ivp.y
+                            y_list.append(yy[:, :nOdes])
+                            t_list.append(t)
+                            yb[arc_idx, :] = yy[-1, :nOdes]
+                            phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
+                            phi_full_list.append(np.copy(phi_full))
                 if n_iter == 1:
                     if not self.saved_code:
                         self.save_code()
@@ -353,15 +389,17 @@ class Shooting(BaseAlgorithm):
                 if r1 < min(10*self.tolerance, 1e-3):
                     alpha, beta = 1, 1
 
-                dy0, *_ = np.linalg.lstsq(J, -res)
-                dy0 = alpha*beta*dy0
+                try:
+                    dy0 = alpha*beta*np.linalg.solve(J, -res)
+                except:
+                    dy0, *_ = np.linalg.lstsq(J, -res)
+                    dy0 = alpha*beta*dy0
 
                 # Apply corrections to states and parameters (if any)
-                d_ya = np.array([dy0[:nOdes]])
-                d_ya = np.vstack((d_ya, np.reshape(dy0[nOdes+nParams+1:], (num_arcs-1, nOdes), order='F')))
-                keyboard()
+                d_ya = np.reshape(dy0[:nOdes * num_arcs], (num_arcs, nOdes), order='C')
+
                 if nParams > 0:
-                    dp = dy0[nOdes:nOdes+nParams]
+                    dp = dy0[nOdes * num_arcs:]
                     paramGuess += dp
                     ya = ya + d_ya
                 else:
@@ -382,7 +420,7 @@ class Shooting(BaseAlgorithm):
                 sol.arcs.append((timestep_ctr, timestep_ctr+len(tt)-1))
 
             sol.t = np.hstack(t_list)
-            sol.y = np.column_stack(y_list)
+            sol.y = np.row_stack(y_list)
             sol.parameters = paramGuess
 
         else:
