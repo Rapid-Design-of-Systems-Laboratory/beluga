@@ -120,7 +120,7 @@ class Shooting(BaseAlgorithm):
         self.stm_ode_func = self.make_stmode(obj[0].deriv_func, problem_data['nOdes'])
         return obj
 
-    def _bc_jac_multi(self, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
+    def _bc_jac_multi(self, t_list, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
         p  = np.array(parameters)
         nParams = p.size
         h = StepSize
@@ -128,7 +128,7 @@ class Shooting(BaseAlgorithm):
         yb = np.array([traj[-1] for traj in y_list]).T
         nOdes = ya.shape[0]
         num_arcs = len(phi_full_list)
-        fx = bc_func(ya,yb,p,aux)
+        fx = bc_func(t_list[0][0], ya, [], t_list[-1][-1], yb, [], p, aux)
         nBCs = len(fx)
 
         M = np.zeros((nBCs, nOdes))
@@ -142,7 +142,7 @@ class Shooting(BaseAlgorithm):
             for i in range(nOdes):
                 dx[i, arc_idx] = dx[i, arc_idx] + h
                 dy = np.dot(phi[-1], dx)
-                f = bc_func(ya + dx[:nOdes], yb + dy, p, aux)
+                f = bc_func(t_list[0][0], ya + dx[:nOdes], [], t_list[-1][-1], yb + dy, [], p, aux)
                 M[:,i] = (f-fx)/h
                 dx[i, arc_idx] = dx[i, arc_idx] - h
             J_i = M
@@ -155,7 +155,7 @@ class Shooting(BaseAlgorithm):
                 j = i + nOdes
                 dx[j, arc_idx] = dx[j, arc_idx] + h
                 dy = np.dot(phi[-1], dx)
-                f = bc_func(ya, yb + dy, p, aux)
+                f = bc_func(t_list[0][0], ya, [], t_list[-1][-1], yb + dy, [], p, aux)
                 Ptemp[:,i] = (f-fx)/h
                 dx[j, arc_idx] = dx[j, arc_idx] - h
                 p[i] = p[i] - h
@@ -169,15 +169,15 @@ class Shooting(BaseAlgorithm):
         return J
 
     def _bc_func_multiple_shooting(self, bc_func=None):
-        def _bc_func(ya, yb, paramGuess, aux):
-            bc1 = bc_func(ya, yb, paramGuess, aux)
-            narcs = ya.shape[1]
-            bc2 = np.array([ya[:, ii + 1] - yb[:, ii] for ii in range(narcs - 1)]).flatten()
+        def _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux):
+            bc1 = bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)
+            narcs = y0.shape[1]
+            bc2 = np.array([y0[:, ii + 1] - yf[:, ii] for ii in range(narcs - 1)]).flatten()
             bc = np.hstack((bc1,bc2))
             return bc
 
-        def wrapper(ya, yb, paramGuess, aux):
-            return _bc_func(ya, yb, paramGuess, aux)
+        def wrapper(t0, y0, q0, tf, yf, qf, paramGuess, aux):
+            return _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)
 
         return wrapper
 
@@ -343,7 +343,7 @@ class Shooting(BaseAlgorithm):
                     break
 
                 # Determine the error vector
-                res = self.bc_func(ya.T, yb.T, paramGuess, sol.aux)
+                res = self.bc_func(t_list[0][0], ya.T, [], t_list[-1][-1], yb.T, [], paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -366,7 +366,7 @@ class Shooting(BaseAlgorithm):
 
                 # Compute Jacobian of boundary conditions
                 nBCs = len(res)
-                J = self._bc_jac_multi(nBCs, phi_full_list, y_list, paramGuess, sol.aux, self.bc_func)
+                J = self._bc_jac_multi(t_list, nBCs, phi_full_list, y_list, paramGuess, sol.aux, self.bc_func)
 
                 # Compute correction vector
                 if r0 is not None:

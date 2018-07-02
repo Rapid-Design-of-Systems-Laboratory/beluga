@@ -43,7 +43,7 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                         verbose = True,
                         max_error=100,
                         num_arcs=1,
-                        num_cpus=2
+                        num_cpus=1
              )
 # array([ 0.    ,  0.    ,  0.    ,  0.    ,  0.    , -2.1481,  0.019 ])
 # array([ 0.    ,  0.    ,  0.    ,  0.0002, -0.0021, -2.148 ,  0.019 ])

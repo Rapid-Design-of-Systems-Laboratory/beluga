@@ -11,7 +11,7 @@ def test_Shooting_1():
     def odefun(t, X, p, const, arc):
         return np.hstack((X[1], -abs(X[0])))
 
-    def bcfun(X0,Xf,p,aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, p, aux):
         return np.hstack((X0[0], Xf[0]+2))
 
     algo = Shooting()
@@ -35,7 +35,7 @@ def test_Shooting_2():
     def odefun(t, X, p, const, arc):
         return np.hstack((X[1], -(p[0] - 2 * 5 * np.cos(2 * t)) * X[0]))
 
-    def bcfun(X0, Xf, p, aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, p, aux):
         return np.hstack((X0[1], Xf[1], X0[0] - 1))
 
     algo = Shooting()
@@ -45,12 +45,12 @@ def test_Shooting_2():
     solinit.parameters = np.array([15])
 
     out = algo.solve(odefun, None, bcfun, solinit)
-    assert out.t[-1] - np.pi < tol
-    assert out.y[0][0] - 1 < tol
-    assert out.y[0][1] < tol
-    assert out.y[-1][0] - 1 < tol
-    assert out.y[-1][1] < tol
-    assert out.parameters[0] - 17.09646175 < tol
+    assert abs(out.t[-1] - np.pi) < tol
+    assert abs(out.y[0][0] - 1) < tol
+    assert abs(out.y[0][1]) < tol
+    assert abs(out.y[-1][0] - 1) < tol
+    assert abs(out.y[-1][1]) < tol
+    assert abs(out.parameters[0] - 17.09646175) < tol
 
 def test_Shooting_3():
     # This problem contains a parameter, but it is not explicit in the BCs.
@@ -59,7 +59,7 @@ def test_Shooting_3():
     def odefun(t, X, p, const, arc):
         return (1 * p[0])
 
-    def bcfun(X0, Xf, p, aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, p, aux):
         return np.hstack((X0[0] - 0, Xf[0] - 2))
 
     algo = Shooting()
@@ -68,4 +68,4 @@ def test_Shooting_3():
     solinit.y = np.array([[0], [0]])
     solinit.parameters = np.array([1])
     out = algo.solve(odefun, None, bcfun, solinit)
-    assert out.parameters - 2 < tol
+    assert abs(out.parameters - 2) < tol
