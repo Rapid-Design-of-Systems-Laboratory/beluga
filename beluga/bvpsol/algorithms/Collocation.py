@@ -213,7 +213,7 @@ class Collocation(BaseAlgorithm):
     def _collocation_constraint_boundary(self, vectorized):
         X, quads0, params = self._unwrap_params(vectorized)
         if len(quads0) == 0:
-            return np.squeeze(self.bcs(np.array([X[0]]).T, np.array([X[-1]]).T, params, self.aux))
+            return np.squeeze(self.bcs(self.tspan[0], np.array([X[0]]).T, [], self.tspan[-1], np.array([X[-1]]).T, [], params, self.aux))
         else:
             quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadratures)
             return np.squeeze(self.bcs(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, self.aux))

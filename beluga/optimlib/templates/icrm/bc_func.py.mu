@@ -53,8 +53,8 @@ def bc_func_right(_yb, _p, _aux):
 
     return res_right
 
-def bc_func(_ya, _yb, _p, _aux):
-    res_left = bc_func_left(_ya[:,0], _p, _aux)
-    res_right = bc_func_right(_yb[:,-1], _p, _aux)
+def bc_func(_t0, _y0, _q0, _tf, _yf, _qf, _p, _aux):
+    res_left = bc_func_left(_y0[:,0], _p, _aux)
+    res_right = bc_func_right(_yf[:,-1], _p, _aux)
 
     return np.hstack((res_left, res_right))

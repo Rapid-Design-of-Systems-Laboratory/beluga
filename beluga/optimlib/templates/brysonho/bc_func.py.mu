@@ -116,13 +116,13 @@ def bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq):
     return full_res
 
 
-def bc_func(_ya, _yb, _p, _aux):
+def bc_func(_t0, _y0, _q0, _tf, _yf, _qf, _p, _aux):
     _arc_seq = _aux.get('arc_seq', (0,))
     _pi_seq = _aux.get('pi_seq',(None,))
-    res_left = bc_func_left(_ya[:,0], _p, _aux, _arc_seq, _pi_seq)
-    res_right = bc_func_right(_yb[:,-1], _p, _aux, _arc_seq, _pi_seq)
+    res_left = bc_func_left(_y0[:,0], _p, _aux, _arc_seq, _pi_seq)
+    res_right = bc_func_right(_yf[:,-1], _p, _aux, _arc_seq, _pi_seq)
     if len(_arc_seq) > 1:
-        res_int = bc_func_interior(_ya, _yb, _p, _aux, _arc_seq, _pi_seq)
+        res_int = bc_func_interior(_y0, _yf, _p, _aux, _arc_seq, _pi_seq)
         return np.hstack((res_left,res_int,res_right)) # Concatenate
     else:
         return np.hstack((res_left,res_right)) # Concatenate
