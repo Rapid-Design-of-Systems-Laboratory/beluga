@@ -66,6 +66,10 @@ class Shooting(BaseAlgorithm):
         +------------------------+-----------------+-----------------+
         | max_iterations         | 100             | > 0             |
         +------------------------+-----------------+-----------------+
+        | num_arcs               | 1               | > 0             |
+        +------------------------+-----------------+-----------------+
+        | num_cpus               | 1               | > 0             |
+        +------------------------+-----------------+-----------------+
         | use_numba              | False           | Bool            |
         +------------------------+-----------------+-----------------+
         | verbose                | False           | Bool            |
@@ -80,6 +84,8 @@ class Shooting(BaseAlgorithm):
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
+        num_arcs = kwargs.get('num_arcs', 1)
+        num_cpus = kwargs.get('num_cpus', 1)
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
@@ -89,6 +95,8 @@ class Shooting(BaseAlgorithm):
         obj.tolerance = tolerance
         obj.max_error = max_error
         obj.max_iterations = max_iterations
+        obj.num_arcs = num_arcs
+        obj.num_cpus = num_cpus
         obj.use_numba = use_numba
         obj.verbose = verbose
         return obj
@@ -148,6 +156,9 @@ class Shooting(BaseAlgorithm):
         J = np.hstack((M,P))
         return J
 
+    def _bc_multi_shooting(self, ya, yb, paramGuess, aux):
+        pass
+
     @staticmethod
     def make_stmode(odefn, nOdes, StepSize=1e-6):
         Xh = np.eye(nOdes)*StepSize
@@ -191,7 +202,7 @@ class Shooting(BaseAlgorithm):
         :return: A solution to the BVP.
         """
 
-        # Instantly make a copy of sol and format inputs
+        # Make a copy of sol and format inputs
         sol = copy.deepcopy(solinit)
         sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
@@ -220,6 +231,7 @@ class Shooting(BaseAlgorithm):
 
         tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1]
         tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])]
+        keyboard()
 
         if solinit.parameters is None:
             nParams = 0
