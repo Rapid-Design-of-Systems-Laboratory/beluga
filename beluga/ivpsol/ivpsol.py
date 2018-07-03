@@ -64,7 +64,6 @@ class Propagator(Algorithm):
         :param kwargs: Unused.
         :return: A full reconstructed trajectory, :math:`\\gamma`.
         """
-
         int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0,
                                             rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
 
@@ -145,7 +144,10 @@ class Trajectory(object):
         # This builds the interpolation function on the most up to date data
         if dim == 1:
             f = self.interpolate(self.t, self.y.T)
-            y_val = np.array([f(t)])
+            if t.shape == ():
+                y_val = np.array([f(t)])
+            else:
+                y_val = f(t)
         else:
             f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(dim)]
             y_val = np.array([f[ii](t) for ii in range(dim)]).T
