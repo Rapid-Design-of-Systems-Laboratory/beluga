@@ -170,7 +170,7 @@ class Shooting(BaseAlgorithm):
 
     def _bc_func_multiple_shooting(self, bc_func=None):
         def _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux):
-            bc1 = bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)
+            bc1 = np.array(bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)).flatten()
             narcs = y0.shape[1]
             bc2 = np.array([y0[:, ii + 1] - yf[:, ii] for ii in range(narcs - 1)]).flatten()
             bc = np.hstack((bc1,bc2))
@@ -207,7 +207,7 @@ class Shooting(BaseAlgorithm):
                 p[i] -= StepSize
 
             phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))), np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
-            return np.concatenate((fx, np.reshape(phiDot, (nOdes * (nOdes + nParams)))))
+            return np.hstack((fx, np.reshape(phiDot, (nOdes * (nOdes + nParams)))))
 
         def wrapper(t, _X, p, const, arc_idx):  # needed for scipy
             return _stmode_fd(t, _X, p, const, arc_idx)

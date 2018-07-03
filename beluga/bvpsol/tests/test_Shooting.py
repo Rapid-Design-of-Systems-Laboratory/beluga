@@ -9,10 +9,10 @@ def test_Shooting_1():
     # This is the simplest BVP
 
     def odefun(t, X, p, const, arc):
-        return np.hstack((X[1], -abs(X[0])))
+        return (X[1], -abs(X[0]))
 
     def bcfun(t0, X0, q0, tf, Xf, qf, p, aux):
-        return np.hstack((X0[0], Xf[0]+2))
+        return (X0[0], Xf[0]+2)
 
     algo = Shooting()
     solinit = Solution()
@@ -33,10 +33,10 @@ def test_Shooting_2():
     # This problem contains an adjustable parameter.
 
     def odefun(t, X, p, const, arc):
-        return np.hstack((X[1], -(p[0] - 2 * 5 * np.cos(2 * t)) * X[0]))
+        return (X[1], -(p[0] - 2 * 5 * np.cos(2 * t)) * X[0])
 
     def bcfun(t0, X0, q0, tf, Xf, qf, p, aux):
-        return np.hstack((X0[1], Xf[1], X0[0] - 1))
+        return (X0[1], Xf[1], X0[0] - 1)
 
     algo = Shooting()
     solinit = Solution()
@@ -57,10 +57,10 @@ def test_Shooting_3():
     # Since time is buried in the ODEs, this tests if the BVP solver calculates
     # sensitivities with respect to parameters.
     def odefun(t, X, p, const, arc):
-        return (1 * p[0])
+        return 1 * p[0]
 
     def bcfun(t0, X0, q0, tf, Xf, qf, p, aux):
-        return np.hstack((X0[0] - 0, Xf[0] - 2))
+        return (X0[0] - 0, Xf[0] - 2)
 
     algo = Shooting()
     solinit = Solution()
