@@ -21,11 +21,10 @@ modules = ['beluga.bvpsol',
 
 tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
-         'beluga.ivpsol.integrators.tests',
          'beluga.optimlib.tests']
 
 setup(name="beluga",
-      version="0.1.6",
+      version="0.2.0",
       description="An indirect trajectory optimization framework.",
       long_description=long_description,
       author="Michael Sparapany",
