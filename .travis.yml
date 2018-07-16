@@ -1,15 +1,9 @@
 language: python
 os:
-  - osx
   - linux
 python:
   - 3.5
   - 3.6
-before_install: |
-  if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-    sudo -H easy_install pip
-    sudo -H easy_install virtualenv
-  fi
 cache: pip
 install:
   - pip install -e .
