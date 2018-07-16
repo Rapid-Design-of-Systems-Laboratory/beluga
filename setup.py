@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+# from beluga import __version__
 import os, sys
 
 with open('requirements.txt') as f:
@@ -24,7 +25,7 @@ tests = ['beluga.bvpsol.tests',
          'beluga.optimlib.tests']
 
 setup(name="beluga",
-      version="0.2.0",
+      version='0.2.0',
       description="An indirect trajectory optimization framework.",
       long_description=long_description,
       author="Michael Sparapany",
