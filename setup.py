@@ -42,5 +42,18 @@ setup(name="beluga",
           ]
       },
       install_requires=requirements,
-      include_package_data = True
+      include_package_data = True,
+      classifiers=(
+          'Intended Audience :: Developers',
+          'Intended Audience :: Science/Research',
+          'License :: OSI Approved :: MIT License',
+          'Operating System :: OS Independent',
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
+          'Topic :: Scientific/Engineering',
+          'Topic :: Scientific/Engineering :: Mathematics',
+          'Topic :: Scientific/Engineering :: Physics'
+      )
       )
