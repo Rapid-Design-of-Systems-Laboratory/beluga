@@ -202,8 +202,9 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp_fn.compute_control(_t,_X,sol.parameters,sol.aux)
-                    sol.u = np.array(list(map(f, sol.t, list(sol.y.T)))).T
+                    f = lambda _t, _X: bvp_fn.compute_control(_t, _X, sol.parameters, sol.aux)
+                    sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+                    # keyboard()
 
                     # Copy solution object for storage and reuse `sol` in next
                     # iteration

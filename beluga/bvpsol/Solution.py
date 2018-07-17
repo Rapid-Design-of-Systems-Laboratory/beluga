@@ -150,7 +150,7 @@ class Solution(Trajectory):
                        for idx,state in enumerate(problem_data['state_list'])]
 
         # Define control variables
-        variables += [(control,np.array(u[idx,:], dtype=np.float64))
+        variables += [(control,np.array(u[:, idx], dtype=np.float64))
                        for idx,control in enumerate(problem_data['control_list'])]
 
 
