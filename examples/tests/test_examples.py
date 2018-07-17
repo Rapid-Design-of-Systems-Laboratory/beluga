@@ -55,6 +55,10 @@ def test_brachistochrone_shooting():
 
     assert isinstance(sol, Trajectory)
     assert isinstance(sol, Solution)
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 7
+    assert sol.u.shape[1] == 1
 
     y0 = sol.y[0]
     yf = sol.y[-1]
@@ -78,6 +82,10 @@ def test_brachistochrone_shooting():
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 6
+    assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -148,6 +156,10 @@ def test_brachistochrone_collocation():
 
     assert isinstance(sol, Trajectory)
     assert isinstance(sol, Solution)
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 6
+    assert sol.u.shape[1] == 1
 
     y0 = sol.y[0]
     yf = sol.y[-1]
@@ -171,6 +183,11 @@ def test_brachistochrone_collocation():
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 7
+    assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -238,6 +255,11 @@ def test_brachistochrone_adjoined():
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 6
+    assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -258,6 +280,11 @@ def test_brachistochrone_adjoined():
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 7
+    assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
@@ -352,6 +379,10 @@ def test_planarhypersonic():
     yfe = [0, 0.0873, 2691.4733, -0.9383, 546.4540, 1212433.8085, -5382.9467, 0.1840]
     tfe = 144.5677
 
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 8
+    assert sol.u.shape[1] == 1
     assert abs((y0[0] - y0e[0]) / y0e[0]) < tol
     assert abs((y0[1] - y0e[1])) < tol
     assert abs((y0[2] - y0e[2]) / y0e[2]) < tol
