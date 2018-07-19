@@ -1,10 +1,17 @@
 beluga
 ======
 
-|travisbadge| |docs| |coverage|
++---------------+-----------------+---------------+------------+
+| Linux         | Windows         | Documentation | Coverage   |
++===============+=================+===============+============+
+| |travisbadge| | |appveyorbadge| | |docs|        | |coverage| |
++---------------+-----------------+---------------+------------+
 
 .. |travisbadge| image:: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga.svg?branch=master
     :target: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga
+
+.. |appveyorbadge| image:: https://ci.appveyor.com/api/projects/status/page1k2q2yeqbyty?svg=true
+    :target: https://ci.appveyor.com/project/msparapa/beluga/branch/master
 
 .. |docs| image:: https://readthedocs.org/projects/beluga/badge/?version=latest
     :target: https://beluga.readthedocs.io/en/latest/?badge=latest

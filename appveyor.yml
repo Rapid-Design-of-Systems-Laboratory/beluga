@@ -1,6 +1,5 @@
 environment:
   matrix:
-    - PYTHON: "C:\\Python35"
     - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
 
@@ -11,10 +10,3 @@ build: off
 
 test_script:
   - "%PYTHON%\\python.exe -m pytest"
-
-after_test:
-  - "%PYTHON%\\python.exe setup.py bdist_wheel"
-
-artifacts:
-  # bdist_wheel puts your built wheel in the dist directory
-  - path: dist\*
