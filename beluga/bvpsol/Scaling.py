@@ -50,7 +50,11 @@ class Scaling(dict):
         cost_used = next(key for key in cost_keys if str(ws[key]) != '0')
         if len(cost_used) < 1:
             raise ValueError('At least one cost function must be specified as nonzero!')
-        cost_unit = str(ws[cost_used].unit)
+
+        if cost_used == 'path_cost':
+            cost_unit = str(ws[cost_used].unit) + '*' + str(ws['indep_var'].unit)
+        else:
+            cost_unit = str(ws[cost_used].unit)
 
         # Scaling functions for states & costates (combined)
         self.scale_func['states'] = {}

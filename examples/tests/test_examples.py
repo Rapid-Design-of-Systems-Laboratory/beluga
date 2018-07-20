@@ -25,7 +25,7 @@ def test_brachistochrone_shooting():
     ocp.constant('g', -9.81, 'm/s^2')
 
     # Define costs
-    ocp.path_cost('1', 's')
+    ocp.path_cost('1', '1')
 
     # Define constraints
     ocp.constraints() \
@@ -127,7 +127,7 @@ def test_brachistochrone_collocation():
     ocp.constant('g', -9.81, 'm/s^2')
 
     # Define costs
-    ocp.path_cost('1', 's')
+    ocp.path_cost('1', '1')
 
     # Define constraints
     ocp.constraints() \
@@ -226,7 +226,7 @@ def test_brachistochrone_adjoined():
     ocp.constant('g', -9.81, 'm/s^2')
 
     # Define costs
-    ocp.path_cost('1', 's')
+    ocp.path_cost('1', '1')
 
     # Define constraints
     ocp.constraints() \
