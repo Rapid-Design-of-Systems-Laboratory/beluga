@@ -296,42 +296,41 @@ class Shooting(BaseAlgorithm):
                 phi_full_list = []
                 t_list = []
                 y_list = []
-                with timeout(seconds=5000):
-                    if self.pool is None:
-                        for arc_idx, tspan in enumerate(tspan_list):
-                            y0stm[:nOdes] = ya[arc_idx, :]
-                            y0stm[nOdes:] = stm0[:]
-                            q0 = []
-                            sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
-                            t = sol_ivp.t
-                            yy = sol_ivp.y
-                            y_list.append(yy[:, :nOdes])
-                            t_list.append(t)
-                            yb[arc_idx, :] = yy[-1, :nOdes]
-                            phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
-                            phi_full_list.append(np.copy(phi_full))
-                    else:
-                        raise NotImplementedError
-                        y0stm = [np.hstack((ya[arc_idx, :],stm0[:])) for arc_idx, tspan in enumerate(tspan_list)]
+                if self.pool is None:
+                    for arc_idx, tspan in enumerate(tspan_list):
+                        y0stm[:nOdes] = ya[arc_idx, :]
+                        y0stm[nOdes:] = stm0[:]
                         q0 = []
-                        sol_set = [self.pool.apply_async(prop, args=(self.stm_ode_func, None, tspan, y0s, q0, paramGuess, sol.aux, 0)) for tspan, y0s in zip(tspan_list, y0stm)]
-                        sol_ivp = [traj.get() for traj in sol_set]
-                        t_list = [s.t for s in sol_ivp]
-                        y_list = [s.y for s in sol_ivp]
-                        yb = [s.y[-1] for s in sol_ivp]
-                        keyboard() # TODO: Parallelize multiple shooting. This is as far as I got.
-                        for arc_idx, tspan in enumerate(tspan_list):
-                            y0stm[:nOdes] = ya[arc_idx, :]
-                            y0stm[nOdes:] = stm0[:]
-                            q0 = []
-                            sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0)
-                            t = sol_ivp.t
-                            yy = sol_ivp.y
-                            y_list.append(yy[:, :nOdes])
-                            t_list.append(t)
-                            yb[arc_idx, :] = yy[-1, :nOdes]
-                            phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
-                            phi_full_list.append(np.copy(phi_full))
+                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
+                        t = sol_ivp.t
+                        yy = sol_ivp.y
+                        y_list.append(yy[:, :nOdes])
+                        t_list.append(t)
+                        yb[arc_idx, :] = yy[-1, :nOdes]
+                        phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
+                        phi_full_list.append(np.copy(phi_full))
+                else:
+                    raise NotImplementedError
+                    y0stm = [np.hstack((ya[arc_idx, :],stm0[:])) for arc_idx, tspan in enumerate(tspan_list)]
+                    q0 = []
+                    sol_set = [self.pool.apply_async(prop, args=(self.stm_ode_func, None, tspan, y0s, q0, paramGuess, sol.aux, 0)) for tspan, y0s in zip(tspan_list, y0stm)]
+                    sol_ivp = [traj.get() for traj in sol_set]
+                    t_list = [s.t for s in sol_ivp]
+                    y_list = [s.y for s in sol_ivp]
+                    yb = [s.y[-1] for s in sol_ivp]
+                    keyboard() # TODO: Parallelize multiple shooting. This is as far as I got.
+                    for arc_idx, tspan in enumerate(tspan_list):
+                        y0stm[:nOdes] = ya[arc_idx, :]
+                        y0stm[nOdes:] = stm0[:]
+                        q0 = []
+                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0)
+                        t = sol_ivp.t
+                        yy = sol_ivp.y
+                        y_list.append(yy[:, :nOdes])
+                        t_list.append(t)
+                        yb[arc_idx, :] = yy[-1, :nOdes]
+                        phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
+                        phi_full_list.append(np.copy(phi_full))
                 if n_iter == 1:
                     if not self.saved_code:
                         self.save_code()
