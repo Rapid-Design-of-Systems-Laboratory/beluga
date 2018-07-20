@@ -88,7 +88,7 @@ continuation_steps.add_step('bisection').num_cases(41) \
 continuation_steps.add_step('bisection').num_cases(41) \
     .terminal('phi', 2*pi/180)
 
-beluga.setup_beluga(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.setup_beluga(logging_level=logging.DEBUG)
 
 beluga.solve(ocp,
              method='traditional',
