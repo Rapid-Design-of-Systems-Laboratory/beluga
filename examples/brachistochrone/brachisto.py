@@ -31,7 +31,7 @@ ocp.constraints() \
     .terminal('x-x_f', 'm')   \
     .terminal('y-y_f', 'm')
 
-# Use the "adjoined method" to solve for the constraints.
+# Use the "adjoined method" to solve for the constraints. (Default is False)
 # ocp.constraints().set_adjoined(True)
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1)
@@ -45,8 +45,6 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                         num_arcs=1,
                         num_cpus=1
              )
-# array([ 0.    ,  0.    ,  0.    ,  0.    ,  0.    , -2.1481,  0.019 ])
-# array([ 0.    ,  0.    ,  0.    ,  0.0002, -0.0021, -2.148 ,  0.019 ])
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
