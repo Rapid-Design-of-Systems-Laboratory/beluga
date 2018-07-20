@@ -32,39 +32,37 @@ def bvp_algorithm(algo, **kwargs):
             if name.lower() == algo.lower():
                 return obj(**kwargs)
     else:
-        # Raise exception if the loop completes without finding an algorithm
-        # by the given name
+        # Raise exception if the loop completes without finding an algorithm by the given name
         raise ValueError('Algorithm '+algo+' not found')
 
 
 def guess_generator(*args, **kwargs):
-    """Helper for creating Initial guess generator."""
+    """
+    Helper for creating Initial guess generator.
+    """
     guess_gen = problem.GuessGenerator()
     guess_gen.setup(*args,**kwargs)
     return guess_gen
 
 
 def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
-    """Performs initial configuration on beluga."""
+    """
+    Performs initial configuration on beluga.
+    """
 
     # Get reference to the input file module
     frm = inspect.stack()[1]
-    input_module = (inspect.getmodule(frm[0]))
-
-    # Get information about input file
-    info = inspect.getframeinfo(frm[0])
 
     # Suppress warnings
     warnings.filterwarnings("ignore")
 
     # Initialize logging system
-    helpers.init_logging(logging_level,display_level, config['logfile'])
+    helpers.init_logging(logging_level, display_level, config['logfile'])
 
     # Set the output file name
     if output_file is not None:
         config['output_file'] = output_file
 
-    # solve(problem)
     return
 
 
@@ -74,19 +72,17 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     """
 
     # Initialize necessary conditions of optimality object
-    # print("Computing the necessary conditions of optimality")
     logging.info("Computing the necessary conditions of optimality")
     from beluga.optimlib import methods
 
     wf = methods[method]
-    # ocp_ws = ocp_to_bvp(ocp, guess_generator)
     ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
 
     solinit = Solution()
 
     solinit.aux['const'] = OrderedDict((str(const.name),float(const.value))
                                 for const in ocp_ws['constants'])
-    # keyboard()
+
     solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']
 
     # For path constraints
@@ -97,18 +93,16 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
                                                    'arc_type': i,
                                                    'pi_list':[str(_) for _ in s['pi_list']]})
                                       for i, s in enumerate(ocp_ws['problem_data']['s_list'],1))
+
     solinit.aux['arc_seq'] = (0,)
     solinit.aux['pi_seq'] = (None,)
     bvp_fn, bvp = bvp_algorithm.preprocess(ocp_ws['problem_data'])
-    # The initial guess is automatically stored in the bvp object
-    # solinit is just a reference to it
     solinit = ocp_ws['guess'].generate(bvp_fn, solinit)
 
-    # # includes costates
     state_names = ocp_ws['problem_data']['state_list']
 
-    initial_states = solinit.y[0, :]  # First column
-    terminal_states = solinit.y[-1, :] # Last column
+    initial_states = solinit.y[0, :]
+    terminal_states = solinit.y[-1, :]
 
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
@@ -127,10 +121,6 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit, bvp)
     total_time = toc()
-
-    # tic()
-    # out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit2)
-    # total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
@@ -189,8 +179,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                 if sol.converged:
                     # Post-processing phase
 
-                    # Compute control history
-                    # Required for plotting to work with control variables
+                    # Compute control history, since its required for plotting to work with control variables
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['control_list']
 

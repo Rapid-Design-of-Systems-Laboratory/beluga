@@ -69,7 +69,7 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
              )
 
 guess_maker = beluga.guess_generator('auto',
-                start=[40000,0,4000,(-90)*pi/180],
+                start=[40000,0,2000,(-90)*pi/180],
                 direction='forward',
                 costate_guess = -0.1
 )
@@ -94,12 +94,12 @@ continuation_steps.add_step('bisection') \
 # Bring flight-path angle up slightly to activate the control
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .initial('gam', -70*pi/180) \
+                .initial('gam', -80*pi/180) \
                 .terminal('theta', 0.5*pi/180)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .initial('gam', -25*pi/180) \
+                .num_cases(31) \
+                .initial('gam', -0*pi/180) \
                 .terminal('theta', 3*pi/180)
 
 beluga.setup_beluga(logging_level=logging.DEBUG)
@@ -191,8 +191,6 @@ continuation_steps_2.add_step('bisection').num_cases(3) \
 
 continuation_steps_2.add_step('bisection').num_cases(41) \
     .terminal('phi', 2*pi/180)
-
-beluga.setup_beluga(logging_level=logging.DEBUG)
 
 sol = beluga.solve(ocp_2,
              method='traditional',
