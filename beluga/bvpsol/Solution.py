@@ -132,7 +132,7 @@ class Solution(Trajectory):
             new_t, new_y, new_u, new_arcs = self.t, self.y, self.u, self.arcs
         t, y, u, p, arcs = self.t, self.y, self.u, self.parameters, self.arcs
         if not overwrite:
-            t, y, u, p, arcs = new_t, new_y, new_u, new_arcs
+            t, y, u, arcs = new_t, new_y, new_u, new_arcs
 
         #TODO: Write test for prepare()
         #TODO: Make state_list a part of the Solution object
