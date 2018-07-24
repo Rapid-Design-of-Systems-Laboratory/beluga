@@ -4,7 +4,7 @@ beluga
 +---------------+-----------------+---------------+------------+
 | Linux         | Windows         | Documentation | Coverage   |
 +===============+=================+===============+============+
-| |travisbadge| | |appveyorbadge| | |docs|        | |coverage| |
+| |travisbadge| | |appveyorbadge| |    |docs|     | |coverage| |
 +---------------+-----------------+---------------+------------+
 
 .. |travisbadge| image:: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga.svg?branch=master
