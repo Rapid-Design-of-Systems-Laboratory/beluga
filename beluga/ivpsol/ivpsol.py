@@ -76,15 +76,15 @@ class Propagator(Algorithm):
 
 
 class Trajectory(object):
-    """
+    r"""
     Class containing information for a trajectory.
 
     .. math::
-        \\gamma(t) : I \\subset \\mathbb{R} \\rightarrow B
+        \gamma(t) : I \subset \mathbb{R} \rightarrow B
     """
 
     def __new__(cls, *args, **kwargs):
-        """
+        r"""
         Creates a new Trajectory object.
 
         :param args: :math:`(t, y, q, u)`
@@ -121,11 +121,11 @@ class Trajectory(object):
         self.set_interpolate_function(self.interpolation_type)
 
     def __call__(self, t):
-        """
+        r"""
         Mapping function for a trajectory.
 
-        :param t: Time as :math:`t \\in \\mathbb{R}`
-        :return: Returns position values :math:`(y, q, u) \\in B`
+        :param t: Time as :math:`t \in \mathbb{R}`
+        :return: Returns position values :math:`(y, q, u) \in B`
         """
 
         t = np.array(t, dtype=np.float64)
@@ -193,19 +193,19 @@ class Trajectory(object):
 
 
 def reconstruct(quadfun, gamma, *args):
-    """
-    Completely reconstructs a trajectory for all time in :math:`\\gamma`.
+    r"""
+    Completely reconstructs a trajectory for all time in :math:`\gamma`.
 
     .. math::
-        \\begin{aligned}
-            \\text{reconstruct} : \\gamma \\in B/Q &\\rightarrow \\gamma \\in B \\\\
-            (g, \\gamma) &\\mapsto \\int_{t_0}^{t} g \\circ \\gamma dt \\; \\forall \\; t
-        \\end{aligned}
+        \begin{aligned}
+            \text{reconstruct} : \gamma \in B/Q &\rightarrow \gamma \in B \\
+            (g, \gamma) &\mapsto \int_{t_0}^{t} g \circ \gamma dt \; \forall \; t
+        \end{aligned}
 
     :param quadfun: Equations of motion on the symmetry space.
     :param gamma: Trajectory in quotient space :math:`B/Q`.
     :param args: Additional arguments needed by quadfun.
-    :return: :math:`\\gamma` - Reconstructed trajectory in total space :math:`B`.
+    :return: :math:`\gamma` - Reconstructed trajectory in total space :math:`B`.
     """
 
     gamma = copy.copy(gamma)
@@ -226,14 +226,14 @@ def reconstruct(quadfun, gamma, *args):
 
 
 def integrate_quads(quadfun, tspan, gamma, *args):
-    """
+    r"""
     Integrates quadratures over a trajectory base space. Only returns the terminal point.
 
     .. math::
-        \\begin{aligned}
-            \\text{integrate_quads} : \\gamma \\in B/Q &\\rightarrow q_f \\in B \\\\
-            (g, \\gamma) &\\mapsto \\int_{t_0}^{t_f} g \\circ \\gamma dt
-        \\end{aligned}
+        \begin{aligned}
+            \text{integrate_quads} : \gamma \in B/Q &\rightarrow q_f \in B \\
+            (g, \gamma) &\mapsto \int_{t_0}^{t_f} g \circ \gamma dt
+        \end{aligned}
 
     :param quadfun: Equations of motion on the symmetry space.
     :param tspan: Time interval to integrate over.

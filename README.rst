@@ -14,7 +14,7 @@ beluga
     :target: https://ci.appveyor.com/project/msparapa/beluga/branch/master
 
 .. |docs| image:: https://readthedocs.org/projects/beluga/badge/?version=latest
-    :target: https://beluga.readthedocs.io/en/latest/?badge=latest
+    :target: http://beluga.readthedocs.io/en/latest/?badge=latest
 
 .. |logo| image:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
     :align: right

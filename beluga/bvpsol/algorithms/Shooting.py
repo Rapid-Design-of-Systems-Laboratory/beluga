@@ -18,41 +18,30 @@ class Shooting(BaseAlgorithm):
     Given a system of ordinary differential equations :eq:`ordinarydifferentialequation`, define the sensitivities as
 
     .. math::
-        A(t) = \\left[\\frac{\\partial \\mathbf{f}}{\\partial \\mathbf{x}}, \\frac{\\partial \\mathbf{f}}{\\partial \\mathbf{p}}\\right]
+        A(t) = \left[\frac{\partial \mathbf{f}}{\partial \mathbf{x}}, \frac{\partial \mathbf{f}}{\partial \mathbf{p}}\right]
 
     Then, the state-transition matrix is defined as the following set of first-order differential equations
 
     .. math::
-        \\begin{aligned}
-            \\Delta_0 &= \\left[Id_M, \\mathbf{0}\\right] \\\\
-            \\dot{\\Delta} &= A(t)\\Delta
-        \\end{aligned}
+        \begin{aligned}
+            \Delta_0 &= \left[Id_M, \mathbf{0}\right] \\
+            \dot{\Delta} &= A(t)\Delta
+        \end{aligned}
 
     Sensitivities of the boundary conditions are
 
     .. math::
-        \\begin{aligned}
-            M &= \\frac{\\partial \mathbf{\\Phi}}{\\partial \\mathbf{x}_0} \\\\
-            P &= \\frac{\\partial \mathbf{\\Phi}}{\\partial \\mathbf{p}} \\\\
-            Q_0 &= \\frac{\\partial \mathbf{\\Phi}}{\\partial \\mathbf{q}_0} \\\\
-            Q_f &= \\frac{\\partial \mathbf{\\Phi}}{\\partial \\mathbf{q}_f}
-        \\end{aligned}
+        \begin{aligned}
+            M &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{x}_0} \\
+            P &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{p}} \\
+            Q_0 &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_0} \\
+            Q_f &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_f}
+        \end{aligned}
 
     The Jacobian matrix is then the concatenation of these sensitivities
 
     .. math::
-        J = \\left[M, P, Q_0+Q_f \\right]
-
-    Then there could be some equation `[v_1, v_2]`.
-
-    Then theres some more equations :math:`[v_1, v_2]`
-
-    Then there's another format $$[v_1, v_2]$$ but its not inline
-
-    And a single doodad $[v_1, v_2]$
-
-    >>> import numpy
-    >>> beluga.solve(numpy)
+        J = \left[M, P, Q_0+Q_f \right]
 
     """
 
