@@ -8,6 +8,9 @@ import sys
 class ActivateConstraint(object):
     """
     Continuation class activating a constraint.
+
+    And theres some $$m = 2$$ math
+
     """
     strategy_name = 'activate_constraint'
 

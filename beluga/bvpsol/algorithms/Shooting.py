@@ -47,7 +47,9 @@ class Shooting(BaseAlgorithm):
 
     Then theres some more equations :math:`[v_1, v_2]`
 
-    Then there's another format $$[v_1, v_2]$$
+    Then there's another format $$[v_1, v_2]$$ but its not inline
+
+    And a single doodad $[v_1, v_2]$
 
     >>> import numpy
     >>> beluga.solve(numpy)
