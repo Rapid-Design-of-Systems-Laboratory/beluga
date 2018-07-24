@@ -12,7 +12,7 @@ import itertools as it
 
 
 class Shooting(BaseAlgorithm):
-    """
+    r"""
     Shooting algorithm for solving boundary value problems.
 
     Given a system of ordinary differential equations :eq:`ordinarydifferentialequation`, define the sensitivities as
@@ -42,6 +42,14 @@ class Shooting(BaseAlgorithm):
 
     .. math::
         J = \\left[M, P, Q_0+Q_f \\right]
+
+    Then there could be some equation `[v_1, v_2]`.
+
+    Then theres some more equations :math:`[v_1, v_2]`
+
+    >>> import numpy
+    >>> beluga.solve(numpy)
+
     """
 
     def __new__(cls, *args, **kwargs):
