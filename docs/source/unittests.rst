@@ -1,6 +1,10 @@
 Running unit tests
 ------------------
 
-*Note: As of now, it is required that you run the configuration tool before the unit tests start working. This is something to be fixed.*
+To run unit tests, in the root directory of `beluga`, do::
 
-Run the shell script "run_tests.sh" to run all the unit tests in the software package.
+    $ python -m pytest beluga/
+
+to run the "fast" test cases. To run the full set of test cases, including full example problems, do::
+
+    $ python -m pytest

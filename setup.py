@@ -5,8 +5,8 @@ import os, sys
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
-with open('README.rst') as file:
-    long_description = file.read()
+long_description = '''beluga is a Python library for trajectory optimization
+via indirect methods.'''
 
 modules = ['beluga.bvpsol',
            'beluga.bvpsol.algorithms',

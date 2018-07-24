@@ -1,7 +1,7 @@
 Coding new features
 -------------------
 
-1. Start a new issue: `(!) Issues on GitHub <https://github.com/msparapa/beluga/issues>`_
+1. Start a new issue: `(!) Issues on GitHub <https://github.com/Rapid-Design-of-Systems-Laboratory/beluga/issues>`_
 
     a. :code:`git pull` Make sure you have the latest copy of **master**.
 
