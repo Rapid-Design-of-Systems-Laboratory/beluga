@@ -159,6 +159,7 @@ latex_documents = [
      'Michael Sparapany', 'manual'),
 ]
 
+latex_engine = 'xelatex'
 
 # -- Options for manual page output ---------------------------------------
 
