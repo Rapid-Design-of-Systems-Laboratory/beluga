@@ -28,7 +28,7 @@ class Collocation(BaseAlgorithm):
         +------------------------+-----------------+-----------------+
         | max_iterations         | 100             | > 0             |
         +------------------------+-----------------+-----------------+
-        | number_of_nodes        | 30              | > 1             |
+        | number_of_nodes        | 40              | > 1             |
         +------------------------+-----------------+-----------------+
         | use_numba              | False           | Bool            |
         +------------------------+-----------------+-----------------+
@@ -42,7 +42,7 @@ class Collocation(BaseAlgorithm):
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
-        number_of_nodes = kwargs.get('number_of_nodes', 30)
+        number_of_nodes = kwargs.get('number_of_nodes', 40)
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
@@ -68,8 +68,8 @@ class Collocation(BaseAlgorithm):
         sol = copy.deepcopy(solinit)
         sol.set_interpolate_function('cubic')
         number_of_datapoints = len(sol.t)
-        if number_of_datapoints < 3:
-            raise ValueError('Initial guess must have more than 2 data points in collocation.')
+        if number_of_datapoints < 4:
+            raise ValueError('Initial guess must have at least 4 data points in collocation.')
 
         reconstruct = False
         if self.number_of_nodes != number_of_datapoints:
@@ -95,7 +95,7 @@ class Collocation(BaseAlgorithm):
 
         # Set up initial guess and other info
         self.tspan = sol.t
-        self.number_of_odes = len(sol.y[0])
+        self.number_of_odes = sol.y.shape[1]
 
         # TODO: The following if-then structure is silly, but I can't resolve this until some optimlib corrections are made
         if sol.q is None:
@@ -197,6 +197,8 @@ class Collocation(BaseAlgorithm):
         tf = self.tspan[-1]
         # dX = np.squeeze(self.eoms(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
         dX = np.squeeze([self.eoms(ti, yi, params, self.aux) for ti,yi in zip(self.tspan, y)])
+        if len(dX.shape) == 1:
+            dX = np.array([dX]).T
         dp0 = dX[:-1]
         dp1 = dX[1:]
         p0 = y[:-1]
@@ -207,6 +209,8 @@ class Collocation(BaseAlgorithm):
         midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (self.number_of_nodes - 1) / 8 * (dp0 - dp1)
         midpoint_derivative_predicted = -3 / 2 * (self.number_of_nodes - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
         midpoint_derivative_actual = np.squeeze([self.eoms(ti, yi, params, self.aux) for ti, yi in zip(t12, midpoint_predicted)]) # TODO: Vectorize, so this one works as well
+        if len(midpoint_derivative_actual.shape) == 1:
+            midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
         return outvec.flatten()
 

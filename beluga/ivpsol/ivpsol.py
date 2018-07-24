@@ -148,6 +148,9 @@ class Trajectory(object):
                 y_val = np.array([f(t)])
             else:
                 y_val = f(t)
+
+            y_val = y_val.T
+
         else:
             f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(dim)]
             y_val = np.array([f[ii](t) for ii in range(dim)]).T
