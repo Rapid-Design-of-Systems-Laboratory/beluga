@@ -17,14 +17,14 @@ import sympy as sym
 
 
 def add_equality_constraints(hamiltonian, equality_constraints):
-    """
+    r"""
     Adjoins equality constraints to a Hamiltonian function.
 
     .. math::
-        \\begin{aligned}
-            \\text{add_equality_constraints} : C^\\infty(M) &\\rightarrow C^\\infty(M) \\\\
-            (H, f) &\\mapsto H + \\mu_i f_i \\; \\forall \\; i \\in f
-        \\end{aligned}
+        \begin{aligned}
+            \text{add_equality_constraints} : C^\infty(M) &\rightarrow C^\infty(M) \\
+            (H, f) &\mapsto H + \mu_i f_i \; \forall \; i \in f
+        \end{aligned}
 
     :param ham: A Hamiltonian function, :math:`H`.
     :param equality_constraints: List of equality constraints, :math:`f`.
@@ -113,14 +113,14 @@ def init_workspace(ocp, guess):
 
 # TODO: Check if this function is ever used. I don't think it's needed.
 def jacobian(expr_list, var_list, derivative_fn):
-    """
+    r"""
     Returns a Jacobian matrix for a given set of functions and variables.
 
     .. math::
-        \\begin{aligned}
-            \\text{jacobian} : \\Gamma^1(M) &\\rightarrow \\Gamma^2(M) \\\\
-            (f, x, d) &\\mapsto J_{ij} = d_{x_j} f_i \\; \\forall \\; i,j
-        \\end{aligned}
+        \begin{aligned}
+            \text{jacobian} : \Gamma^1(M) &\rightarrow \Gamma^2(M) \\
+            (f, x, d) &\mapsto J_{ij} = d_{x_j} f_i \; \forall \; i,j
+        \end{aligned}
 
     :param expr_list: List of expressions to take the partials of, :math:`f`.
     :param var_list: List of variables to take the partials with respect to, :math:`x`.
@@ -136,14 +136,14 @@ def jacobian(expr_list, var_list, derivative_fn):
 
 
 def make_augmented_cost(cost, constraints, constraints_adjoined, location):
-    """
+    r"""
     Augments the cost function with the given list of constraints.
 
     .. math::
-        \\begin{aligned}
-            \\text{make_augmented_cost} : C^\\infty(M) &\\rightarrow C^\\infty(M) \\\\
-            (f, g) &\\mapsto f + g_i \\nu_i \\; \\forall \\; i \\in g
-        \\end{aligned}
+        \begin{aligned}
+            \text{make_augmented_cost} : C^\infty(M) &\rightarrow C^\infty(M) \\
+            (f, g) &\mapsto f + g_i \nu_i \; \forall \; i \in g
+        \end{aligned}
 
     :param cost: The cost function, :math:`f`.
     :param constraints: List of constraint to adjoin to the cost function, :math:`g`.
@@ -366,11 +366,11 @@ def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_
 
 
 def make_costate_names(states):
-    """
+    r"""
     Makes a list of variables representing each costate.
 
     :param states: List of state variables, :math:`x`.
-    :return: List of costate variables, :math:`\\lambda_x`.
+    :return: List of costate variables, :math:`\lambda_x`.
     """
 
     return [sympify('lam'+str(s.name).upper()) for s in states]
@@ -393,7 +393,7 @@ def make_costate_rates(ham, states, costate_names, derivative_fn):
 
 #TODO: Determine if make_dhdu() is ever even used. Like 2 of the functions show up as not imported.
 def make_dhdu(ham, controls, derivative_fn):
-    """
+    r"""
     Computes the partial of the hamiltonian w.r.t control variables.
 
     :param ham: Hamiltonian function.
@@ -416,7 +416,7 @@ def make_dhdu(ham, controls, derivative_fn):
 
 
 def make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivative_fn):
-    """
+    r"""
     Creates a Hamiltonian function and costate rates.
 
     :param states: A list of state variables, :math:`x`.
@@ -424,7 +424,7 @@ def make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivativ
     :param path_cost: The path cost to be minimized.
     :param derivative_fn: The derivative function.
     :return: A Hamiltonian function, :math:`H`.
-    :return: A list of costate rates, :math:`\\dot{\\lambda}_x`
+    :return: A list of costate rates, :math:`\dot{\lambda}_x`
     """
 
     costate_names = make_costate_names(states)

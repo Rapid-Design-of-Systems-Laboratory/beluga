@@ -43,15 +43,14 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode']
 
+MathJax = {'tex2jax': {'inlineMath': [['$','$'],['\\(','\\)']], 'procesEscapes': True}}
+
 mathjax_path = 'http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML-full'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
 source_suffix = '.rst'
 
 # The master toctree document.
@@ -59,8 +58,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'beluga'
-copyright = '2018, Michael Sparapany'
-author = 'Michael Sparapany'
+copyright = '2018, Rapid Design of Systems Laboratory'
+author = 'Rapid Design of Systems Laboratory'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -130,25 +129,28 @@ html_theme = 'classic'
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'belugadoc'
 
+html_logo = '_static/rdsl.png'
+latex_logo = '_static/rdsl.png'
+
 
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
+    'babel': '',
+    'fontenc': r'''
+\usepackage{bm}
+\usepackage{amssymb}
+\usepackage{fontspec}
+\usepackage[english]{babel}
+\defaultfontfeatures{Mapping=tex-text}
+''',
+    'fontpkg':   '',
+    'inputenc':  '',
+    'utf8extra': '',
+    'preamble':  r'''
+% redefine \LaTeX to be usable in math mode
+\expandafter\def\expandafter\LaTeX\expandafter{\expandafter\text\expandafter{\LaTeX}}
+'''
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -159,6 +161,7 @@ latex_documents = [
      'Michael Sparapany', 'manual'),
 ]
 
+latex_engine = 'xelatex'
 
 # -- Options for manual page output ---------------------------------------
 

@@ -7,7 +7,7 @@
 .. _Collocation: https://en.wikipedia.org/wiki/Collocation_method
 
 Optimal Control
----------------
+===============
 
 In optimal control theory, we wish to solve problems of the form
 
