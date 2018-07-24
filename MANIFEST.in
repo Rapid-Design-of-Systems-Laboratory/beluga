@@ -1,8 +1,18 @@
+# Include the requirements
+include *.txt
+
 # Include the README
 include *.rst
 
 # Include the license file
 include LICENSE
+
+# Include the examples
+recursive-include examples *.py
+
+# Include the documentation
+recursive-include docs *
+prune docs/build
 
 # Include template files
 include beluga/bvpsol/templates/*
