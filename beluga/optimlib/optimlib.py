@@ -92,6 +92,7 @@ def init_workspace(ocp, guess):
     # sort_map = [i[0] for i in sorted(enumerate(ocp.constants()), key=lambda x:x[1]['name'])]
     # workspace['constants'] = [SymVar(ocp.constants()[k]) for k in sort_map]
     workspace['constants'] = [SymVar(k) for k in ocp.constants()]
+    workspace['constants_of_motion'] = [SymVar(k) for k in ocp.constants_of_motion()]
 
     constraints = ocp.constraints()
     workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
@@ -763,9 +764,6 @@ BaseWorkflow = sp.Workflow([
     sp.Task(ft.partial(make_augmented_params, location='terminal'),
             inputs=('constraints', 'constraints_adjoined'),
             outputs=('terminal_lm_params')),
-    # sp.Task(make_costate_names,
-    #         inputs=('states'),
-    #         outputs=('costate_names')),
     sp.Task(make_ham_lamdot_with_eq_constraint,
             inputs=('states', 'constraints', 'path_cost', 'derivative_fn'),
             outputs=('ham', 'costates')),
@@ -776,8 +774,7 @@ BaseWorkflow = sp.Workflow([
             inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
             outputs=('bc_terminal')),
     sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
-    sp.Task(make_dhdu,
-            inputs=('ham', 'controls', 'derivative_fn'),
+    sp.Task(make_dhdu, inputs=('ham', 'controls', 'derivative_fn'),
             outputs=('dhdu')),
     sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
             outputs='parameters'),

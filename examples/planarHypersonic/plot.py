@@ -2,7 +2,7 @@ from beluga.visualization import BelugaPlot
 from beluga.visualization.datasources import Dill
 
 # plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1)
-ds = Dill('./data2.dill')
+ds = Dill('./data.dill')
 # ds2 = Dill('./phu_2k5_eps4.dill')
 plots = BelugaPlot(datasource=ds,default_sol=-1,default_step=-1, renderer='matplotlib')
 # plots = BelugaPlot('./phu_2k5_eps4.dill',default_sol=-1,default_step=-1, renderer='bokeh')
@@ -11,7 +11,7 @@ plots = BelugaPlot(datasource=ds,default_sol=-1,default_step=-1, renderer='matpl
 #                 .xlabel('Downrange (km)').ylabel('h (km)')      \
 #                 .title('Altitude vs. Downrange')
 
-plots.add_plot().line('theta*re/1000','h/1000',datasource=ds,label='DS1')                    \
+plots.add_plot().line_series('theta*re/1000','h/1000', datasource=ds)                    \
                 .xlabel('Downrange (km)').ylabel('h (km)')      \
                 .title('Altitude vs. Downrange')
 #                .line('theta*re/1000','h/1000',datasource=ds2,label='DS2')                   \
