@@ -65,6 +65,7 @@ def generate_problem_data(workspace):
         'states': workspace['states'],
         'costates': workspace['costates'],
         'constants': workspace['constants'],
+        'constants_of_motion': workspace['constants_of_motion'],
         'parameters': [tf_var] + workspace['parameters'],
         'controls': workspace['controls'],
         'mu_vars': workspace['mu_vars'],
