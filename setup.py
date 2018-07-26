@@ -24,8 +24,14 @@ tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
          'beluga.optimlib.tests']
 
+dir_setup = os.path.dirname(os.path.realpath(__file__))
+
+with open(os.path.join(dir_setup, 'beluga', 'release.py')) as f:
+    # Defines __version__
+    exec(f.read())
+
 setup(name="beluga",
-      version='0.2.1',
+      version=__version__,
       description="An indirect trajectory optimization framework.",
       long_description=long_description,
       author="Michael Sparapany",
