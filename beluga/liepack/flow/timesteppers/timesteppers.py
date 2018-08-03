@@ -2,35 +2,56 @@ import abc
 import numpy as np
 # from beluga.liepack.domain.liealgebras import LieAlgebra
 import copy
+import csv
+import os
+
+# The following math import statements appear to be unused, but they are required on import of the specific
+# methods since an eval() is called
+from math import sqrt
 
 class Method(object):
     def __new__(cls, name):
         obj = super(Method, cls).__new__(cls)
         obj.name = name
+        obj.data = None
         return obj
 
-    def __init__(self, name):
-        name = name.upper()
-        # TODO: Move all these schemes to a csv file or some other data file
-        if name == 'E1':
-            self.name = name
-            self.RKa = np.array([0])
-            self.RKb = np.array([1])
-            self.RKc = np.array([0])
-            self.RKbhat = np.array([0])
-            self.RKord = 1
-            self.RKns = 1
-            self.RKtype = 'explicit'
-        elif name == 'RK4':
-            self.name = name
-            self.RKa = np.array([[0, 0, 0, 0], [1/2, 0, 0, 0], [0, 1/2, 0, 0], [0, 0, 1, 0]])
-            self.RKb = np.array([1/6, 1/3, 1/3, 1/6])
-            self.RKc = np.array([0, 1/2, 1/2, 1])
-            self.RKbhat = np.array([0, 0, 0, 0])
-            self.RKord = 4
-            self.RKns = 4
-            self.RKtype = 'explicit'
+    def __init__(self, method):
+        self.loadmethods()
 
+        method = method.upper()
+        self.name = method
+        self.RKtype = self.data[method]['type']
+        self.RKa = np.array(self.data[method]['a'], dtype=np.float64)
+        self.RKb = np.array(self.data[method]['b'], dtype=np.float64)
+        self.RKbhat = np.array(self.data[method]['bhat'], dtype=np.float64)
+        self.RKc = np.array(self.data[method]['c'], dtype=np.float64)
+        self.RKord = int(self.data[method]['order'])
+        self.RKns = int(self.data[method]['n'])
+
+    def loadmethods(self):
+        path = os.path.dirname(os.path.abspath(__file__))
+        with open(path + '/methods/RK.csv', mode='r', encoding='utf-8-sig', newline='\n') as RKfile:
+            reader = csv.reader(RKfile, delimiter=',')
+            num_methods = 0
+            data = {}
+            for row in reader:
+                if num_methods == 0:
+                    header = row
+                else:
+                    L = len(header)
+                    name = row[0]
+                    key = [header[1]]
+                    val = [row[1]]
+                    key += [_ for _ in header[2:]]
+                    val += [eval(_) for _ in row[2:]]
+                    data[name] = dict(zip(key, val))
+
+                num_methods += 1
+        self.data = data
+
+    def getmethods(self):
+        return self.data.keys()
 
 class TimeStepper(object):
     def __new__(cls, *args, **kwargs):
@@ -72,13 +93,13 @@ class RK(TimeStepper):
         if self.method.RKtype == 'explicit':
             if vf.get_equationtype() == 'linear':
                 for ii in range(self.method.RKns):
-                    Kj[ii] = vf(t0 + self.method.RKc[ii]*dt, Yr[ii])
+                    Kj[ii] = np.array(vf(t0 + self.method.RKc[ii]*dt, Yr[ii]), dtype=np.float64)
             else:
                 for ii in range(self.method.RKns):
                     Yr[ii] = copy.copy(y)
                     for jj in range(ii):
                         Yr[ii].left(dt*self.method.RKa[ii,jj]*Kj[jj], self.coordinate)
-                    Kj[ii] = vf(t0 + self.method.RKc[ii]*dt, Yr[ii])
+                    Kj[ii] = np.array(vf(t0 + self.method.RKc[ii]*dt, Yr[ii]), dtype=np.float64)
 
         else:
             raise NotImplementedError
