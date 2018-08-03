@@ -218,7 +218,7 @@ def reconstruct(quadfun, gamma, *args):
         q0 = gamma.q[0]
 
     l = len(gamma)
-    temp_q = np.array([integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args)])
+    temp_q = integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args)
 
     for ii in range(l-1):
         qf = integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii+1]], gamma, *args)

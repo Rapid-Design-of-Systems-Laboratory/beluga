@@ -10,8 +10,8 @@ ocp = beluga.OCP('brachisto')
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v*cos(theta)', 'm')   \
-   .state('y', 'v*sin(theta)', 'm')   \
+ocp.state('x', 'v*cos(theta)', 'm') \
+   .state('y', 'v*sin(theta)', 'm') \
    .state('v', 'g*sin(theta)', 'm/s')
 
 # Define controls
@@ -19,6 +19,9 @@ ocp.control('theta','rad')
 
 # Define constants
 ocp.constant('g', -9.81, 'm/s^2')
+
+ocp.constant_of_motion('c1', 'lamX', '1/m')
+ocp.constant_of_motion('c2', 'lamY', '1/m')
 
 # Define costs
 ocp.path_cost('1', '1')
