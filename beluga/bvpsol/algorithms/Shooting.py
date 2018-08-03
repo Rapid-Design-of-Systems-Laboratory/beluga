@@ -192,10 +192,12 @@ class Shooting(BaseAlgorithm):
         sol = copy.deepcopy(solinit)
         sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
+        sol.q = np.array(sol.q, dtype=np.float64)
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
+        q0g = sol.q[0, :]
         nOdes = y0g.shape[0]
         paramGuess = sol.parameters
 
@@ -263,10 +265,10 @@ class Shooting(BaseAlgorithm):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[arc_idx, :]
                         y0stm[nOdes:] = stm0[:]
-                        q0 = []
-                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
+                        sol_ivp = prop(self.stm_ode_func, quad_func, tspan, y0stm, q0g, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
                         t = sol_ivp.t
                         yy = sol_ivp.y
+                        qq = sol_ivp.q
                         y_list.append(yy[:, :nOdes])
                         t_list.append(t)
                         yb[arc_idx, :] = yy[-1, :nOdes]
@@ -301,7 +303,7 @@ class Shooting(BaseAlgorithm):
                     break
 
                 # Determine the error vector
-                res = self.bc_func(t_list[0][0], ya.T, [], t_list[-1][-1], yb.T, [], paramGuess, sol.aux)
+                res = self.bc_func(t_list[0][0], ya.T, qq[0], t_list[-1][-1], yb.T, qq[-1], paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -322,6 +324,7 @@ class Shooting(BaseAlgorithm):
 
                 # Compute Jacobian of boundary conditions
                 nBCs = len(res)
+                # TODO: I left off here working on quads
                 J = self._bc_jac_multi(t_list, nBCs, phi_full_list, y_list, paramGuess, sol.aux, self.bc_func)
 
                 # Compute correction vector
