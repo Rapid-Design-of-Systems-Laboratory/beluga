@@ -1,12 +1,14 @@
 import numpy as np
-from scipy.optimize import minimize
-import scipy.integrate
+from scipy.integrate import solve_ivp, simps
 import scipy.interpolate
-import time
 import copy
 from beluga.utils import keyboard
-from scipy.integrate import simps
 
+from beluga.liepack.flow.timesteppers import RK
+from beluga.liepack.domain.hspaces import HLie
+from beluga.liepack.domain.liegroups import lgrn
+from beluga.liepack.flow import Flow
+from beluga.liepack.field import VectorField
 
 class Algorithm(object):
     """
@@ -34,25 +36,28 @@ class Propagator(Algorithm):
         :param kwargs: Additional parameters accepted by the solver.
         :return: Propagator object.
 
-        +------------------------+-----------------+-----------------+
-        | Valid kwargs           | Default Value   | Valid Values    |
-        +========================+=================+=================+
-        | abstol                 | 1e-6            |  > 0            |
-        +------------------------+-----------------+-----------------+
-        | maxstep                | 0.1             |  > 0            |
-        +------------------------+-----------------+-----------------+
-        | reltol                 | 1e-6            |  > 0            |
-        +------------------------+-----------------+-----------------+
+        +------------------------+-----------------+--------------------+
+        | Valid kwargs           | Default Value   | Valid Values       |
+        +========================+=================+====================+
+        | abstol                 | 1e-6            |  > 0               |
+        +------------------------+-----------------+--------------------+
+        | maxstep                | 0.1             |  > 0               |
+        +------------------------+-----------------+--------------------+
+        | reltol                 | 1e-6            |  > 0               |
+        +------------------------+-----------------+--------------------+
+        | algorithm              | 'scipy'         |  {'scipy', 'lie'}  |
+        +------------------------+-----------------+--------------------+
         """
 
         obj = super().__new__(cls, *args, **kwargs)
         obj.abstol = kwargs.get('abstol', 1e-6)
         obj.maxstep = kwargs.get('maxstep', 0.1)
         obj.reltol = kwargs.get('reltol', 1e-6)
+        obj.algorithm = kwargs.get('algorithm', 'scipy').lower()
         return obj
 
     def __call__(self, eom_func, quad_func, tspan, y0, q0, *args, **kwargs):
-        """
+        r"""
         Propagates the differential equations over a defined time interval.
 
         :param eom_func: Function representing the equations of motion.
@@ -62,12 +67,26 @@ class Propagator(Algorithm):
         :param q0: Initial quad position.
         :param args: Additional arguments required by EOM files.
         :param kwargs: Unused.
-        :return: A full reconstructed trajectory, :math:`\\gamma`.
+        :return: A full reconstructed trajectory, :math:`\gamma`.
         """
-        int_sol = scipy.integrate.solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0,
-                                            rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
+        y0 = np.array(y0, dtype=np.float64)
 
-        gamma = Trajectory(int_sol.t, int_sol.y.T)
+        if self.algorithm == 'scipy':
+            int_sol = solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0,
+                                rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
+            gamma = Trajectory(int_sol.t, int_sol.y.T)
+
+        elif self.algorithm == 'lie':
+            dim = y0.shape[0]
+            y = HLie(lgrn(dim), y0)
+            vf = VectorField(y)
+            vf.set_equationtype('general')
+            vf.set_fm2g(lambda t, y: eom_func(t, y, *args))
+            ts = RK()
+            ts.setmethod('RK4')
+            f = Flow(ts, vf, variablestep=False)
+            ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
+            gamma = Trajectory(ti, np.vstack([_.data for _ in yi]))
 
         if quad_func is not None:
             gamma = reconstruct(quad_func, gamma, *args)
