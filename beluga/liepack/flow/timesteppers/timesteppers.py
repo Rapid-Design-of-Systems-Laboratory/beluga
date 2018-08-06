@@ -4,6 +4,7 @@ import numpy as np
 import copy
 import csv
 import os
+from beluga.utils import keyboard
 
 # The following math import statements appear to be unused, but they are required on import of the specific
 # methods since an eval() is called
@@ -89,7 +90,7 @@ class TimeStepper(object):
 class RK(TimeStepper):
     def __call__(self, vf, y, t0, dt):
         Kj = [np.zeros(y.data.shape)]*self.method.RKns
-        Yr = [copy.copy(y)]*self.method.RKns
+        Yr = [copy.copy(y) for _ in range(self.method.RKns)]
         if self.method.RKtype == 'explicit':
             if vf.get_equationtype() == 'linear':
                 for ii in range(self.method.RKns):
@@ -122,5 +123,41 @@ class RK(TimeStepper):
 
         return ylow, yhigh, errest
 
+def dexpinv(a,b,ord):
+    raise NotImplementedError
 
+class RKMK(TimeStepper):
+    def __call__(self, vf, y, t0, dt):
+        Kj = [np.zeros(y.data.shape)]*self.method.RKns
+        Yr = [copy.copy(y) for _ in range(self.method.RKns)]
+        if self.method.RKtype == 'explicit':
+            Kj[0] = np.array(vf(t0, y.data))
+            for ii in range(self.method.RKns - 1):
+                U = sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])])
+                Yr[ii+1].left(U, self.coordinate)
+                K = np.array(vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1]))
+                Kj[ii+1] = K
 
+        else:
+            raise NotImplementedError
+
+        Ulow = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKb)])
+        ylow = copy.copy(y)
+        ylow.left(Ulow, self.coordinate)
+        errest = -1
+
+        yhigh = None
+        if self.variablestep:
+            if sum(self.method.RKbhat) == 0:
+                raise NotImplementedError(self.method.name + ' does not support variable stepsize.')
+
+            Uhigh = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKbhat)])
+            yhigh = copy.copy(y)
+            ylow.left(Uhigh, self.coordinate)
+            keyboard()
+            for ii in range(self.method.RKns):
+                yhigh.left(dt*self.method.RKbhat[ii]*Kj[ii], self.coordinate)
+            raise NotImplementedError
+            errest = dist(ylow, yhigh)
+
+        return ylow, yhigh, errest

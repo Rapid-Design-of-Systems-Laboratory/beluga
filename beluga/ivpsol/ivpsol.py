@@ -4,7 +4,7 @@ import scipy.interpolate
 import copy
 from beluga.utils import keyboard
 
-from beluga.liepack.flow.timesteppers import RK
+from beluga.liepack.flow.timesteppers import RK, RKMK
 from beluga.liepack.domain.hspaces import HLie
 from beluga.liepack.domain.liegroups import lgrn
 from beluga.liepack.flow import Flow
@@ -82,8 +82,8 @@ class Propagator(Algorithm):
             vf = VectorField(y)
             vf.set_equationtype('general')
             vf.set_fm2g(lambda t, y: eom_func(t, y, *args))
-            ts = RK()
-            ts.setmethod('RK4')
+            ts = RKMK()
+            ts.setmethod('RK45')
             f = Flow(ts, vf, variablestep=False)
             ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
             gamma = Trajectory(ti, np.vstack([_.data for _ in yi]))
