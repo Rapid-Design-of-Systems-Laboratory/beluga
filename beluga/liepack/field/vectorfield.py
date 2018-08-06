@@ -1,3 +1,5 @@
+import numpy as np
+
 class VectorField(object):
     def __new__(cls, *args, **kwargs):
         obj = super(VectorField, cls).__new__(cls)
@@ -11,7 +13,7 @@ class VectorField(object):
         return obj
 
     def __call__(self, t, y):
-        return self.fm2g(t, y)
+        return np.array(self.fm2g(t, y), dtype=np.float64)
 
     def get_domain(self):
         return self.domain

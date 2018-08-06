@@ -4,7 +4,7 @@ import scipy.interpolate
 import copy
 from beluga.utils import keyboard
 
-from beluga.liepack.flow.timesteppers import RK
+from beluga.liepack.flow.timesteppers import RK, RKMK
 from beluga.liepack.domain.hspaces import HLie
 from beluga.liepack.domain.liegroups import lgrn
 from beluga.liepack.flow import Flow
@@ -54,6 +54,8 @@ class Propagator(Algorithm):
         obj.maxstep = kwargs.get('maxstep', 0.1)
         obj.reltol = kwargs.get('reltol', 1e-6)
         obj.algorithm = kwargs.get('algorithm', 'scipy').lower()
+        obj.method = kwargs.get('method', 'RKMK').upper()
+        obj.stepper = kwargs.get('stepper', 'RK45').upper()
         return obj
 
     def __call__(self, eom_func, quad_func, tspan, y0, q0, *args, **kwargs):
@@ -82,9 +84,13 @@ class Propagator(Algorithm):
             vf = VectorField(y)
             vf.set_equationtype('general')
             vf.set_fm2g(lambda t, y: eom_func(t, y, *args))
-            ts = RK()
-            ts.setmethod('RK4')
-            f = Flow(ts, vf, variablestep=False)
+            if self.method == 'RKMK':
+                ts = RKMK()
+            else:
+                raise NotImplementedError
+
+            ts.setmethod(self.stepper)
+            f = Flow(ts, vf, variablestep=True)
             ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
             gamma = Trajectory(ti, np.vstack([_.data for _ in yi]))
 
