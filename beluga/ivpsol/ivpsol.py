@@ -4,7 +4,7 @@ import scipy.interpolate
 import copy
 from beluga.utils import keyboard
 
-from beluga.liepack.flow.timesteppers import RK, RKMK
+from beluga.liepack.flow.timesteppers import RKMK
 from beluga.liepack.domain.hspaces import HLie
 from beluga.liepack.domain.liegroups import lgrn
 from beluga.liepack.flow import Flow

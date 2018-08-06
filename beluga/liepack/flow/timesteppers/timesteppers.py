@@ -87,42 +87,6 @@ class TimeStepper(object):
         self.method = Method(method)
 
 
-class RK(TimeStepper):
-    def __call__(self, vf, y, t0, dt):
-        Kj = [np.zeros(y.data.shape)]*self.method.RKns
-        Yr = [copy.copy(y) for _ in range(self.method.RKns)]
-        if self.method.RKtype == 'explicit':
-            if vf.get_equationtype() == 'linear':
-                for ii in range(self.method.RKns):
-                    Kj[ii] = vf(t0 + self.method.RKc[ii]*dt, Yr[ii])
-            else:
-                for ii in range(self.method.RKns):
-                    Yr[ii] = copy.copy(y)
-                    for jj in range(ii):
-                        Yr[ii].left(dt*self.method.RKa[ii,jj]*Kj[jj], self.coordinate)
-                    Kj[ii] = vf(t0 + self.method.RKc[ii]*dt, Yr[ii])
-
-        else:
-            raise NotImplementedError
-
-        ylow = copy.copy(y)
-
-        for ii in range(self.method.RKns):
-            ylow.left(dt*self.method.RKb[ii]*Kj[ii], self.coordinate)
-
-        errest = -1
-
-        yhigh = None
-        if self.variablestep:
-            yhigh = copy.copy(y)
-            for ii in range(self.method.RKns):
-                yhigh.left(dt*self.method.RKbhat[ii]*Kj[ii], self.coordinate)
-
-            raise NotImplementedError
-            errest = dist(ylow, yhigh)
-
-        return ylow, yhigh, errest
-
 def dexpinv(a,b,ord):
     raise NotImplementedError
 
