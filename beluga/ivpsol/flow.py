@@ -1,6 +1,4 @@
 import numpy as np
-from beluga.utils import keyboard
-import copy
 
 class Flow(object):
     def __new__(cls, *args, **kwargs):
@@ -10,7 +8,7 @@ class Flow(object):
         :param argument 1: Timestepper object
         :param argument 2: Vectorfield object
         :param kwargs: Additional parameters accepted by the solver.
-        :return: Propagator object.
+        :return: Flow object.
 
         +------------------------+-----------------+-----------------+
         | Valid kwargs           | Default Value   | Valid Values    |
@@ -94,6 +92,16 @@ class Flow(object):
         return dt_new, accepted
 
     def __call__(self, y, t0, tf, dt):
+        '''
+        Computes the flow.
+
+        :param y:
+        :param t0:
+        :param tf:
+        :param dt:
+        :return:
+        '''
+
         self.timestepper.variablestep = self.variablestep
         yi = [y]
         ti = np.zeros((1,))
@@ -134,4 +142,3 @@ class Flow(object):
             dt = dt_new
 
         return ti, yi
-

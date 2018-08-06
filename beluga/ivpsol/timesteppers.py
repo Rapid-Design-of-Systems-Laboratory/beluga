@@ -11,7 +11,18 @@ from beluga.utils import keyboard
 from math import sqrt
 
 class Method(object):
+    """
+    Class containing information on various integration methods. It's primary purpose is not to perform explicit
+    calculations, but rather to load and store saved schemes.
+    """
+
     def __new__(cls, name):
+        """
+        Created a new Method object.
+
+        :param name: Name of a method.
+        :return: Method object.
+        """
         obj = super(Method, cls).__new__(cls)
         obj.name = name
         obj.data = None
@@ -54,8 +65,22 @@ class Method(object):
     def getmethods(self):
         return self.data.keys()
 
+
 class TimeStepper(object):
+    """
+    This class serves as a superclass for various time stepper objects. The purpose of a timestepper is to advance
+    numerical solutions of ordinary differential equations a single time step per evaluation.
+    """
+
     def __new__(cls, *args, **kwargs):
+        """
+        Creates a new TimeStepper object.
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
         obj = super(TimeStepper, cls).__new__(cls)
 
         obj.variablestep = False
@@ -87,11 +112,21 @@ class TimeStepper(object):
         self.method = Method(method)
 
 
-def dexpinv(a,b,ord):
-    raise NotImplementedError
-
 class RKMK(TimeStepper):
+    """
+    The Runge-Kutta-Munthe-Kaas time stepper object.
+    """
+
     def __call__(self, vf, y, t0, dt):
+        """
+        Advances a numerical solution.
+
+        :param vf: Vectorfield object.
+        :param y: Homogeneous space.
+        :param t0: Initial time.
+        :param dt: Time to advance (for fixed-step methods).
+        :return: (y_low, y_high, errest) - A "low" quality and "high" quality estimate for solutions, and an error estimate.
+        """
         Kj = [np.zeros(y.data.shape)]*self.method.RKns
         Yr = [copy.copy(y) for _ in range(self.method.RKns)]
         if self.method.RKtype == 'explicit':

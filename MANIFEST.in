@@ -20,3 +20,6 @@ include beluga/optimlib/templates/brysonho/*
 include beluga/optimlib/templates/brysonho/qcpi/*
 include beluga/optimlib/templates/icrm/*
 include beluga/optimlib/templates/icrm/qcpi/*
+
+# Include the ivp solver methods
+include beluga/ivpsol/methods/*

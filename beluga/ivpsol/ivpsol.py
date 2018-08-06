@@ -2,12 +2,10 @@ import numpy as np
 from scipy.integrate import solve_ivp, simps
 import scipy.interpolate
 import copy
-from beluga.utils import keyboard
 
-from beluga.liepack.flow.timesteppers import RKMK
+from beluga.ivpsol import RKMK, Flow
 from beluga.liepack.domain.hspaces import HLie
 from beluga.liepack.domain.liegroups import lgrn
-from beluga.liepack.flow import Flow
 from beluga.liepack.field import VectorField
 
 class Algorithm(object):
@@ -45,7 +43,7 @@ class Propagator(Algorithm):
         +------------------------+-----------------+--------------------+
         | reltol                 | 1e-6            |  > 0               |
         +------------------------+-----------------+--------------------+
-        | algorithm              | 'scipy'         |  {'scipy', 'lie'}  |
+        | program                | 'scipy'         |  {'scipy', 'lie'}  |
         +------------------------+-----------------+--------------------+
         """
 
@@ -53,7 +51,7 @@ class Propagator(Algorithm):
         obj.abstol = kwargs.get('abstol', 1e-6)
         obj.maxstep = kwargs.get('maxstep', 0.1)
         obj.reltol = kwargs.get('reltol', 1e-6)
-        obj.algorithm = kwargs.get('algorithm', 'scipy').lower()
+        obj.program = kwargs.get('program', 'scipy').lower()
         obj.method = kwargs.get('method', 'RKMK').upper()
         obj.stepper = kwargs.get('stepper', 'RK45').upper()
         return obj
@@ -73,12 +71,12 @@ class Propagator(Algorithm):
         """
         y0 = np.array(y0, dtype=np.float64)
 
-        if self.algorithm == 'scipy':
+        if self.program == 'scipy':
             int_sol = solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0,
                                 rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
             gamma = Trajectory(int_sol.t, int_sol.y.T)
 
-        elif self.algorithm == 'lie':
+        elif self.program == 'lie':
             dim = y0.shape[0]
             y = HLie(lgrn(dim), y0)
             vf = VectorField(y)

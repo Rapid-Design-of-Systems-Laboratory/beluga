@@ -11,7 +11,7 @@ This modules solves :eq:`ordinarydifferentialequation` of the form
 .. math::
     \begin{aligned}
         \dot{x} &= f(t,\mathbf{x}, \mathbf{p}) \\
-        \dot{q} &= g(t,\mathbf{x}, \mathbf{p}) \\
+        \dot{q} &= h(t,\mathbf{x}, \mathbf{p}) \\
         \mathbf{x}(t_0) &= \mathbf{x}_0
     \end{aligned}
     :label: ordinarydifferentialequation
@@ -32,3 +32,11 @@ Base Class Reference
 .. autofunction:: reconstruct
 
 .. autofunction:: integrate_quads
+
+.. autoclass:: Flow
+    :members: __new__, __call__
+
+.. autoclass:: TimeStepper
+
+.. autoclass:: RKMK
+    :members: __new__, __call__
