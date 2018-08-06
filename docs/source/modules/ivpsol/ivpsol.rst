@@ -18,6 +18,17 @@ This modules solves :eq:`ordinarydifferentialequation` of the form
 
 from :math:`t_0` to :math:`t_f`.
 
+Integration Programs
+--------------------
+
+The ivpsol module serves as a common interface to various integration programs as well as an ivp solver included with
+beluga. The following link contains a list of integration methods available in beluga.
+
+.. toctree::
+   :maxdepth: 2
+
+   integrationmethods.rst
+
 Base Class Reference
 --------------------
 .. autoclass:: Algorithm
@@ -40,3 +51,6 @@ Base Class Reference
 
 .. autoclass:: RKMK
     :members: __new__, __call__
+
+.. autoclass:: Method
+    :members: __new__

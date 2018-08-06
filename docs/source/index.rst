@@ -17,7 +17,7 @@ Contents:
    features.rst
    unittests.rst
    nomenclature.rst
-   modules/ivpsol.rst
+   modules/ivpsol/ivpsol.rst
    modules/bvpsol.rst
    modules/continuation.rst
    modules/optimlib.rst

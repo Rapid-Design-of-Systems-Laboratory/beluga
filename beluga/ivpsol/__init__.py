@@ -1,5 +1,5 @@
 from .flow import (Flow)
-from .timesteppers import (TimeStepper, RKMK)
+from .timesteppers import (TimeStepper, RKMK, Method)
 from .ivpsol import (Propagator, Algorithm, Trajectory, reconstruct, integrate_quads)
 
 import os
