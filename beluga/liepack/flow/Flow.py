@@ -25,7 +25,7 @@ class Flow(object):
         +------------------------+-----------------+-----------------+
         | tol                    | 1e-6            |  > 0            |
         +------------------------+-----------------+-----------------+
-        | hmax                   | 1.0             |  > 0            |
+        | dt_max                 | 1.0             |  > 0            |
         +------------------------+-----------------+-----------------+
         | newexact               | 1               |  > 0            |
         +------------------------+-----------------+-----------------+
@@ -54,7 +54,7 @@ class Flow(object):
         obj.pessimist = kwargs.get('pessimist', 0.9)
         obj.accept = kwargs.get('accept', 1.2)
         obj.tol = kwargs.get('tol', 1e-6)
-        obj.hmax = kwargs.get('hmax', 1.0)
+        obj.dt_max = kwargs.get('dt_max', 1.0)
 
         obj.newexact = kwargs.get('newexact', 1)
         obj.numstep = kwargs.get('numstep', 8)
@@ -79,19 +79,19 @@ class Flow(object):
 
         return obj
 
-    def newstepsize(self, hold, errest):
+    def newstepsize(self, dt_old, errest):
         method = self.timestepper.method
-        h = self.pessimist * (self.tol / errest)**(1/(method.RKord+1))*hold
-        h = min((h, self.large*hold))
-        h = max((h, self.small*hold))
-        hnew = min(h, self.hmax)
+        dt = self.pessimist * (self.tol / errest)**(1/(method.RKord+1))*dt_old
+        dt = min((dt, self.large*dt_old))
+        dt = max((dt, self.small*dt_old))
+        dt_new = min(dt, self.dt_max)
 
         if (self.accept*self.tol - errest) > 0:
             accepted = True
         else:
             accepted = False
 
-        return hnew, accepted
+        return dt_new, accepted
 
     def __call__(self, y, t0, tf, dt):
         self.timestepper.variablestep = self.variablestep
@@ -101,36 +101,37 @@ class Flow(object):
             dt = tf - t0
 
         accepted = False
-        rejected = False
+        rejected = 0
         errest = 0
         n = 0
         converged = False
         while not converged:
-            if ti[-1] + dt > tf:
+            if ti[-1] + dt >= tf:
                 dt = tf - ti[-1]
                 converged = True
-            n += 1
 
             while not accepted:
                 ylow, yhigh, errest = self.timestepper(self.vectorfield, yi[-1], ti[-1], dt)
 
                 if self.variablestep is True:
-                    raise NotImplementedError
+                    if errest == -1:
+                        errest = np.linalg.norm(ylow.data - yhigh.data)
 
+                    [dt_new, accepted] = self.newstepsize(dt, errest)
                 else:
-                    # keyboard()
-                    # yhigh = copy.copy(ylow)
-                    # errest = dist(ylow, yhigh)
-                    # [dtnew, accepted] = self.newstepsize(dt)
                     accepted = True
+                    yhigh = ylow
+                    dt_new = dt
 
-                # if not accepted:
-                #     dt = dtnew
-                #     rejected += 1
+                if not accepted:
+                    dt = dt_new
+                    rejected += 1
 
             ti = np.hstack((ti, ti[-1] + dt))
-            yi.append(ylow)
+            yi.append(yhigh)
             accepted = False
+            rejected = 0
+            dt = dt_new
 
         return ti, yi
 
