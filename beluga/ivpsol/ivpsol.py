@@ -5,7 +5,7 @@ import copy
 
 from beluga.ivpsol import RKMK, Flow
 from beluga.liepack.domain.hspaces import HLie
-from beluga.liepack.domain.liegroups import lgrn
+from beluga.liepack.domain.liegroups import RN
 from beluga.liepack.field import VectorField
 
 class Algorithm(object):
@@ -78,7 +78,7 @@ class Propagator(Algorithm):
 
         elif self.program == 'lie':
             dim = y0.shape[0]
-            y = HLie(lgrn(dim), y0)
+            y = HLie(RN(dim), y0)
             vf = VectorField(y)
             vf.set_equationtype('general')
             vf.set_fm2g(lambda t, y: eom_func(t, y, *args))

@@ -1,1 +1,1 @@
-from .liegroups import LieGroup, lgso, lgrn
+from .liegroups import LieGroup, SO, RN
