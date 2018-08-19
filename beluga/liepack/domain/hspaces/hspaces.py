@@ -1,4 +1,4 @@
-from ..liegroups import LieGroup
+from beluga.liepack.domain.liegroups import LieGroup
 from scipy.linalg import expm
 import numpy as np
 from beluga.utils import keyboard
