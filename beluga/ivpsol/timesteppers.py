@@ -16,30 +16,33 @@ class Method(object):
     calculations, but rather to load and store saved schemes.
     """
 
-    def __new__(cls, name):
+    def __new__(cls, *args, **kwargs):
         """
         Created a new Method object.
 
         :param name: Name of a method.
         :return: Method object.
         """
+
         obj = super(Method, cls).__new__(cls)
-        obj.name = name
+        obj.name = 'RK4'
         obj.data = None
+
+        if len(args) > 0:
+            obj.name = args[0].upper()
+
         return obj
 
-    def __init__(self, method):
+    def __init__(self, *args, **kwargs):
         self.loadmethods()
 
-        method = method.upper()
-        self.name = method
-        self.RKtype = self.data[method]['type']
-        self.RKa = np.array(self.data[method]['a'], dtype=np.float64)
-        self.RKb = np.array(self.data[method]['b'], dtype=np.float64)
-        self.RKbhat = np.array(self.data[method]['bhat'], dtype=np.float64)
-        self.RKc = np.array(self.data[method]['c'], dtype=np.float64)
-        self.RKord = int(self.data[method]['order'])
-        self.RKns = int(self.data[method]['n'])
+        self.RKtype = self.data[self.name]['type']
+        self.RKa = np.array(self.data[self.name]['a'], dtype=np.float64)
+        self.RKb = np.array(self.data[self.name]['b'], dtype=np.float64)
+        self.RKbhat = np.array(self.data[self.name]['bhat'], dtype=np.float64)
+        self.RKc = np.array(self.data[self.name]['c'], dtype=np.float64)
+        self.RKord = int(self.data[self.name]['order'])
+        self.RKns = int(self.data[self.name]['n'])
 
     def loadmethods(self):
         path = os.path.dirname(os.path.abspath(__file__))
