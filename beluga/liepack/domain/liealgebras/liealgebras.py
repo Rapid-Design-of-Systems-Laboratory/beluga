@@ -8,6 +8,10 @@ from random import uniform
 from beluga.utils import keyboard
 
 class LieAlgebra(object):
+    """
+    This serves as the default superclass on which all Lie algebras are constructed from.
+    """
+
     abelian = False
     group = LieGroup
 
