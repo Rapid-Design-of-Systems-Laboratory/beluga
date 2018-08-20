@@ -45,7 +45,7 @@ class Adjoint(object):
 
     .. math::
         \begin{aligned}
-            \text{Adjoint} : G \times \mathfrak{g} &\rightarrow \text{Aut}(\mathfrak{g}) \\
+            \text{Adjoint} : G &\rightarrow \mathfrak{Aut}(\mathfrak{g}) \\
             (g, h) &\mapsto ghg^{-1}
         \end{aligned}
 
@@ -74,17 +74,21 @@ class Adjoint(object):
     def __call__(self, *args, **kwargs):
         k = 0
         if self._G is None:
-            self._G = args[k]
+            G = args[k]
             k += 1
+        else:
+            G = self._G
 
         if self._g is None:
-            self._g = args[k]
+            g = args[k]
             k += 1
+        else:
+            g = self._g
 
         if self._G.abelian is True:
             return LieAlgebra(self._g)
         else:
-            return LieAlgebra(self._g, self._G.data)*self._g*LieAlgebra(self._g, scipyinv(self._G.data))
+            return LieAlgebra(g, G.data)*g*LieAlgebra(g, scipyinv(G.data))
 
 
 class Commutator(object):
@@ -107,6 +111,10 @@ class Commutator(object):
     | anticommutator         | 1               | {1, -1}         |
     +------------------------+-----------------+-----------------+
 
+    Examples:
+
+    Construct the set of commutation relations in :math:`so(3)`.
+
     >>> from beluga.liepack.domain.liealgebras import so
     >>> from beluga.liepack import Commutator
     >>> x = so(3)
@@ -116,6 +124,14 @@ class Commutator(object):
     >>> y.set_data([0,1,0])
     >>> z.set_data([0,0,1])
     >>> Commutator(x,y) == z
+    True
+
+    Use the commutator to "preload" the adjoint map, :math:`ad_g : \mathfrak{g} \rightarrow \mathfrak{g}`.
+
+    >>> adg = Commutator(x)
+    >>> adg(y) == z
+    True
+    >>> adg(z) == -y
     True
     """
 
@@ -140,14 +156,18 @@ class Commutator(object):
     def __call__(self, *args, **kwargs):
         k = 0
         if self._g is None:
-            self._g = args[k]
+            g = args[k]
             k += 1
+        else:
+            g = self._g
 
         if self._h is None:
-            self._h = args[k]
+            h = args[k]
             k += 1
+        else:
+            h = self._h
 
-        return self._g*self._h - self.anticommutator*self._h*self._g
+        return g*h - self.anticommutator*h*g
 
 def dexpinv(g, h, order=5):
     r"""
@@ -161,7 +181,7 @@ def dexpinv(g, h, order=5):
     .. math::
         dexp_g^{-1}(h) = h - \frac{1}{2}[g,h] + \frac{B_2}{2!}[g,[g,h]] + \cdots = \sum_{k=0}^{\text{order}} \frac{B_k}{k!}\text{ad}_g^k(h)
 
-    where :math:`B_k` are the :math:`k`-th Bernioulli numbers.
+    where :math:`B_k` are the :math:`k`-th Bernioulli numbers. The infinite series is truncated at `order`.
 
     :param g: Element of a Lie algebra.
     :return:
@@ -181,13 +201,13 @@ def dexpinv(g, h, order=5):
     out = h
 
     k = 1
-    adjoint = Commutator(g)
-    stack = adjoint(stack)
+    adg = Commutator(g)
+    stack = adg(stack)
     out += -1/2*stack
 
     while k < order:
         k += 1
-        stack = adjoint(stack)
+        stack = adg(stack)
         out += Bernoulli(k)/factorial(k)*stack
 
     return out
@@ -197,8 +217,14 @@ def exp(g):
     r"""
     Exponential map of a Lie algebra element to its Lie group.
 
-    :param g:
-    :return:
+    .. math::
+        \begin{aligned}
+            \text{exp} : \mathfrak{g} &\rightarrow G \\
+            (g) &\mapsto Id_G + g + \frac{1}{2}g^2 + \cdots = \sum_{k=0}^{\infty} \frac{g^k}{k!}
+        \end{aligned}
+
+    :param g: Lie algebra element.
+    :return: Lie group element, :math:`G`.
     """
     if isinstance(g, LieAlgebra):
-        return g.group(g.get_shape, scipyexpm(g.data))
+        return algebra2group(g)(g.shape, scipyexpm(g.data))
