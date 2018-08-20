@@ -87,7 +87,7 @@ class Commutator(object):
 
 def expm(g):
     r"""
-    Exponential map of Lie algebra elements to their Lie group.
+    Exponential map of a Lie algebra element to its Lie group.
 
     :param g:
     :return:

@@ -25,9 +25,9 @@ The ivpsol module serves as a common interface to various integration programs a
 beluga. The following link contains a list of integration methods available in beluga.
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   integrationmethods.rst
+    integrationmethods.rst
 
 Base Class Reference
 --------------------
