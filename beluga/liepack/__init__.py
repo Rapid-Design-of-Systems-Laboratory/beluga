@@ -1,1 +1,1 @@
-from .liepack import (adjoint, commutator, expm)
+from .liepack import (adjoint, Commutator, expm)
