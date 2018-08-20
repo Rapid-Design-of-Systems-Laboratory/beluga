@@ -22,6 +22,7 @@ Contents:
    modules/continuation.rst
    modules/optimlib.rst
    modules/codegen.rst
+   modules/liepack.rst
 
 
 Indices and tables
