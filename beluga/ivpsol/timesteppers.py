@@ -5,6 +5,7 @@ import copy
 import csv
 import os
 from beluga.utils import keyboard
+from beluga.liepack import *
 
 # The following math import statements appear to be unused, but they are required on import of the specific
 # methods since an eval() is called
@@ -130,15 +131,16 @@ class RKMK(TimeStepper):
         :param dt: Time to advance (for fixed-step methods).
         :return: (y_low, y_high, errest) - A "low" quality and "high" quality estimate for solutions, and an error estimate.
         """
-        Kj = [np.zeros(y.data.shape)]*self.method.RKns
+        algebra = group2algebra(y.shape)
+        Kj = [algebra(y.shape.shape, np.zeros(y.data.shape))]*self.method.RKns
         Yr = [copy.copy(y) for _ in range(self.method.RKns)]
         if self.method.RKtype == 'explicit':
-            Kj[0] = vf(t0, y.data)
+            Kj[0] = algebra(y.shape.shape, vf(t0, y.data))
             for ii in range(self.method.RKns - 1):
-                U = sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])])
+                U = algebra(y.shape.shape, sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])]).data)
                 Yr[ii+1].left(U, self.coordinate)
-                K = vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1])
-                Kj[ii+1] = K
+                K = algebra(y.shape.shape, vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1]))
+                Kj[ii+1] = dexpinv(U, K, order=self.method.RKord-1)
 
         else:
             raise NotImplementedError

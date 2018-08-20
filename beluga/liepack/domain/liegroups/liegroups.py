@@ -8,7 +8,6 @@ class LieGroup(object):
     """
     This serves as the default superclass on which all Lie algebras are constructed from.
     """
-
     abelian = False
 
     def __new__(cls, *args, **kwargs):

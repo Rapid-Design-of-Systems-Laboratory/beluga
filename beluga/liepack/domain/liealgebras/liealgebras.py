@@ -1,4 +1,3 @@
-from beluga.liepack.domain.liegroups import *
 import abc
 import copy
 import numpy as np
@@ -11,9 +10,7 @@ class LieAlgebra(object):
     """
     This serves as the default superclass on which all Lie algebras are constructed from.
     """
-
-    abelian = False
-    group = LieGroup
+    abelian = False # Default to assuming all Lie algebras are nonabelian.
 
     def __new__(cls, *args, **kwargs):
         obj = super(LieAlgebra, cls).__new__(cls)
@@ -32,7 +29,25 @@ class LieAlgebra(object):
         return obj
 
     def __add__(self, other):
-        return LieAlgebra(self, self.data + other.data)
+        if isinstance(other, int):
+            newdata = self.data + other
+        elif isinstance(other, float):
+            newdata = self.data + other
+        elif isinstance(other, LieAlgebra):
+            newdata = self.data + other.data
+        return LieAlgebra(self, newdata)
+
+    __radd__ = __add__
+
+    def __truediv__(self, other):
+        if isinstance(other, int):
+            newdata = self.data / other
+        elif isinstance(other, float):
+            newdata = self.data / other
+        else:
+            raise NotImplementedError
+
+        return LieAlgebra(self, newdata)
 
     def __eq__(self, other):
         class_condition = type(self) == type(other)
@@ -71,46 +86,115 @@ class LieAlgebra(object):
 
     __rmul__ = __mul__
 
-    def get_data(self):
-        return self.data
-
     @abc.abstractmethod
     def get_dimension(self):
-        pass
+        """
+        Returns the dimension of the Lie algebra.
+
+        :return: Dimension.
+        """
+        raise NotImplementedError
 
     def get_shape(self):
+        r"""
+        Returns the shape of the Lie algebra.
+
+        :return: Shape.
+        """
         return self.shape
 
+    @abc.abstractmethod
+    def set_vector(self, vector):
+        r"""
+        Take's a vector and saves it to the Lie algebra's matrix representation.
+
+        :param vector: A :math:`1 \times n`-dimensional vector.
+        """
+        raise NotImplementedError
+
     def random(self):
+        r"""
+        Initializes a random element in the Lie algebra.
+        """
         v = [uniform(0,1) for _ in range(self.get_dimension())]
         self.set_vector(v)
 
 class rn(LieAlgebra):
-    abelian = True
-    group = RN
-    pass
+    r"""
+    Lie algebra :math:`\mathbb{R}^n`, or ":math:`rn`".
 
-# dimension
-# getdata
-# getmatrix
-# getnumberfield
-# getshape
-# getvector
-# hasmatrix
-# hasshape
+    For a Lie algebra element of the form :math:`(x,y,z,\cdots,w)`, matrix representation is of the form:
+
+    .. math::
+        \begin{bmatrix}
+            1 & 0 & 0 & \cdots & 0 & x \\
+            0 & 1 & 0 & \cdots & 0 & y \\
+            0 & 0 & 1 & \cdots & 0 & z \\
+            \vdots & \vdots & \vdots & \ddots & \vdots & \vdots \\
+            0 & 0 & 0 & \cdots & 1 & w \\
+            0 & 0 & 0 & \cdots & 0 & 1
+        \end{bmatrix}
+
+    """
+    abelian = True
+
+    def get_dimension(self):
+        n = self.shape
+        return int(n)
+
+    def get_vector(self):
+        return np.array(self.data[:-1,-1])
+
+    def set_vector(self, vector):
+        vector = np.array(vector, dtype=np.float64)
+        n = self.shape
+        vlen = n
+        if vlen != len(vector):
+            raise ValueError
+
+        mat = np.eye(n+1)
+        for i in range(n):
+            mat[i, -1] = vector[i]
+
+        self.data = mat
+
 
 class so(LieAlgebra):
+    r"""
+    Lie algebra :math:`so(n)`.
+
+    For a Lie algebra element of the form :math:`(x, y, z)`, the matrix representation is of the form:
+
+    .. math::
+        \begin{bmatrix}
+            0 & -z & y \\
+            z & 0 & -x \\
+            -y & x & 0
+        \end{bmatrix}
+    """
     abelian = False
-    group = SO
 
     def get_dimension(self):
         n = self.shape
         return int(n*(n-1)/2)
 
+    def get_vector(self):
+        n = self.shape
+        vlen = int(n*(n-1)/2)
+        vector = np.zeros(vlen)
+
+        k = 0
+        for i in range(n-1, 0, -1):
+            for j in range(n, i, -1):
+                vector[k] = self.data[i-1, j-1]/(-1)**(i+j)
+                k += 1
+
+        return vector
+
     def set_vector(self, vector):
         vector = np.array(vector, dtype=np.float64)
         n = self.shape
-        vlen = n*(n-1)/2
+        vlen = int(n*(n-1)/2)
         if vlen != len(vector):
             raise ValueError
 

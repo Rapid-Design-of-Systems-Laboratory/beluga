@@ -23,6 +23,14 @@ Various domains are provided to solve equations on.
 Base Class Reference
 --------------------
 
-.. autofunction:: adjoint
+.. autofunction:: algebra2group
+
+.. autofunction:: group2algebra
+
+.. autoclass:: Adjoint
 
 .. autoclass:: Commutator
+
+.. autofunction:: dexpinv
+
+.. autofunction:: exp

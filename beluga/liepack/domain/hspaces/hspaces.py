@@ -43,17 +43,13 @@ class HLie(HManifold):
         return obj
 
     def left(self, element, coord):
-        if len(element.shape) == 1:
-            self.data = self.data + element
-        elif coord == 'exp':
-            self.data = np.dot(expm(element), self.data)
+        if coord == 'exp':
+            self.data = np.dot(expm(element.data), self.data)
         else:
             return NotImplementedError
 
     def right(self, element, coord):
-        if len(element.shape) == 1:
-            self.data = element + self.data
-        elif coord == 'exp':
-            self.data = np.dot(self.data, expm(element))
+        if coord == 'exp':
+            self.data = np.dot(self.data, expm(element.data))
         else:
             return NotImplementedError
