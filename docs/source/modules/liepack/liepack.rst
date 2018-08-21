@@ -34,3 +34,5 @@ Base Class Reference
 .. autofunction:: dexpinv
 
 .. autofunction:: exp
+
+.. autofunction:: Left

@@ -1,5 +1,6 @@
 from beluga.liepack.domain.liealgebras import *
 from beluga.liepack.domain.liegroups import *
+from beluga.liepack.domain.hspaces import *
 
 from beluga.utils import keyboard
 
@@ -49,9 +50,9 @@ class Adjoint(object):
             (g, h) &\mapsto ghg^{-1}
         \end{aligned}
 
-    :param G: A Lie group element.
-    :param g: A Lie algebra element.
-    :return: :math:`\text{Ad}_G(g)`
+    :param g: A Lie group element.
+    :param h: A Lie algebra element.
+    :return: :math:`\text{Ad}_g(h)`
     """
     def __new__(cls, *args, **kwargs):
         obj = super(Adjoint, cls).__new__(cls)
@@ -231,5 +232,28 @@ def exp(g):
 
 
 def Left(G, M):
-    homogeneous_space = type(M)
-    M.data = np.dot(G.data, M.data)
+    r"""
+    Left action of group :math:`G` on homogeneous space :math:`M`.
+
+    .. math::
+        \begin{aligned}
+            \text{Left} : G \times M &\rightarrow M \\
+            (G,M) &\mapsto GM
+        \end{aligned}
+
+    :param G: Lie group.
+    :param M: Homogeneous space.
+    :return: Homogeneous space.
+    """
+    if not isinstance(G, LieGroup):
+        raise ValueError
+    Mout = HManifold(M)
+    Mout.data = np.dot(G.data, Mout.data)
+    return Mout
+
+def Right(G, M):
+    if not isinstance(G, LieGroup):
+        raise ValueError
+    Mout = HManifold(M)
+    Mout.data = np.dot(Mout.data, G.data)
+    return Mout

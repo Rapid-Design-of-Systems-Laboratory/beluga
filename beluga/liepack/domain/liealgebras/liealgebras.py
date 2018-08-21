@@ -151,7 +151,7 @@ class rn(LieAlgebra):
             0 & 0 & 0 & \cdots & 0 & z \\
             \vdots & \vdots & \vdots & \ddots & \vdots & \vdots \\
             0 & 0 & 0 & \cdots & 0 & w \\
-            0 & 0 & 0 & \cdots & 0 & 1
+            0 & 0 & 0 & \cdots & 0 & 0
         \end{bmatrix}
 
     """

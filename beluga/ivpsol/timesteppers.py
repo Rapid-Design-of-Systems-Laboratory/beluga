@@ -131,25 +131,22 @@ class RKMK(TimeStepper):
         :param dt: Time to advance (for fixed-step methods).
         :return: (y_low, y_high, errest) - A "low" quality and "high" quality estimate for solutions, and an error estimate.
         """
-        algebra = group2algebra(y.shape)
-        Kj = [algebra(y.shape.shape)]*self.method.RKns
-        keyboard()
+        g = group2algebra(y.shape)
+        Kj = [g(y.shape.shape) for _ in range(self.method.RKns)]
         Yr = [copy.copy(y) for _ in range(self.method.RKns)]
         if self.method.RKtype == 'explicit':
             Kj[0] = vf(t0, y)
             for ii in range(self.method.RKns - 1):
                 U = sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])])
                 Yr[ii+1] = Left(exp(U), y)
-                keyboard()
-                K = algebra(y.shape.shape, vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1]))
+                K = vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1])
                 Kj[ii+1] = dexpinv(U, K, order=self.method.RKord-1)
-
         else:
             raise NotImplementedError
 
         Ulow = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKb)])
         ylow = copy.copy(y)
-        ylow.left(Ulow, self.coordinate)
+        ylow = Left(exp(Ulow), ylow)
         errest = -1
 
         yhigh = None
@@ -159,7 +156,7 @@ class RKMK(TimeStepper):
 
             Uhigh = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKbhat)])
             yhigh = copy.copy(y)
-            yhigh.left(Uhigh, self.coordinate)
+            yhigh = Left(exp(Uhigh), yhigh)
             errest = np.linalg.norm(ylow.data - yhigh.data)
 
         return ylow, yhigh, errest

@@ -6,6 +6,8 @@ import copy
 from beluga.ivpsol import RKMK, Flow
 from beluga.liepack.domain.hspaces import HLie
 from beluga.liepack.domain.liegroups import RN
+from beluga.liepack.domain.liealgebras import rn
+from beluga.liepack import exp
 from beluga.liepack.field import VectorField
 
 class Algorithm(object):
@@ -45,6 +47,12 @@ class Propagator(Algorithm):
         +------------------------+-----------------+--------------------+
         | program                | 'scipy'         |  {'scipy', 'lie'}  |
         +------------------------+-----------------+--------------------+
+        | method                 | 'RKMK'          |  {'RKMK'}          |
+        +------------------------+-----------------+--------------------+
+        | stepper                | 'RK45'          |  see ivp methods   |
+        +------------------------+-----------------+--------------------+
+        | variable_step          | True            |  bool              |
+        +------------------------+-----------------+--------------------+
         """
 
         obj = super().__new__(cls, *args, **kwargs)
@@ -54,6 +62,7 @@ class Propagator(Algorithm):
         obj.program = kwargs.get('program', 'scipy').lower()
         obj.method = kwargs.get('method', 'RKMK').upper()
         obj.stepper = kwargs.get('stepper', 'RK45').upper()
+        obj.variable_step = kwargs.get('variable_step', True)
         return obj
 
     def __call__(self, eom_func, quad_func, tspan, y0, q0, *args, **kwargs):
@@ -78,19 +87,29 @@ class Propagator(Algorithm):
 
         elif self.program == 'lie':
             dim = y0.shape[0]
-            y = HLie(RN(dim), y0)
+            g = rn(dim)
+            g.set_vector(y0)
+            y = HLie(RN(dim), exp(g).data)
             vf = VectorField(y)
             vf.set_equationtype('general')
-            vf.set_fm2g(lambda t, y: eom_func(t, y, *args))
+
+            def M2g(t, y):
+                vec = y.data[:-1,-1]
+                out = eom_func(t, vec, *args)
+                g = rn(dim)
+                g.set_vector(out)
+                return g
+
+            vf.set_M2g(M2g)
             if self.method == 'RKMK':
                 ts = RKMK()
             else:
                 raise NotImplementedError
 
             ts.setmethod(self.stepper)
-            f = Flow(ts, vf, variablestep=True)
+            f = Flow(ts, vf, variablestep=self.variable_step)
             ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
-            gamma = Trajectory(ti, np.vstack([_.data for _ in yi]))
+            gamma = Trajectory(ti, np.vstack([_.data[:-1,-1] for _ in yi])) # Hardcoded assuming RN
 
         if quad_func is not None:
             gamma = reconstruct(quad_func, gamma, *args)

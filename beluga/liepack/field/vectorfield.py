@@ -10,17 +10,9 @@ class VectorField(object):
     :param args:
     :param kwargs:
     :return:
-
-    +------------------------+-----------------+-------------------------+
-    | Valid kwargs           | Default Value   | Valid Values            |
-    +========================+=================+=========================+
-    | evaltype               | 'M'             | {'M', 'vector'}         |
-    +------------------------+-----------------+-------------------------+
-
     """
     def __new__(cls, *args, **kwargs):
         obj = super(VectorField, cls).__new__(cls)
-        obj.evaltype = kwargs.get('evaltype', 'M')
         obj.domain = None
         obj.equationtype = 'general'
         obj.M2g = None
@@ -31,13 +23,7 @@ class VectorField(object):
         return obj
 
     def __call__(self, t, y):
-        g = group2algebra(y.shape)
-        algebra_shape = y.shape.shape
-
-        if self.evaltype == 'M':
-            return g(algebra_shape, np.array(self.M2g(t, y), dtype=np.float64))
-        elif self.evaltype == 'vector':
-            return np.array(self.M2g(t, y.get_vector()), dtype=np.float64)
+        return self.M2g(t, y)
 
     def get_domain(self):
         return self.domain

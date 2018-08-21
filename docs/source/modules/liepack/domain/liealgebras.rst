@@ -10,7 +10,7 @@ Base Class Reference
 --------------------
 
 .. autoclass:: LieAlgebra
-    :members: set_vector, random
+    :members: get_dimension, get_shape, set_vector, random, zero
 
 .. autoclass:: rn
 
