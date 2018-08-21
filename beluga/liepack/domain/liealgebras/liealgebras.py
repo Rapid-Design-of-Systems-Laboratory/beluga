@@ -15,7 +15,7 @@ class LieAlgebra(object):
     def __new__(cls, *args, **kwargs):
         obj = super(LieAlgebra, cls).__new__(cls)
 
-        if len(args) >= 1:
+        if len(args) > 0:
             if isinstance(args[0], LieAlgebra):
                 obj = copy.copy(args[0])
             elif isinstance(args[0], int):
@@ -28,6 +28,10 @@ class LieAlgebra(object):
 
         return obj
 
+    def __init__(self, *args, **kwargs):
+        if self.data is None:
+            self.zero()
+
     def __add__(self, other):
         if isinstance(other, int):
             newdata = self.data + other
@@ -37,24 +41,9 @@ class LieAlgebra(object):
             newdata = self.data + other.data
         return LieAlgebra(self, newdata)
 
-    __radd__ = __add__
-
-    def __truediv__(self, other):
-        if isinstance(other, int):
-            newdata = self.data / other
-        elif isinstance(other, float):
-            newdata = self.data / other
-        else:
-            raise NotImplementedError
-
-        return LieAlgebra(self, newdata)
-
     def __eq__(self, other):
         class_condition = type(self) == type(other)
-        if isinstance(other, int):
-            class_condition = True
-            data_condition = (self.data == other*np.ones((self.shape))).all()
-        elif isinstance(other, float):
+        if isinstance(other, int) or isinstance(other, float):
             class_condition = True
             data_condition = (self.data == other*np.ones((self.shape))).all()
         else:
@@ -62,17 +51,13 @@ class LieAlgebra(object):
 
         return class_condition and data_condition
 
-    def __ne__(self, other):
-        class_condition = type(self) == type(other)
-        data_condition = (self.data == other.data).all()
+    def __lt__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            data_condition = (self.data < other * np.ones((self.shape))).all()
+        else:
+            data_condition = (self.data < other.data).all()
 
-        return not (class_condition and data_condition)
-
-    def __neg__(self):
-        return LieAlgebra(self, -self.data)
-
-    def __sub__(self, other):
-        return LieAlgebra(self, self.data - other.data)
+        return data_condition
 
     def __mul__(self, other):
         if isinstance(other, int):
@@ -84,7 +69,34 @@ class LieAlgebra(object):
 
         return LieAlgebra(self, newdata)
 
+    def __ne__(self, other):
+        class_condition = type(self) == type(other)
+        data_condition = (self.data == other.data).all()
+
+        return not (class_condition and data_condition)
+
+    def __neg__(self):
+        return LieAlgebra(self, -self.data)
+
+    __radd__ = __add__
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(' + str(self.shape) + ', ' + str(self.data) + ')'
+
     __rmul__ = __mul__
+
+    def __sub__(self, other):
+        return LieAlgebra(self, self.data - other.data)
+
+    def __truediv__(self, other):
+        if isinstance(other, int):
+            newdata = self.data / other
+        elif isinstance(other, float):
+            newdata = self.data / other
+        else:
+            raise NotImplementedError
+
+        return LieAlgebra(self, newdata)
 
     @abc.abstractmethod
     def get_dimension(self):
@@ -119,6 +131,13 @@ class LieAlgebra(object):
         v = [uniform(0,1) for _ in range(self.get_dimension())]
         self.set_vector(v)
 
+    def zero(self):
+        r"""
+        Sets the Lie algebra to the zero element.
+        """
+        v = np.zeros(self.get_dimension())
+        self.set_vector(v)
+
 class rn(LieAlgebra):
     r"""
     Lie algebra :math:`\mathbb{R}^n`, or ":math:`rn`".
@@ -127,11 +146,11 @@ class rn(LieAlgebra):
 
     .. math::
         \begin{bmatrix}
-            1 & 0 & 0 & \cdots & 0 & x \\
-            0 & 1 & 0 & \cdots & 0 & y \\
-            0 & 0 & 1 & \cdots & 0 & z \\
+            0 & 0 & 0 & \cdots & 0 & x \\
+            0 & 0 & 0 & \cdots & 0 & y \\
+            0 & 0 & 0 & \cdots & 0 & z \\
             \vdots & \vdots & \vdots & \ddots & \vdots & \vdots \\
-            0 & 0 & 0 & \cdots & 1 & w \\
+            0 & 0 & 0 & \cdots & 0 & w \\
             0 & 0 & 0 & \cdots & 0 & 1
         \end{bmatrix}
 
@@ -152,7 +171,7 @@ class rn(LieAlgebra):
         if vlen != len(vector):
             raise ValueError
 
-        mat = np.eye(n+1)
+        mat = np.zeros((n+1,n+1))
         for i in range(n):
             mat[i, -1] = vector[i]
 

@@ -132,13 +132,15 @@ class RKMK(TimeStepper):
         :return: (y_low, y_high, errest) - A "low" quality and "high" quality estimate for solutions, and an error estimate.
         """
         algebra = group2algebra(y.shape)
-        Kj = [algebra(y.shape.shape, np.zeros(y.data.shape))]*self.method.RKns
+        Kj = [algebra(y.shape.shape)]*self.method.RKns
+        keyboard()
         Yr = [copy.copy(y) for _ in range(self.method.RKns)]
         if self.method.RKtype == 'explicit':
-            Kj[0] = algebra(y.shape.shape, vf(t0, y.data))
+            Kj[0] = vf(t0, y)
             for ii in range(self.method.RKns - 1):
-                U = algebra(y.shape.shape, sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])]).data)
-                Yr[ii+1].left(U, self.coordinate)
+                U = sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])])
+                Yr[ii+1] = Left(exp(U), y)
+                keyboard()
                 K = algebra(y.shape.shape, vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1]))
                 Kj[ii+1] = dexpinv(U, K, order=self.method.RKord-1)
 

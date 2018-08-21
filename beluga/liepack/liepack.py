@@ -228,3 +228,8 @@ def exp(g):
     """
     if isinstance(g, LieAlgebra):
         return algebra2group(g)(g.shape, scipyexpm(g.data))
+
+
+def Left(G, M):
+    homogeneous_space = type(M)
+    M.data = np.dot(G.data, M.data)

@@ -39,6 +39,9 @@ class LieGroup(object):
         elif isinstance(other, LieGroup):
             return LieGroup(self, np.dot(self.data, other.data))
 
+    def __repr__(self):
+        return self.__class__.__name__ + '(' + str(self.shape) + ', ' + str(self.data) + ')'
+
     __rmul__ = __mul__
 
     @abc.abstractmethod
