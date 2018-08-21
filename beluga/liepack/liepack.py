@@ -205,11 +205,12 @@ def dexpinv(g, h, order=5):
     adg = Commutator(g)
     stack = adg(stack)
     out += -1/2*stack
+    k += 1
 
     while k < order:
-        k += 1
         stack = adg(stack)
         out += Bernoulli(k)/factorial(k)*stack
+        k += 2
 
     return out
 
