@@ -1,11 +1,21 @@
 import numpy as np
+from beluga.utils import keyboard
+from beluga.liepack.domain.liealgebras import LieAlgebra
+from beluga.liepack import group2algebra
 
 class VectorField(object):
+    """
+    A VectorField class.
+
+    :param args:
+    :param kwargs:
+    :return:
+    """
     def __new__(cls, *args, **kwargs):
         obj = super(VectorField, cls).__new__(cls)
         obj.domain = None
         obj.equationtype = 'general'
-        obj.fm2g = None
+        obj.M2g = None
 
         if len(args) > 0:
             obj.domain = args[0]
@@ -13,7 +23,7 @@ class VectorField(object):
         return obj
 
     def __call__(self, t, y):
-        return np.array(self.fm2g(t, y), dtype=np.float64)
+        return self.M2g(t, y)
 
     def get_domain(self):
         return self.domain
@@ -21,8 +31,8 @@ class VectorField(object):
     def get_equationtype(self):
         return self.equationtype
 
-    def get_fm2g(self):
-        return self.fm2g
+    def get_M2g(self):
+        return self.M2g
 
     def set_domain(self, domain):
         self.domain = domain
@@ -39,5 +49,5 @@ class VectorField(object):
 
         self.equationtype = equationtype
 
-    def set_fm2g(self, fm2g):
-        self.fm2g = fm2g
+    def set_M2g(self, M2g):
+        self.M2g = M2g

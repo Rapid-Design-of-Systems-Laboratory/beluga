@@ -1,7 +1,8 @@
 import time
 import sympy
 import platform
-
+from fractions import Fraction as R
+from scipy.special import comb
 import signal
 # https://stackoverflow.com/a/22348885/538379
 if platform.system() == 'Windows':
@@ -28,11 +29,21 @@ else:
         def __exit__(self, type, value, traceback):
             signal.alarm(0)
 
-
-
-
 # Source: http://stackoverflow.com/questions/5849800/tic-toc-functions-analog-in-python
 _tstart_stack = []
+
+def Bernoulli(num):
+    B = [R(1,1)]
+    def Sum(m):
+        total = R(0,1)
+        for k in range(0,m):
+            total += int(comb(m, k, exact=False)) * R(B[k], m-k+1)
+        return 1 - total
+    m = 1
+    while m <= num:
+        B.append(Sum(m))
+        m += 1
+    return float(B[-1])
 
 def tic():
     _tstart_stack.append(time.time())

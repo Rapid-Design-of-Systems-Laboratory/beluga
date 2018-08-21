@@ -17,11 +17,12 @@ Contents:
    features.rst
    unittests.rst
    nomenclature.rst
-   modules/ivpsol/ivpsol.rst
    modules/bvpsol.rst
-   modules/continuation.rst
-   modules/optimlib.rst
    modules/codegen.rst
+   modules/continuation.rst
+   modules/ivpsol/ivpsol.rst
+   modules/liepack/liepack.rst
+   modules/optimlib.rst
 
 
 Indices and tables

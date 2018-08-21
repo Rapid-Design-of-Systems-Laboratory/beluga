@@ -1,1 +1,1 @@
-from .hspaces import (HLie)
+from .hspaces import HManifold, HLie

@@ -15,6 +15,11 @@ modules = ['beluga.bvpsol',
            'beluga.continuation.strategies',
            'beluga.ivpsol',
            'beluga.ivpsol.integrators',
+           'beluga.liepack',
+           'beluga.liepack.domain.hspaces',
+           'beluga.liepack.domain.liealgebras',
+           'beluga.liepack.domain.liegroups',
+           'beluga.liepack.field',
            'beluga.optimlib',
            'beluga.utils',
            'beluga.visualization',
@@ -22,6 +27,8 @@ modules = ['beluga.bvpsol',
 
 tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
+         'beluga.liepack.domain.liealgebras.tests',
+         'beluga.liepack.tests',
          'beluga.optimlib.tests']
 
 dir_setup = os.path.dirname(os.path.realpath(__file__))
