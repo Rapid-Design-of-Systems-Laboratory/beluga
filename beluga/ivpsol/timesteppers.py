@@ -1,10 +1,8 @@
 import abc
 import numpy as np
-# from beluga.liepack.domain.liealgebras import LieAlgebra
 import copy
 import csv
 import os
-from beluga.utils import keyboard
 from beluga.liepack import *
 
 # The following math import statements appear to be unused, but they are required on import of the specific
@@ -44,6 +42,7 @@ class Method(object):
         self.RKc = np.array(self.data[self.name]['c'], dtype=np.float64)
         self.RKord = int(self.data[self.name]['order'])
         self.RKns = int(self.data[self.name]['n'])
+        self.variable_step = sum(self.RKbhat) != 0
 
     def loadmethods(self):
         path = os.path.dirname(os.path.abspath(__file__))
@@ -145,18 +144,16 @@ class RKMK(TimeStepper):
             raise NotImplementedError
 
         Ulow = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKb)])
-        ylow = copy.copy(y)
-        ylow = Left(exp(Ulow), ylow)
+        ylow = Left(exp(Ulow), y)
         errest = -1
 
         yhigh = None
         if self.variablestep:
-            if sum(self.method.RKbhat) == 0:
+            if not self.method.variable_step:
                 raise NotImplementedError(self.method.name + ' does not support variable stepsize.')
 
             Uhigh = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKbhat)])
-            yhigh = copy.copy(y)
-            yhigh = Left(exp(Uhigh), yhigh)
-            errest = np.linalg.norm(ylow.data - yhigh.data)
+            yhigh = Left(exp(Uhigh), y)
+            errest = np.linalg.norm(Ulow.get_vector() - Uhigh.get_vector())
 
         return ylow, yhigh, errest
