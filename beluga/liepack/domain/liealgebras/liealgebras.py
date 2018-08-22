@@ -10,7 +10,7 @@ class LieAlgebra(object):
     """
     This serves as the default superclass on which all Lie algebras are constructed from.
     """
-    abelian = False # Default to assuming all Lie algebras are nonabelian.
+    abelian = False  # Default to assuming all Lie algebras are nonabelian.
 
     def __new__(cls, *args, **kwargs):
         obj = super(LieAlgebra, cls).__new__(cls)
