@@ -140,14 +140,28 @@ class RKMK(TimeStepper):
                 Yr[ii+1] = Left(exp(U), y)
                 K = vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1])
                 Kj[ii+1] = dexpinv(U, K, order=self.method.RKord-1)
-        else:
-            raise NotImplementedError
+
+        elif self.method.RKtype == 'implicit':
+            Kjold = copy.copy(Kj)
+            tol = 1e-15
+            max_iter = 50
+            iter = 0
+            iter_dist = 1 + tol
+            while (iter_dist > tol) and (iter < max_iter):
+                iter += 1
+                for ii in range(self.method.RKns):
+                    U = sum([elem*dt*coeff for elem, coeff in zip(Kjold, self.method.RKa[ii, :])])
+                    K = vf(t0 + dt*self.method.RKc[ii], Left(exp(U), y))
+                    Kj[ii] = dexpinv(U, K, order=self.method.RKord-1)
+                iter_dist = sum(np.linalg.norm(v1.get_vector() - v2.get_vector()) for v1,v2 in zip(Kj, Kjold))
+                Kjold = copy.copy(Kj)
+
 
         Ulow = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKb)])
         ylow = Left(exp(Ulow), y)
         errest = -1
-
         yhigh = None
+
         if self.variablestep:
             if not self.method.variable_step:
                 raise NotImplementedError(self.method.name + ' does not support variable stepsize.')
