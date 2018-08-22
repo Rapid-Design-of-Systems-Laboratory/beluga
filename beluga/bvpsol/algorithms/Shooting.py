@@ -1,11 +1,9 @@
 import numpy as np
 
-from beluga.utils import timeout, keyboard
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator
 from multiprocessing_on_dill import pool
 import copy
-import numba
 
 import logging
 import itertools as it
@@ -186,7 +184,6 @@ class Shooting(BaseAlgorithm):
     def make_stmode(odefn, nOdes, StepSize=1e-6):
         Xh = np.eye(nOdes)*StepSize
 
-        # @numba.jit(looplift=True, nopython=True)
         def _stmode_fd(t, _X, p, const, arc_idx):
             """ Finite difference version of state transition matrix """
             nParams = p.size
@@ -197,11 +194,11 @@ class Shooting(BaseAlgorithm):
             # Compute Jacobian matrix, F using finite difference
             fx = np.squeeze([odefn(t, X, p, const, arc_idx)])
 
-            for i in numba.prange(nOdes):
+            for i in range(nOdes):
                 fxh = odefn(t, X + Xh[i, :], p, const, arc_idx)
                 F[:, i] = (fxh-fx)/StepSize
 
-            for i in numba.prange(nParams):
+            for i in range(nParams):
                 p[i] += StepSize
                 fxh = odefn(t, X, p, const, arc_idx)
                 F[:, i+nOdes] = (fxh - fx).real / StepSize

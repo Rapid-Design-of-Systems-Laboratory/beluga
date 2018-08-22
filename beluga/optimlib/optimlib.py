@@ -6,6 +6,8 @@ Base functions required by all optimization methods.
 from beluga.utils import sympify, sympify2, keyboard
 from beluga.problem import SymVar
 import sympy
+from sympy import Symbol, im
+from sympy.core.function import AppliedUndef
 import functools as ft
 import itertools as it
 import simplepipe as sp
@@ -409,7 +411,7 @@ def make_dhdu(ham, controls, derivative_fn):
         custom_diff = dHdu.atoms(sympy.Derivative)
         # Substitute "Derivative" with complex step derivative
         repl = {(d, im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
-                    for f,v in zip(d.atoms(sympy.AppliedUndef), d.atoms(Symbol))}
+                    for f,v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
 
         dhdu.append(dHdu.subs(repl))
 
@@ -427,7 +429,6 @@ def make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivativ
     :return: A Hamiltonian function, :math:`H`.
     :return: A list of costate rates, :math:`\dot{\lambda}_x`
     """
-
     costate_names = make_costate_names(states)
     ham = path_cost.expr + sum([lam*s.eom for s, lam in zip(states, costate_names)])
     ham = add_equality_constraints(ham, constraints.get('equality', []))

@@ -71,6 +71,10 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     Solves the OCP using specified method
     """
 
+    # Get all other inputs
+    frm = inspect.stack()[1]
+    input_module = (inspect.getmodule(frm[0]))
+
     # Initialize necessary conditions of optimality object
     logging.info("Computing the necessary conditions of optimality")
     from beluga.optimlib import methods
