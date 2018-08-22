@@ -194,6 +194,9 @@ def dexpinv(g, h, order=5):
     +------------------------+-----------------+-----------------+
 
     """
+
+    if g.abelian:
+        return LieAlgebra(h)
     if order < 2:
         return h
 
