@@ -1,4 +1,7 @@
 [
+  "beluga/bvpsol/tests/test_Collocation.py::test_Collocation_1",
+  "beluga/bvpsol/tests/test_Collocation.py::test_Collocation_2",
+  "beluga/bvpsol/tests/test_Collocation.py::test_Collocation_3",
   "beluga/bvpsol/tests/test_Shooting.py::test_Shooting_1",
   "beluga/bvpsol/tests/test_Shooting.py::test_Shooting_2",
   "beluga/bvpsol/tests/test_Shooting.py::test_Shooting_3",
@@ -7,8 +10,15 @@
   "beluga/ivpsol/tests/test_ivpsol.py::test_Trajectory",
   "beluga/ivpsol/tests/test_ivpsol.py::test_integrate_quads",
   "beluga/ivpsol/tests/test_ivpsol_full.py::test_ode45_2",
+  "beluga/liepack/domain/liealgebras/tests/test_liealgebras.py::test_rn",
+  "beluga/liepack/domain/liealgebras/tests/test_liealgebras.py::test_so",
+  "beluga/liepack/tests/test_liepack.py::test_Adjoint",
+  "beluga/liepack/tests/test_liepack.py::test_Commutator",
+  "beluga/liepack/tests/test_liepack.py::test_exp",
   "beluga/optimlib/tests/test_optimlib.py::test_init_workspace",
-  "examples/tests/test_examples.py::test_brachistochrone",
+  "beluga/optimlib/tests/test_optimlib.py::test_make_augmented_cost",
+  "examples/tests/test_examples.py::test_brachistochrone_shooting",
+  "examples/tests/test_examples.py::test_brachistochrone_collocation",
   "examples/tests/test_examples.py::test_brachistochrone_adjoined",
   "examples/tests/test_examples.py::test_planarhypersonic"
 ]

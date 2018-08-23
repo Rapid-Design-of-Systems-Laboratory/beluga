@@ -1,6 +1,5 @@
 """
 problem2 -- Rename to 'problem' after refactoring.
-
 Contains class/functions related to defining the optimal control problems.
 """
 
@@ -19,7 +18,7 @@ from itertools import zip_longest
 from beluga.bvpsol import Scaling
 from beluga.ivpsol.integrators import ode45
 from beluga.utils import sympify, tic, toc
-from beluga.utils import keyboard
+from beluga.ivpsol import Propagator
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
@@ -27,7 +26,6 @@ class OCP(object):
 
     def __init__(self, name=''):
         """Initializes problem object.
-
         Parameters
         ----------
         name - str
@@ -44,7 +42,6 @@ class OCP(object):
     # Alias for returning cost function by type
     def get_cost(self, cost_type):
         """Retrieves the cost function for the problem.
-
         Parameters
         ----------
         cost_type - str
@@ -54,15 +51,12 @@ class OCP(object):
 
     def set_cost(self, expr, unit, cost_type):
         """Sets cost function for problem.
-
         Parameters
         ----------
         expr - str
             Expression for cost function
-
         unit - str
             Unit of cost function
-
         cost_type - str
             Type of cost function - path, initial or terminal
         """
@@ -71,17 +65,12 @@ class OCP(object):
     def set_property(self, *args, property_name, property_args, **kwargs):
         """
         Adds a property of the optimal control problem
-
         Parameters
         ----------
         args
-
         property_name
-
         property_args
-
         kwargs
-
         Returns a reference to self for chaining purposes
         """
         prop = self._properties.get(property_name, [])
@@ -96,23 +85,22 @@ class OCP(object):
         return self._properties.get(property_name, [])
 
     # TODO: Write documentation for these aliases
-    state = partialmethod(set_property, property_name='states',
-                    property_args=('name', 'eom', 'unit'))
-    control = partialmethod(set_property, property_name='controls',
-                    property_args=('name', 'unit'))
-    constant = partialmethod(set_property, property_name='constants',
-                    property_args=('name', 'value', 'unit'))
-    quantity = partialmethod(set_property, property_name='quantities',
-                    property_args=('name', 'value'))
+    state = partialmethod(set_property, property_name='states', property_args=('name', 'eom', 'unit'))
+    control = partialmethod(set_property, property_name='controls', property_args=('name', 'unit'))
+    constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
+    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
+                                       property_args=('name', 'function', 'unit'))
+    quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
 
     states = partialmethod(get_property, property_name='states')
     controls = partialmethod(get_property, property_name='controls')
     constants = partialmethod(get_property, property_name='constants')
+    constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     quantities = partialmethod(get_property, property_name='quantities')
 
     # TODO: Maybe write as separate function?
     def independent(self, name, unit):
-        self._properties['independent'] = {'name': name, 'unit':unit}
+        self._properties['independent'] = {'name': name, 'unit': unit}
 
     # Aliases for defining properties of the problem
     path_cost = partialmethod(set_cost, cost_type='path')
@@ -126,7 +114,6 @@ class OCP(object):
     def constraints(self):
         """
         Returns the ConstraintList object containing alias methods
-
         This function is purely for aesthetic purposes while method chaining
         in the input file
         """
@@ -150,7 +137,6 @@ class OCP(object):
         """Validates that the name is in the right format
             Only alphabets, numbers and underscores allowed
             Should not start with a number or underscore
-
             Required for the in-memory compilation of code to work
         """
 
@@ -172,7 +158,7 @@ class OCP(object):
 class ConstraintList(dict):
     def __new__(cls, *args, **kwargs):
         obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
-        obj.adjoined = False
+        obj.adjoined = kwargs.get('adjoined', False)
         return obj
 
     def set_adjoined(self, bool):
@@ -181,7 +167,6 @@ class ConstraintList(dict):
     def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """
         Adds constraint of the specified type
-
         Returns reference to self.constraint_aliases for chaining
         """
 
@@ -217,23 +202,18 @@ class ConstraintList(dict):
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """Combines positional and keyword arguments
-
     Parameters
     ----------
     arg_list - list of str
         List of keys in order of positional arguments
-
     args - list of str
         List of positional arguments
-
     kwargs: dict
         Dictionary of keyword arguments
-
     Returns
     -------
     A dictionary merging kwargs and args with keys from
     from args_list
-
     Example
     -------
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
@@ -336,10 +316,8 @@ class GuessGenerator(object):
 
     def file(self, bvp_fn, solinit):
         """Generates initial guess by loading an existing data file.
-
         bvp_fn : BVP
             BVP object containing functions
-
         solinit : Solution
             Solution object with some starting information (such as aux vars)
         """
@@ -448,10 +426,11 @@ class GuessGenerator(object):
             tspan = [0, -1]
 
         tic()
-        [x, y] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
+        prop = Propagator()
+        solivp = prop(bvp_fn.deriv_func_ode45, None, tspan, x0, [], param_guess, solinit.aux)
         elapsed_time = toc()
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
-        solinit.x = x
-        solinit.y = y
+        solinit.t = solivp.t
+        solinit.y = solivp.y
         solinit.parameters = param_guess
         return solinit

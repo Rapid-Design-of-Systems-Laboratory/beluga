@@ -54,6 +54,9 @@ var/
 *.manifest
 *.spec
 
+# Pytest cache folder
+.pytest_cache/
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
