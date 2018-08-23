@@ -3,16 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to beluga's documentation!
-==================================
+.. include:: ../../README.rst
 
-Contents:
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
 
-   install.rst
-   testproblem.rst
    problemsetup.rst
    features.rst
    unittests.rst
@@ -31,3 +29,8 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+License
+=======
+
+.. include:: ../../LICENSE
