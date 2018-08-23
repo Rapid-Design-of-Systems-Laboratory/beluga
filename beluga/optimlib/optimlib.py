@@ -455,31 +455,24 @@ def make_time_bc(constraints, bc_terminal):
         return bc_terminal+['_H - 0']
 
 
-def process_path_constraints(workspace):
+def process_path_constraints(states, controls, constants, constraints, path_constraints, derivative_fn, quantity_vars, quantity_list, path_cost, terminal_cost, indep_var):
     """
     Documentation needed.
 
     :param workspace:
     :return:
     """
-    states = workspace['states']
-    controls = workspace['controls']
-    constants = workspace['constants']
-    constraints = workspace['constraints']
-    derivative_fn = workspace['derivative_fn']
-    quantity_vars = workspace['quantity_vars']
-    quantity_list = workspace['quantity_list']
 
-    path_cost_expr = workspace['path_cost'].expr
-    path_cost_unit = workspace['path_cost'].unit
+    path_cost_expr = path_cost.expr
+    path_cost_unit = path_cost.unit
     if path_cost_expr == 0:
         logging.debug('No path cost specified, using unit from terminal cost function')
         path_cost_expr = None
-        path_cost_unit = workspace['terminal_cost'].unit
+        path_cost_unit = terminal_cost.unit
 
     logging.debug('Path cost is of unit: '+str(path_cost_unit))
-    time_unit = workspace['indep_var'].unit
-    path_constraints = workspace['path_constraints']
+    time_unit = indep_var.unit
+    path_constraints = path_constraints
 
     eq = constraints.get('equality', [])
     xi_init_vals = []
@@ -629,17 +622,7 @@ def process_path_constraints(workspace):
 
     s_list = []
     mu_vars = []
-
-    yield states
-    yield controls
-    yield constants
-    yield constraints
-    yield path_cost
-    yield s_list
-    yield mu_vars
-    yield xi_init_vals
-    yield derivative_fn
-    yield jacobian_fn
+    return states, controls, constants, constraints, path_cost, s_list, mu_vars, xi_init_vals, derivative_fn, jacobian_fn
 
 
 def process_quantities(quantities):

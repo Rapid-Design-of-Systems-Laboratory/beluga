@@ -7,6 +7,100 @@ import logging
 import numpy as np
 
 
+def ocp_to_bvp(ocp, guess):
+    ws = init_workspace(ocp, guess)
+    problem_name = ws['problem_name']
+    independent_variable = ws['indep_var']
+    states = ws['states']
+    controls = ws['controls']
+    constants = ws['constants']
+    constants_of_motion = ws['constants_of_motion']
+    constraints = ws['constraints']
+    constraints_adjoined = ws['constraints_adjoined']
+    path_constraints = ws['path_constraints']
+    quantities = ws['quantities']
+    initial_cost = ws['initial_cost']
+    terminal_cost = ws['terminal_cost']
+    path_cost = ws['path_cost']
+    quantity_vars, quantity_list, derivative_fn, jacobian_fn = process_quantities(quantities)
+    states, controls, constants, constraints, path_cost, s_list, mu_vars, xi_init_vals, derivative_fn, jacobian_fn = process_path_constraints(states, controls, constants, constraints, path_constraints, derivative_fn, quantity_vars, quantity_list, path_cost, terminal_cost, independent_variable)
+    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, constraints_adjoined, location='initial')
+    initial_lm_params = make_augmented_params(constraints, constraints_adjoined, location='initial')
+    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, constraints_adjoined, location='terminal')
+    terminal_lm_params = make_augmented_params(constraints, constraints_adjoined, location='terminal')
+    hamiltonian, costates = make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivative_fn)
+    bc_initial = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_initial_cost, derivative_fn, location='initial')
+    bc_terminal = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+    bc_terminal = make_time_bc(constraints, bc_terminal)
+    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+    parameters = make_parameters(initial_lm_params, terminal_lm_params, s_list)
+    bc_free_mask = make_bc_mask(states, controls, [], initial_cost, augmented_initial_cost, derivative_fn)
+    # TODO: More path constraints are processed here. Ref #51
+    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian, mu_vars, s_list)
+    mu_vars, mu_lhs, dae_states, dae_equations, dae_bc, guess, temp_dgdX, temp_dgdU = make_control_dae(states, costates, controls, constraints, dHdu, xi_init_vals, guess, derivative_fn)
+
+    # Generate the problem data
+    tf_var = sympify('tf')
+
+    dgdX = []
+    for i, row in enumerate(temp_dgdX.tolist()):
+        for j, expr in enumerate(row):
+            if expr != 0:
+                dgdX.append('dgdX[{},{}] = {}'.format(i, j, expr))
+
+    dgdU = []
+    for i, row in enumerate(temp_dgdU.tolist()):
+        for j, expr in enumerate(row):
+            if expr != 0:
+                dgdU.append('dgdU[{},{}] = {}'.format(i, j, expr))
+
+    out = ws
+    out['states'] = states
+    out['costates'] = costates
+    out['s_list'] = s_list
+    out['initial_lm_params'] = initial_lm_params
+    out['terminal_lm_params'] = terminal_lm_params
+    out['problem_data'] = {'method': 'icrm',
+        'problem_name': problem_name,
+        'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+        'state_list':[str(x) for x in it.chain(states, costates)],
+        'parameter_list': [str(tf_var)] + [str(p) for p in parameters],
+        'x_deriv_list': [str(tf_var * state.eom) for state in states],
+        'lam_deriv_list': [str(tf_var * costate.eom) for costate in costates],
+        'deriv_list': [str(tf_var * state.eom) for state in states] + [str(tf_var * costate.eom) for costate in costates],
+        'states': states,
+        'costates': costates,
+        'constants': constants,
+        'constants_of_motion': constants_of_motion,
+        'parameters': [tf_var] + parameters,
+        'controls': controls,
+        'mu_vars': mu_vars,
+        'quantity_vars': quantity_vars,
+        'dae_var_list': [str(dae_state) for dae_state in 'dae_states'],
+        'dae_eom_list': ['(tf)*(' + str(dae_eom) + ')' for dae_eom in dae_equations],
+        'dae_var_num': len(dae_states),
+        'costate_eoms': costate_eoms,
+        'bc_list': [],
+        'ham': hamiltonian,
+        's_list': [],
+        'num_states': 2 * len(states),
+        'num_params': len(parameters) + 1,
+        'dHdu': [str(_) for _ in it.chain(dHdu, mu_lhs)],
+        'bc_initial': [str(_) for _ in bc_initial],
+        'bc_terminal': [str(_) for _ in it.chain(bc_terminal, dae_bc)],
+        'num_bc': len(bc_initial) + len(bc_terminal) + len(dae_bc),
+        'control_options': [],
+        'control_list': [str(u) for u in controls + mu_vars],
+        'num_controls': len(controls) + len(mu_vars),
+        'ham_expr': str(hamiltonian),
+        'quantity_list': quantity_list,
+        'bc_free_mask': bc_free_mask,
+        'dgdX': dgdX,
+        'dgdU': dgdU,
+        'nOdes': 2 * len(states) + len(dae_states)}
+    return out
+
+
 def make_control_dae(states, costates, controls, constraints, dhdu, xi_init_vals, guess, derivative_fn):
     """
     Make's control law for dae (ICRM) formulation.
@@ -55,87 +149,3 @@ def make_control_dae(states, costates, controls, constraints, dhdu, xi_init_vals
     yield guess
     yield dgdX
     yield dgdU
-
-
-def generate_problem_data(workspace):
-    """Generates the `problem_data` dictionary used for code generation."""
-
-    tf_var = sympify('tf')
-
-    dgdX = []
-    for i, row in enumerate(workspace['dgdX'].tolist()):
-        for j, expr in enumerate(row):
-            if expr != 0:
-                dgdX.append('dgdX[{},{}] = {}'.format(i, j, expr))
-
-    dgdU = []
-    for i, row in enumerate(workspace['dgdU'].tolist()):
-        for j, expr in enumerate(row):
-            if expr != 0:
-                dgdU.append('dgdU[{},{}] = {}'.format(i, j, expr))
-
-    problem_data = {
-        'method': 'icrm',
-        'problem_name': workspace['problem_name'],
-        'aux_list': [
-            {
-            'type' : 'const',
-            'vars': [str(k) for k in workspace['constants']]
-            }
-        ],
-        'state_list':
-            [str(x) for x in it.chain(workspace['states'], workspace['costates'])]
-        ,
-        'parameter_list': [str(tf_var)] + [str(p) for p in workspace['parameters']],
-        'x_deriv_list': [str(tf_var*state.eom) for state in workspace['states']],
-        'lam_deriv_list':[str(tf_var*costate.eom) for costate in workspace['costates']],
-        'deriv_list':
-            [str(tf_var*state.eom) for state in workspace['states']] +
-            [str(tf_var*costate.eom) for costate in workspace['costates']]
-        ,
-        'states': workspace['states'],
-        'costates': workspace['costates'],
-        'constants': workspace['constants'],
-        'constants_of_motion': workspace['constants_of_motion'],
-        'parameters': [tf_var] + workspace['parameters'],
-        'controls': workspace['controls'],
-        'mu_vars': workspace['mu_vars'],
-        'quantity_vars': workspace['quantity_vars'],
-        'dae_var_list':
-            [str(dae_state) for dae_state in workspace['dae_states']],
-        'dae_eom_list':
-            ['(tf)*('+str(dae_eom)+')' for dae_eom in workspace['dae_equations']],
-        'dae_var_num': len(workspace['dae_states']),
-
-        'costate_eoms': [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ],
-        'ham': workspace['ham'],
-
-        's_list': [],
-        'bc_list': [],
-        'num_states': 2*len(workspace['states']),
-        'num_params': len(workspace['parameters']) + 1,
-        'dHdu': [str(_) for _ in it.chain(workspace['dhdu'], workspace['mu_lhs'])],
-        'bc_initial': [str(_) for _ in workspace['bc_initial']],
-        'bc_terminal': [str(_) for _ in it.chain(workspace['bc_terminal'], workspace['dae_bc'])],
-        'num_bc': len(workspace['bc_initial'])+len(workspace['bc_terminal'])+ len(workspace['dae_bc']),
-        'control_options': [],
-        'control_list': [str(u) for u in workspace['controls']+workspace['mu_vars']],
-        'num_controls': len(workspace['controls'])+len(workspace['mu_vars']),
-        'ham_expr': str(workspace['ham']),
-        'quantity_list': workspace['quantity_list'],
-        'bc_free_mask': workspace['bc_free_mask'],
-        'dgdX': dgdX,
-        'dgdU': dgdU,
-        'nOdes': 2*len(workspace['states']) + len(workspace['dae_states']),
-    }
-
-    return problem_data
-
-
-# Implement workflow using simplepipe and functions defined above
-ICRM = sp.Workflow()
-ICRM.add_task(BaseWorkflow)
-ICRM.add_task(make_control_dae,
-            inputs=('states', 'costates', 'controls', 'constraints', 'dhdu', 'xi_init_vals', 'guess', 'derivative_fn'),
-            outputs=('mu_vars', 'mu_lhs', 'dae_states', 'dae_equations', 'dae_bc', 'guess', 'dgdX', 'dgdU'))
-ICRM.add_task(generate_problem_data, inputs='*', outputs=('problem_data'))

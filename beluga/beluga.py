@@ -12,8 +12,8 @@ import collections as cl
 
 from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
-from beluga.optimlib import methods
-from beluga.optimlib.brysonho import ocp_to_bvp
+from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
+from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from .utils import tic, toc
 from collections import OrderedDict
 from .utils.keyboard import keyboard
@@ -75,12 +75,14 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     logging.info("Computing the necessary conditions of optimality")
 
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
-        ocp_ws = ocp_to_bvp(ocp, guess_generator)
-        ocp_ws['problem'] = ocp
-        ocp_ws['guess'] = guess_generator
+        ocp_ws = BH_ocp_to_bvp(ocp, guess_generator)
+    elif method.lower() == 'icrm':
+        ocp_ws = ICRM_ocp_to_bvp(ocp, guess_generator)
     else:
-        wf = methods[method]
-        ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
+        raise NotImplementedError
+
+    ocp_ws['problem'] = ocp
+    ocp_ws['guess'] = guess_generator
 
     solinit = Solution()
 
