@@ -1,6 +1,5 @@
 """
 Computes the necessary conditions of optimality using Bryson & Ho's method
-
 [1] Bryson, Arthur Earl. Applied optimal control: optimization, estimation and control. CRC Press, 1975.
 """
 
@@ -12,7 +11,6 @@ import simplepipe as sp
 def make_control_law(dhdu, controls):
     """
     Solves control equation to get control law.
-
     :param dhdu:
     :param controls:
     :return: Control law options.

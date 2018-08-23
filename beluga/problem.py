@@ -1,6 +1,5 @@
 """
 problem2 -- Rename to 'problem' after refactoring.
-
 Contains class/functions related to defining the optimal control problems.
 """
 
@@ -27,7 +26,6 @@ class OCP(object):
 
     def __init__(self, name=''):
         """Initializes problem object.
-
         Parameters
         ----------
         name - str
@@ -44,7 +42,6 @@ class OCP(object):
     # Alias for returning cost function by type
     def get_cost(self, cost_type):
         """Retrieves the cost function for the problem.
-
         Parameters
         ----------
         cost_type - str
@@ -54,15 +51,12 @@ class OCP(object):
 
     def set_cost(self, expr, unit, cost_type):
         """Sets cost function for problem.
-
         Parameters
         ----------
         expr - str
             Expression for cost function
-
         unit - str
             Unit of cost function
-
         cost_type - str
             Type of cost function - path, initial or terminal
         """
@@ -71,17 +65,12 @@ class OCP(object):
     def set_property(self, *args, property_name, property_args, **kwargs):
         """
         Adds a property of the optimal control problem
-
         Parameters
         ----------
         args
-
         property_name
-
         property_args
-
         kwargs
-
         Returns a reference to self for chaining purposes
         """
         prop = self._properties.get(property_name, [])
@@ -125,7 +114,6 @@ class OCP(object):
     def constraints(self):
         """
         Returns the ConstraintList object containing alias methods
-
         This function is purely for aesthetic purposes while method chaining
         in the input file
         """
@@ -149,7 +137,6 @@ class OCP(object):
         """Validates that the name is in the right format
             Only alphabets, numbers and underscores allowed
             Should not start with a number or underscore
-
             Required for the in-memory compilation of code to work
         """
 
@@ -180,7 +167,6 @@ class ConstraintList(dict):
     def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """
         Adds constraint of the specified type
-
         Returns reference to self.constraint_aliases for chaining
         """
 
@@ -216,23 +202,18 @@ class ConstraintList(dict):
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """Combines positional and keyword arguments
-
     Parameters
     ----------
     arg_list - list of str
         List of keys in order of positional arguments
-
     args - list of str
         List of positional arguments
-
     kwargs: dict
         Dictionary of keyword arguments
-
     Returns
     -------
     A dictionary merging kwargs and args with keys from
     from args_list
-
     Example
     -------
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
@@ -335,10 +316,8 @@ class GuessGenerator(object):
 
     def file(self, bvp_fn, solinit):
         """Generates initial guess by loading an existing data file.
-
         bvp_fn : BVP
             BVP object containing functions
-
         solinit : Solution
             Solution object with some starting information (such as aux vars)
         """
