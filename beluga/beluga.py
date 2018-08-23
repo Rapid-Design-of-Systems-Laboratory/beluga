@@ -76,8 +76,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
         ocp_ws = ocp_to_bvp(ocp, guess_generator)
-        keyboard()
-        ocp_ws['problem_data'] = ocp_to_bvp(ocp, guess_generator)
+        ocp_ws['problem'] = ocp
         ocp_ws['guess'] = guess_generator
     else:
         wf = methods[method]
