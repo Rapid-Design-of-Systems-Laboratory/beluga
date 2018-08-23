@@ -1,3 +1,8 @@
+.. |rdsl| figure:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
+    :align: right
+
+|rdsl|
+
 beluga
 ======
 
@@ -15,9 +20,6 @@ beluga
 
 .. |docs| image:: https://readthedocs.org/projects/beluga/badge/?version=latest
     :target: http://beluga.readthedocs.io/en/latest/?badge=latest
-
-.. |logo| image:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
-    :align: right
 
 .. |coverage| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/coverage.svg
     :target: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
