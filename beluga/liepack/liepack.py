@@ -121,9 +121,9 @@ class Commutator(object):
     >>> x = so(3)
     >>> y = so(3)
     >>> z = so(3)
-    >>> x.set_data([1,0,0])
-    >>> y.set_data([0,1,0])
-    >>> z.set_data([0,0,1])
+    >>> x.set_vector([1,0,0])
+    >>> y.set_vector([0,1,0])
+    >>> z.set_vector([0,0,1])
     >>> Commutator(x,y) == z
     True
 
