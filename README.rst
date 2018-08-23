@@ -1,7 +1,5 @@
-.. |rdsl| figure:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
+.. image:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
     :align: right
-
-|rdsl|
 
 beluga
 ======
