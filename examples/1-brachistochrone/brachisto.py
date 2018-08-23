@@ -32,7 +32,7 @@ ocp.constraints() \
     .terminal('y-y_f', 'm')
 
 # Use the "adjoined method" to solve for the constraints. (Default is False)
-# ocp.constraints().set_adjoined(True)
+ocp.constraints().set_adjoined(True)
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 

@@ -12,6 +12,8 @@ import collections as cl
 
 from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
+from beluga.optimlib import methods
+from beluga.optimlib.brysonho import ocp_to_bvp
 from .utils import tic, toc
 from collections import OrderedDict
 from .utils.keyboard import keyboard
@@ -50,10 +52,6 @@ def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_
     """
     Performs initial configuration on beluga.
     """
-
-    # Get reference to the input file module
-    frm = inspect.stack()[1]
-
     # Suppress warnings
     warnings.filterwarnings("ignore")
 
@@ -64,24 +62,26 @@ def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_
     if output_file is not None:
         config['output_file'] = output_file
 
-    return
-
 
 def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.dill'):
     """
     Solves the OCP using specified method
     """
-
     # Get all other inputs
     frm = inspect.stack()[1]
     input_module = (inspect.getmodule(frm[0]))
 
     # Initialize necessary conditions of optimality object
     logging.info("Computing the necessary conditions of optimality")
-    from beluga.optimlib import methods
 
-    wf = methods[method]
-    ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
+    if method.lower() == 'traditional' or method.lower() == 'brysonho':
+        ocp_ws = ocp_to_bvp(ocp, guess_generator)
+        keyboard()
+        ocp_ws['problem_data'] = ocp_to_bvp(ocp, guess_generator)
+        ocp_ws['guess'] = guess_generator
+    else:
+        wf = methods[method]
+        ocp_ws = wf({'problem': ocp, 'guess': guess_generator})
 
     solinit = Solution()
 
