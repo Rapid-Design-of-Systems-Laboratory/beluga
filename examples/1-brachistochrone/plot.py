@@ -3,7 +3,7 @@ from beluga.visualization import BelugaPlot
 plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plot1 = plots.add_plot()
-plot1.line('x','y')
+plot1.line_series('x','y')
 plot1.xlabel('x(t)')
 plot1.ylabel('y(t)')
 plot1.title('Trajectory time history')

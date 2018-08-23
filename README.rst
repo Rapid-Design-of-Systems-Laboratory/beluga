@@ -1,8 +1,8 @@
-.. image:: https://raw.githubusercontent.com/msparapa/Rapid-Design-of-Systems-Laboratory/master/rdsl.png
-    :align: right
-
 beluga
 ======
+
+.. image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/rdsl.png
+    :align: right
 
 +---------------+-----------------+---------------+------------+
 | Linux         | Windows         | Documentation | Coverage   |
