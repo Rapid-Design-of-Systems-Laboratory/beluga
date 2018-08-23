@@ -1,8 +1,8 @@
-.. |plot0| image:: plot0.png
+.. |plot0| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/1-brachistochrone/plot0.png
 
-.. |plot1| image:: plot1.png
+.. |plot1| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/1-brachistochrone/plot1.png
 
-.. |plot2| image:: plot2.png
+.. |plot2| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/1-brachistochrone/plot2.png
 
 Brachistochrone Problem
 =======================

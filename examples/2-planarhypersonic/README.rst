@@ -1,10 +1,10 @@
-.. |plot1| image:: plot1.png
+.. |plot1| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/2-planarhypersonic/plot1.png
 
-.. |plot2| image:: plot2.png
+.. |plot2| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/2-planarhypersonic/plot2.png
 
-.. |plot3| image:: plot3.png
+.. |plot3| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/2-planarhypersonic/plot3.png
 
-.. |plot4| image:: plot4.png
+.. |plot4| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/examples/2-planarhypersonic/plot4.png
 
 Planar Hypersonic (Unconstrained Entry FPA)
 ===========================================
