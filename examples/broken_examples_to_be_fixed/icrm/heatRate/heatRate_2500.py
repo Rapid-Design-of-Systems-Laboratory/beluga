@@ -50,7 +50,7 @@ ocp.constraints().initial('h-h_0','m') \
                     .terminal('theta-theta_f','rad') \
                     .path('heatRate','(qdot/qdotMax)','<',1.0,'nd',start_eps=1e-2) \
 
-bvp_solver = beluga.bvp_algorithm('MultipleShooting',
+bvp_solver = beluga.bvp_algorithm('Shooting',
                     derivative_method='fd',
                     tolerance=1e-4,
                     max_iterations=40,

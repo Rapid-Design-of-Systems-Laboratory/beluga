@@ -58,8 +58,6 @@ def create_module(problem_data):
     problem_name = problem_data['problem_name']
     module = imp.new_module('_beluga_'+problem_name)
 
-
-
     # module.corner_fns = problem_data['corner_fns']
     # module.compute_hamiltonian = problem_data['ham_fn']
     # module.costate_eoms = problem_data['costate_eoms']
@@ -85,9 +83,8 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
         ham_args.append('___dummy_arg___')
         u_args.append('___dummy_arg___')
     control_opt_mat = sym.Matrix([[option.get(u, '0')
-                                    for u in unknowns]
-                                    for option in control_opts])
-
+                                   for u in unknowns]
+                                  for option in control_opts])
 
     # control_opt_fn = sym.lambdify(u_args, control_opt_mat)
     # print('Making control fn with args',u_args)
@@ -190,10 +187,10 @@ def compile_code_py(code_string, module, function_name):
 
 
 def make_njit_fn(args, fn_expr):
-    fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '')\
+    fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '') \
                                                   .replace('(([[', '[') \
                                                   .replace(']]))', ']')
-    jit_fn = numba.njit(parallel=True, nopython=True)(eval(fn_str))
+    jit_fn = numba.njit(parallel=True)(eval(fn_str))
     return jit_fn
 
 

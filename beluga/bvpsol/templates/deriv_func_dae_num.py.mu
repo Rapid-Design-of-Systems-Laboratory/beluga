@@ -82,7 +82,8 @@ def deriv_func(_t,_X,_p,_aux):
     # dgdU   = compute_jacobian(g_fn, _X, range({{num_states}},{{num_states}}+{{dae_var_num}}))
 
     # dgdU * udot + dgdX * xdot = 0
-    udot   = scipy.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
+    # udot   = scipy.linalg.solve(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
+    udot   = numpy.linalg.lstsq(dgdU, np.dot(-dgdX, Xdot[:{{num_states}}]))
 
 #    udot = np.array([{{#dae_eom_list}}{{.}},
 #    {{/dae_eom_list}}])

@@ -15,13 +15,14 @@ from beluga.bvpsol import algorithms, Solution
 from .utils import tic, toc
 from collections import OrderedDict
 from .utils.keyboard import keyboard
-# from beluga.optimlib import ocp_to_bvp
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='Shooting',
               output_file='data.dill')
 
 BVP = cl.namedtuple('BVP', 'deriv_func bc_func compute_control')
+
+
 def bvp_algorithm(algo, **kwargs):
     """
     Helper method to load algorithm by name
@@ -142,11 +143,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     del out['problem_data']['costates']
 
     qvars = out['problem_data']['quantity_vars']
-    qvars = {str(k):str(v) for k,v in qvars.items()}
+    qvars = {str(k): str(v) for k, v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
     with open(output_file, 'wb') as outfile:
         dill.settings['recurse'] = True
-        dill.dump(out, outfile) # Dill Beluga object only
+        dill.dump(out, outfile)  # Dill Beluga object only
 
     return out['solution'][-1][-1]
 
@@ -187,7 +188,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['control_list']
 
-                    #TODO: Make control computation more efficient
+                    # TODO: Make control computation more efficient
                     # for i in range(len(sol.x)):
                     #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
                     #     sol.u[:,i] = _u
