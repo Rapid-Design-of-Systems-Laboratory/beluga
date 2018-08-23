@@ -1,4 +1,3 @@
-.. _nomenclature:
 Nomenclature
 ============
 
