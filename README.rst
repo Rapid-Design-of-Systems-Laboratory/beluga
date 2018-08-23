@@ -4,11 +4,17 @@ beluga
 .. image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/rdsl.png
     :align: right
 
-+---------------+-----------------+---------------+------------+
-| Linux         | Windows         | Documentation | Coverage   |
-+===============+=================+===============+============+
-| |travisbadge| | |appveyorbadge| |    |docs|     | |coverage| |
-+---------------+-----------------+---------------+------------+
+.. _GitHub: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga/releases
+
+.. _PyPI: https://pypi.org/project/beluga/#history
+
+.. _Documentation: http://beluga.readthedocs.io/en/latest/?badge=latest
+
++---------------+-----------------+----------------+------------+
+| Linux         | Windows         | Documentation_ | Coverage   |
++===============+=================+================+============+
+| |travisbadge| | |appveyorbadge| |    |docs|      | |coverage| |
++---------------+-----------------+----------------+------------+
 
 .. |travisbadge| image:: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga.svg?branch=master
     :target: https://travis-ci.org/Rapid-Design-of-Systems-Laboratory/beluga
@@ -17,7 +23,7 @@ beluga
     :target: https://ci.appveyor.com/project/msparapa/beluga/branch/master
 
 .. |docs| image:: https://readthedocs.org/projects/beluga/badge/?version=latest
-    :target: http://beluga.readthedocs.io/en/latest/?badge=latest
+    :target: Documentation_
 
 .. |coverage| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/coverage.svg
     :target: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
@@ -35,7 +41,7 @@ If you already have Python 3+ installed along with pip, then do::
 Installation using binaries
 ---------------------------
 
-Binary files are located on `PyPI <https://pypi.org/project/beluga/#history>`_ and `GitHub <https://github.com/Rapid-Design-of-Systems-Laboratory/beluga/releases>`_.
+Binary files are located on PyPI_ and GitHub_.
 
 Installation using git
 ----------------------
