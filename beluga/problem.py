@@ -19,7 +19,7 @@ from itertools import zip_longest
 from beluga.bvpsol import Scaling
 from beluga.ivpsol.integrators import ode45
 from beluga.utils import sympify, tic, toc
-from beluga.ivpsol import Propagator
+from beluga.utils import keyboard
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
@@ -96,22 +96,23 @@ class OCP(object):
         return self._properties.get(property_name, [])
 
     # TODO: Write documentation for these aliases
-    state = partialmethod(set_property, property_name='states', property_args=('name', 'eom', 'unit'))
-    control = partialmethod(set_property, property_name='controls', property_args=('name', 'unit'))
-    constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
-    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
-                                       property_args=('name', 'function', 'unit'))
-    quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
+    state = partialmethod(set_property, property_name='states',
+                    property_args=('name', 'eom', 'unit'))
+    control = partialmethod(set_property, property_name='controls',
+                    property_args=('name', 'unit'))
+    constant = partialmethod(set_property, property_name='constants',
+                    property_args=('name', 'value', 'unit'))
+    quantity = partialmethod(set_property, property_name='quantities',
+                    property_args=('name', 'value'))
 
     states = partialmethod(get_property, property_name='states')
     controls = partialmethod(get_property, property_name='controls')
     constants = partialmethod(get_property, property_name='constants')
-    constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     quantities = partialmethod(get_property, property_name='quantities')
 
     # TODO: Maybe write as separate function?
     def independent(self, name, unit):
-        self._properties['independent'] = {'name': name, 'unit': unit}
+        self._properties['independent'] = {'name': name, 'unit':unit}
 
     # Aliases for defining properties of the problem
     path_cost = partialmethod(set_cost, cost_type='path')
@@ -171,7 +172,7 @@ class OCP(object):
 class ConstraintList(dict):
     def __new__(cls, *args, **kwargs):
         obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
-        obj.adjoined = kwargs.get('adjoined', False)
+        obj.adjoined = False
         return obj
 
     def set_adjoined(self, bool):
@@ -447,11 +448,10 @@ class GuessGenerator(object):
             tspan = [0, -1]
 
         tic()
-        prop = Propagator()
-        solivp = prop(bvp_fn.deriv_func_ode45, None, tspan, x0, [], param_guess, solinit.aux)
+        [x, y] = ode45(bvp_fn.deriv_func_ode45, tspan, x0, param_guess, solinit.aux)
         elapsed_time = toc()
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
-        solinit.t = solivp.t
-        solinit.y = solivp.y
+        solinit.x = x
+        solinit.y = y
         solinit.parameters = param_guess
         return solinit
