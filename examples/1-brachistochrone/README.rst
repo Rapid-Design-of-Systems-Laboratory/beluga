@@ -1,11 +1,13 @@
+.. |plot0| image:: plot0.png
+
 .. |plot1| image:: plot1.png
 
 .. |plot2| image:: plot2.png
 
-
-
 Brachistochrone Problem
 =======================
+
+|plot0|
 
 Here, we're going to solve the Brachistochrone_ problem. First, import :code:`beluga` and :code:`logging`. :code:`beluga` is the optimal control solver and :code:`logging` will keep track of solver progress. We will also need pi (3.14) and a plotting tool. We will use the :code:`Python` built-in :code:`math.pi` and :code:`matplotlib`'s :code:`pyplot` module, but any approximation of :math:`\pi` and plotting tool will do::
 

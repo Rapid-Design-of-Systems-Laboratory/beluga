@@ -5,13 +5,12 @@
 
 .. include:: ../../README.rst
 
-Contents:
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
 
-   install.rst
-   testproblem.rst
    problemsetup.rst
    features.rst
    unittests.rst
