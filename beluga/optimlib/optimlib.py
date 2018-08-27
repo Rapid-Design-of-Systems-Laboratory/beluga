@@ -40,7 +40,7 @@ def add_equality_constraints(hamiltonian, equality_constraints):
 
 
 def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
-    """
+    r"""
     Documentation needed.
 
     :param var:
@@ -75,8 +75,8 @@ def get_satfn(var, ubound=None, lbound=None, slopeAtZero=1):
 
 
 def init_workspace(ocp, guess):
-    """
-    Initializes the simplepipe workspace using an OCP definition.
+    r"""
+    Initializes the workspace using an OCP definition.
 
     All the strings in the original definition are converted into symbolic
     expressions for computation.
@@ -86,13 +86,10 @@ def init_workspace(ocp, guess):
     """
 
     workspace = {}
-    # variable_list = ['states', 'controls', 'constraints', 'quantities', 'initial_cost', 'terminal_cost', 'path_cost']
     workspace['problem_name'] = ocp.name
     workspace['indep_var'] = SymVar(ocp._properties['independent'])
     workspace['states'] = [SymVar(s) for s in ocp.states()]
     workspace['controls'] = [SymVar(u) for u in ocp.controls()]
-    # sort_map = [i[0] for i in sorted(enumerate(ocp.constants()), key=lambda x:x[1]['name'])]
-    # workspace['constants'] = [SymVar(ocp.constants()[k]) for k in sort_map]
     workspace['constants'] = [SymVar(k) for k in ocp.constants()]
     workspace['constants_of_motion'] = [SymVar(k) for k in ocp.constants_of_motion()]
 
@@ -167,7 +164,7 @@ def make_augmented_cost(cost, constraints, constraints_adjoined, location):
 
 
 def make_augmented_params(constraints, constraints_adjoined, location):
-    """
+    r"""
     Make the lagrange multiplier terms for adjoining boundary conditions.
 
     :param constraints: List of constraints at the boundaries.
@@ -187,8 +184,8 @@ def make_augmented_params(constraints, constraints_adjoined, location):
 
 
 def make_bc_mask(states, controls, mu_vars, cost, aug_cost, derivative_fn):
-
-    """Creates mask marking free and bound variables at t=0
+    r"""
+    Creates mask marking free and bound variables at t=0
 
     free = 1, constrained = 0
     """
@@ -240,55 +237,41 @@ def make_boundary_conditions(constraints, constraints_adjoined, states, costates
     return bc_list
 
 
-def make_constrained_arc_fns(workspace):
+def make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian, mu_vars, s_list):
     """
     Creates constrained arc control functions.
 
     :param workspace:
     :return:
     """
-    controls = workspace['controls']
-    constants = workspace['constants']
-    states = workspace['states']
-    costates = workspace['costates']
-    parameters = workspace['parameters']
-    quantity_vars = workspace['quantity_vars']
-    fn_args_lamdot = [list(it.chain(states, costates)), parameters, constants, controls]
-    # control_fns = [workspace['control_fn']]
     tf_var = sympify('tf')
-    costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in workspace['costates']], 'arctype':0} ]
-    bc_list = [] # Unconstrained arc placeholder
+    costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in costates], 'arctype':0} ]
+    bc_list = []  # Unconstrained arc placeholder
 
-    mu_vars = workspace['mu_vars']
-
-
-    for arc_type, s in enumerate(workspace['s_list'],1):
+    for arc_type, s in enumerate(s_list,1):
         pi_list = [str(_) for _ in s['pi_list']]
-
 
         costate_eom = {'eom':[str(_.eom*tf_var) for _ in s['lamdot']],
                        'arctype':arc_type,
                        'pi_list': pi_list}
 
         entry_bc, exit_bc = make_constraint_bc(s,
-                                workspace['states'],
-                                workspace['costates'],
-                                workspace['parameters'],
-                                workspace['constants'],
-                                workspace['controls'], mu_vars, workspace['quantity_vars'], workspace['ham'])
+                                states,
+                                costates,
+                                parameters,
+                                constants,
+                                controls, mu_vars, quantity_vars, hamiltonian)
+
         bc = {'entry_bc': entry_bc,
               'exit_bc': exit_bc,
               'arctype': arc_type,
               'pi_list': pi_list,
               'name': s['name']}
-        bc_list.append(bc)
 
-        # control_fns.append(u_fn)
+        bc_list.append(bc)
         costate_eoms.append(costate_eom)
 
-    # yield control_fns
-    yield costate_eoms
-    yield bc_list
+    return costate_eoms, bc_list
 
 
 def make_constraint_bc(s, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham):
@@ -472,31 +455,24 @@ def make_time_bc(constraints, bc_terminal):
         return bc_terminal+['_H - 0']
 
 
-def process_path_constraints(workspace):
+def process_path_constraints(states, controls, constants, constraints, path_constraints, derivative_fn, quantity_vars, quantity_list, path_cost, terminal_cost, indep_var):
     """
     Documentation needed.
 
     :param workspace:
     :return:
     """
-    states = workspace['states']
-    controls = workspace['controls']
-    constants = workspace['constants']
-    constraints = workspace['constraints']
-    derivative_fn = workspace['derivative_fn']
-    quantity_vars = workspace['quantity_vars']
-    quantity_list = workspace['quantity_list']
 
-    path_cost_expr = workspace['path_cost'].expr
-    path_cost_unit = workspace['path_cost'].unit
+    path_cost_expr = path_cost.expr
+    path_cost_unit = path_cost.unit
     if path_cost_expr == 0:
         logging.debug('No path cost specified, using unit from terminal cost function')
         path_cost_expr = None
-        path_cost_unit = workspace['terminal_cost'].unit
+        path_cost_unit = terminal_cost.unit
 
     logging.debug('Path cost is of unit: '+str(path_cost_unit))
-    time_unit = workspace['indep_var'].unit
-    path_constraints = workspace['path_constraints']
+    time_unit = indep_var.unit
+    path_constraints = path_constraints
 
     eq = constraints.get('equality', [])
     xi_init_vals = []
@@ -646,17 +622,7 @@ def process_path_constraints(workspace):
 
     s_list = []
     mu_vars = []
-
-    yield states
-    yield controls
-    yield constants
-    yield constraints
-    yield path_cost
-    yield s_list
-    yield mu_vars
-    yield xi_init_vals
-    yield derivative_fn
-    yield jacobian_fn
+    return states, controls, constants, constraints, path_cost, s_list, mu_vars, xi_init_vals, derivative_fn, jacobian_fn
 
 
 def process_quantities(quantities):
@@ -665,18 +631,12 @@ def process_quantities(quantities):
     derivative operator that takes considers these definitions.
 
     :param quantities: List of quantities.
-    :return:
+    :return: quantity_vars, quantity_list, derivative_fn, jacobian_fn
     """
-
-    # TODO: Sanitize quantity expressions
-    # TODO: Check for circular references in quantity expressions
 
     # Trivial case when no quantities are defined
     if len(quantities) == 0:
-        yield {}
-        yield []
-        yield total_derivative
-        yield ft.partial(jacobian, derivative_fn=total_derivative)
+        return dict(), list(), total_derivative, ft.partial(jacobian, derivative_fn=total_derivative)
 
     quantity_subs = [(q.name, q.value) for q in quantities]
     quantity_sym, quantity_expr = zip(*quantity_subs)
@@ -693,11 +653,7 @@ def process_quantities(quantities):
     # Function partial that takes derivative while considering quantities
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
     jacobian_fn = ft.partial(jacobian, derivative_fn=derivative_fn)
-
-    yield quantity_vars
-    yield quantity_list
-    yield derivative_fn
-    yield jacobian_fn
+    return quantity_vars, quantity_list, derivative_fn, jacobian_fn
 
 
 def sanitize_constraint_expr(constraint, states, location, prefix_map):
