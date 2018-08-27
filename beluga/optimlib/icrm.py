@@ -76,7 +76,7 @@ def ocp_to_bvp(ocp, guess):
         'controls': controls,
         'mu_vars': mu_vars,
         'quantity_vars': quantity_vars,
-        'dae_var_list': [str(dae_state) for dae_state in 'dae_states'],
+        'dae_var_list': [str(dae_state) for dae_state in dae_states],
         'dae_eom_list': ['(tf)*(' + str(dae_eom) + ')' for dae_eom in dae_equations],
         'dae_var_num': len(dae_states),
         'costate_eoms': costate_eoms,
