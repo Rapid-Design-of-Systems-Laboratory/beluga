@@ -4,7 +4,7 @@ from beluga.ivpsol.integrators.mcpi import mcpi, mcpi_init, absdiff
 from numba import njit, prange, jit
 from .BaseAlgorithm import BaseAlgorithm
 import pystache
-import simplepipe as sp
+# import simplepipe as sp
 import numpy as np
 import functools as ft
 import imp
@@ -84,29 +84,31 @@ def compile_code_py(code_string, module, function_name):
     exec(code_string, module.__dict__)
     return getattr(module,function_name)
 
-QCPICodeGen = sp.Workflow([
-    # Create module for holding compiled code
-    sp.Task(ft.partial(create_module), inputs='problem_data', outputs=('code_module')),
-
-    # sp.Task(make_functions, inputs=('problem_data', 'code_module'), outputs=('code_module','compute_control_fn')),
-    # Load equation template files and generate code
-    sp.Task(ft.partial(load_eqn_template,
-                template_file='deriv_func.py.mu'),
-            inputs='problem_data',
-            outputs='deriv_func_code'),
-    sp.Task(ft.partial(load_eqn_template,
-                template_file='bc_func.py.mu'),
-            inputs='problem_data',
-            outputs='bc_func_code'),
-
-    # Compile generated code
-    sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
-            inputs=['deriv_func_code', 'code_module'],
-            outputs='deriv_func_fn'),
-    sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
-            inputs=['bc_func_code', 'code_module'],
-            outputs='bc_func_fn'),
-], description='Generates and compiles the required BVP functions from problem data')
+# TODO: This code block was never fully removed. When QCPI is rewritten, this code block
+# will need to be rewritten as well. Do not delete without fixing.
+# QCPICodeGen = sp.Workflow([
+#     # Create module for holding compiled code
+#     sp.Task(ft.partial(create_module), inputs='problem_data', outputs=('code_module')),
+#
+#     # sp.Task(make_functions, inputs=('problem_data', 'code_module'), outputs=('code_module','compute_control_fn')),
+#     # Load equation template files and generate code
+#     sp.Task(ft.partial(load_eqn_template,
+#                 template_file='deriv_func.py.mu'),
+#             inputs='problem_data',
+#             outputs='deriv_func_code'),
+#     sp.Task(ft.partial(load_eqn_template,
+#                 template_file='bc_func.py.mu'),
+#             inputs='problem_data',
+#             outputs='bc_func_code'),
+#
+#     # Compile generated code
+#     sp.Task(ft.partial(compile_code_py, function_name='deriv_func'),
+#             inputs=['deriv_func_code', 'code_module'],
+#             outputs='deriv_func_fn'),
+#     sp.Task(ft.partial(compile_code_py, function_name='bc_func'),
+#             inputs=['bc_func_code', 'code_module'],
+#             outputs='bc_func_fn'),
+# ], description='Generates and compiles the required BVP functions from problem data')
 
 
 pert_eom_bck = None
@@ -198,7 +200,7 @@ class QCPI(BaseAlgorithm):
         #
         # else:
         #     deriv_func_bck = None
-        out_ws = QCPICodeGen({'problem_data': problem_data})
+        out_ws = QCPICodeGen({'problem_data': problem_data}) # TODO: Fix this old simplepipe call
         print(out_ws['bc_func_code'])
         print(out_ws['deriv_func_code'])
 
