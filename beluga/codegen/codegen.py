@@ -1,6 +1,5 @@
 import numba
 import functools as ft
-import simplepipe as sp
 import logging
 from sympy.utilities.lambdify import lambdastr
 import pystache

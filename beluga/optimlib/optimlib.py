@@ -4,13 +4,11 @@ Base functions required by all optimization methods.
 
 
 from beluga.utils import sympify, sympify2, keyboard
-from beluga.problem import SymVar
 import sympy
 from sympy import Symbol, im
 from sympy.core.function import AppliedUndef
 import functools as ft
 import itertools as it
-import simplepipe as sp
 import re as _re
 from beluga.problem import SymVar
 import logging
@@ -677,7 +675,7 @@ def sanitize_constraint_expr(constraint, states, location, prefix_map):
     if not all(x is None for x in invalid):
         raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
 
-    return _re.sub(pattern,prefix,str(constraint.expr))
+    return _re.sub(pattern, prefix, str(constraint.expr))
 
 
 def total_derivative(expr, var, dependent_vars=None):
@@ -700,42 +698,3 @@ def total_derivative(expr, var, dependent_vars=None):
     # Chain rule + total derivative
     out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
     return out
-
-
-BaseWorkflow = sp.Workflow([
-    sp.Task(init_workspace, inputs=('problem','guess'), outputs='*'),
-    sp.Task(process_quantities,
-            inputs=('quantities'),
-            outputs=('quantity_vars', 'quantity_list', 'derivative_fn', 'jacobian_fn')),
-    sp.Task(process_path_constraints, inputs='*',
-            outputs=('states', 'controls', 'constants', 'constraints', 'path_cost', 's_list', 'mu_vars', 'xi_init_vals', 'derivative_fn', 'jacobian_fn')),
-    sp.Task(ft.partial(make_augmented_cost, location='initial'),
-            inputs=('initial_cost', 'constraints', 'constraints_adjoined'),
-            outputs=('aug_initial_cost')),
-    sp.Task(ft.partial(make_augmented_params, location='initial'),
-            inputs=('constraints', 'constraints_adjoined'),
-            outputs=('initial_lm_params')),
-    sp.Task(ft.partial(make_augmented_cost, location='terminal'),
-            inputs=('terminal_cost', 'constraints', 'constraints_adjoined'),
-            outputs=('aug_terminal_cost')),
-    sp.Task(ft.partial(make_augmented_params, location='terminal'),
-            inputs=('constraints', 'constraints_adjoined'),
-            outputs=('terminal_lm_params')),
-    sp.Task(make_ham_lamdot_with_eq_constraint,
-            inputs=('states', 'constraints', 'path_cost', 'derivative_fn'),
-            outputs=('ham', 'costates')),
-    sp.Task(ft.partial(make_boundary_conditions, location='initial'),
-            inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_initial_cost', 'derivative_fn'),
-            outputs=('bc_initial')),
-    sp.Task(ft.partial(make_boundary_conditions, location='terminal'),
-            inputs=('constraints', 'constraints_adjoined', 'states', 'costates', 'aug_terminal_cost', 'derivative_fn'),
-            outputs=('bc_terminal')),
-    sp.Task(make_time_bc, inputs=('constraints', 'bc_terminal'), outputs=('bc_terminal')),
-    sp.Task(make_dhdu, inputs=('ham', 'controls', 'derivative_fn'),
-            outputs=('dhdu')),
-    sp.Task(make_parameters, inputs=['initial_lm_params', 'terminal_lm_params', 's_list'],
-            outputs='parameters'),
-    sp.Task(make_bc_mask,
-            inputs=('states', 'controls', 'mu_vars', 'initial_cost', 'aug_initial_cost', 'derivative_fn'),
-            outputs=('bc_free_mask')),
-    sp.Task(make_constrained_arc_fns, inputs='*', outputs=['costate_eoms', 'bc_list'])])

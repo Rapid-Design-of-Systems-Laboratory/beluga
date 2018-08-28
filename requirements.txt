@@ -2,13 +2,11 @@ bokeh>=0.12.5
 dill>=0.2.7.1
 docopt>=0.6.2
 matplotlib>=2.2.2
-mock>=2.0.0
 multiprocessing_on_dill>=3.5.0a4
 numba>=0.35.0
 numexpr>=2.6.2
 numpy>=1.14.3
 scipy>=1.1.0
-simplepipe>=0.0.5.3
 sympy==1.1.1
 pystache>=0.5.4
 pytest>=3.5.1
