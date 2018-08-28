@@ -22,7 +22,9 @@ from beluga.ivpsol import Propagator
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
 class OCP(object):
-    """Builder class for defining optimal control problem."""
+    """
+    Class containing information for an optimal control problem.
+    """
 
     def __init__(self, name=''):
         """Initializes problem object.
@@ -91,12 +93,14 @@ class OCP(object):
     constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
                                        property_args=('name', 'function', 'unit'))
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
+    custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','handle'))
 
     states = partialmethod(get_property, property_name='states')
     controls = partialmethod(get_property, property_name='controls')
     constants = partialmethod(get_property, property_name='constants')
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     quantities = partialmethod(get_property, property_name='quantities')
+    custom_functions = partialmethod(get_property, property_name='custom_functions')
 
     # TODO: Maybe write as separate function?
     def independent(self, name, unit):

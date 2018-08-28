@@ -67,10 +67,6 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     """
     Solves the OCP using specified method
     """
-    # Get all other inputs
-    frm = inspect.stack()[1]
-    input_module = (inspect.getmodule(frm[0]))
-
     # Initialize necessary conditions of optimality object
     logging.info("Computing the necessary conditions of optimality")
 
@@ -83,7 +79,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     ocp_ws['problem'] = ocp
     ocp_ws['guess'] = guess_generator
-
+    ocp_ws['problem_data']['custom_functions'] = ocp.custom_functions()
     solinit = Solution()
 
     solinit.aux['const'] = OrderedDict((str(const.name),float(const.value))
