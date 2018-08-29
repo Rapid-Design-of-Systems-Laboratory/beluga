@@ -22,3 +22,5 @@ Base Class Reference
 .. autofunction:: make_njit_fn
 
 .. autofunction:: make_sympy_fn
+
+.. autofunction:: preprocess

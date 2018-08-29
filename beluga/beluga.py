@@ -102,7 +102,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
 
     solinit.aux['arc_seq'] = (0,)
     solinit.aux['pi_seq'] = (None,)
-    bvp_fn, bvp = bvp_algorithm.preprocess(ocp_ws['problem_data'])
+    bvp_fn, bvp = preprocess(ocp_ws['problem_data'])
     solinit = ocp_ws['guess'].generate(bvp_fn, solinit)
 
     state_names = ocp_ws['problem_data']['state_list']

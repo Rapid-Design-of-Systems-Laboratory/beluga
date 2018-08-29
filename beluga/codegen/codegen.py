@@ -1,17 +1,19 @@
-import numba
-import functools as ft
-import logging
-from sympy.utilities.lambdify import lambdastr
-import pystache
-import imp
-import sympy as sym
-import itertools as it
-# from beluga.bvpsol.algorithms import Shooting
 import beluga
-import sys
+import collections as cl
+import imp
+import itertools as it
+import logging
+import numba
 import numpy as np
+import pystache
+import sympy as sym
+import sys
+
+from sympy.utilities.lambdify import lambdastr
+
+# The following import statement *looks* unused, but is in fact used by the code compiler. This enables users to use
+# various basic math functions like `cos` and `atan`. Do not delete.
 from math import *
-from beluga.utils import keyboard
 
 
 def load_eqn_template(problem_data, template_file, renderer = pystache.Renderer(escape=lambda u: u)):
@@ -184,7 +186,6 @@ def compile_code_py(code_string, module, function_name):
     exec(code_string, module.__dict__)
     return getattr(module, function_name, None)
 
-
 def make_njit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '') \
                                                   .replace('(([[', '[') \
@@ -212,3 +213,41 @@ def make_sympy_fn(args, fn_expr):
         return vector_fn
     else:
         return make_njit_fn(args, fn_expr)
+
+def preprocess(problem_data, use_numba=False):
+    '''
+    Code generation and compilation before running solver.
+
+    :param problem_data:
+    :param use_numba:
+    :return: Code module.
+    '''
+    out_ws = dict()
+    code_module = create_module(problem_data)
+    code_module, compute_control_fn = make_functions(problem_data, code_module)
+    out_ws['code_module'] = code_module
+    deriv_func_code = load_eqn_template(problem_data, template_file='deriv_func.py.mu')
+    bc_func_code = load_eqn_template(problem_data, template_file='bc_func.py.mu')
+    deriv_func_fn = compile_code_py(deriv_func_code, code_module, 'deriv_func')
+    bc_func_fn = compile_code_py(bc_func_code, code_module, 'bc_func')
+    out_ws['deriv_func_code'] = deriv_func_code
+    out_ws['bc_func_code'] = bc_func_code
+    logging.debug(out_ws['bc_func_code'])
+    logging.debug(out_ws['deriv_func_code'])
+
+    if use_numba:
+        deriv_func = numba.njit(parallel=False, nopython=True)(code_module.deriv_func_nojit)
+    else:
+        deriv_func = code_module.deriv_func_nojit
+
+    deriv_func_fn = deriv_func
+    code_module.deriv_func = deriv_func
+    out_ws['code_module'].deriv_func = deriv_func
+
+    bvp = BVP(deriv_func_fn, bc_func_fn, compute_control_fn)
+
+    sys.modules['_beluga_' + problem_data['problem_name']] = out_ws['code_module']
+    return out_ws['code_module'], bvp
+
+
+BVP = cl.namedtuple('BVP', 'deriv_func bc_func compute_control')
