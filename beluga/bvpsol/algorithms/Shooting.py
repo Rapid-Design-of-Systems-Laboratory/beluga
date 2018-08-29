@@ -1,12 +1,11 @@
+import copy
+import itertools as it
+import logging
 import numpy as np
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator
 from multiprocessing_on_dill import pool
-import copy
-
-import logging
-import itertools as it
 
 
 class Shooting(BaseAlgorithm):
@@ -113,11 +112,6 @@ class Shooting(BaseAlgorithm):
 
         if self.derivative_method not in ['fd']:
             raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
-
-    def preprocess(self, problem_data, use_numba=False):
-        obj = super().preprocess(problem_data, use_numba=use_numba)
-        self.stm_ode_func = self.make_stmode(obj[0].deriv_func, problem_data['nOdes'])
-        return obj
 
     def _bc_jac_multi(self, t_list, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
         p  = np.array(parameters)
@@ -233,9 +227,8 @@ class Shooting(BaseAlgorithm):
         nOdes = y0g.shape[0]
         paramGuess = sol.parameters
 
-        # Make the state-transition ode matrix if it hasn't already been made
-        if self.stm_ode_func is None:
-            self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
+        # Make the state-transition ode matrix
+        self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
 
         # Set up the boundary condition function
         self.bc_func = self._bc_func_multiple_shooting(bc_func=bc_func)
