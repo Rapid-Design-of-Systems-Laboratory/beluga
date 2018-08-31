@@ -163,7 +163,18 @@ def make_jit_fn(args, fn_expr, nopython=False):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '') \
         .replace('(([[', '[') \
         .replace(']]))', ']')
-    keyboard()
+
+    def custom_cosine(x):
+        return np.cos(x)
+
+    f = eval(fn_str)
+    # TODO: #56 Make "custom_cosine" work in this f() call. It can be poorly implemented since, once I figure out how
+    # to do this, I can implement it better.
+    try:
+        f(*np.ones(len(args)))
+    except:
+        keyboard()
+
     jit_fn = numba.jit(nopython=nopython)(eval(fn_str))
     return jit_fn
 

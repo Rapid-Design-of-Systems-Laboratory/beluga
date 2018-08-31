@@ -4,13 +4,20 @@ import logging
 from math import pi
 import matplotlib.pyplot as plt
 
+import numpy as np
+
 ocp = beluga.OCP('brachisto')
+
+def custom_cosine(x):
+    return np.cos(x)
+
+ocp.custom_function('custom_cosine', custom_cosine)
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v*cos(theta)', 'm')   \
+ocp.state('x', 'v*custom_cosine(theta)', 'm')   \
    .state('y', 'v*sin(theta)', 'm')   \
    .state('v', 'g*sin(theta)', 'm/s')
 
