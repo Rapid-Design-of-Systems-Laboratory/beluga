@@ -387,16 +387,11 @@ def make_dhdu(ham, controls, derivative_fn):
     """
 
     dhdu = []
+    complex_step = False
     for ctrl in controls:
         dHdu = derivative_fn(ham, ctrl)
-        custom_diff = dHdu.atoms(sympy.Derivative)
-        # Substitute "Derivative" with complex step derivative
-        repl = {(d, im(f.func(v+1j*1e-30))/1e-30) for d in custom_diff
-                    for f,v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
 
-        dhdu.append(dHdu.subs(repl))
-
-    return dhdu
+    return dHdu
 
 
 def make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivative_fn):
@@ -694,6 +689,18 @@ def total_derivative(expr, var, dependent_vars=None):
 
     dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
+    print('I\'m in optimlib line 692')
+    keyboard()
+    custom_diff = dHdu.atoms(sympy.Derivative)
+    # Substitute "Derivative" with complex step derivative
+    if complex_step == True:
+        repl = {(d, im(f.func(v + 1j * 1e-30)) / 1e-30) for d in custom_diff
+                for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
+    else:
+        repl = {(d, (f.func(v + 1 * 1e-6) - f.func(v)) / (1e-6)) for d in custom_diff
+                for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
+
+    dhdu.append(dHdu.subs(repl))
 
     # Chain rule + total derivative
     out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)

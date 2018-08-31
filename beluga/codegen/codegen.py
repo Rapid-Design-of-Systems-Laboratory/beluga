@@ -1,6 +1,7 @@
 import beluga
 import collections as cl
 import imp
+import importlib
 import itertools as it
 import logging
 import numba
@@ -12,12 +13,12 @@ from beluga.utils import keyboard
 
 from sympy.utilities.lambdify import lambdastr
 
-# The following import statement *looks* unused, but is in fact used by the code compiler. This enables users to use
+# The following import statements *look* unused, but is in fact used by the code compiler. This enables users to use
 # various basic math functions like `cos` and `atan`. Do not delete.
 from math import *
 from numpy import imag as im
 
-def custom_cos(theta):
+def custom_cosine(theta):
     return cos(theta)
 
 
@@ -75,6 +76,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     # print('Making control fn with args',u_args)
     control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
 
+
     # print('Making ham fn with args', ham_args)
     ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
 
@@ -97,8 +99,6 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
             # from beluga.utils import keyboard
             # keyboard()
             raise
-
-            # keyboard()
         ham_val = np.zeros(num_options)
         for i in range(num_options):
             try:
@@ -106,8 +106,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
             except:
                 print(X, p, C, u_list[i])
                 raise
-        # if len(ham_val) == 0:
-        #     keyboard()
+
         return u_list[np.argmin(ham_val)]
 
     yield compute_control_fn
@@ -126,10 +125,8 @@ def make_functions(problem_data, module):
     ham = problem_data['ham']
 
     logging.info('Making unconstrained control')
-    # keyboard()
     control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars,ham)
 
-    # problem_data['ham_fn'] = ham_fn
     module.ham_fn = ham_fn
     control_fns = [control_fn] # Also makethiss
     logging.info('Processing constraints')
@@ -164,18 +161,14 @@ def make_jit_fn(args, fn_expr, nopython=False):
         .replace('(([[', '[') \
         .replace(']]))', ']')
 
-    def custom_cosine(x):
-        return np.cos(x)
-
     f = eval(fn_str)
     # TODO: #56 Make "custom_cosine" work in this f() call. It can be poorly implemented since, once I figure out how
     # to do this, I can implement it better.
-    try:
-        f(*np.ones(len(args)))
-    except:
-        keyboard()
+    f(*np.ones(len(args)))
 
     jit_fn = numba.jit(nopython=nopython)(eval(fn_str))
+    jit_fn(*np.ones(len(args)))
+
     return jit_fn
 
 
@@ -211,6 +204,8 @@ def preprocess(problem_data, use_numba=False):
     out_ws = dict()
     code_module = create_module(problem_data)
     code_module, compute_control_fn = make_functions(problem_data, code_module)
+    for func in problem_data['custom_functions']:
+        code_module.__dict__[func['name']] = func['handle']
     out_ws['code_module'] = code_module
     deriv_func_code = load_eqn_template(problem_data, template_file='deriv_func.py.mu')
     bc_func_code = load_eqn_template(problem_data, template_file='bc_func.py.mu')
@@ -225,7 +220,7 @@ def preprocess(problem_data, use_numba=False):
         deriv_func = numba.njit(parallel=False, nopython=True)(code_module.deriv_func_nojit)
     else:
         deriv_func = code_module.deriv_func_nojit
-
+    keyboard()
     deriv_func_fn = deriv_func
     code_module.deriv_func = deriv_func
     out_ws['code_module'].deriv_func = deriv_func
