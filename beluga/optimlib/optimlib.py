@@ -386,10 +386,9 @@ def make_dhdu(ham, controls, derivative_fn):
     :return: :math:`dH/du`
     """
 
-    dhdu = []
-    complex_step = False
+    dHdu = []
     for ctrl in controls:
-        dHdu = derivative_fn(ham, ctrl)
+        dHdu.append(derivative_fn(ham, ctrl))
 
     return dHdu
 
@@ -681,6 +680,8 @@ def total_derivative(expr, var, dependent_vars=None):
     :param var: Variable to take the derivative with respect to.
     :param dependent_vars: Other dependent variables to consider with chain rule.
     """
+
+    complex_step = False
     if dependent_vars is None:
         dependent_vars = {}
 
@@ -689,19 +690,20 @@ def total_derivative(expr, var, dependent_vars=None):
 
     dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
-    print('I\'m in optimlib line 692')
-    keyboard()
-    custom_diff = dHdu.atoms(sympy.Derivative)
+    out = sum(d1 * d2 for d1, d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
+    custom_diff = out.atoms(sympy.Derivative)
     # Substitute "Derivative" with complex step derivative
     if complex_step == True:
         repl = {(d, im(f.func(v + 1j * 1e-30)) / 1e-30) for d in custom_diff
                 for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
     else:
-        repl = {(d, (f.func(v + 1 * 1e-6) - f.func(v)) / (1e-6)) for d in custom_diff
+        repl = {(d, (f.func(v + 1 * 1e-8) - f.func(v)) / (1e-8)) for d in custom_diff
                 for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
+    out = out.subs(repl)
+    p = out.atoms(sympy.Subs)
+    q = [_ for _ in p]
+    for term in q:
+        rep = zip([term], [term.doit()])
+        out = out.subs(rep)
 
-    dhdu.append(dHdu.subs(repl))
-
-    # Chain rule + total derivative
-    out = sum(d1*d2 for d1,d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
     return out
