@@ -17,6 +17,7 @@ from sympy.utilities.lambdify import lambdastr
 # various basic math functions like `cos` and `atan`. Do not delete.
 from math import *
 from numpy import imag as im
+from sympy import I #TODO: This doesn't fix complex step derivatives.
 
 def custom_cosine(theta):
     return cos(theta)
@@ -220,7 +221,7 @@ def preprocess(problem_data, use_numba=False):
         deriv_func = numba.njit(parallel=False, nopython=True)(code_module.deriv_func_nojit)
     else:
         deriv_func = code_module.deriv_func_nojit
-    keyboard()
+
     deriv_func_fn = deriv_func
     code_module.deriv_func = deriv_func
     out_ws['code_module'].deriv_func = deriv_func
