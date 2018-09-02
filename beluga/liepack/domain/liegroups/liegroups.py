@@ -57,9 +57,11 @@ class LieGroup(object):
 
 class RN(LieGroup):
     abelian = True
-    pass
 
 
 class SO(LieGroup):
     abelian = False
-    pass
+
+
+class SP(LieGroup):
+    abelian = False
