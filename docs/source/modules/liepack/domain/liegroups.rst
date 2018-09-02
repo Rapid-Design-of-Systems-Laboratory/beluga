@@ -14,3 +14,5 @@ Base Class Reference
 .. autoclass:: RN
 
 .. autoclass:: SO
+
+.. autoclass:: SP

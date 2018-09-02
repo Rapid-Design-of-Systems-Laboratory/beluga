@@ -103,3 +103,52 @@ def test_so():
     assert Commutator(x, x) == Commutator(y, y) == Commutator(z, z) == zero  # Alternativity
     assert Commutator(x, Commutator(y, z)) + Commutator(z, Commutator(x, y)) + Commutator(y, Commutator(z, x)) < tol  # Jacobi Identity
     assert Commutator(x, y) == -Commutator(y, x)  # Anticommutivity
+
+def test_sp():
+    x = sp(2)
+    y = sp(2)
+    z = sp(2)
+    zero = sp(2)
+
+    # Vector basis tests
+    x.set_vector([1,0,0])
+    y.set_vector([0,1,0])
+    z.set_vector([0,0,1])
+    zero.zero()
+    a = 2
+    b = 3
+
+    # Algebra definitions
+    assert (x + y)*z == x*z + y*z  # Right distributive
+    assert x*(y + z) == x*y + x*z  # Left Distributive
+    assert (a*x) * (b*y) == (a*b) * (x*y)  #Scalar multiplication
+
+    # Lie algebra definitions
+    assert Commutator(a*x + b*y, z) == a*Commutator(x,z) + b*Commutator(y,z)  # Bilinearity
+    assert Commutator(x,x) == Commutator(y,y) == Commutator(z,z) == zero  # Alternativity
+    assert Commutator(x, Commutator(y,z)) + Commutator(z, Commutator(x,y)) + Commutator(y, Commutator(z,x)) == zero  # Jacobi Identity
+    assert Commutator(x,y) == -Commutator(y,x)  # Anticommutivity
+
+    # sp specific (simple)
+    assert Commutator(x,y) == 2*y
+    assert Commutator(x,z) == -2*z
+    assert Commutator(y,z) == x
+
+    # Random vector tests
+    x.random()
+    y.random()
+    z.random()
+    zero.zero()
+    a = uniform(-1,1)
+    b = uniform(-1,1)
+
+    # Algebra definitions
+    assert ((x + y) * z) - (x * z + y * z) < tol  # Right distributive
+    assert (x * (y + z)) - (x * y + x * z) < tol  # Left Distributive
+    assert ((a * x) * (b * y)) - ((a * b) * (x * y)) < tol  # Scalar multiplication
+
+    # Lie algebra definitions
+    assert (Commutator(a * x + b * y, z)) - (a * Commutator(x, z) + b * Commutator(y, z)) < tol  # Bilinearity
+    assert Commutator(x, x) == Commutator(y, y) == Commutator(z, z) == zero  # Alternativity
+    assert Commutator(x, Commutator(y, z)) + Commutator(z, Commutator(x, y)) + Commutator(y, Commutator(z, x)) < tol  # Jacobi Identity
+    assert Commutator(x, y) == -Commutator(y, x)  # Anticommutivity

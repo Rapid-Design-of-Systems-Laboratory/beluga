@@ -11,7 +11,7 @@ from math import factorial
 import numpy as np
 
 def algebra2group(g):
-    """
+    r"""
     Returns the Lie group corresponding to an input Lie algebra element.
 
     :param g: An element of Lie algebra :math:`\mathfrak{g}`.
@@ -21,12 +21,14 @@ def algebra2group(g):
         return RN
     if isinstance(g, so):
         return SO
+    if isinstance(g, sp):
+        return SP
     if isinstance(g, LieAlgebra):
         return LieGroup
 
 
 def group2algebra(G):
-    """
+    r"""
     Returns the Lie algebra corresponding to an input Lie group element.
 
     :param G: An element of Lie group :math:`G`.

@@ -3,6 +3,7 @@ import copy
 import numpy as np
 
 from random import uniform
+from math import floor
 
 from beluga.utils import keyboard
 
@@ -14,6 +15,8 @@ class LieAlgebra(object):
 
     def __new__(cls, *args, **kwargs):
         obj = super(LieAlgebra, cls).__new__(cls)
+        obj.shape = None
+        obj.data = None
 
         if len(args) > 0:
             if isinstance(args[0], LieAlgebra):
@@ -22,9 +25,8 @@ class LieAlgebra(object):
                 obj.shape = args[0]
                 obj.data = None
 
-        if len(args) >= 2:
+        if len(args) > 1:
             obj.data = args[1]
-            obj.shape = obj.data.shape[0]
 
         return obj
 
@@ -99,7 +101,7 @@ class LieAlgebra(object):
         return LieAlgebra(self, newdata)
 
     @abc.abstractmethod
-    def get_dimension(self):
+    def get_dimension(self) -> int:
         """
         Returns the dimension of the Lie algebra.
 
@@ -107,7 +109,7 @@ class LieAlgebra(object):
         """
         raise NotImplementedError
 
-    def get_shape(self):
+    def get_shape(self) -> int:
         r"""
         Returns the shape of the Lie algebra.
 
@@ -157,7 +159,7 @@ class rn(LieAlgebra):
     """
     abelian = True
 
-    def get_dimension(self):
+    def get_dimension(self) -> int:
         n = self.shape
         return int(n)
 
@@ -193,7 +195,7 @@ class so(LieAlgebra):
     """
     abelian = False
 
-    def get_dimension(self):
+    def get_dimension(self) -> int:
         n = self.shape
         return int(n*(n-1)/2)
 
@@ -225,3 +227,91 @@ class so(LieAlgebra):
                 k += 1
 
         self.data = mat - mat.T
+
+
+class sp(LieAlgebra):
+    r"""
+    Lie algebra :math:`sp(n)`.
+
+    For a Lie algebra element of the form :math:`(x, y, z)`, the matrix representation is of the form:
+
+    .. math::
+        \begin{bmatrix}
+            x & y \\
+            z & -x
+        \end{bmatrix}
+
+    For higher dimensions, the matrix representation is of the form:
+
+    .. math::
+        \begin{bmatrix}
+            A & B \\
+            C & -A^T
+        \end{bmatrix}
+
+    where :math:`B` and :math:`C` are symmetric matrices.
+
+    """
+    abelian = False
+
+    def __new__(cls, *args, **kwargs):
+        obj = super(sp, cls).__new__(cls, *args, **kwargs)
+
+        if obj.shape is not None and obj.shape % 2 != 0:
+            raise ValueError('Symplectic Lie algebra must have an even dimension.')
+
+        return obj
+
+    def get_dimension(self) -> int:
+        return int(self.shape * (self.shape + 1)/2)
+
+    def get_vector(self):
+        d = self.get_shape()
+        s = int(d/2)
+        k = 0
+        out = np.zeros(self.get_dimension())
+        A = self.data[:s,:s]
+        B = self.data[:s, s:2*s]
+        C = self.data[s:2*s, :s]
+        for ii in range(s):
+            for jj in range(s):
+                out[k] = A[ii, jj]
+                k += 1
+
+        for ii in range(s):
+            for jj in range(ii, s):
+                out[k] = B[ii, jj]
+                k += 1
+
+        for ii in range(s):
+            for jj in range(ii, s):
+                out[k] = C[ii, jj]
+                k += 1
+        return out
+
+    def set_vector(self, vector):
+        d = self.get_shape()
+        s = int(d/2)
+        k = 0
+        A = np.zeros((s,s))
+        B = np.zeros((s,s))
+        C = np.zeros((s,s))
+        for ii in range(s):
+            for jj in range(s):
+                A[ii, jj] = vector[k]
+                k += 1
+
+        for ii in range(s):
+            for jj in range(ii, s):
+                B[ii, jj] = vector[k]
+                k += 1
+        B = B + B.T - np.diag(B.diagonal())
+
+        for ii in range(s):
+            for jj in range(ii, s):
+                C[ii, jj] = vector[k]
+                k += 1
+        C = C + C.T - np.diag(C.diagonal())
+        top = np.hstack((A, B))
+        bot = np.hstack((C, -A.T))
+        self.data = np.vstack((top, bot))

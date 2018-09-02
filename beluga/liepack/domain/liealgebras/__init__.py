@@ -1,1 +1,1 @@
-from .liealgebras import (LieAlgebra, rn, so)
+from .liealgebras import (LieAlgebra, rn, so, sp)
