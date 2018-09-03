@@ -100,6 +100,16 @@ class LieAlgebra(object):
 
         return LieAlgebra(self, newdata)
 
+    def basis(self):
+        d = self.get_dimension()
+        basis = [LieAlgebra(self) for _ in range(d)]
+        z = np.zeros(d)
+        for ii in range(d):
+            z[ii] = 1
+            basis[ii].set_vector(z)
+            z[ii] = 0
+        return basis
+
     @abc.abstractmethod
     def get_dimension(self) -> int:
         """
