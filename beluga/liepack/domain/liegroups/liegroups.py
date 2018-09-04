@@ -51,6 +51,11 @@ class LieGroup(object):
     def get_data(self):
         return self.data
 
+    def Identity(self):
+        from beluga.liepack import group2algebra, exp
+        g = group2algebra(self)(self.shape)
+        self.data = exp(g).data
+
     def set_data(self, data):
         self.data = np.array(data, dtype=np.float64)
 

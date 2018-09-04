@@ -38,6 +38,8 @@ def group2algebra(G):
         return rn
     if isinstance(G, SO):
         return so
+    if isinstance(G, SP):
+        return sp
     if isinstance(G, LieGroup):
         return LieAlgebra
 
