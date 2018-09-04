@@ -19,9 +19,6 @@ from math import *
 from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
 
-def custom_cosine(theta):
-    return cos(theta)
-
 
 def load_eqn_template(problem_data, template_file, renderer = pystache.Renderer(escape=lambda u: u)):
     r"""
@@ -49,10 +46,15 @@ def create_module(problem_data):
     """
     problem_name = problem_data['problem_name']
     module = imp.new_module('_beluga_'+problem_name)
+
+    # Put the custom functions into the newly created code module.
+    for func in problem_data['custom_functions']:
+        module.__dict__[func['name']] = func['handle']
+
     return module
 
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, constraint_name=None):
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, custom_functions, constraint_name=None):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
@@ -73,13 +75,11 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
                                    for u in unknowns]
                                   for option in control_opts])
 
-    # control_opt_fn = sym.lambdify(u_args, control_opt_mat)
-    # print('Making control fn with args',u_args)
-    control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
+    control_opt_fn = make_sympy_fn(u_args, control_opt_mat, custom_functions)
 
 
     # print('Making ham fn with args', ham_args)
-    ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
+    ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars), custom_functions)
 
     num_unknowns = len(unknowns)
     num_options = len(control_opts)
@@ -95,10 +95,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
 
         try:
             u_list = control_opt_fn(*X, *p, *C, s_val)
-        except Exception as e:
-            # print('oh nooes')
-            # from beluga.utils import keyboard
-            # keyboard()
+        except Exception as e: # TODO: When is this error ever thrown?
             raise
         ham_val = np.zeros(num_options)
         for i in range(num_options):
@@ -115,6 +112,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
 
 
 def make_functions(problem_data, module):
+    custom_functions = problem_data['custom_functions']
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
     costates = problem_data['costates']
@@ -126,13 +124,13 @@ def make_functions(problem_data, module):
     ham = problem_data['ham']
 
     logging.info('Making unconstrained control')
-    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars,ham)
+    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars, ham, custom_functions)
 
     module.ham_fn = ham_fn
     control_fns = [control_fn] # Also makethiss
     logging.info('Processing constraints')
     for arc_type, s in enumerate(problem_data['s_list'],1):
-        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], s['name'])
+        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], custom_functions, s['name'])
         control_fns.append(u_fn)
 
     module.control_fns = control_fns
@@ -157,30 +155,25 @@ def compile_code_py(code_string, module, function_name):
     return getattr(module, function_name, None)
 
 
-def make_jit_fn(args, fn_expr, nopython=False):
+def make_jit_fn(args, fn_expr, custom_functions, nopython=False):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '') \
         .replace('(([[', '[') \
         .replace(']]))', ']')
 
     f = eval(fn_str)
-    # TODO: #56 Make "custom_cosine" work in this f() call. It can be poorly implemented since, once I figure out how
-    # to do this, I can implement it better.
-    f(*np.ones(len(args)))
-
     jit_fn = numba.jit(nopython=nopython)(eval(fn_str))
     jit_fn(*np.ones(len(args)))
-
     return jit_fn
 
 
-def make_sympy_fn(args, fn_expr):
+def make_sympy_fn(args, fn_expr, custom_functions):
     if hasattr(fn_expr, 'shape'):
         output_shape = fn_expr.shape
     else:
         output_shape = None
 
     if output_shape is not None:
-        jit_fns = [make_jit_fn(args, expr) for expr in fn_expr]
+        jit_fns = [make_jit_fn(args, expr, custom_functions) for expr in fn_expr]
         len_output = len(fn_expr)
 
         # @numba.jit(parallel=True, nopython=True)
@@ -191,7 +184,7 @@ def make_sympy_fn(args, fn_expr):
             return output
         return vector_fn
     else:
-        return make_jit_fn(args, fn_expr, nopython=False)
+        return make_jit_fn(args, fn_expr, custom_functions, nopython=False)
 
 
 def preprocess(problem_data, use_numba=False):
@@ -203,10 +196,12 @@ def preprocess(problem_data, use_numba=False):
     :return: Code module.
     """
     out_ws = dict()
+    custom_functions = problem_data['custom_functions']
+    # Register custom functions as global functions
+    for f in custom_functions:
+        globals()[f['name']] = f['handle']
     code_module = create_module(problem_data)
     code_module, compute_control_fn = make_functions(problem_data, code_module)
-    for func in problem_data['custom_functions']:
-        code_module.__dict__[func['name']] = func['handle']
     out_ws['code_module'] = code_module
     deriv_func_code = load_eqn_template(problem_data, template_file='deriv_func.py.mu')
     bc_func_code = load_eqn_template(problem_data, template_file='bc_func.py.mu')
@@ -216,7 +211,6 @@ def preprocess(problem_data, use_numba=False):
     out_ws['bc_func_code'] = bc_func_code
     logging.debug(out_ws['bc_func_code'])
     logging.debug(out_ws['deriv_func_code'])
-
     if use_numba:
         deriv_func = numba.njit(parallel=False, nopython=True)(code_module.deriv_func_nojit)
     else:
