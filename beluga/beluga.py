@@ -142,9 +142,12 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.
     qvars = out['problem_data']['quantity_vars']
     qvars = {str(k): str(v) for k, v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
-    with open(output_file, 'wb') as outfile:
-        dill.settings['recurse'] = True
-        dill.dump(out, outfile)  # Dill Beluga object only
+    try:
+        with open(output_file, 'wb') as outfile:
+            dill.settings['recurse'] = True
+            dill.dump(out, outfile)  # Dill Beluga object only
+    except:
+        print('Data export error.')
 
     return out['solution'][-1][-1]
 

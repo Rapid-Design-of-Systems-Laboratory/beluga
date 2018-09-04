@@ -2,22 +2,14 @@
 import beluga
 import logging
 from math import pi
-import matplotlib.pyplot as plt
-
-import numpy as np
 
 ocp = beluga.OCP('brachisto')
-
-def custom_cosine(x):
-    return np.cos(x)
-
-ocp.custom_function('custom_cosine', custom_cosine)
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v*custom_cosine(theta)', 'm')   \
+ocp.state('x', 'v*cos(theta)', 'm')   \
    .state('y', 'v*sin(theta)', 'm')   \
    .state('v', 'g*sin(theta)', 'm/s')
 
@@ -71,7 +63,7 @@ continuation_steps.add_step('bisection') \
 beluga.setup_beluga(logging_level=logging.DEBUG, output_file='data.dill')
 
 sol = beluga.solve(ocp,
-             method='icrm',
+             method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
