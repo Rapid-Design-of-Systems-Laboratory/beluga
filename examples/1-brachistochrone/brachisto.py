@@ -2,7 +2,6 @@
 import beluga
 import logging
 from math import pi
-import matplotlib.pyplot as plt
 
 ocp = beluga.OCP('brachisto')
 
