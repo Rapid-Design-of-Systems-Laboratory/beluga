@@ -19,7 +19,7 @@ Base Class Reference
 
 .. autofunction:: compile_code_py
 
-.. autofunction:: make_njit_fn
+.. autofunction:: make_jit_fn
 
 .. autofunction:: make_sympy_fn
 

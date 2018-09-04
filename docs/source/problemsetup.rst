@@ -19,6 +19,28 @@ In optimal control theory, we wish to solve problems of the form
         0 &= \mathbf{\Psi}(t_0, \mathbf{x}_0, t_f, \mathbf{x}_f)
     \end{aligned}
 
+Setting up a Problem
+--------------------
+
+Initialize a new Optimal Control Problem with
+
+>>> import beluga
+>>> ocp = beluga.OCP('my problem name')
+<beluga.problem.OCP object at 0x0...>
+
+Define parameters in the Optimal Control Problem with
+
+>>> ocp.<parameter>(value1, value2, ..., valuen)
+
+for example
+
+>>> ocp.independent('t','s')
+
+defines the independent variable `t` with units of `s`. Info for available parameters are included in the OCP documentation.
+
+.. autoclass:: beluga.OCP
+    :noindex:
+
 Example Problems
 ----------------
 

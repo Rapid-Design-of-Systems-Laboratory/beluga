@@ -15,6 +15,7 @@ Contents
    features.rst
    unittests.rst
    nomenclature.rst
+   modules/beluga.rst
    modules/bvpsol.rst
    modules/codegen.rst
    modules/continuation.rst
