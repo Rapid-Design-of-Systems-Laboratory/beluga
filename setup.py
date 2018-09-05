@@ -1,5 +1,4 @@
 from setuptools import find_packages, setup
-# from beluga import __version__
 import os, sys
 
 with open('requirements.txt') as f:

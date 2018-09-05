@@ -102,7 +102,7 @@ continuation_steps.add_step('bisection') \
                 .initial('gam', -0*pi/180) \
                 .terminal('theta', 3*pi/180)
 
-beluga.setup_beluga(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG)
 
 sol = beluga.solve(ocp,
              method='traditional',
