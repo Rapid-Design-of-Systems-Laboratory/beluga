@@ -48,7 +48,7 @@ def guess_generator(*args, **kwargs):
     return guess_gen
 
 
-def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_file=None):
+def add_logger(logging_level=logging.INFO, display_level=logging.INFO):
     """
     Performs initial configuration on beluga.
     """
@@ -58,16 +58,17 @@ def setup_beluga(logging_level=logging.INFO, display_level=logging.INFO, output_
     # Initialize logging system
     helpers.init_logging(logging_level, display_level, config['logfile'])
 
-    # Set the output file name
+
+def set_output_file(output_file=None):
     if output_file is not None:
         config['output_file'] = output_file
 
 
-def solve(ocp, method, bvp_algorithm, steps, guess_generator, output_file='data.dill'):
+def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     """
     Solves the OCP using specified method
     """
-    # Initialize necessary conditions of optimality object
+    output_file = config['output_file']
     logging.info("Computing the necessary conditions of optimality")
 
     if method.lower() == 'traditional' or method.lower() == 'brysonho':

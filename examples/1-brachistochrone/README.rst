@@ -85,7 +85,7 @@ So we guessed that :code:`beluga` will automatically handle us propagating forwa
 
 So when we created :code:`continuation_steps`, it behaves likes a :code:`Python list()`. In this case there's only 1 continuation set. What this continuation set does is it drags out the terminal boundary conditions, :math:`x_f` and :math:`y_f`, to (10, -10). It will do this in 21 evenly spaced steps, using the previous solution as an initial guess into the next. Optimal control theory can be difficult, and even the simplest of problems won't converge, so lets use our :code:`logging` package to keep track of the output and progress::
 
-    beluga.setup_beluga(logging_level=logging.DEBUG)
+    beluga.add_logger(logging_level=logging.DEBUG)
 
 Finally. with all of the components defined let's solve the output::
 
