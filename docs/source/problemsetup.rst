@@ -48,5 +48,6 @@ Example Problems
     :maxdepth: 2
 
     examples/1-brachistochrone
-    examples/2-planarhypersonic
-    examples/3-hypersonic3dof
+    examples/2-zermelo
+    examples/3-planarhypersonic
+    examples/4-hypersonic3dof

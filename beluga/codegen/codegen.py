@@ -162,7 +162,10 @@ def make_jit_fn(args, fn_expr, custom_functions, nopython=False):
 
     f = eval(fn_str)
     jit_fn = numba.jit(nopython=nopython)(eval(fn_str))
+    # try:
     jit_fn(*np.ones(len(args)))
+    # except ZeroDivisionError:
+    #     pass
     return jit_fn
 
 

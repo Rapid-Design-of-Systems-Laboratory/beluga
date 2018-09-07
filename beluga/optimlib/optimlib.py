@@ -694,10 +694,10 @@ def total_derivative(expr, var, dependent_vars=None):
     custom_diff = out.atoms(sympy.Derivative)
     # Substitute "Derivative" with complex step derivative
     if complex_step == True:
-        repl = {(d, im(f.func(v + 1j * 1e-30)) / 1e-30) for d in custom_diff
+        repl = {(d, im(f.subs(v, v + 1j * 1e-30)) / 1e-30) for d in custom_diff
                 for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
     else:
-        repl = {(d, (f.func(v + 1 * 1e-4) - f.func(v)) / (1e-4)) for d in custom_diff
+        repl = {(d, (f.subs(v, v + 1 * 1e-4) - f) / (1e-4)) for d in custom_diff
                 for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
     out = out.subs(repl)
     p = out.atoms(sympy.Subs)
