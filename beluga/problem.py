@@ -16,7 +16,6 @@ from collections import namedtuple, ChainMap
 from itertools import zip_longest
 
 from beluga.bvpsol import Scaling
-from beluga.ivpsol.integrators import ode45
 from beluga.utils import sympify, tic, toc
 from beluga.ivpsol import Propagator
 
