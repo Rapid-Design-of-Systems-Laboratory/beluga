@@ -1,4 +1,5 @@
 import abc
+import copy
 
 from beluga.utils import keyboard
 
@@ -6,28 +7,29 @@ import numpy as np
 
 class LieGroup(object):
     """
-    This serves as the default superclass on which all Lie algebras are constructed from.
+    This serves as the default superclass on which all Lie groups are constructed from.
     """
     abelian = False
 
     def __new__(cls, *args, **kwargs):
         obj = super(LieGroup, cls).__new__(cls)
-        if len(args) == 0:
-            obj.field = 'R'
-            obj.shape = None
-            obj.data = None
-        elif len(args) == 1 and isinstance(args[0], LieGroup):
-            obj = args[0]
-        elif len(args) == 1 and isinstance(args[0], int):
-            obj.field = 'R'
+        obj.field = 'R'
+        obj.shape = None
+        obj.data = None
+
+        if len(args) >= 1 and isinstance(args[0], LieGroup):
+            obj = copy.copy(args[0])
+        if len(args) >= 1 and isinstance(args[0], int):
             obj.shape = args[0]
-            obj.data = None
-        elif len(args) == 2:
-            obj.field = 'R'
-            obj.shape = args[0]
+
+        if len(args) >= 2:
             obj.data = args[1]
 
         return obj
+
+    def __init__(self, *args, **kwargs):
+        if self.data is None:
+            self.Identity()
 
     def __mul__(self, other):
         if isinstance(other, int):
@@ -54,6 +56,12 @@ class LieGroup(object):
     def Identity(self):
         from beluga.liepack import group2algebra, exp
         g = group2algebra(self)(self.shape)
+        self.data = exp(g).data
+
+    def random(self):
+        from beluga.liepack import group2algebra, exp
+        g = group2algebra(self)(self.shape)
+        g.random()
         self.data = exp(g).data
 
     def set_data(self, data):

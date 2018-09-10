@@ -6,16 +6,14 @@ from random import uniform
 tol = 1e-15
 
 def test_rn():
-    x = rn(3)
-    y = rn(3)
-    z = rn(3)
     zero = rn(3)
 
     # Vector basis tests
-    x.set_vector([1,0,0])
-    y.set_vector([0,1,0])
-    z.set_vector([0,0,1])
-    zero.zero()
+    basis = rn(3).basis()
+    x = basis[0]
+    y = basis[1]
+    z = basis[2]
+
     a = 2
     b = 3
 
@@ -37,7 +35,7 @@ def test_rn():
     x.random()
     y.random()
     z.random()
-    zero.zero()
+
     a = uniform(-1,1)
     b = uniform(-1,1)
 
@@ -56,16 +54,14 @@ def test_rn():
     assert Commutator(x, y) == Commutator(x, z) == Commutator(y, z) == zero
 
 def test_so():
-    x = so(3)
-    y = so(3)
-    z = so(3)
     zero = so(3)
 
     # Vector basis tests
-    x.set_vector([1,0,0])
-    y.set_vector([0,1,0])
-    z.set_vector([0,0,1])
-    zero.zero()
+    basis = so(3).basis()
+    x = basis[0]
+    y = basis[1]
+    z = basis[2]
+
     a = 2
     b = 3
 
@@ -89,7 +85,7 @@ def test_so():
     x.random()
     y.random()
     z.random()
-    zero.zero()
+
     a = uniform(-1,1)
     b = uniform(-1,1)
 
@@ -105,16 +101,14 @@ def test_so():
     assert Commutator(x, y) == -Commutator(y, x)  # Anticommutivity
 
 def test_sp():
-    x = sp(2)
-    y = sp(2)
-    z = sp(2)
     zero = sp(2)
 
     # Vector basis tests
-    x.set_vector([1,0,0])
-    y.set_vector([0,1,0])
-    z.set_vector([0,0,1])
-    zero.zero()
+    basis = sp(2).basis()
+    x = basis[0]
+    y = basis[1]
+    z = basis[2]
+
     a = 2
     b = 3
 
@@ -138,7 +132,7 @@ def test_sp():
     x.random()
     y.random()
     z.random()
-    zero.zero()
+
     a = uniform(-1,1)
     b = uniform(-1,1)
 

@@ -42,8 +42,7 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                         verbose = True,
                         max_error=100,
                         num_arcs=1,
-                        num_cpus=1,
-                          ivp_args={'program':'lie', 'stepper':'RK45'}
+                        num_cpus=1
              )
 
 guess_maker = beluga.guess_generator('auto',
