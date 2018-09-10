@@ -301,6 +301,94 @@ def test_brachistochrone_adjoined():
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 
+
+def test_brachistochrone_custom_functions():
+    from math import pi, cos, sin
+    import beluga
+
+    from beluga.ivpsol import Trajectory
+    from beluga.bvpsol import Solution
+
+    ocp = beluga.OCP('brachisto')
+
+    # Define independent variables
+    ocp.independent('t', 's')
+
+    # Define equations of motion
+    ocp.state('x', 'v*custom_cos(theta)', 'm') \
+        .state('y', 'v*custom_sin(theta)', 'm') \
+        .state('v', 'g*custom_sin(theta)', 'm/s')
+
+    # Define custom functions
+    def custom_cos(theta):
+        return cos(theta)
+
+    def custom_sin(theta):
+        return sin(theta)
+
+    ocp.custom_function('custom_cos', custom_cos)
+    ocp.custom_function('custom_sin', custom_sin)
+
+    # Define controls
+    ocp.control('theta', 'rad')
+
+    # Define constants
+    ocp.constant('g', -9.81, 'm/s^2')
+
+    # Define costs
+    ocp.path_cost('1', '1')
+
+    # Define constraints
+    ocp.constraints() \
+        .initial('x-x_0', 'm') \
+        .initial('y-y_0', 'm') \
+        .initial('v-v_0', 'm/s') \
+        .terminal('x-x_f', 'm') \
+        .terminal('y-y_f', 'm')
+
+    ocp.constraints().set_adjoined(False)
+
+    ocp.scale(m='y', s='y/v', kg=1, rad=1)
+
+    shooting_solver = beluga.bvp_algorithm('Shooting')
+
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
+
+    continuation_steps = beluga.init_continuation()
+
+    continuation_steps.add_step('bisection') \
+        .num_cases(21) \
+        .terminal('x', 10) \
+        .terminal('y', -10)
+
+    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+
+    assert isinstance(sol, Trajectory)
+    assert isinstance(sol, Solution)
+    assert sol.t.shape[0] == sol.y.shape[0]
+    assert sol.t.shape[0] == sol.u.shape[0]
+    assert sol.y.shape[1] == 7
+    assert sol.u.shape[1] == 1
+
+    y0 = sol.y[0]
+    yf = sol.y[-1]
+    assert abs(y0[0] - 0) < tol
+    assert abs(y0[1] - 0) < tol
+    assert abs(y0[2] - 0) < tol
+    assert abs(y0[3] + 0.0667) < tol
+    assert abs(y0[4] - 0.0255) < tol
+    assert abs(y0[5] + 0.1019) < tol
+    assert abs(sol.t[-1] - 1.8433) < tol
+    assert abs(yf[0] - 10) < tol
+    assert abs(yf[1] + 10) < tol
+    assert abs(yf[2] - 14.0071) < tol
+    assert abs(yf[3] + 0.0667) < tol
+    assert abs(yf[4] - 0.0255) < tol
+    assert abs(yf[5] - 0) < tol
+    assert abs(y0[3] - yf[3]) < tol
+    assert abs(y0[4] - yf[4]) < tol
+
+
 def test_planarhypersonic():
     from math import pi
     import beluga
