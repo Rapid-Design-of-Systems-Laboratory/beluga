@@ -28,10 +28,9 @@ Collocation Methods
 Base Class Reference
 --------------------
 .. autoclass:: BaseAlgorithm
-    :members:
 
 .. autoclass:: Shooting
-    :members: __new__, solve
+    :members: solve
 
 .. autoclass:: Collocation
     :members: __new__, solve

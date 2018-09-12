@@ -64,7 +64,6 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                         derivative_method='fd',
                         tolerance=1e-6,
                         max_iterations=100,
-                        verbose = True,
                         max_error=100
              )
 
@@ -169,7 +168,6 @@ bvp_solver_2 = beluga.bvp_algorithm('Shooting',
                                   derivative_method='fd',
                                   tolerance=1e-4,
                                   max_iterations=100,
-                                  verbose=True,
                                   max_error=400,
                                   )
 

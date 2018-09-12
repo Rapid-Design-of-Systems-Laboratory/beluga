@@ -39,7 +39,6 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                         derivative_method='fd',
                         tolerance=1e-4,
                         max_iterations=200,
-                        verbose = True,
                         max_error=100,
                         num_arcs=1,
                         num_cpus=1

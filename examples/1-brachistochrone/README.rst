@@ -9,7 +9,7 @@ Brachistochrone Problem
 
 |plot0|
 
-Here, we're going to solve the Brachistochrone_ problem. First, import :code:`beluga` and :code:`logging`. :code:`beluga` is the optimal control solver and :code:`logging` will keep track of solver progress. We will also need pi (3.14) and a plotting tool. We will use the :code:`Python` built-in :code:`math.pi` and :code:`matplotlib`'s :code:`pyplot` module, but any approximation of :math:`\pi` and plotting tool will do::
+Here, we're going to solve the Brachistochrone problem. First, import :code:`beluga` and :code:`logging`. :code:`beluga` is the optimal control solver and :code:`logging` will keep track of solver progress. We will also need pi (3.14) and a plotting tool. We will use the :code:`Python` built-in :code:`math.pi` and :code:`matplotlib`'s :code:`pyplot` module, but any approximation of :math:`\pi` and plotting tool will do::
 
     import beluga
     import logging
@@ -63,11 +63,11 @@ Next, define the units in terms of states that have been define so the solver kn
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-We told the solver that a meter is 1 :math:`y` and a meter per second is 1 :math:`y/v`. We also told it that kilograms and radians don't need to be scaled. Next, let's choose a numerical solver. Shooting_ sounds good::
+We told the solver that a meter is 1 :math:`y` and a meter per second is 1 :math:`y/v`. We also told it that kilograms and radians don't need to be scaled. Next, let's choose a numerical solver. Shooting sounds good::
 
     bvp_solver = beluga.bvp_algorithm('Shooting')
 
-The :code:`Shooting` solver usually ends up being one of the best choices, however Collocation_ fundamentally works differently and, if a problem has a tough time with :code:`Shooting`, then :code:`Collocation` might be able to get the job done. To use :code:`Collocation` instead, just use::
+The :code:`Shooting` solver usually ends up being one of the best choices, however Collocation fundamentally works differently and, if a problem has a tough time with :code:`Shooting`, then :code:`Collocation` might be able to get the job done. To use :code:`Collocation` instead, just use::
 
     bvp_solver = beluga.bvp_algorithm('Collocation')
 

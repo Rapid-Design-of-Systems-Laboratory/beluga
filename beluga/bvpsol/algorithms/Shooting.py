@@ -40,64 +40,40 @@ class Shooting(BaseAlgorithm):
     .. math::
         J = \left[M, P, Q_0+Q_f \right]
 
+    +------------------------+-----------------+-----------------+
+    | Valid kwargs           | Default Value   | Valid Values    |
+    +========================+=================+=================+
+    | ivp_args               | {}              | see `ivpsol`    |
+    +------------------------+-----------------+-----------------+
+    | tolerance              | 1e-4            | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_error              | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_iterations         | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | num_arcs               | 1               | > 0             |
+    +------------------------+-----------------+-----------------+
+    | num_cpus               | 1               | > 0             |
+    +------------------------+-----------------+-----------------+
+
     """
 
     def __new__(cls, *args, **kwargs):
-        """
-        Creates a new Shooting object.
-
-        :param args: Unused
-        :param kwargs: Additional parameters accepted by the solver.
-        :return: Shooting object.
-
-        +------------------------+-----------------+-----------------+
-        | Valid kwargs           | Default Value   | Valid Values    |
-        +========================+=================+=================+
-        | cached                 | True            | Bool            |
-        +------------------------+-----------------+-----------------+
-        | derivative_method      | 'fd'            | {'fd','csd'}    |
-        +------------------------+-----------------+-----------------+
-        | ivp_args               | {}              | see `ivpsol`    |
-        +------------------------+-----------------+-----------------+
-        | tolerance              | 1e-4            | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_error              | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_iterations         | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | num_arcs               | 1               | > 0             |
-        +------------------------+-----------------+-----------------+
-        | num_cpus               | 1               | > 0             |
-        +------------------------+-----------------+-----------------+
-        | use_numba              | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        | verbose                | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        """
-
         obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
 
-        cached = kwargs.get('cached', True)
-        derivative_method = kwargs.get('derivative_method', 'fd')
         ivp_args = kwargs.get('ivp_args', dict())
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
         num_arcs = kwargs.get('num_arcs', 1)
         num_cpus = kwargs.get('num_cpus', 1)
-        use_numba = kwargs.get('use_numba', False)
-        verbose = kwargs.get('verbose', False)
 
-        obj.cached = cached
-        obj.derivative_method = derivative_method
         obj.ivp_args = ivp_args
         obj.tolerance = tolerance
         obj.max_error = max_error
         obj.max_iterations = max_iterations
         obj.num_arcs = num_arcs
         obj.num_cpus = num_cpus
-        obj.use_numba = use_numba
-        obj.verbose = verbose
 
         obj.pool = None
 
@@ -105,13 +81,9 @@ class Shooting(BaseAlgorithm):
 
     def __init__(self, *args, **kwargs):
         self.stm_ode_func = None
-        self.saved_code = True
 
         if self.num_cpus > 1:
             self.pool = pool.Pool(processes=self.num_cpus)
-
-        if self.derivative_method not in ['fd']:
-            raise ValueError("Invalid derivative method specified. Valid options are 'csd' and 'fd'.")
 
     def _bc_jac_multi(self, t_list, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
         p  = np.array(parameters)
@@ -322,10 +294,6 @@ class Shooting(BaseAlgorithm):
                         yb[arc_idx, :] = yy[-1, :nOdes]
                         phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
-                if n_iter == 1:
-                    if not self.saved_code:
-                        self.save_code()
-                        self.saved_code = True
 
                 # Break cycle if it exceeds the max number of iterations
                 if n_iter > self.max_iterations:
@@ -341,16 +309,14 @@ class Shooting(BaseAlgorithm):
                     raise RuntimeError("Nan in residual")
 
                 r1 = max(abs(res))
-                if self.verbose:
-                    logging.debug('Residual: ' + str(r1))
+                logging.debug('Residual: ' + str(r1))
 
                 if r1 > self.max_error:
                     raise RuntimeError('Error exceeded max_error')
 
                 # Solution converged if BCs are satisfied to tolerance
                 if r1 <= self.tolerance and n_iter > 1:
-                    if self.verbose:
-                        logging.info("Converged in "+str(n_iter)+" iterations.")
+                    logging.info("Converged in "+str(n_iter)+" iterations.")
                     converged = True
                     break
 
