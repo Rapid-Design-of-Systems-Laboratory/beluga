@@ -15,6 +15,7 @@ from sympy.utilities.lambdify import lambdastr
 
 # The following import statements *look* unused, but is in fact used by the code compiler. This enables users to use
 # various basic math functions like `cos` and `atan`. Do not delete.
+import math
 from math import *
 from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
@@ -162,10 +163,7 @@ def make_jit_fn(args, fn_expr, custom_functions, nopython=False):
 
     f = eval(fn_str)
     jit_fn = numba.jit(nopython=nopython)(eval(fn_str))
-    # try:
     jit_fn(*np.ones(len(args)))
-    # except ZeroDivisionError:
-    #     pass
     return jit_fn
 
 
