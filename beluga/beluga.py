@@ -90,12 +90,6 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
 
     # For path constraints
     solinit.aux['constraint'] = cl.defaultdict(float)
-    solinit.aux['constraints'] = dict((s['name'], {'unit':str(s['unit']),
-                                                   'expr':str(s['expr']),
-                                                   'direction': s['direction'],
-                                                   'arc_type': i,
-                                                   'pi_list':[str(_) for _ in s['pi_list']]})
-                                      for i, s in enumerate(ocp_ws['problem_data']['s_list'],1))
 
     solinit.aux['arc_seq'] = (0,)
     solinit.aux['pi_seq'] = (None,)
