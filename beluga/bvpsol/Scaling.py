@@ -81,13 +81,6 @@ class Scaling(dict):
                 mul_unit = '('+cost_unit+')/('+str(c.unit)+')'
                 self.scale_func['parameters'][str(mul_var)] = self.create_scale_fn(mul_unit)
 
-        # Scale factors for path constraint-related stuff
-        for s in ws['s_list']:
-            for pi_var in s['pi_list']:
-                pi_unit = '('+cost_unit+')/('+str(s['unit'])+')'
-                self.scale_func['parameters'][str(pi_var)] = self.create_scale_fn(pi_unit)
-            self.scale_func['constraints'][str(s['name'])] = self.create_scale_fn(s['unit'])
-
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify(unit_expr))
 

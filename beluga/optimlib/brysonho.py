@@ -4,6 +4,8 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 
 from .optimlib import *
 from beluga.utils import sympify
+import logging
+
 
 def ocp_to_bvp(ocp, guess):
     ws = init_workspace(ocp, guess)
@@ -15,35 +17,27 @@ def ocp_to_bvp(ocp, guess):
     constants_of_motion = ws['constants_of_motion']
     constraints = ws['constraints']
     constraints_adjoined = ws['constraints_adjoined']
-    path_constraints = ws['path_constraints']
     quantities = ws['quantities']
     initial_cost = ws['initial_cost']
     terminal_cost = ws['terminal_cost']
     path_cost = ws['path_cost']
-    quantity_vars, quantity_list, derivative_fn, jacobian_fn = process_quantities(quantities)
-    # TODO: Process path constraints here. Ref #51
-    mu_vars = []
-    s_list = []
+    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
     augmented_initial_cost = make_augmented_cost(initial_cost, constraints, constraints_adjoined, location='initial')
     initial_lm_params = make_augmented_params(constraints, constraints_adjoined, location='initial')
     augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, constraints_adjoined, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, constraints_adjoined, location='terminal')
-    hamiltonian, costates = make_ham_lamdot_with_eq_constraint(states, constraints, path_cost, derivative_fn)
+    hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
     bc_initial = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_initial_cost, derivative_fn, location='initial')
     bc_terminal = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
     bc_terminal = make_time_bc(constraints, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-    parameters = make_parameters(initial_lm_params, terminal_lm_params, s_list)
-    bc_free_mask = make_bc_mask(states, controls, [], initial_cost, augmented_initial_cost, derivative_fn)
-    # TODO: More path constraints are processed here. Ref #51
-    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian, mu_vars, s_list)
+    parameters = make_parameters(initial_lm_params, terminal_lm_params)
+    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian)
     control_law = make_control_law(dHdu, controls)
-
     # Generate the problem data
     tf_var = sympify('tf')
     out = ws
     out['costates'] = costates
-    out['s_list'] = s_list
     out['initial_lm_params'] = initial_lm_params
     out['terminal_lm_params'] = terminal_lm_params
     out['problem_data'] = {'method': 'brysonho',
@@ -60,20 +54,17 @@ def ocp_to_bvp(ocp, guess):
         'constants_of_motion': constants_of_motion,
         'parameters': [tf_var] + parameters,
         'controls': controls,
-        'mu_vars': mu_vars,
         'quantity_vars': quantity_vars,
         'costate_eoms': costate_eoms,
-        'bc_list': bc_list,
         'ham': hamiltonian,
-        's_list': s_list,
         'num_states': 2 * len(states),
         'num_params': len(parameters) + 1,
         'dHdu': dHdu,
         'bc_initial': [str(_) for _ in bc_initial],
         'bc_terminal': [str(_) for _ in bc_terminal],
         'control_options': control_law,
-        'control_list': [str(u) for u in controls + mu_vars],
-        'num_controls': len(controls) + len(mu_vars),
+        'control_list': [str(u) for u in controls],
+        'num_controls': len(controls),
         'ham_expr': str(hamiltonian),
         'quantity_list': quantity_list,
         'nOdes': 2 * len(states)}
@@ -91,12 +82,12 @@ def make_control_law(dhdu, controls):
     :param controls: A list of control variables, :math:`[u_1, u_2, \cdots, u_n]`.
     :return: Control law options.
     """
-    logging.info(controls)
     var_list = list(controls)
-    logging.info("Attempting using SymPy ...")
+    from sympy import __version__
+    logging.info("Attempting using SymPy (v" + __version__ + ")...")
     logging.debug("dHdu = "+str(dhdu))
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
     logging.info('Control found')
-    logging.info(ctrl_sol)
+    logging.debug(ctrl_sol)
     control_options = ctrl_sol
     return control_options

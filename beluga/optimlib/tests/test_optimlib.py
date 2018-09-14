@@ -1,6 +1,5 @@
 import pytest
-from beluga.optimlib import init_workspace
-from beluga.optimlib import make_augmented_params, make_augmented_cost
+from beluga.optimlib import *
 from beluga.problem import SymVar
 
 def test_init_workspace():

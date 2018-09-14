@@ -55,14 +55,14 @@ def create_module(problem_data):
     return module
 
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, mu_vars, quantity_vars, ham, custom_functions, constraint_name=None):
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, quantity_vars, ham, custom_functions, constraint_name=None):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
     costates = sym.Matrix([_.name for _ in costates])
     parameters = sym.Matrix(parameters)
     tf_var = sym.sympify('tf')
-    unknowns = list(it.chain(controls, mu_vars))
+    unknowns = list(controls)
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
     u_args = [*states, *costates, *parameters, *constants]
 
@@ -120,19 +120,14 @@ def make_functions(problem_data, module):
     parameters = problem_data['parameters']
     constants = problem_data['constants']
     controls = problem_data['controls']
-    mu_vars = problem_data['mu_vars']
     quantity_vars = problem_data['quantity_vars']
     ham = problem_data['ham']
 
     logging.info('Making unconstrained control')
-    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,mu_vars,quantity_vars, ham, custom_functions)
+    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law,states,costates,parameters,constants,controls,quantity_vars, ham, custom_functions)
 
     module.ham_fn = ham_fn
-    control_fns = [control_fn] # Also makethiss
-    logging.info('Processing constraints')
-    for arc_type, s in enumerate(problem_data['s_list'],1):
-        u_fn, ham_fn = make_control_and_ham_fn(s['control_law'], states, costates, parameters, constants, controls, mu_vars, quantity_vars, s['ham'], custom_functions, s['name'])
-        control_fns.append(u_fn)
+    control_fns = [control_fn]
 
     module.control_fns = control_fns
     module.ham_fn = ham_fn

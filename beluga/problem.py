@@ -445,10 +445,8 @@ class GuessGenerator(object):
             else:
                 dae_x0 = dae_guess
 
-            print('dae_x0',dae_x0)
             x0 = np.append(x0, dae_x0)  # Add dae states
 
-        print('guess ode',id(bvp_fn.deriv_func))
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
 
