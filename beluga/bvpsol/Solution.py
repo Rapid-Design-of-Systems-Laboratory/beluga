@@ -1,9 +1,9 @@
+import inspect
+import math
 import numpy as np
 import numexpr as ne
-from scipy.interpolate import InterpolatedUnivariateSpline
-import math
+
 from beluga.ivpsol import Trajectory
-from beluga.utils import keyboard
 
 
 class Solution(Trajectory):
@@ -57,54 +57,6 @@ class Solution(Trajectory):
         obj.converged = False
         return obj
 
-    # TODO: Remove this and use Trajectory()'s interpolation.
-    def init_interpolate(self):
-        """
-        Fits splines to all states in the solution data
-        """
-        self.y_splines = []
-        self.u_splines = []
-        for arc_start, arc_end in self.arcs:
-            y_spline_arc = []
-            u_spline_arc = []
-            for j,row in enumerate(self.y):
-                spline = InterpolatedUnivariateSpline(self.t[arc_start:arc_end+1], row[arc_start:arc_end+1])
-                y_spline_arc.append(spline)
-
-            if len(self.u.shape) ==1 :
-                spline = InterpolatedUnivariateSpline(self.t[arc_start:arc_end+1], self.u[arc_start:arc_end+1])
-                u_spline_arc.append(spline)
-            else:
-                for j,row in enumerate(self.u):
-                    spline = InterpolatedUnivariateSpline(self.t[arc_start:arc_end+1], row[arc_start:arc_end+1])
-                    u_spline_arc.append(spline)
-
-            self.y_splines.append(y_spline_arc)
-            self.u_splines.append(u_spline_arc)
-
-    def interpolate(self, new_t, new_arcs, overwrite=False):
-        """
-        Interpolates solution data over a new mesh of 't'
-
-        new_t : new mesh to evaluate
-        overwrite: Should the current solution be overwritten?
-        """
-        # Account for old data files with no sol_splines
-        if self.y_splines is None or self.u_splines is None:
-            self.init_interpolate()
-
-        new_y = np.hstack([np.vstack([spline(new_t[arc_start:arc_end+1]) for spline in spline_arc])
-                           for (arc_start, arc_end), spline_arc in zip(new_arcs, self.y_splines)])
-        new_u = np.hstack([np.vstack([spline(new_t[arc_start:arc_end+1]) for spline in spline_arc])
-                           for (arc_start, arc_end), spline_arc in zip(new_arcs, self.u_splines)])
-
-        if overwrite:
-            self.t = new_t
-            self.y = new_y
-            self.u = new_u
-            self.arcs = new_arcs
-
-        return new_y, new_u
 
     def prepare(self, problem_data, mesh_size=None, overwrite=False):
         """
@@ -134,9 +86,6 @@ class Solution(Trajectory):
         if not overwrite:
             t, y, u, arcs = new_t, new_y, new_u, new_arcs
 
-        #TODO: Write test for prepare()
-        #TODO: Make state_list a part of the Solution object
-
         # Define every aux variable (such as constants) in the dictionary
         variables = [(aux_name, np.ones_like(t)*aux_val)
                      for aux_type in self.aux
@@ -153,18 +102,11 @@ class Solution(Trajectory):
         variables += [(control,np.array(u[:, idx], dtype=np.float64))
                        for idx,control in enumerate(problem_data['control_list'])]
 
-
-        # Define constants
-        # variables += [(str(constant),np.ones_like(x)*float(self.aux['const'][].value))
-        #                for idx,constant in enumerate(problem_data['constants'])]
-
         t_list = []
         tf_ind = problem_data['parameter_list'].index('tf')
         last_t = 0
         for arc_start, arc_end in arcs:
             start_t = t[arc_start]
-            # from beluga.utils import keyboard
-            # keyboard()
             t_list.append(last_t+(t[arc_start:arc_end+1] - start_t))
             last_t += y[tf_ind, arc_start]
 
@@ -183,7 +125,7 @@ class Solution(Trajectory):
         self.var_dict = dict(variables)
         self.var_dict['pi'] = math.pi
 
-    def evaluate(self,expr):
+    def evaluate(self, expr):
         """
         Evaluates an expression or custom function involving the variables in this solution
 
