@@ -431,8 +431,7 @@ class GuessGenerator(object):
             param_guess += np.zeros(len(solinit.aux['parameters']) - len(param_guess))
         elif len(param_guess) > len(solinit.aux['parameters']):
             # TODO: Write a better error message
-            raise ValueError('param_guess too big. Maximum length allowed is ' +
-                             len(solinit.aux['parameters']))
+            raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
 
         param_guess[0] = self.time_integrate
 
@@ -455,7 +454,7 @@ class GuessGenerator(object):
 
         tic()
         prop = Propagator()
-        solivp = prop(bvp_fn.deriv_func_ode45, None, tspan, x0, [], param_guess, solinit.aux)
+        solivp = prop(bvp_fn.deriv_func, None, tspan, x0, [], param_guess, solinit.aux)
         elapsed_time = toc()
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
