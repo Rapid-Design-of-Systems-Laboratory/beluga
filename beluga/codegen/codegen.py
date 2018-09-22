@@ -132,14 +132,17 @@ def compile_code_py(code_string, module, function_name):
     return getattr(module, function_name, None)
 
 
-def make_jit_fn(args, fn_expr, nopython=False):
+def make_jit_fn(args, fn_expr):
     fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '') \
         .replace('(([[', '[') \
         .replace(']]))', ']')
 
     f = eval(fn_str)
-    jit_fn = numba.jit(nopython=nopython)(eval(fn_str))
-    jit_fn(*np.ones(len(args)))
+    try:
+        jit_fn = numba.jit(nopython=True)(f)
+        jit_fn(*np.ones(len(args)))
+    except:
+        jit_fn = f
     return jit_fn
 
 
@@ -160,7 +163,7 @@ def make_sympy_fn(args, fn_expr):
             return output
         return vector_fn
     else:
-        return make_jit_fn(args, fn_expr, nopython=False)
+        return make_jit_fn(args, fn_expr)
 
 
 def preprocess(problem_data, use_numba=False):
@@ -182,7 +185,7 @@ def preprocess(problem_data, use_numba=False):
     deriv_func_fn = compile_code_py(deriv_func_code, code_module, 'deriv_func')
     bc_func = compile_code_py(bc_func_code, code_module, 'bc_func')
     if use_numba:
-        deriv_func = numba.njit(parallel=False, nopython=True)(code_module.deriv_func_nojit)
+        deriv_func = numba.jit(nopython=True)(code_module.deriv_func_nojit)
     else:
         deriv_func = code_module.deriv_func_nojit
 
