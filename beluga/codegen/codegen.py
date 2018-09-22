@@ -87,22 +87,14 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
         C = aux['const'].values()
         p = p[:num_params]
         s_val = aux['constraint'].get((constraint_name, 1), -1)
-        try:
-            u_list = control_opt_fn(*X, *p, *C, s_val)
-        except Exception as e: # TODO: When is this error ever thrown?
-            raise
+        u_list = control_opt_fn(*X, *p, *C, s_val)
         ham_val = np.zeros(num_options)
         for i in range(num_options):
-            try:
-                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i], s_val)
-            except:
-                print(X, p, C, u_list[i])
-                raise
+            ham_val[i] = ham_fn(*X, *p, *C, *u_list[i], s_val)
 
         return u_list[np.argmin(ham_val)]
 
-    yield compute_control_fn
-    yield ham_fn
+    return compute_control_fn, ham_fn
 
 
 def make_functions(problem_data, module):
@@ -161,7 +153,6 @@ def make_sympy_fn(args, fn_expr):
         jit_fns = [make_jit_fn(args, expr) for expr in fn_expr]
         len_output = len(fn_expr)
 
-        # @numba.jit(parallel=True, nopython=True)
         def vector_fn(*args):
             output = np.zeros(output_shape)
             for i in numba.prange(len_output):
