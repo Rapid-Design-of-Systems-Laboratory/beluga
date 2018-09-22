@@ -93,8 +93,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
 
     solinit.aux['arc_seq'] = (0,)
     solinit.aux['pi_seq'] = (None,)
-    bvp_fn, bvp = preprocess(ocp_ws['problem_data'])
-    solinit = ocp_ws['guess'].generate(bvp_fn, solinit)
+    bvp = preprocess(ocp_ws['problem_data'])
+    solinit = ocp_ws['guess'].generate(bvp, solinit)
 
     state_names = ocp_ws['problem_data']['state_list']
 
@@ -116,7 +116,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp._scaling.initialize(ocp_ws)
     ocp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, bvp_fn, solinit, bvp)
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, solinit, bvp)
     total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -147,7 +147,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     return out['solution'][-1][-1]
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
@@ -191,7 +191,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, bvp_fn, solinit, bvp):
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp_fn.compute_control(_t, _X, sol.parameters, sol.aux)
+                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.parameters, sol.aux)
                     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
                     # keyboard()
 
