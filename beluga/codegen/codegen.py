@@ -1,10 +1,7 @@
-import beluga
 import collections as cl
-import imp
 import logging
 import numba
 import numpy as np
-import pystache
 import sympy as sym
 from beluga.utils import keyboard
 
@@ -18,47 +15,12 @@ from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
 
 
-def load_eqn_template(problem_data, template_file, renderer = pystache.Renderer(escape=lambda u: u)):
-    r"""
-    Loads pystache template and uses it to generate code.
-
-    :param problem_data: Workspace defining variables for template.
-    :param template_file: Path to template file to be used.
-    :param renderer: Renderer used to convert template file to code.
-    :return: Code generated from template file.
-    """
-    template_path = beluga.root()+'/optimlib/templates/'+problem_data['method']+'/'+template_file
-    with open(template_path) as f:
-        tmpl = f.read()
-        # Render the template using the data
-        code = renderer.render(tmpl, problem_data)
-        return code
-
-
-def create_module(problem_data):
-    r"""
-    Creates a new module for storing compiled code.
-
-    :param problem_data: Data structure of an optimal control problem.
-    :return: A module for holding compiled code.
-    """
-    problem_name = problem_data['problem_name']
-    module = imp.new_module('_beluga_'+problem_name)
-
-    # Put the custom functions into the newly created code module.
-    for func in problem_data['custom_functions']:
-        module.__dict__[func['name']] = func['handle']
-
-    return module
-
-
 def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, quantity_vars, ham, constraint_name=None):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
     costates = sym.Matrix([_.name for _ in costates])
     parameters = sym.Matrix(parameters)
-    tf_var = sym.sympify('tf')
     unknowns = list(controls)
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
     u_args = [*states, *costates, *parameters, *constants]
@@ -76,7 +38,6 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
     ham_fn = make_sympy_fn(ham_args, ham.subs(quantity_vars))
 
-    num_unknowns = len(unknowns)
     num_options = len(control_opts)
     num_states = len(states)
     num_params = len(parameters)
@@ -97,7 +58,148 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     return compute_control_fn, ham_fn
 
 
-def make_functions(problem_data, module):
+def make_deriv_func(state_list, costate_list, states, costates, parameters, constants, controls, quantity_vars, compute_control, constraint_name=None):
+    controls = sym.Matrix([_._sym for _ in controls])
+    constants = sym.Matrix([_._sym for _ in constants])
+    states = sym.Matrix([_.name for _ in states])
+    costates = sym.Matrix([_.name for _ in costates])
+    parameters = sym.Matrix(parameters)
+    unknowns = list(controls)
+    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
+    u_args = [*states, *costates, *parameters, *constants]
+
+    if constraint_name is not None:
+        ham_args.append(constraint_name)
+        u_args.append(constraint_name)
+    else:
+        ham_args.append('___dummy_arg___')
+        u_args.append('___dummy_arg___')
+    eom_fn = [make_sympy_fn(ham_args, eom.subs(quantity_vars)) for eom in state_list + costate_list]
+
+    num_states = len(states)
+    num_params = len(parameters)
+    constraint_name = str(constraint_name)
+    num_eoms = len(eom_fn)
+
+    def deriv_func(t, X, p, aux, arc_idx=None):
+        X = X[:(2 * num_states + 1)]
+        C = aux['const'].values()
+        p = p[:num_params]
+        s_val = aux['constraint'].get((constraint_name, 1), -1)
+        u = compute_control(t, X, p, aux)
+        eom_vals = np.zeros(num_eoms)
+        for ii in range(num_eoms):
+            eom_vals[ii] = eom_fn[ii](*X, *p, *C, *u, s_val)
+
+        return eom_vals
+
+    return deriv_func
+
+def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constants, controls, quantity_vars, compute_control, ham_fn, constraint_name=None):
+    controls = sym.Matrix([_._sym for _ in controls])
+    constants = sym.Matrix([_._sym for _ in constants])
+    states = sym.Matrix([_.name for _ in states])
+    costates = sym.Matrix([_.name for _ in costates])
+    parameters = sym.Matrix(parameters)
+    unknowns = list(controls)
+    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
+    u_args = [*states, *costates, *parameters, *constants]
+
+    if constraint_name is not None:
+        ham_args.append(constraint_name)
+        u_args.append(constraint_name)
+    else:
+        ham_args.append('___dummy_arg___')
+        u_args.append('___dummy_arg___')
+
+    num_states = len(states)
+    num_params = len(parameters)
+    constraint_name = str(constraint_name)
+
+    def bc_func_left(_y, p, aux, arc_seq, pi_seq, bcf=bc_initial):
+        _y = _y[:(2 * num_states + 1)]
+        C = aux['const'].values()
+        p = p[:num_params]
+        s_val = aux['constraint'].get((constraint_name, 1), -1)
+        u = compute_control(0, _y, p, aux)
+        _x0 = aux['initial']
+        _xf = aux['terminal']
+        ham_args_num = (*_y, *p, *C, *u, s_val)
+        _H = ham_fn(*ham_args_num)
+        ii = 0
+        for a in states:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in costates:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in parameters:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in constants:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in unknowns:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        bc = []
+        for s in bcf:
+            exec('bc.append(' + s + ')')
+
+        return np.array(bc)
+
+    def bc_func_right(_y, p, aux, arc_seq, pi_seq, bcf=bc_terminal):
+        _y = _y[:(2 * num_states + 1)]
+        C = aux['const'].values()
+        p = p[:num_params]
+        s_val = aux['constraint'].get((constraint_name, 1), -1)
+        u = compute_control(0, _y, p, aux)
+        _x0 = aux['initial']
+        _xf = aux['terminal']
+        ham_args_num = (*_y, *p, *C, *u, s_val)
+        _H = ham_fn(*ham_args_num)
+        ii = 0
+        for a in states:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in costates:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in parameters:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in constants:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        for a in unknowns:
+            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        bc = []
+        for s in bcf:
+            exec('bc.append(' + s + ')')
+
+        return np.array(bc)
+
+    def bc_func(t0, y0, q0, tf, yf, qf, p, aux):
+        arc_seq = aux.get('arc_seq', (0,))
+        pi_seq = aux.get('pi_seq', (None,))
+        res_left = bc_func_left(y0[:, 0], p, aux, arc_seq, pi_seq)
+        res_right = bc_func_right(yf[:, -1], p, aux, arc_seq, pi_seq)
+        return np.hstack((res_left, res_right))
+
+    return bc_func
+
+def make_functions(problem_data):
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
     costates = problem_data['costates']
@@ -106,30 +208,20 @@ def make_functions(problem_data, module):
     controls = problem_data['controls']
     quantity_vars = problem_data['quantity_vars']
     ham = problem_data['ham']
-
     logging.info('Making unconstrained control')
     control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, costates, parameters, constants, controls, quantity_vars, ham)
 
-    module.ham_fn = ham_fn
-    control_fns = [control_fn]
-    module.control_fns = control_fns
-    module.ham_fn = ham_fn
+    logging.info('Making derivative function and bc function')
+    state_list = problem_data['x_deriv_list']
+    costate_list = problem_data['lam_deriv_list']
 
-    return module
+    deriv_func = make_deriv_func(state_list, costate_list, states, costates, parameters, constants, controls, quantity_vars, control_fn)
 
+    bc_initial = problem_data['bc_initial']
+    bc_terminal = problem_data['bc_terminal']
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constants, controls, quantity_vars, control_fn, ham_fn)
 
-def compile_code_py(code_string, module, function_name):
-    r"""
-    Compiles a function specified by template in filename and stores it in a module.
-
-    :param code_string: String containing the python code to be compiled.
-    :param module: Module in which the new functions will be defined.
-    :param function_name: Name of the function being compiled (this must be defined in the template with the same name).
-    :return: module: A module for the compiled function.
-    """
-    # module.__dict__.update({'__builtin__': {}})
-    exec(code_string, module.__dict__)
-    return getattr(module, function_name, None)
+    return deriv_func, bc_func, control_fn, ham_fn
 
 
 def make_jit_fn(args, fn_expr):
@@ -178,18 +270,9 @@ def preprocess(problem_data, use_numba=False):
     custom_functions = problem_data['custom_functions']
     for f in custom_functions:
         globals()[f['name']] = f['handle']
-    code_module = create_module(problem_data)
-    code_module = make_functions(problem_data, code_module)
-    deriv_func_code = load_eqn_template(problem_data, template_file='deriv_func.py.mu')
-    bc_func_code = load_eqn_template(problem_data, template_file='bc_func.py.mu')
-    deriv_func_fn = compile_code_py(deriv_func_code, code_module, 'deriv_func')
-    bc_func = compile_code_py(bc_func_code, code_module, 'bc_func')
-    if use_numba:
-        deriv_func = numba.jit(nopython=True)(code_module.deriv_func_nojit)
-    else:
-        deriv_func = code_module.deriv_func_nojit
+    deriv_func, bc_func, compute_control, ham_fn = make_functions(problem_data)
 
-    bvp = BVP(deriv_func, bc_func, code_module.compute_control)
+    bvp = BVP(deriv_func, bc_func, compute_control)
 
     return bvp
 
