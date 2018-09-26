@@ -180,7 +180,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
 
                     # Compute control history, since its required for plotting to work with control variables
                     sol.ctrl_expr = problem_data['control_options']
-                    sol.ctrl_vars = problem_data['control_list']
+                    sol.ctrl_vars = problem_data['controls']
 
                     # TODO: Make control computation more efficient
                     # for i in range(len(sol.x)):
