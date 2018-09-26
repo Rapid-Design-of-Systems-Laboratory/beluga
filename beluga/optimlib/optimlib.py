@@ -117,7 +117,6 @@ def make_boundary_conditions(constraints, constraints_adjoined, states, costates
     prefix_map = dict(prefix_map)
     bc_list = [sanitize_constraint_expr(x, states, location, prefix_map) for x in constraints[location]]
     *_, sign = dict(prefix_map)[location]
-
     cost_expr = sign * cost
 
     if constraints_adjoined:
@@ -284,7 +283,7 @@ def sanitize_constraint_expr(constraint, states, location, prefix_map):
         raise ValueError('Invalid constraint type')
 
     pattern, prefix, _ = dict(prefix_map)[location]
-    m = _re.findall(pattern,str(constraint.expr))
+    m = _re.findall(pattern, str(constraint.expr))
     invalid = [x for x in m if x not in states]
 
     if not all(x is None for x in invalid):

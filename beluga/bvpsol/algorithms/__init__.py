@@ -1,7 +1,6 @@
 from .BaseAlgorithm import BaseAlgorithm
 from .Shooting import Shooting
 from .Collocation import Collocation
-from .QCPI import QCPI
 
 import os
 import glob

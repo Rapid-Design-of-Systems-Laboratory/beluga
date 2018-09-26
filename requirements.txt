@@ -8,7 +8,6 @@ numexpr>=2.6.8
 numpy>=1.14.3
 scipy>=1.1.0
 sympy>=1.1.1
-pystache>=0.5.4
 pytest>=3.5.1
 pytest-cov>=2.5.1
 pytest-describe>=0.11.1
