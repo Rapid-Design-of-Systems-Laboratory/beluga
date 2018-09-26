@@ -1,5 +1,5 @@
 import abc
-import dill
+import cloudpickle as pickle
 import logging
 
 #TODO: Identify data source based on file extension
@@ -51,7 +51,7 @@ class Dill(BaseDataSource):
         if not self.is_loaded:
             with open(self.filename,'rb') as f:
                 logging.info("Loading datafile "+self.filename+"...")
-                self._data = dill.load(f)
+                self._data = pickle.load(f)
                 if 'solution' not in self._data:
                     self.is_loaded = False
                     logging.error("Solution missing in data file :"+self.filename)
