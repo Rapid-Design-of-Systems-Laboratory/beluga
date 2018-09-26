@@ -5,7 +5,7 @@ import logging
 
 from beluga.codegen.codegen import *
 
-import dill
+import cloudpickle as pickle
 import numpy as np
 import collections as cl
 
@@ -136,12 +136,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     qvars = out['problem_data']['quantity_vars']
     qvars = {str(k): str(v) for k, v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
-    try:
-        with open(output_file, 'wb') as outfile:
-            dill.settings['recurse'] = True
-            dill.dump(out, outfile)  # Dill Beluga object only
-    except:
-        print('Data export error.')
+
+    with open(output_file, 'wb') as outfile:
+        pickle.dump(out, outfile)
 
     return out['solution'][-1][-1]
 
