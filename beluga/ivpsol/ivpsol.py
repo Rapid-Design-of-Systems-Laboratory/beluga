@@ -260,10 +260,18 @@ def reconstruct(quadfun, gamma, *args):
         q0 = gamma.q[0]
 
     l = len(gamma)
-    temp_q = integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args)
+    temp_q = np.array(integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args))
+
+    wrap = False
+    if temp_q.size == 1:
+        wrap = True
+        temp_q = np.array([temp_q])
 
     for ii in range(l-1):
-        qf = integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii+1]], gamma, *args)
+        if wrap:
+            qf = np.array([integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii + 1]], gamma, *args)])
+        else:
+            qf = np.array(integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii + 1]], gamma, *args))
         temp_q = np.vstack((temp_q, temp_q[-1] + qf))
 
     gamma.q = temp_q + q0
