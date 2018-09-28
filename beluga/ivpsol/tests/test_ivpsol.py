@@ -45,26 +45,26 @@ def test_Trajectory():
     gam = Trajectory(t, y1)
     y, q, u = gam(0.5)
     assert y == 0.5
-    assert q == None
-    assert u == None
+    assert len(q) == 0
+    assert len(u) == 0
 
     y, q, u = gam(0.25)
     assert y == 0.25
-    assert q == None
-    assert u == None
+    assert len(q) == 0
+    assert len(u) == 0
 
     gam.set_interpolate_function('cubic')
 
     y, q, u = gam(0.25)
     assert y - 0.0625 < 1e-4
-    assert q == None
-    assert u == None
+    assert len(q) == 0
+    assert len(u) == 0
 
     t, y, q, u = gam[0]
     assert t == 0
     assert y == 0
-    assert q == None
-    assert u == None
+    assert len(q) == 0
+    assert len(u) == 0
 
 
 def test_integrate_quads():

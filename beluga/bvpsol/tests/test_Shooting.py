@@ -74,29 +74,24 @@ def test_Shooting_4():
     # This problem contains a quad and tests if the bvp solver correctly
     # integrates the quadfun.
 
-    def compute_control_reduced(t, X, params, consts):
-        g = consts[0]
-        lx = params[0]
-        ly = params[1]
-        v = X[0]
-        lv = X[1]
-        theta1 = 2 * np.arctan(
-            (lx * v - np.sqrt(g ** 2 * lv ** 2 - 2 * g * lv * ly * v + lx ** 2 * v ** 2 + ly ** 2 * v ** 2)) / (
-                        g * lv - ly * v))
-        theta2 = 2 * np.arctan(
-            (lx * v + np.sqrt(g ** 2 * lv ** 2 - 2 * g * lv * ly * v + lx ** 2 * v ** 2 + ly ** 2 * v ** 2)) / (
-                        g * lv - ly * v))
-        H1 = -g * lv * np.sin(theta1) + lx * v * np.cos(theta1) + ly * v * np.sin(theta1) + 1
-        H2 = -g * lv * np.sin(theta2) + lx * v * np.cos(theta2) + ly * v * np.sin(theta2) + 1
-        T = np.vstack((theta1, theta2))
-        H = np.vstack((H1, H2))
-        ind = np.argmin(H, axis=0)
-        return T[ind][0]
+    def odefun(t, x, p, const, arc):
+        return -x[1], x[0]
+
+    def quadfun(t, x, p, const, arc):
+        return x[0]
+
+    def bcfun(t0, X0, q0, tf, Xf, qf, params, aux):
+        return X0[0], X0[1] - 1, qf[0] - 1.0 + params[0]
 
     algo = Shooting()
     solinit = Solution()
-    solinit.t = np.linspace(0, 1, 2)
-    solinit.y = np.array([[0], [0]])
-    solinit.parameters = np.array([1])
-    out = algo.solve(odefun, None, bcfun, solinit)
-    assert abs(out.parameters - 2) < tol
+    solinit.t = np.linspace(0, np.pi / 2, 2)
+    solinit.y = np.array([[1, 0], [1, 0]])  # Ends at [0, 1] # q is y[:,1]
+    solinit.q = np.array([[0], [0]])
+    solinit.parameters = np.array([0])
+    out = algo.solve(odefun, quadfun, bcfun, solinit)
+    assert (out.y[0,0] - 0) < tol
+    assert (out.y[0,1] - 1) < tol
+    assert (out.q[0,0] - 0) < tol
+    assert (out.q[-1,0] + 1) < tol
+
