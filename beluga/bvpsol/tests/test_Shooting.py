@@ -94,4 +94,5 @@ def test_Shooting_4():
     assert (out.y[0,1] - 1) < tol
     assert (out.q[0,0] - 0) < tol
     assert (out.q[-1,0] + 1) < tol
+    assert (out.parameters[0] - 2) < tol
 
