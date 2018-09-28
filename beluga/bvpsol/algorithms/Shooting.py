@@ -4,7 +4,7 @@ import logging
 import numpy as np
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
-from beluga.ivpsol import Propagator
+from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
 from multiprocessing_on_dill import pool
 
 
@@ -85,47 +85,65 @@ class Shooting(BaseAlgorithm):
         if self.num_cpus > 1:
             self.pool = pool.Pool(processes=self.num_cpus)
 
-    def _bc_jac_multi(self, t_list, nBCs, phi_full_list, y_list, parameters, aux, bc_func, StepSize=1e-6):
-        p  = np.array(parameters)
-        nParams = p.size
+    def _bc_jac_multi(self, t_list, nBCs, nquads, phi_full_list, y_list, q_list, parameters, aux, quad_func, bc_func, StepSize=1e-6):
+        parameters = np.array(parameters)
+        nParams = parameters.size
         h = StepSize
-        ya = np.array([traj[0] for traj in y_list]).T
-        yb = np.array([traj[-1] for traj in y_list]).T
-        nOdes = ya.shape[0]
+        t0 = t_list[0][0]
+        tf = t_list[-1][-1]
+        y0 = np.array([traj[0] for traj in y_list])[0]
+        yf = np.array([traj[-1] for traj in y_list])[0]
+        if nquads > 0:
+            q0 = q_list[0][0]
+            qf = q_list[-1][-1]
+        else:
+            q0 = []
+            qf = []
+        nOdes = y0.shape[0]
         num_arcs = len(phi_full_list)
-        fx = bc_func(t_list[0][0], ya, [], t_list[-1][-1], yb, [], p, aux)
+
+        fx = bc_func(t0, y0, q0, tf, yf, qf, parameters, aux)
         nBCs = len(fx)
 
         M = np.zeros((nBCs, nOdes))
-        P = np.zeros((nBCs, p.size))
-        Ptemp = np.zeros((nBCs, p.size))
-        J = np.zeros((nBCs, (nOdes)*num_arcs+p.size))
+        P = np.zeros((nBCs, parameters.size))
+        Ptemp = np.zeros((nBCs, parameters.size))
+        J = np.zeros((nBCs, (nOdes)*num_arcs+parameters.size))
         dx = np.zeros((nOdes+nParams, num_arcs))
 
         for arc_idx, phi in zip(it.count(), phi_full_list):
-            # Evaluate for all arcs
-            for i in range(nOdes):
-                dx[i, arc_idx] = dx[i, arc_idx] + h
-                dy = np.dot(phi[-1], dx)
-                f = bc_func(t_list[0][0], ya + dx[:nOdes], [], t_list[-1][-1], yb + dy, [], p, aux)
-                M[:,i] = (f-fx)/h
-                dx[i, arc_idx] = dx[i, arc_idx] - h
+            for ii in range(nOdes):
+                dx[ii, arc_idx] = dx[ii, arc_idx] + h
+                dy = np.dot(phi, dx)
+                gamma = Trajectory(np.hstack(t_list), np.vstack(y_list) + dy[:,:,arc_idx])
+                if nquads > 0:
+                    gamma = reconstruct(quad_func, gamma, q0, parameters, aux, (0,))
+                    f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, aux)
+                else:
+                    f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, aux)
+                M[:, ii] = (f-fx)/h
+                dx[ii, arc_idx] = dx[ii, arc_idx] - h
             J_i = M
             J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
             J[:,J_slice] = J_i
 
         for arc_idx, phi in zip(it.count(), phi_full_list):
-            for i in range(p.size):
-                p[i] = p[i] + h
-                j = i + nOdes
-                dx[j, arc_idx] = dx[j, arc_idx] + h
-                dy = np.dot(phi[-1], dx)
-                f = bc_func(t_list[0][0], ya, [], t_list[-1][-1], yb + dy, [], p, aux)
-                Ptemp[:,i] = (f-fx)/h
-                dx[j, arc_idx] = dx[j, arc_idx] - h
-                p[i] = p[i] - h
+            for ii in range(nParams):
+                parameters[ii] = parameters[ii] + h
+                jj = ii + nOdes
+                dx[jj, arc_idx] = dx[jj, arc_idx] + h
+                dy = np.dot(phi, dx)
+                gamma = Trajectory(np.hstack(t_list), np.vstack(y_list) + dy[:, :, arc_idx])
+                if nquads > 0:
+                    gamma = reconstruct(quad_func, gamma, q0, parameters, aux, (0,))
+                    f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, aux)
+                else:
+                    f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, aux)
+                Ptemp[:, ii] = (f-fx)/h
+                dx[jj, arc_idx] = dx[jj, arc_idx] - h
+                parameters[ii] = parameters[ii] - h
             P += Ptemp
-            Ptemp = np.zeros((nBCs, p.size))
+            Ptemp = np.zeros((nBCs, nParams))
 
         J_i = P
         J_slice = slice(nOdes * num_arcs, nOdes * num_arcs + nParams)
@@ -136,10 +154,10 @@ class Shooting(BaseAlgorithm):
     def _bc_func_multiple_shooting(self, bc_func=None):
         def _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux):
             bc1 = np.array(bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)).flatten()
-            narcs = y0.shape[1]
-            bc2 = np.array([y0[:, ii + 1] - yf[:, ii] for ii in range(narcs - 1)]).flatten()
-            bc = np.hstack((bc1,bc2))
-            return bc
+            # narcs = y0.shape[1]
+            # bc2 = np.array([y0[:, ii + 1] - yf[:, ii] for ii in range(narcs - 1)]).flatten()
+            # bc = np.hstack((bc1,bc2))
+            return bc1
 
         def wrapper(t0, y0, q0, tf, yf, qf, paramGuess, aux):
             return _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)
@@ -192,11 +210,18 @@ class Shooting(BaseAlgorithm):
         sol = copy.deepcopy(solinit)
         sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
+        sol.q = np.array(sol.q, dtype=np.float64)
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
+        if quad_func is None or all(np.isnan(sol.q)):
+            q0g = np.array([])
+        else:
+            q0g = sol.q[0, :]
+
         nOdes = y0g.shape[0]
+        nquads = q0g.shape[0]
         paramGuess = sol.parameters
 
         # Make the state-transition ode matrix
@@ -259,16 +284,19 @@ class Shooting(BaseAlgorithm):
                 phi_full_list = []
                 t_list = []
                 y_list = []
+                q_list = []
                 if self.pool is None:
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[arc_idx, :]
                         y0stm[nOdes:] = stm0[:]
-                        q0 = []
-                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
+                        sol_ivp = prop(self.stm_ode_func, quad_func, tspan, y0stm, q0g, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
                         t = sol_ivp.t
                         yy = sol_ivp.y
-                        y_list.append(yy[:, :nOdes])
+                        qq = sol_ivp.q
                         t_list.append(t)
+                        y_list.append(yy[:, :nOdes])
+                        if nquads > 0:
+                            q_list.append(qq[:, :nquads])
                         yb[arc_idx, :] = yy[-1, :nOdes]
                         phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
                         phi_full_list.append(np.copy(phi_full))
@@ -301,7 +329,10 @@ class Shooting(BaseAlgorithm):
                     break
 
                 # Determine the error vector
-                res = self.bc_func(t_list[0][0], ya.T, [], t_list[-1][-1], yb.T, [], paramGuess, sol.aux)
+                if nquads == 0:
+                    res = self.bc_func(t_list[0][0], ya[0], [], t_list[-1][-1], yb[0], [], paramGuess, sol.aux)
+                else:
+                    res = self.bc_func(t_list[0][0], ya[0], qq[0], t_list[-1][-1], yb[0], qq[-1], paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -322,7 +353,8 @@ class Shooting(BaseAlgorithm):
 
                 # Compute Jacobian of boundary conditions
                 nBCs = len(res)
-                J = self._bc_jac_multi(t_list, nBCs, phi_full_list, y_list, paramGuess, sol.aux, self.bc_func)
+
+                J = self._bc_jac_multi(t_list, nBCs, nquads, phi_full_list, y_list, q_list, paramGuess, sol.aux, quad_func, self.bc_func)
 
                 # Compute correction vector
                 if r0 is not None:
@@ -377,6 +409,8 @@ class Shooting(BaseAlgorithm):
 
             sol.t = np.hstack(t_list)
             sol.y = np.row_stack(y_list)
+            if nquads > 0:
+                sol.q = np.row_stack(q_list)
             sol.parameters = paramGuess
 
         else:

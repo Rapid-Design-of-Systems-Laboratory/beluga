@@ -112,7 +112,7 @@ class Propagator(Algorithm):
             gamma = Trajectory(ti, np.vstack([_.data[:-1,-1] for _ in yi])) # Hardcoded assuming RN
 
         if quad_func is not None:
-            gamma = reconstruct(quad_func, gamma, *args)
+            gamma = reconstruct(quad_func, gamma, q0, *args)
 
         return gamma
 
@@ -135,10 +135,10 @@ class Trajectory(object):
         """
 
         obj = super(Trajectory, cls).__new__(cls)
-        obj.t = None
-        obj.y = None
-        obj.q = None
-        obj.u = None
+        obj.t = np.array([])
+        obj.y = np.array([])
+        obj.q = np.array([])
+        obj.u = np.array([])
 
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
         obj.interpolation_type = interpolation_type
@@ -171,12 +171,12 @@ class Trajectory(object):
         """
 
         t = np.array(t, dtype=np.float64)
-        y_val = None
-        q_val = None
-        u_val = None
+        y_val = np.array([])
+        q_val = np.array([])
+        u_val = np.array([])
 
         if len(self.t) == 0:
-            return None, None, None
+            return y_val, q_val, u_val
 
         if len(self.y.shape) == 1:
             dim = 1
@@ -212,20 +212,20 @@ class Trajectory(object):
             self.interpolate = lambda t, y: scipy.interpolate.interp1d(t, y, kind=func)
 
     def __getitem__(self, item):
-        t_val = None
-        y_val = None
-        q_val = None
-        u_val = None
-        if self.t is not None:
+        t_val = np.array([])
+        y_val = np.array([])
+        q_val = np.array([])
+        u_val = np.array([])
+        if len(self.t) > 0:
             t_val = self.t[item]
 
-        if self.y is not None:
+        if len(self.y) > 0:
             y_val = self.y[item]
 
-        if self.q is not None:
+        if len(self.q) > 0:
             q_val = self.q[item]
 
-        if self.u is not None:
+        if len(self.u) > 0:
             u_val = self.u[item]
 
         return t_val, y_val, q_val, u_val
@@ -237,7 +237,7 @@ class Trajectory(object):
             return len(self.t)
 
 
-def reconstruct(quadfun, gamma, *args):
+def reconstruct(quadfun, gamma, q0, *args):
     r"""
     Completely reconstructs a trajectory for all time in :math:`\gamma`.
 
@@ -249,21 +249,24 @@ def reconstruct(quadfun, gamma, *args):
 
     :param quadfun: Equations of motion on the symmetry space.
     :param gamma: Trajectory in quotient space :math:`B/Q`.
+    :param q0: Initial quad point.
     :param args: Additional arguments needed by quadfun.
     :return: :math:`\gamma` - Reconstructed trajectory in total space :math:`B`.
     """
-
     gamma = copy.copy(gamma)
-    if gamma.q is None:
-        q0 = 0
-    else:
-        q0 = gamma.q[0]
 
     l = len(gamma)
-    temp_q = np.array([integrate_quads(quadfun, [gamma.t[0], gamma.t[0]], gamma, *args)])
+    temp_q = np.zeros_like(q0)
+    wrap = False
+    if temp_q.size == 1:
+        wrap = True
+        temp_q = np.array([temp_q])
 
     for ii in range(l-1):
-        qf = integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii+1]], gamma, *args)
+        if wrap:
+            qf = np.array([integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii + 1]], gamma, *args)])
+        else:
+            qf = np.array(integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii + 1]], gamma, *args))
         temp_q = np.vstack((temp_q, temp_q[-1] + qf))
 
     gamma.q = temp_q + q0
@@ -286,7 +289,6 @@ def integrate_quads(quadfun, tspan, gamma, *args):
     :param args: Additional arguments needed by quadfun.
     :return: Value of the quads at :math:`t_f`.
     """
-
     if tspan[0] < gamma.t[0]:
         raise Exception('Time span out of integration bounds.')
 
@@ -300,27 +302,26 @@ def integrate_quads(quadfun, tspan, gamma, *args):
     indf = int(np.ceil(np.interp(tspan[-1], gamma.t, x_set_temp)))
 
     if tspan[0] != gamma.t[ind0]:
-        x_interp = np.array([tspan[0]])
+        t_interp = np.array([tspan[0]])
     else:
-        x_interp = np.array([])
+        t_interp = np.array([])
 
-    x_interp = np.hstack((x_interp, gamma.t[ind0:indf]))
+    t_interp = np.hstack((t_interp, gamma.t[ind0:indf]))
 
     if tspan[-1] != gamma.t[indf-1]:
-        x_interp = np.hstack((x_interp, tspan[-1]))
+        t_interp = np.hstack((t_interp, tspan[-1]))
 
-    y0, q0, u0 = gamma(x_interp[0])
+    y0, q0, u0 = gamma(t_interp[0])
 
     # Evaluate the quad function over every point in the given interval
-    dq = np.array([quadfun(time, gamma(time)[0], *args) for time in x_interp])
+    dq = np.array([quadfun(time, gamma(time)[0], *args) for time in t_interp])
 
     # Integrate the quad func using numerical quadrature
-    qf_m0 = simps(dq.T, x=x_interp)
+    qf_m0 = simps(dq.T, x=t_interp)
 
     # Add the initial state to get the final state.
-    if q0 is None:
+    if len(q0) == 0:
         q0 = 0
 
     qf = qf_m0 + q0
-
     return qf

@@ -69,3 +69,29 @@ def test_Shooting_3():
     solinit.parameters = np.array([1])
     out = algo.solve(odefun, None, bcfun, solinit)
     assert abs(out.parameters - 2) < tol
+
+def test_Shooting_4():
+    # This problem contains a quad and tests if the bvp solver correctly
+    # integrates the quadfun.
+
+    def odefun(t, x, p, const, arc):
+        return -x[1], x[0]
+
+    def quadfun(t, x, p, const, arc):
+        return x[0]
+
+    def bcfun(t0, X0, q0, tf, Xf, qf, params, aux):
+        return X0[0], X0[1] - 1, qf[0] - 1.0 + params[0]
+
+    algo = Shooting()
+    solinit = Solution()
+    solinit.t = np.linspace(0, np.pi / 2, 2)
+    solinit.y = np.array([[1, 0], [1, 0]])  # Ends at [0, 1] # q is y[:,1]
+    solinit.q = np.array([[0], [0]])
+    solinit.parameters = np.array([0])
+    out = algo.solve(odefun, quadfun, bcfun, solinit)
+    assert (out.y[0,0] - 0) < tol
+    assert (out.y[0,1] - 1) < tol
+    assert (out.q[0,0] - 0) < tol
+    assert (out.q[-1,0] + 1) < tol
+
