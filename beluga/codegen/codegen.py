@@ -203,19 +203,19 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
         def bc_func(t0, y0, q0, tf, yf, qf, p, aux):
             arc_seq = aux.get('arc_seq', (0,))
             pi_seq = aux.get('pi_seq', (None,))
-            u0 = compute_control(t0, y0[:, 0], p, aux)
-            uf = compute_control(tf, yf[:, -1], p, aux)
-            res_left = bc_func_left(y0[:2*num_states, 0], u0, p, aux, arc_seq, pi_seq)
-            res_right = bc_func_right(yf[:2*num_states, -1], uf, p, aux, arc_seq, pi_seq)
+            u0 = compute_control(t0, y0, p, aux)
+            uf = compute_control(tf, yf, p, aux)
+            res_left = bc_func_left(y0[:2*num_states], u0, p, aux, arc_seq, pi_seq)
+            res_right = bc_func_right(yf[:2*num_states], uf, p, aux, arc_seq, pi_seq)
             return np.hstack((res_left, res_right))
     else:
         def bc_func(t0, y0, q0, tf, yf, qf, p, aux):
             arc_seq = aux.get('arc_seq', (0,))
             pi_seq = aux.get('pi_seq', (None,))
-            u0 = compute_control(t0, y0[:, 0], p, aux)
-            uf = compute_control(tf, yf[:, -1], p, aux)
-            res_left = bc_func_left(y0[:, 0], u0, p, aux, arc_seq, pi_seq)
-            res_right = bc_func_right(yf[:, -1], uf, p, aux, arc_seq, pi_seq)
+            u0 = compute_control(t0, y0, p, aux)
+            uf = compute_control(tf, yf, p, aux)
+            res_left = bc_func_left(y0, u0, p, aux, arc_seq, pi_seq)
+            res_right = bc_func_right(yf, uf, p, aux, arc_seq, pi_seq)
             return np.hstack((res_left, res_right))
 
     return bc_func
