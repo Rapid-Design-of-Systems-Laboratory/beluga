@@ -2,7 +2,6 @@ from beluga.liepack.domain.liegroups import LieGroup
 import copy
 from scipy.linalg import expm
 import numpy as np
-from beluga.utils import keyboard
 
 class HManifold(object):
     def __new__(cls, *args, **kwargs):

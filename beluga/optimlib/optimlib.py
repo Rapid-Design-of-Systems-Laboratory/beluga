@@ -3,7 +3,7 @@ Base functions required by all optimization methods.
 """
 
 
-from beluga.utils import sympify, sympify2, keyboard
+from beluga.utils import sympify
 import sympy
 from sympy import Symbol, im
 from sympy.core.function import AppliedUndef

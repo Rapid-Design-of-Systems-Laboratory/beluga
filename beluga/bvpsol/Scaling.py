@@ -1,7 +1,7 @@
 import numbers as num
 
 from sympy import *
-from beluga.utils import sympify, keyboard
+from beluga.utils import sympify
 
 import copy
 

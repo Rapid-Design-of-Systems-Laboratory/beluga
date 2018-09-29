@@ -3,7 +3,6 @@ import numpy as np
 import copy
 from scipy.optimize import minimize
 import logging
-from beluga.utils import keyboard
 
 class Collocation(BaseAlgorithm):
     """
@@ -154,10 +153,7 @@ class Collocation(BaseAlgorithm):
                 t12 = (t1 + t0) / 2
                 p0 = ivp.sol.y[ind-1]
                 p1 = ivp.sol.y[ind]
-                try:
-                    dp0 = np.squeeze(ivp.eoms(t0, p0, ivp.sol.params, ivp.sol.consts))
-                except:
-                    keyboard()
+                dp0 = np.squeeze(ivp.eoms(t0, p0, ivp.sol.params, ivp.sol.consts))
                 dp1 = np.squeeze(ivp.eoms(t1, p1, ivp.sol.params, ivp.sol.consts))
                 midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (len(ivp.sol.x) - 1) / 8 * (dp0 - dp1)
                 dt = ivp.sol.x[ind] - ivp.sol.x[ind-1]

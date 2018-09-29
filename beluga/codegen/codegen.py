@@ -3,7 +3,6 @@ import logging
 import numba
 import numpy as np
 import sympy as sym
-from beluga.utils import keyboard
 
 from sympy.utilities.lambdify import lambdastr
 

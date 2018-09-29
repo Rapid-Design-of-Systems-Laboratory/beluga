@@ -15,7 +15,6 @@ from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from .utils import tic, toc
 from collections import OrderedDict
-from .utils.keyboard import keyboard
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='Shooting',

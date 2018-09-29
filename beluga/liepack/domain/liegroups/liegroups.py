@@ -1,8 +1,6 @@
 import abc
 import copy
 
-from beluga.utils import keyboard
-
 import numpy as np
 
 class LieGroup(object):
