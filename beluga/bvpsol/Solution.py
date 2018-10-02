@@ -23,6 +23,7 @@ class Solution(Trajectory):
         parameters = kwargs.get('parameters', None)
         aux = kwargs.get('aux', None)
         state_list = kwargs.get('state_list', None)
+        control_list = kwargs.get('control_list', None)
         arcs = kwargs.get('arcs', None)
 
         if t is not None:
@@ -47,6 +48,7 @@ class Solution(Trajectory):
             obj.aux = aux
 
         obj.state_list = state_list
+        obj.control_list = control_list
         obj.var_dict = None
         obj.converged = False
         obj.arcs = arcs
@@ -95,12 +97,12 @@ class Solution(Trajectory):
                      ]
         # Define state variables
         # Have to do in this order to override state values with arrays
-        variables += [(state,np.array(y[:, idx], dtype=np.float64))
-                       for idx,state in enumerate(problem_data['state_list'])]
+        variables += [(state, np.array(y[:, idx], dtype=np.float64))
+                      for idx, state in enumerate(problem_data['state_list'])]
 
         # Define control variables
-        variables += [(control,np.array(u[:, idx], dtype=np.float64))
-                       for idx,control in enumerate(problem_data['control_list'])]
+        variables += [(control, np.array(u[:, idx], dtype=np.float64))
+                      for idx, control in enumerate(problem_data['control_list'])]
 
         t_list = []
         tf_ind = problem_data['parameter_list'].index('tf')

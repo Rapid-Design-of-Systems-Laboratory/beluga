@@ -51,6 +51,7 @@ def ocp_to_bvp(ocp, guess):
         'constants': constants,
         'constants_of_motion': constants_of_motion,
         'parameters': [tf_var] + parameters,
+        'control_list': [str(x) for x in it.chain(controls)],
         'controls': controls,
         'quantity_vars': quantity_vars,
         'hamiltonian': hamiltonian,

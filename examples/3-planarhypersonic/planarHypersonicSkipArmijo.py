@@ -15,21 +15,21 @@ if __name__ == '__main__':
     ocp.independent('t', 's')
 
     # Define equations of motion
-    ocp.state('h','v*sin(gam)','m')   \
-       .state('theta','v*cos(gam)/r','rad')  \
-       .state('v','-D/mass - mu*sin(gam)/r**2','m/s') \
-       .state('gam','L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)','rad')
+    ocp.state('h', 'v*sin(gam)', 'm')   \
+       .state('theta', 'v*cos(gam)/r', 'rad')  \
+       .state('v', '-D/mass - mu*sin(gam)/r**2', 'm/s') \
+       .state('gam', 'L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)', 'rad')
 
     # Define quantities used in the problem
-    ocp.quantity('rho','rho0*exp(-h/H)')
-    ocp.quantity('Cl','(1.5658*alfa + -0.0000)')
-    ocp.quantity('Cd','(1.6537*alfa^2 + 0.0612)')
-    ocp.quantity('D','0.5*rho*v^2*Cd*Aref')
-    ocp.quantity('L','0.5*rho*v^2*Cl*Aref')
-    ocp.quantity('r','re+h')
+    ocp.quantity('rho', 'rho0*exp(-h/H)')
+    ocp.quantity('Cl', '(1.5658*alfa + -0.0000)')
+    ocp.quantity('Cd', '(1.6537*alfa^2 + 0.0612)')
+    ocp.quantity('D', '0.5*rho*v^2*Cd*Aref')
+    ocp.quantity('L', '0.5*rho*v^2*Cl*Aref')
+    ocp.quantity('r', 're+h')
 
     # Define controls
-    ocp.control('alfa','rad')
+    ocp.control('alfa', 'rad')
 
     # Define constants
     ocp.constant('mu', 3.986e5*1e9, 'm^3/s^2')  # Gravitational parameter, m^3/s^2
@@ -54,14 +54,12 @@ if __name__ == '__main__':
 
     ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-    bvp_solver = beluga.bvp_algorithm('Shooting',
+    bvp_solver = beluga.bvp_algorithm('ArmijoShooting',
                                       derivative_method='fd',
                                       tolerance=1e-4,
                                       max_iterations=100,
                                       verbose=True,
                                       max_error=100,
-                                      num_arcs=4,
-                                      num_cpus=4
                                       )
 
     # bvp_solver = beluga.bvp_algorithm('Collocation')
@@ -74,27 +72,20 @@ if __name__ == '__main__':
 
     continuation_steps = beluga.init_continuation()
 
-    # Start by flying straight towards the ground
     continuation_steps.add_step('bisection') \
                     .num_cases(3) \
                     .terminal('h', 0)
 
-    #
     continuation_steps.add_step('bisection') \
-                    .num_cases(21) \
-                    .initial('gam', 0*pi/180) \
+                    .num_cases(41) \
+                    .initial('gam', -0*pi/180) \
                     .terminal('theta', 5*pi/180)
 
     continuation_steps.add_step('bisection') \
                     .num_cases(11) \
                     .terminal('theta', 15*pi/180)
 
-    continuation_steps.add_step('bisection') \
-                    .num_cases(21) \
-                    .terminal('theta', 20*pi/180)
-
-    beluga.setup_beluga(logging_level=logging.DEBUG)
-
+    beluga.add_logger(logging_level=logging.DEBUG)
 
     beluga.solve(ocp,
                  method='traditional',
