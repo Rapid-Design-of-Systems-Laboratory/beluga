@@ -5,6 +5,7 @@ import collections
 from sympy import *
 from sympy.utilities.lambdify import lambdify
 
+
 class Plot(object):
     """
     Represents a single plot with axes, labels, expressions to evaluate etc.
@@ -77,7 +78,7 @@ class Plot(object):
         """
         for line in self.plot_data:
             solution = line['datasource'].get_solution()
-            problem_data  = line['datasource'].get_problem()
+            problem_data = line['datasource'].get_problem()
 
             step_idx = line['step'] if line['step'] is not None else self.step_index
             line['data'] = []
@@ -104,6 +105,7 @@ class Plot(object):
     def postprocess(self, fn):
         self.postprocess_list.append(fn)
         return self
+
 
 class PlotList(list):
     """

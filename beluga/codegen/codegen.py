@@ -215,7 +215,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
             uf = compute_control(tf, yf, p, aux)
             res_left = bc_func_left(y0, u0, p, aux, arc_seq, pi_seq)
             res_right = bc_func_right(yf, uf, p, aux, arc_seq, pi_seq)
-            return np.hstack((res_left, res_right))
+            return np.hstack((res_left.flatten(), res_right.flatten()))
 
     return bc_func
 
@@ -252,8 +252,9 @@ def make_jit_fn(args, fn_expr):
 
     f = eval(fn_str)
     try:
-        jit_fn = numba.jit(nopython=True)(f)
-        jit_fn(*np.ones(len(args)))
+        # jit_fn = numba.jit(nopython=True)(f)
+        # jit_fn(*np.ones(len(args), dtype=float))
+        jit_fn = f
     except:
         jit_fn = f
     return jit_fn
