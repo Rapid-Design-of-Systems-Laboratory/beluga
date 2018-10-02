@@ -61,26 +61,23 @@ class Shooting(BaseAlgorithm):
     def __new__(cls, *args, **kwargs):
         obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
 
-        ivp_args = kwargs.get('ivp_args', dict())
-        tolerance = kwargs.get('tolerance', 1e-4)
-        max_error = kwargs.get('max_error', 100)
-        max_iterations = kwargs.get('max_iterations', 100)
-        num_arcs = kwargs.get('num_arcs', 1)
-        num_cpus = kwargs.get('num_cpus', 1)
-
-        obj.ivp_args = ivp_args
-        obj.tolerance = tolerance
-        obj.max_error = max_error
-        obj.max_iterations = max_iterations
-        obj.num_arcs = num_arcs
-        obj.num_cpus = num_cpus
+        obj.ivp_args = kwargs.get('ivp_args', dict())
+        obj.tolerance = kwargs.get('tolerance', 1e-4)
+        obj.max_error = kwargs.get('max_error', 100)
+        obj.max_iterations = kwargs.get('max_iterations', 100)
+        obj.num_arcs = kwargs.get('num_arcs', 1)
+        obj.num_cpus = kwargs.get('num_cpus', 1)
 
         obj.pool = None
+        obj.stm_ode_func = None
+        obj.bc_func_ms = None
 
         return obj
 
     def __init__(self, *args, **kwargs):
-        self.stm_ode_func = None
+        # Set up the boundary condition function
+        if self.boundarycondition_function is not None:
+            self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
 
         if self.num_cpus > 1:
             self.pool = pool.Pool(processes=self.num_cpus)
@@ -195,7 +192,7 @@ class Shooting(BaseAlgorithm):
             return _stmode_fd(t, _X, p, const, arc_idx)
         return wrapper
 
-    def solve(self, deriv_func, quad_func, bc_func, solinit):
+    def solve(self, solinit):
         """
         Solve a two-point boundary value problem using the shooting method.
 
@@ -213,9 +210,10 @@ class Shooting(BaseAlgorithm):
         sol.q = np.array(sol.q, dtype=np.float64)
         sol.parameters = np.array(sol.parameters, dtype=np.float64)
 
+
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
-        if quad_func is None or all(np.isnan(sol.q)):
+        if self.quadrature_function is None or all(np.isnan(sol.q)):
             q0g = np.array([])
         else:
             q0g = sol.q[0, :]
@@ -225,10 +223,12 @@ class Shooting(BaseAlgorithm):
         paramGuess = sol.parameters
 
         # Make the state-transition ode matrix
-        self.stm_ode_func = self.make_stmode(deriv_func, y0g.shape[0])
+        if self.stm_ode_func is None:
+            self.stm_ode_func = self.make_stmode(self.derivative_function, y0g.shape[0])
 
         # Set up the boundary condition function
-        self.bc_func = self._bc_func_multiple_shooting(bc_func=bc_func)
+        if self.bc_func_ms is None:
+            self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
 
         if sol.arcs is None:
             sol.arcs = [(0, len(solinit.t)-1)]
@@ -289,7 +289,7 @@ class Shooting(BaseAlgorithm):
                     for arc_idx, tspan in enumerate(tspan_list):
                         y0stm[:nOdes] = ya[arc_idx, :]
                         y0stm[nOdes:] = stm0[:]
-                        sol_ivp = prop(self.stm_ode_func, quad_func, tspan, y0stm, q0g, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
+                        sol_ivp = prop(self.stm_ode_func, self.quadrature_function, tspan, y0stm, q0g, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
                         t = sol_ivp.t
                         yy = sol_ivp.y
                         qq = sol_ivp.q
@@ -330,9 +330,9 @@ class Shooting(BaseAlgorithm):
 
                 # Determine the error vector
                 if nquads == 0:
-                    res = self.bc_func(t_list[0][0], ya[0], [], t_list[-1][-1], yb[0], [], paramGuess, sol.aux)
+                    res = self.bc_func_ms(t_list[0][0], ya[0], [], t_list[-1][-1], yb[0], [], paramGuess, sol.aux)
                 else:
-                    res = self.bc_func(t_list[0][0], ya[0], qq[0], t_list[-1][-1], yb[0], qq[-1], paramGuess, sol.aux)
+                    res = self.bc_func_ms(t_list[0][0], ya[0], qq[0], t_list[-1][-1], yb[0], qq[-1], paramGuess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -354,7 +354,7 @@ class Shooting(BaseAlgorithm):
                 # Compute Jacobian of boundary conditions
                 nBCs = len(res)
 
-                J = self._bc_jac_multi(t_list, nBCs, nquads, phi_full_list, y_list, q_list, paramGuess, sol.aux, quad_func, self.bc_func)
+                J = self._bc_jac_multi(t_list, nBCs, nquads, phi_full_list, y_list, q_list, paramGuess, sol.aux, self.quadrature_function, self.bc_func_ms)
 
                 # Compute correction vector
                 if r0 is not None:

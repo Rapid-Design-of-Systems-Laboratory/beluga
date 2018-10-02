@@ -148,6 +148,11 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
     # Initialize scaling
     s = ocp_ws['scaling']
     problem_data = ocp_ws['problem_data']
+
+    # Load the derivative function into the bvp algorithm
+    bvp_algo.set_derivative_function(bvp.deriv_func)
+    bvp_algo.set_quadrature_function(None)
+    bvp_algo.set_boundarycondition_function(bvp.bc_func)
     try:
         sol_guess = solinit
         sol = None
@@ -167,7 +172,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
                 s.compute_scaling(sol_guess)
                 sol_guess = s.scale(sol_guess)
 
-                sol = bvp_algo.solve(bvp.deriv_func, None, bvp.bc_func, sol_guess)
+                sol = bvp_algo.solve(sol_guess)
                 step.last_sol.converged = sol.converged
                 sol = s.unscale(sol)
 

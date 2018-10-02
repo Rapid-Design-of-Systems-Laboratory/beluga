@@ -54,7 +54,7 @@ class Collocation(BaseAlgorithm):
         obj.verbose = verbose
         return obj
     
-    def solve(self, deriv_func, quad_func, bc_func, solinit):
+    def solve(self, solinit):
         """
         Solve a two-point boundary value problem using the collocation method.
 
@@ -78,15 +78,12 @@ class Collocation(BaseAlgorithm):
             sol.y = new_y
             sol.q = new_q
             sol.u = new_u
-            if quad_func is not None:
+            if self.quadrature_function is not None:
                 raise NotImplemented # TODO: Put reconstruction of q's in Trajectory()? Or leave in ivpsol?
 
         # Set up some required class functions for collocation
-        self.eoms = deriv_func
-        self.quadratures = quad_func
         self.path_cost = None # TODO: Assumed to be indirect. This class can handle direct with some work.
         self.terminal_cost = None # TODO: Assumed to be indirect.
-        self.bcs = bc_func
 
         # self.constraint = {'type': 'eq', 'fun': self._collocation_constraint}
         self.constraint_midpoint = {'type': 'eq', 'fun': self._collocation_constraint_midpoint}
@@ -191,8 +188,8 @@ class Collocation(BaseAlgorithm):
     def _collocation_constraint_midpoint(self, vectorized):
         y, quads0, params = self._unwrap_params(vectorized)
         tf = self.tspan[-1]
-        # dX = np.squeeze(self.eoms(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
-        dX = np.squeeze([self.eoms(ti, yi, params, self.aux) for ti,yi in zip(self.tspan, y)])
+        # dX = np.squeeze(self.derivative_function(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
+        dX = np.squeeze([self.derivative_function(ti, yi, params, self.aux) for ti,yi in zip(self.tspan, y)])
         if len(dX.shape) == 1:
             dX = np.array([dX]).T
         dp0 = dX[:-1]
@@ -204,7 +201,7 @@ class Collocation(BaseAlgorithm):
         t12 = (t0+t1)/2
         midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (self.number_of_nodes - 1) / 8 * (dp0 - dp1)
         midpoint_derivative_predicted = -3 / 2 * (self.number_of_nodes - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
-        midpoint_derivative_actual = np.squeeze([self.eoms(ti, yi, params, self.aux) for ti, yi in zip(t12, midpoint_predicted)]) # TODO: Vectorize, so this one works as well
+        midpoint_derivative_actual = np.squeeze([self.derivative_function(ti, yi, params, self.aux) for ti, yi in zip(t12, midpoint_predicted)]) # TODO: Vectorize, so this one works as well
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
@@ -213,10 +210,10 @@ class Collocation(BaseAlgorithm):
     def _collocation_constraint_boundary(self, vectorized):
         X, quads0, params = self._unwrap_params(vectorized)
         if len(quads0) == 0:
-            return np.squeeze(self.bcs(self.tspan[0], X[0], [], self.tspan[-1], X[-1], [], params, self.aux))
+            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], [], self.tspan[-1], X[-1], [], params, self.aux))
         else:
-            quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadratures)
-            return np.squeeze(self.bcs(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, self.aux))
+            quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
+            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, self.aux))
 
     def _collocation_cost(self, vectorized):
         X, quads0, params = self._unwrap_params(vectorized)
