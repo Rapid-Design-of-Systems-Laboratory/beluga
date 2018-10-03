@@ -27,6 +27,7 @@ modules = ['beluga.bvpsol',
 tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
          'beluga.liepack.domain.liealgebras.tests',
+         'beluga.liepack.domain.liegroups.tests',
          'beluga.liepack.tests',
          'beluga.optimlib.tests']
 
