@@ -462,6 +462,6 @@ class GuessGenerator(object):
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y
-        solinit.parameters = param_guess
+        solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         return solinit

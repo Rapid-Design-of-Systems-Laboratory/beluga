@@ -38,14 +38,7 @@ ocp.constraints().set_adjoined(True)
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
-                        derivative_method='fd',
-                        tolerance=1e-4,
-                        max_iterations=200,
-                        max_error=100,
-                        num_arcs=1,
-                        num_cpus=1
-             )
+bvp_solver = beluga.bvp_algorithm('Shooting')
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
@@ -65,7 +58,7 @@ continuation_steps.add_step('bisection') \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol = beluga.solve(ocp,
-             method='traditional',
+             method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)

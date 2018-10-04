@@ -217,7 +217,7 @@ class Shooting(BaseAlgorithm):
         sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
         sol.q = np.array(sol.q, dtype=np.float64)
-        sol.parameters = np.array(sol.parameters, dtype=np.float64)
+        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
 
         # Extract some info from the guess structure
@@ -229,7 +229,7 @@ class Shooting(BaseAlgorithm):
 
         nOdes = y0g.shape[0]
         nquads = q0g.shape[0]
-        paramGuess = sol.parameters
+        paramGuess = sol.dynamical_parameters
         nondynamical_parameter_guess = sol.nondynamical_parameters
 
         # Make the state-transition ode matrix
@@ -270,10 +270,10 @@ class Shooting(BaseAlgorithm):
 
         num_arcs = self.num_arcs
 
-        if solinit.parameters is None:
+        if solinit.dynamical_parameters is None:
             nParams = 0
         else:
-            nParams = solinit.parameters.size
+            nParams = solinit.dynamical_parameters.size
 
         # Initial state of STM is an identity matrix with an additional column of zeros per parameter
         stm0 = np.hstack((np.eye(nOdes), np.zeros((nOdes,nParams)))).reshape(nOdes*(nOdes+nParams))
@@ -423,7 +423,8 @@ class Shooting(BaseAlgorithm):
             sol.y = np.row_stack(y_list)
             if nquads > 0:
                 sol.q = np.row_stack(q_list)
-            sol.parameters = paramGuess
+            sol.dynamical_parameters = paramGuess
+            sol.nondynamical_parameters = nondynamical_parameter_guess
 
         else:
             # Return a copy of the original guess if the problem fails to converge

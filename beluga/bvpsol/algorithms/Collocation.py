@@ -104,13 +104,16 @@ class Collocation(BaseAlgorithm):
             self.number_of_quads = len(sol.q)
             raise NotImplementedError
 
-        if sol.parameters is None:
-            self.number_of_params = 0
-            sol.parameters = np.array([], dtype=np.float64)
-        else:
-            self.number_of_params = len(sol.parameters)
+        if sol.dynamical_parameters is None:
+            sol.dynamical_parameters = np.array([], dtype=np.float64)
 
-        vectorized = self._wrap_params(sol.y, sol.q, sol.parameters)
+        if sol.nondynamical_parameters is None:
+            sol.nondynamical_parameters = np.array([], dtype=np.float64)
+
+        self.number_of_dynamical_params = len(sol.dynamical_parameters)
+        self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
+
+        vectorized = self._wrap_params(sol.y, sol.q, sol.dynamical_parameters, sol.nondynamical_parameters)
 
         self.aux = sol.aux
         sol.converged = False
@@ -128,7 +131,7 @@ class Collocation(BaseAlgorithm):
 
         # Organize the output with the sol() structure
         sol.t = self.tspan
-        sol.y, sol.q, sol.parameters = self._unwrap_params(xopt['x'])
+        sol.y, sol.q, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
         return sol
 
     def reconstruct(self, time, ivp):
@@ -186,7 +189,7 @@ class Collocation(BaseAlgorithm):
         return time, y_new, quadsf
 
     def _collocation_constraint_midpoint(self, vectorized):
-        y, quads0, params = self._unwrap_params(vectorized)
+        y, quads0, params, nondyn_params = self._unwrap_params(vectorized)
         tf = self.tspan[-1]
         # dX = np.squeeze(self.derivative_function(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
         dX = np.squeeze([self.derivative_function(ti, yi, params, self.aux) for ti,yi in zip(self.tspan, y)])
@@ -208,15 +211,15 @@ class Collocation(BaseAlgorithm):
         return outvec.flatten()
 
     def _collocation_constraint_boundary(self, vectorized):
-        X, quads0, params = self._unwrap_params(vectorized)
+        X, quads0, params, nondyn_params = self._unwrap_params(vectorized)
         if len(quads0) == 0:
-            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], [], self.tspan[-1], X[-1], [], params, self.aux))
+            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], [], self.tspan[-1], X[-1], [], params, nondyn_params, self.aux))
         else:
             quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
-            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, self.aux))
+            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, nondyn_params, self.aux))
 
     def _collocation_cost(self, vectorized):
-        X, quads0, params = self._unwrap_params(vectorized)
+        X, quads0, params, nondyn_params = self._unwrap_params(vectorized)
         return 0
 
         if self.path_cost is not None:
@@ -237,27 +240,21 @@ class Collocation(BaseAlgorithm):
         return path_cost + terminal_cost
 
     def _unwrap_params(self, vectorized):
-        # TODO: This is hella inefficient
-        if self.number_of_params + self.number_of_quads == 0:
-            X = vectorized.reshape([self.number_of_nodes,self.number_of_odes])
-            quads = np.array([])
-            params = np.array([])
-        else:
-            quads = np.array([])
-            params = np.array([])
-            X = vectorized[0:-(self.number_of_params+self.number_of_quads)].reshape([self.number_of_nodes,self.number_of_odes])
-            if self.number_of_params == 0:
-                quads = vectorized[-self.number_of_quads:]
-            elif self.number_of_quads == 0:
-                params = np.array(vectorized[-self.number_of_params:])
-            else:
-                quads = vectorized[-(self.number_of_params+self.number_of_quads):-(self.number_of_params)]
-                params = vectorized[-self.number_of_params:]
+        X = vectorized[:self.number_of_odes*self.number_of_nodes].reshape([self.number_of_nodes, self.number_of_odes])
+        vectorized = np.delete(vectorized, np.arange(0, self.number_of_odes * self.number_of_nodes))
 
-        return X, quads, params
+        dynamical_params = vectorized[:self.number_of_dynamical_params]
+        vectorized = np.delete(vectorized, np.arange(0, self.number_of_dynamical_params))
 
-    def _wrap_params(self, y, q, params):
-        return np.concatenate((y.flatten(), q, params))
+        nondynamical_params = vectorized[:self.number_of_nondynamical_params]
+        vectorized = np.delete(vectorized, np.arange(0, self.number_of_nondynamical_params))
+
+        quads = vectorized[:self.number_of_quads]
+
+        return X, quads, dynamical_params, nondynamical_params
+
+    def _wrap_params(self, y, q, params, nondyn_params):
+        return np.concatenate((y.flatten(), q, params, nondyn_params))
 
     @staticmethod
     def _get_poly_coefficients_1_3(p0, dquads0, dquads12, dquads1):
