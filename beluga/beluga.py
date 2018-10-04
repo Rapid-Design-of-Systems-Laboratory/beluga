@@ -84,7 +84,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     solinit.aux['const'] = OrderedDict((str(const.name),float(const.value))
                                 for const in ocp_ws['constants'])
 
-    solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']
+    solinit.aux['dynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['dynamical_parameters']]
+    solinit.aux['nondynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['nondynamical_parameters']]
 
     # For path constraints
     solinit.aux['constraint'] = cl.defaultdict(float)
@@ -123,8 +124,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     # Final time is appended as a parameter, so scale the output x variables to show the correct time
     for continuation_set in out['solution']:
         for sol in continuation_set:
-            tf_ind = [i for i, s in enumerate(out['problem_data']['parameter_list']) if s is 'tf'][0]
-            tf = sol.parameters[tf_ind]
+            tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
+            tf = sol.dynamical_parameters[tf_ind]
             sol.t = sol.t*tf
 
     # Save data
@@ -191,7 +192,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.parameters, sol.aux)
+                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
                     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
                     # keyboard()
 

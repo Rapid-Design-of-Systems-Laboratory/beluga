@@ -428,12 +428,13 @@ class GuessGenerator(object):
         # TODO: Automatically generate parameter guess values
 
         if param_guess is None:
-            param_guess = np.zeros(len(solinit.aux['parameters']))
-        elif len(param_guess) < len(solinit.aux['parameters']):
-            param_guess += np.zeros(len(solinit.aux['parameters']) - len(param_guess))
-        elif len(param_guess) > len(solinit.aux['parameters']):
+            param_guess = np.zeros(len(solinit.aux['dynamical_parameters']))
+        elif len(param_guess) < len(solinit.aux['dynamical_parameters']):
+            param_guess += np.zeros(len(solinit.aux['dynamical_parameters']) - len(param_guess))
+        elif len(param_guess) > len(solinit.aux['dynamical_parameters']):
             # TODO: Write a better error message
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
+        nondynamical_param_guess = np.zeros(len(solinit.aux['nondynamical_parameters']))
 
         param_guess[0] = self.time_integrate
 
@@ -461,5 +462,6 @@ class GuessGenerator(object):
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y
-        solinit.parameters = param_guess
+        solinit.dynamical_parameters = param_guess
+        solinit.nondynamical_parameters = nondynamical_param_guess
         return solinit

@@ -82,9 +82,8 @@ class Shooting(BaseAlgorithm):
         if self.num_cpus > 1:
             self.pool = pool.Pool(processes=self.num_cpus)
 
-    def _bc_jac_multi(self, t_list, nBCs, nquads, phi_full_list, y_list, q_list, parameters, aux, quad_func, bc_func, StepSize=1e-6):
+    def _bc_jac_multi(self, t_list, nBCs, nquads, phi_full_list, y_list, q_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
         parameters = np.array(parameters)
-        nParams = parameters.size
         h = StepSize
         t0 = t_list[0][0]
         tf = t_list[-1][-1]
@@ -99,14 +98,15 @@ class Shooting(BaseAlgorithm):
         nOdes = y0.shape[0]
         num_arcs = len(phi_full_list)
 
-        fx = bc_func(t0, y0, q0, tf, yf, qf, parameters, aux)
+        fx = bc_func(t0, y0, q0, tf, yf, qf, parameters, nondynamical_params, aux)
         nBCs = len(fx)
 
         M = np.zeros((nBCs, nOdes))
-        P = np.zeros((nBCs, parameters.size))
+        P1 = np.zeros((nBCs, parameters.size))
+        P2 = np.zeros((nBCs, nondynamical_params.size))
         Ptemp = np.zeros((nBCs, parameters.size))
-        J = np.zeros((nBCs, (nOdes)*num_arcs+parameters.size))
-        dx = np.zeros((nOdes+nParams, num_arcs))
+        J = np.zeros((nBCs, (nOdes)*num_arcs + parameters.size + nondynamical_params.size))
+        dx = np.zeros((nOdes + parameters.size, num_arcs))
 
         for arc_idx, phi in zip(it.count(), phi_full_list):
             for ii in range(nOdes):
@@ -115,9 +115,9 @@ class Shooting(BaseAlgorithm):
                 gamma = Trajectory(np.hstack(t_list), np.vstack(y_list) + dy[:,:,arc_idx])
                 if nquads > 0:
                     gamma = reconstruct(quad_func, gamma, q0, parameters, aux, (0,))
-                    f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, aux)
+                    f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, nondynamical_params, aux)
                 else:
-                    f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, aux)
+                    f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, nondynamical_params, aux)
                 M[:, ii] = (f-fx)/h
                 dx[ii, arc_idx] = dx[ii, arc_idx] - h
             J_i = M
@@ -125,7 +125,7 @@ class Shooting(BaseAlgorithm):
             J[:,J_slice] = J_i
 
         for arc_idx, phi in zip(it.count(), phi_full_list):
-            for ii in range(nParams):
+            for ii in range(parameters.size):
                 parameters[ii] = parameters[ii] + h
                 jj = ii + nOdes
                 dx[jj, arc_idx] = dx[jj, arc_idx] + h
@@ -133,31 +133,40 @@ class Shooting(BaseAlgorithm):
                 gamma = Trajectory(np.hstack(t_list), np.vstack(y_list) + dy[:, :, arc_idx])
                 if nquads > 0:
                     gamma = reconstruct(quad_func, gamma, q0, parameters, aux, (0,))
-                    f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, aux)
+                    f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, nondynamical_params, aux)
                 else:
-                    f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, aux)
+                    f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, nondynamical_params, aux)
                 Ptemp[:, ii] = (f-fx)/h
                 dx[jj, arc_idx] = dx[jj, arc_idx] - h
                 parameters[ii] = parameters[ii] - h
-            P += Ptemp
-            Ptemp = np.zeros((nBCs, nParams))
+            P1 += Ptemp
+            Ptemp = np.zeros((nBCs, parameters.size))
 
-        J_i = P
-        J_slice = slice(nOdes * num_arcs, nOdes * num_arcs + nParams)
+        Ptemp = np.zeros((nBCs, nondynamical_params.size))
+        for ii in range(nondynamical_params.size):
+            nondynamical_params[ii] = nondynamical_params[ii] + h
+            if nquads > 0:
+                f = bc_func(t0, y_list[0][0,:], q_list[0][0,:], tf, y_list[-1][-1,:], q_list[-1][-1,:], parameters, nondynamical_params, aux)
+            else:
+                f = bc_func(t0, y_list[0][0,:], [], tf, y_list[-1][-1,:], [], parameters, nondynamical_params, aux)
+            Ptemp[:, ii] = (f-fx)/h
+            nondynamical_params[ii] = nondynamical_params[ii] - h
+        P2 += Ptemp
+        J_i = np.hstack((P1, P2))
+        J_slice = slice(nOdes * num_arcs, nOdes * num_arcs + (parameters.size + nondynamical_params.size))
         J[:, J_slice] = J_i
-
         return J
 
     def _bc_func_multiple_shooting(self, bc_func=None):
-        def _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux):
-            bc1 = np.array(bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)).flatten()
+        def _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux):
+            bc1 = np.array(bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux)).flatten()
             # narcs = y0.shape[1]
             # bc2 = np.array([y0[:, ii + 1] - yf[:, ii] for ii in range(narcs - 1)]).flatten()
             # bc = np.hstack((bc1,bc2))
             return bc1
 
-        def wrapper(t0, y0, q0, tf, yf, qf, paramGuess, aux):
-            return _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, aux)
+        def wrapper(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux):
+            return _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux)
 
         return wrapper
 
@@ -208,8 +217,8 @@ class Shooting(BaseAlgorithm):
         sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
         sol.q = np.array(sol.q, dtype=np.float64)
-        sol.parameters = np.array(sol.parameters, dtype=np.float64)
-
+        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
+        sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
@@ -220,7 +229,8 @@ class Shooting(BaseAlgorithm):
 
         nOdes = y0g.shape[0]
         nquads = q0g.shape[0]
-        paramGuess = sol.parameters
+        paramGuess = sol.dynamical_parameters
+        nondynamical_parameter_guess = sol.nondynamical_parameters
 
         # Make the state-transition ode matrix
         if self.stm_ode_func is None:
@@ -260,10 +270,10 @@ class Shooting(BaseAlgorithm):
 
         num_arcs = self.num_arcs
 
-        if solinit.parameters is None:
+        if solinit.dynamical_parameters is None:
             nParams = 0
         else:
-            nParams = solinit.parameters.size
+            nParams = solinit.dynamical_parameters.size
 
         # Initial state of STM is an identity matrix with an additional column of zeros per parameter
         stm0 = np.hstack((np.eye(nOdes), np.zeros((nOdes,nParams)))).reshape(nOdes*(nOdes+nParams))
@@ -330,9 +340,9 @@ class Shooting(BaseAlgorithm):
 
                 # Determine the error vector
                 if nquads == 0:
-                    res = self.bc_func_ms(t_list[0][0], ya[0], [], t_list[-1][-1], yb[0], [], paramGuess, sol.aux)
+                    res = self.bc_func_ms(t_list[0][0], ya[0], [], t_list[-1][-1], yb[0], [], paramGuess, nondynamical_parameter_guess, sol.aux)
                 else:
-                    res = self.bc_func_ms(t_list[0][0], ya[0], qq[0], t_list[-1][-1], yb[0], qq[-1], paramGuess, sol.aux)
+                    res = self.bc_func_ms(t_list[0][0], ya[0], qq[0], t_list[-1][-1], yb[0], qq[-1], paramGuess, nondynamical_parameter_guess, sol.aux)
 
                 # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(res)):
@@ -354,7 +364,7 @@ class Shooting(BaseAlgorithm):
                 # Compute Jacobian of boundary conditions
                 nBCs = len(res)
 
-                J = self._bc_jac_multi(t_list, nBCs, nquads, phi_full_list, y_list, q_list, paramGuess, sol.aux, self.quadrature_function, self.bc_func_ms)
+                J = self._bc_jac_multi(t_list, nBCs, nquads, phi_full_list, y_list, q_list, paramGuess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
 
                 # Compute correction vector
                 if r0 is not None:
@@ -387,8 +397,10 @@ class Shooting(BaseAlgorithm):
                 d_ya = np.reshape(dy0[:nOdes * num_arcs], (num_arcs, nOdes), order='C')
 
                 if nParams > 0:
-                    dp = dy0[nOdes * num_arcs:]
-                    paramGuess += dp
+                    dp1 = dy0[nOdes * num_arcs:nOdes * num_arcs + paramGuess.size]
+                    dp2 = dy0[nOdes * num_arcs + paramGuess.size:]
+                    paramGuess += dp1
+                    nondynamical_parameter_guess += dp2
                     ya = ya + d_ya
                 else:
                     ya = ya + d_ya
@@ -411,7 +423,8 @@ class Shooting(BaseAlgorithm):
             sol.y = np.row_stack(y_list)
             if nquads > 0:
                 sol.q = np.row_stack(q_list)
-            sol.parameters = paramGuess
+            sol.dynamical_parameters = paramGuess
+            sol.nondynamical_parameters = nondynamical_parameter_guess
 
         else:
             # Return a copy of the original guess if the problem fails to converge

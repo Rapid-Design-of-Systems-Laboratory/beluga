@@ -26,8 +26,8 @@ def ocp_to_bvp(ocp, guess):
     bc_terminal = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
     bc_terminal = make_time_bc(constraints, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-    parameters = make_parameters(initial_lm_params, terminal_lm_params)
-    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian)
+    nondyn_parameters = initial_lm_params + terminal_lm_params
+    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, nondyn_parameters, constants, quantity_vars, hamiltonian)
     dae_states, dae_equations, dae_bc, guess, temp_dgdX, temp_dgdU = make_control_dae(states, costates, controls, dHdu, guess, derivative_fn)
 
     # Generate the problem data
@@ -55,13 +55,13 @@ def ocp_to_bvp(ocp, guess):
         'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
         'state_list':[str(x) for x in it.chain(states, costates)],
         'control_list': [str(x) for x in it.chain(controls)],
-        'parameter_list': [str(tf_var)] + [str(p) for p in parameters],
         'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in costates] + [tf_var*dae_eom for dae_eom in dae_equations],
         'states': states,
         'costates': costates,
         'constants': constants,
         'constants_of_motion': constants_of_motion,
-        'parameters': [tf_var] + parameters,
+        'dynamical_parameters': [tf_var],
+        'nondynamical_parameters': nondyn_parameters,
         'controls': controls,
         'quantity_vars': quantity_vars,
         'dae_var_list': [str(dae_state) for dae_state in dae_states],
@@ -70,7 +70,6 @@ def ocp_to_bvp(ocp, guess):
         'costate_eoms': costate_eoms,
         'hamiltonian': hamiltonian,
         'num_states': 2 * len(states),
-        'num_params': len(parameters) + 1,
         'dHdu': [str(_) for _ in it.chain(dHdu)],
         'bc_initial': [str(_) for _ in bc_initial],
         'bc_terminal': [str(_) for _ in it.chain(bc_terminal, dae_bc)],

@@ -203,25 +203,6 @@ def make_ham_lamdot(states, path_cost, derivative_fn):
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
 
 
-def make_parameters(initial_lm_params, terminal_lm_params):
-    """
-    Makes parameters.
-
-    :param initial_lm_params:
-    :param terminal_lm_params:
-    :param s_list:
-    :return: List of parameters.
-    """
-    params_list = [str(p) for p in it.chain(initial_lm_params,
-                                            terminal_lm_params)] #, *all_pi_names)]
-    if len(params_list) > 0:
-        parameters = [sympy.symbols(p) for p in params_list]
-    else:
-        parameters = []
-
-    return parameters
-
-
 def make_time_bc(constraints, bc_terminal):
     """
     Makes free or fixed final time boundary conditions.
