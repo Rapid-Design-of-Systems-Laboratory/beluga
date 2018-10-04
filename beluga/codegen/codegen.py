@@ -108,16 +108,15 @@ def make_deriv_func(deriv_list, states, costates, parameters, constants, control
 
     return deriv_func
 
-def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constants, controls, quantity_vars, compute_control, ham_fn, constraint_name=None, is_icrm=False):
+def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, compute_control, ham_fn, constraint_name=None, is_icrm=False):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
     costates = sym.Matrix([_.name for _ in costates])
-    parameters = sym.Matrix(parameters)
+    dynamical_parameters = sym.Matrix(dynamical_parameters)
     unknowns = list(controls)
-    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, *parameters, *constants]
-
+    ham_args = [*states, *costates, *dynamical_parameters, *constants, *unknowns]
+    u_args = [*states, *costates, *dynamical_parameters, *constants]
     if constraint_name is not None:
         ham_args.append(constraint_name)
         u_args.append(constraint_name)
@@ -125,12 +124,13 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
         ham_args.append('___dummy_arg___')
         u_args.append('___dummy_arg___')
     num_states = len(states)
-    num_params = len(parameters)
+    num_dynamical_params = len(dynamical_parameters)
+    num_nondynamical_params = len(nondynamical_parameters)
     constraint_name = str(constraint_name)
 
-    def bc_func_left(_y, u, p, aux, arc_seq, pi_seq, bcf=bc_initial):
+    def bc_func_left(_y, u, p, ndp, aux, arc_seq, pi_seq, bcf=bc_initial):
         C = aux['const'].values()
-        p = p[:num_params]
+        p = p[:num_dynamical_params]
         s_val = aux['constraint'].get((constraint_name, 1), -1)
         _x0 = aux['initial']
         _xf = aux['terminal']
@@ -145,7 +145,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
             exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
             ii += 1
 
-        for a in parameters:
+        for a in dynamical_parameters:
             exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
             ii += 1
 
@@ -155,6 +155,11 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
 
         for a in unknowns:
             exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        ii = 0
+        for a in nondynamical_parameters:
+            exec(str(a) + ' = ' + 'ndp[' + str(ii) + ']')
             ii += 1
 
         bc = []
@@ -163,9 +168,9 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
 
         return np.array(bc)
 
-    def bc_func_right(_y, u, p, aux, arc_seq, pi_seq, bcf=bc_terminal):
+    def bc_func_right(_y, u, p, ndp, aux, arc_seq, pi_seq, bcf=bc_terminal):
         C = aux['const'].values()
-        p = p[:num_params]
+        p = p[:num_dynamical_params]
         s_val = aux['constraint'].get((constraint_name, 1), -1)
         _x0 = aux['initial']
         _xf = aux['terminal']
@@ -180,7 +185,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
             exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
             ii += 1
 
-        for a in parameters:
+        for a in dynamical_parameters:
             exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
             ii += 1
 
@@ -190,6 +195,11 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
 
         for a in unknowns:
             exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+            ii += 1
+
+        ii = 0
+        for a in nondynamical_parameters:
+            exec(str(a) + ' = ' + 'ndp[' + str(ii) + ']')
             ii += 1
 
         bc = []
@@ -199,22 +209,22 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constant
         return np.array(bc)
 
     if is_icrm:
-        def bc_func(t0, y0, q0, tf, yf, qf, p, aux):
+        def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
             arc_seq = aux.get('arc_seq', (0,))
             pi_seq = aux.get('pi_seq', (None,))
             u0 = compute_control(t0, y0, p, aux)
             uf = compute_control(tf, yf, p, aux)
-            res_left = bc_func_left(y0[:2*num_states], u0, p, aux, arc_seq, pi_seq)
-            res_right = bc_func_right(yf[:2*num_states], uf, p, aux, arc_seq, pi_seq)
+            res_left = bc_func_left(y0[:2*num_states], u0, p, ndp, aux, arc_seq, pi_seq)
+            res_right = bc_func_right(yf[:2*num_states], uf, p, ndp, aux, arc_seq, pi_seq)
             return np.hstack((res_left, res_right))
     else:
-        def bc_func(t0, y0, q0, tf, yf, qf, p, aux):
+        def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
             arc_seq = aux.get('arc_seq', (0,))
             pi_seq = aux.get('pi_seq', (None,))
             u0 = compute_control(t0, y0, p, aux)
             uf = compute_control(tf, yf, p, aux)
-            res_left = bc_func_left(y0, u0, p, aux, arc_seq, pi_seq)
-            res_right = bc_func_right(yf, uf, p, aux, arc_seq, pi_seq)
+            res_left = bc_func_left(y0, u0, p, ndp, aux, arc_seq, pi_seq)
+            res_right = bc_func_right(yf, uf, p, ndp, aux, arc_seq, pi_seq)
             return np.hstack((res_left.flatten(), res_right.flatten()))
 
     return bc_func
@@ -224,23 +234,25 @@ def make_functions(problem_data):
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
     costates = problem_data['costates']
-    parameters = problem_data['parameters']
+    nondynamical_parameters = problem_data['nondynamical_parameters']
+    dynamical_parameters = problem_data['dynamical_parameters']
+    parameters = dynamical_parameters + nondynamical_parameters
     constants = problem_data['constants']
     controls = problem_data['controls']
     quantity_vars = problem_data['quantity_vars']
     is_icrm = problem_data['method'].lower() == 'icrm'
     ham = problem_data['hamiltonian']
     logging.info('Making unconstrained control')
-    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, costates, parameters, constants, controls, quantity_vars, ham, is_icrm=is_icrm)
+    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, costates, dynamical_parameters, constants, controls, quantity_vars, ham, is_icrm=is_icrm)
 
     logging.info('Making derivative function and bc function')
     deriv_list = problem_data['deriv_list']
 
-    deriv_func = make_deriv_func(deriv_list, states, costates, parameters, constants, controls, quantity_vars, control_fn, is_icrm=is_icrm)
+    deriv_func = make_deriv_func(deriv_list, states, costates, dynamical_parameters, constants, controls, quantity_vars, control_fn, is_icrm=is_icrm)
 
     bc_initial = problem_data['bc_initial']
     bc_terminal = problem_data['bc_terminal']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, costates, parameters, constants, controls, quantity_vars, control_fn, ham_fn, is_icrm=is_icrm)
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, control_fn, ham_fn, is_icrm=is_icrm)
 
     return deriv_func, bc_func, control_fn, ham_fn
 
@@ -252,9 +264,8 @@ def make_jit_fn(args, fn_expr):
 
     f = eval(fn_str)
     try:
-        # jit_fn = numba.jit(nopython=True)(f)
-        # jit_fn(*np.ones(len(args), dtype=float))
-        jit_fn = f
+        jit_fn = numba.jit(nopython=True)(f)
+        jit_fn(*np.ones(len(args), dtype=float))
     except:
         jit_fn = f
     return jit_fn

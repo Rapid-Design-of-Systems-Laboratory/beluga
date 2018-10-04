@@ -146,7 +146,7 @@ class Scaling(dict):
                     solout.aux[aux['type']][var] /= self.scale_vals[aux['type']][var]
 
         # Scale parameters
-        for idx, param in enumerate(self.problem_data['parameter_list']):
+        for idx, param in enumerate([str(p) for p in self.problem_data['dynamical_parameters']]):
             solout.parameters[idx] /= self.scale_vals['parameters'][param]
 
         for (s_name, arc_idx), s_val in sol.aux['constraint'].items():
@@ -174,7 +174,7 @@ class Scaling(dict):
                     solout.aux[aux['type']][var] *= self.scale_vals[aux['type']][var]
 
         # Scale parameters
-        for idx, param in enumerate(self.problem_data['parameter_list']):
+        for idx, param in enumerate([str(p) for p in self.problem_data['dynamical_parameters']]):
             solout.parameters[idx] *= self.scale_vals['parameters'][param]
 
         for (s_name, arc_idx), s_val in solout.aux['constraint'].items():
