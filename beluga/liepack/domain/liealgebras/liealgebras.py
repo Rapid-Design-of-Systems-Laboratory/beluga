@@ -3,102 +3,68 @@ import copy
 import numpy as np
 
 from random import uniform
-from math import floor
 
-class LieAlgebra(object):
+class LieAlgebra(np.ndarray):
     """
     This serves as the default superclass on which all Lie algebras are constructed from.
     """
     abelian = False  # Default to assuming all Lie algebras are nonabelian.
 
     def __new__(cls, *args, **kwargs):
-        obj = super(LieAlgebra, cls).__new__(cls)
-        obj.shape = None
-        obj.data = None
+        if len(args) == 0:
+            raise TypeError("Required input 'shape' (pos 1) or 'LieAlgebra' (pos 1) not found")
 
-        if len(args) > 0:
-            if isinstance(args[0], LieAlgebra):
-                obj = copy.copy(args[0])
-            elif isinstance(args[0], int):
-                obj.shape = args[0]
-                obj.data = None
+        if isinstance(args[0], LieAlgebra):
+            obj = copy.copy(args[0])
+            return obj
+
+        if isinstance(args[0], int):
+            obj = super(LieAlgebra, cls).__new__(cls, (args[0], args[0]), **kwargs)
+        else:
+            raise ValueError("Input 'shape' (pos 1) must be of 'int' type")
 
         if len(args) > 1:
-            obj.data = args[1]
+            if isinstance(args[1], np.ndarray):
+                np.copyto(obj, args[1])
+            elif isinstance(args[1], list):
+                for ii in range(len(args[1])):
+                    for jj in range(len(args[1])):
+                        obj[ii,jj] = args[1][ii][jj]
+        else:
+            np.copyto(obj, np.zeros(obj.shape))
 
         return obj
 
-    def __init__(self, *args, **kwargs):
-        if self.data is None:
-            self.zero()
-
-    def __add__(self, other):
-        if isinstance(other, int):
-            newdata = self.data + other
-        elif isinstance(other, float):
-            newdata = self.data + other
-        elif isinstance(other, LieAlgebra):
-            newdata = self.data + other.data
-        return LieAlgebra(self, newdata)
-
     def __eq__(self, other):
-        class_condition = type(self) == type(other)
-        if isinstance(other, int) or isinstance(other, float):
-            class_condition = True
-            data_condition = (self.data == other*np.ones((self.shape))).all()
-        else:
-            data_condition = (self.data == other.data).all()
+        return super(LieAlgebra, self).__eq__(other).view(np.ndarray)
 
-        return class_condition and data_condition
+    def __ge__(self, other):
+        return super(LieAlgebra, self).__ge__(other).view(np.ndarray)
+
+    def __gt__(self, other):
+        return super(LieAlgebra, self).__gt__(other).view(np.ndarray)
+
+    def __le__(self, other):
+        return super(LieAlgebra, self).__le__(other).view(np.ndarray)
 
     def __lt__(self, other):
-        if isinstance(other, int) or isinstance(other, float):
-            data_condition = (self.data < other * np.ones((self.shape))).all()
-        else:
-            data_condition = (self.data < other.data).all()
-
-        return data_condition
-
-    def __mul__(self, other):
-        if isinstance(other, int):
-            newdata = self.data * other
-        elif isinstance(other, float):
-            newdata = self.data * other
-        else:
-            newdata = np.dot(self.data, other.data)
-
-        return LieAlgebra(self, newdata)
+        return super(LieAlgebra, self).__lt__(other).view(np.ndarray)
 
     def __ne__(self, other):
-        class_condition = type(self) == type(other)
-        data_condition = (self.data == other.data).all()
-
-        return not (class_condition and data_condition)
-
-    def __neg__(self):
-        return LieAlgebra(self, -self.data)
-
-    __radd__ = __add__
+        return super(LieAlgebra, self).__ne__(other).view(np.ndarray)
 
     def __repr__(self):
-        return self.__class__.__name__ + '(' + str(self.shape) + ', ' + str(self.data) + ')'
-
-    __rmul__ = __mul__
-
-    def __sub__(self, other):
-        return LieAlgebra(self, self.data - other.data)
-
-    def __truediv__(self, other):
-        if isinstance(other, int):
-            newdata = self.data / other
-        elif isinstance(other, float):
-            newdata = self.data / other
+        if len(self.shape) == 0:
+            return super(LieAlgebra, self).__str__()
         else:
-            raise NotImplementedError
-
-        return LieAlgebra(self, newdata)
+            return self.__class__.__name__ + '(' + str(self.shape[0]) + ', ' + super(LieAlgebra, self).__str__() + ')'
 
     def basis(self):
+        """
+        Returns a basis for the Lie algebra.
+
+        :return: List of basis elements.
+        """
         d = self.get_dimension()
         basis = [LieAlgebra(self) for _ in range(d)]
         z = np.zeros(d)
@@ -109,7 +75,7 @@ class LieAlgebra(object):
         return basis
 
     @abc.abstractmethod
-    def get_dimension(self) -> int:
+    def get_dimension(self):
         """
         Returns the dimension of the Lie algebra.
 
@@ -117,13 +83,38 @@ class LieAlgebra(object):
         """
         raise NotImplementedError
 
-    def get_shape(self) -> int:
+    def get_shape(self):
         r"""
         Returns the shape of the Lie algebra.
 
         :return: Shape.
         """
-        return self.shape
+        return int(self.shape[0])
+
+    @abc.abstractmethod
+    def get_vector(self):
+        r"""
+        Take's a Lie algebra's matrix representation and returns its vector representation.
+
+        :return: vector A :math:`1 \times n`-dimensional vector.
+        """
+        raise NotImplementedError
+
+    def killing_form(self):
+        r"""
+        Returns the Killing form for the Lie algebra.
+
+        :return: Killing form.
+        """
+        from beluga.liepack import killing
+        basis = self.basis()
+        L = len(basis)
+        mat = np.zeros((L,L))
+        for ii in range(L):
+            for jj in range(L):
+                mat[ii,jj] = killing(basis[ii], basis[jj])
+
+        return mat
 
     @abc.abstractmethod
     def set_vector(self, vector):
@@ -167,16 +158,16 @@ class rn(LieAlgebra):
     """
     abelian = True
 
-    def get_dimension(self) -> int:
-        n = self.shape
-        return int(n)
+    def get_dimension(self):
+        n = self.get_shape()
+        return int(n-1)
 
     def get_vector(self):
-        return np.array(self.data[:-1,-1])
+        return np.array(self[:-1,-1])
 
     def set_vector(self, vector):
         vector = np.array(vector, dtype=np.float64)
-        n = self.shape
+        n = self.get_dimension()
         vlen = n
         if vlen != len(vector):
             raise ValueError
@@ -203,26 +194,26 @@ class so(LieAlgebra):
     """
     abelian = False
 
-    def get_dimension(self) -> int:
-        n = self.shape
+    def get_dimension(self):
+        n = self.get_shape()
         return int(n*(n-1)/2)
 
     def get_vector(self):
-        n = self.shape
+        n = self.get_shape()
         vlen = int(n*(n-1)/2)
         vector = np.zeros(vlen)
 
         k = 0
         for i in range(n-1, 0, -1):
             for j in range(n, i, -1):
-                vector[k] = self.data[i-1, j-1]/(-1)**(i+j)
+                vector[k] = (self[i-1, j-1])/(-1)**(i+j)
                 k += 1
 
         return vector
 
     def set_vector(self, vector):
         vector = np.array(vector, dtype=np.float64)
-        n = self.shape
+        n = self.shape[0]
         vlen = int(n*(n-1)/2)
         if vlen != len(vector):
             raise ValueError
@@ -265,22 +256,23 @@ class sp(LieAlgebra):
     def __new__(cls, *args, **kwargs):
         obj = super(sp, cls).__new__(cls, *args, **kwargs)
 
-        if obj.shape is not None and obj.shape % 2 != 0:
+        if cls.get_shape(obj) is not None and cls.get_shape(obj) % 2 != 0:
             raise ValueError('Symplectic Lie algebra must have an even dimension.')
 
         return obj
 
-    def get_dimension(self) -> int:
-        return int(self.shape * (self.shape + 1)/2)
+    def get_dimension(self):
+        shape = self.get_shape()
+        return int(shape * (shape + 1)/2)
 
     def get_vector(self):
         d = self.get_shape()
         s = int(d/2)
         k = 0
         out = np.zeros(self.get_dimension())
-        A = self.data[:s,:s]
-        B = self.data[:s, s:2*s]
-        C = self.data[s:2*s, :s]
+        A = self[:s,:s]
+        B = self[:s, s:2*s]
+        C = self[s:2*s, :s]
         for ii in range(s):
             for jj in range(s):
                 out[k] = A[ii, jj]
