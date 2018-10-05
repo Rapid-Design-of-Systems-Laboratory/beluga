@@ -81,18 +81,15 @@ def test_Shooting_4():
         return x[0]
 
     def bcfun(t0, X0, q0, tf, Xf, qf, params, ndp, aux):
-        return X0[0], X0[1] - 1, qf[0] - 1.0 + params[0]
+        return X0[0], X0[1] - 1, qf[0] - 1.0
 
     algo = Shooting(odefun, quadfun, bcfun)
     solinit = Solution()
     solinit.t = np.linspace(0, np.pi / 2, 2)
-    solinit.y = np.array([[1, 0], [1, 0]])  # Ends at [0, 1] # q is y[:,1]
+    solinit.y = np.array([[1, 0], [1, 0]])
     solinit.q = np.array([[0], [0]])
-    solinit.dynamical_parameters = np.array([0])
     out = algo.solve(solinit)
     assert (out.y[0,0] - 0) < tol
     assert (out.y[0,1] - 1) < tol
-    assert (out.q[0,0] - 0) < tol
-    assert (out.q[-1,0] + 1) < tol
-    assert (out.dynamical_parameters[0] - 2) < tol
-
+    assert (out.q[0,0] - 2) < tol
+    assert (out.q[-1,0] - 1) < tol
