@@ -3,8 +3,7 @@ from beluga.liepack.domain.liegroups import *
 from beluga.liepack.domain.hspaces import *
 
 from scipy.linalg import expm as scipyexpm
-from scipy.linalg import inv as scipyinv
-from beluga.utils import Bernoulli
+from scipy.special import bernoulli
 from math import factorial
 import numpy as np
 
@@ -42,7 +41,7 @@ def group2algebra(G):
         return LieAlgebra
 
 
-class Adjoint(object):
+def Adjoint(G, h):
     r"""
     Adjoint map of a Lie group, :math:`g \in G`, on Lie algebra element :math:`h \in \mathfrak{g}`.
 
@@ -56,45 +55,11 @@ class Adjoint(object):
     :param h: A Lie algebra element.
     :return: :math:`\text{Ad}_g(h)`
     """
-    def __new__(cls, *args, **kwargs):
-        obj = super(Adjoint, cls).__new__(cls)
-        G, g = None, None
-
-        if len(args) > 0:
-            G = args[0]
-
-        if len(args) > 1:
-            g = args[1]
-
-        obj._G = G
-        obj._g = g
-
-        if G is not None and g is not None:
-            return cls.__call__(obj, *args, **kwargs)
-        else:
-            return obj
-
-    def __call__(self, *args, **kwargs):
-        k = 0
-        if self._G is None:
-            G = args[k]
-            k += 1
-        else:
-            G = self._G
-
-        if self._g is None:
-            g = args[k]
-            k += 1
-        else:
-            g = self._g
-
-        if self._G.abelian is True:
-            return LieAlgebra(self._g)
-        else:
-            return LieAlgebra(g, G.data)*g*LieAlgebra(g, scipyinv(G.data))
+    g = group2algebra(G)
+    return g(G.get_shape(), np.dot(np.dot(G, h), np.linalg.inv(G)))
 
 
-class Commutator(object):
+def commutator(g, h, **kwargs):
     r"""
     Commutator of two Lie algebra elements, :math:`g, h \in \mathfrak{g}`.
 
@@ -119,7 +84,7 @@ class Commutator(object):
     Construct the set of commutation relations in :math:`so(3)`.
 
     >>> from beluga.liepack.domain.liealgebras import so
-    >>> from beluga.liepack import Commutator
+    >>> from beluga.liepack import commutator
     >>> x = so(3)
     >>> y = so(3)
     >>> z = so(3)
@@ -128,49 +93,9 @@ class Commutator(object):
     >>> z.set_vector([0,0,1])
     >>> Commutator(x,y) == z
     True
-
-    Use the commutator to "preload" the adjoint map, :math:`ad_g : \mathfrak{g} \rightarrow \mathfrak{g}`.
-
-    >>> adg = Commutator(x)
-    >>> adg(y) == z
-    True
-    >>> adg(z) == -y
-    True
     """
-
-    def __new__(cls, *args, **kwargs):
-        obj = super(Commutator, cls).__new__(cls)
-        obj.anticommutator = int(kwargs.get('anticommutator', 1))
-        g, h = None, None
-
-        if len(args) > 0:
-            g = args[0]
-
-        if len(args) > 1:
-            h = args[1]
-
-        obj._g = g
-        obj._h = h
-        if g is not None and h is not None:
-            return cls.__call__(obj, *args, **kwargs)
-        else:
-            return obj
-
-    def __call__(self, *args, **kwargs):
-        k = 0
-        if self._g is None:
-            g = args[k]
-            k += 1
-        else:
-            g = self._g
-
-        if self._h is None:
-            h = args[k]
-            k += 1
-        else:
-            h = self._h
-
-        return g*h - self.anticommutator*h*g
+    anticommutator = kwargs.get('anticommutator', 1)
+    return np.dot(g,h) - anticommutator*np.dot(h,g)
 
 def dexpinv(g, h, order=5):
     r"""
@@ -202,19 +127,23 @@ def dexpinv(g, h, order=5):
     if order < 2:
         return h
 
+    B = bernoulli(order)
+
+    def adg(e):
+        return commutator(g, e)
+
     k = 0
     stack = h
-    out = h
+    out = B(k) * h
 
     k = 1
-    adg = Commutator(g)
     stack = adg(stack)
-    out += -1/2*stack
+    out += B(k) * stack
     k += 1
 
     while k < order:
         stack = adg(stack)
-        out += Bernoulli(k)/factorial(k)*stack
+        out += B(k) / factorial(k) * stack
         k += 2
 
     return out
@@ -234,7 +163,30 @@ def exp(g):
     :return: Lie group element, :math:`G`.
     """
     if isinstance(g, LieAlgebra):
-        return algebra2group(g)(g.shape, scipyexpm(g.data))
+        return algebra2group(g)(g.get_shape(), scipyexpm(g))
+    else:
+        return scipyexpm(g)
+
+
+def killing(g,h):
+    r"""
+    Determine the Killing coefficient between two elements in a Lie algebra.
+
+    :param g: Lie algebra element.
+    :param h: Lie algebra element.
+    :return: Killing coefficient.
+    """
+    if type(g) != type(h):
+        raise TypeError("Lie algebra elements must be of the same type.")
+
+    basis = g.basis()
+    def adg(H): return commutator(g, H)
+    def adh(G): return commutator(h, G)
+
+    k = 0
+    for ii in range(len(basis)):
+        k += adg(adh(basis[ii])).get_vector()[ii]
+    return k
 
 
 def Left(G, M):
@@ -254,12 +206,12 @@ def Left(G, M):
     if not isinstance(G, LieGroup):
         raise ValueError
     Mout = HManifold(M)
-    Mout.data = np.dot(G.data, Mout.data)
+    Mout = np.dot(G, Mout.data)
     return Mout
 
 def Right(G, M):
     if not isinstance(G, LieGroup):
         raise ValueError
     Mout = HManifold(M)
-    Mout.data = np.dot(Mout.data, G.data)
+    Mout = np.dot(Mout.data, G)
     return Mout

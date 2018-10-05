@@ -9,5 +9,5 @@ def test_SP():
     Ju = np.hstack((np.zeros(1), np.ones(1)))
     Jl = np.hstack((-np.ones(1), np.zeros(1)))
     J = np.vstack((Ju, Jl))
-    J2 = G.data.T @ J @ G.data # Symplectic matrix satisfies G^T * J * G = J
+    J2 = np.dot(np.dot(G.T, J), G) # Symplectic matrix satisfies G^T * J * G = J
     assert (J - J2 < tol).all()

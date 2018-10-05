@@ -1,2 +1,2 @@
-from .liepack import (Adjoint, Commutator, dexpinv, exp, Left)
+from .liepack import (Adjoint, commutator, dexpinv, exp, killing, Left)
 from .liepack import (algebra2group, group2algebra)
