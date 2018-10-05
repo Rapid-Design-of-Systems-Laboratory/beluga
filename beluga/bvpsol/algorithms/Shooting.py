@@ -89,6 +89,7 @@ class Shooting(BaseAlgorithm):
         tf = t_list[-1][-1]
         y0 = np.array([traj[0] for traj in y_list])[0]
         yf = np.array([traj[-1] for traj in y_list])[0]
+
         if nquads > 0:
             q0 = q_list[0][0]
             qf = q_list[-1][-1]
@@ -102,10 +103,11 @@ class Shooting(BaseAlgorithm):
         nBCs = len(fx)
 
         M = np.zeros((nBCs, nOdes))
+        Q = np.zeros((nBCs, nquads))
         P1 = np.zeros((nBCs, parameters.size))
         P2 = np.zeros((nBCs, nondynamical_params.size))
         Ptemp = np.zeros((nBCs, parameters.size))
-        J = np.zeros((nBCs, (nOdes)*num_arcs + parameters.size + nondynamical_params.size))
+        J = np.zeros((nBCs, (nOdes)*num_arcs))
         dx = np.zeros((nOdes + parameters.size, num_arcs))
 
         for arc_idx, phi in zip(it.count(), phi_full_list):
@@ -123,6 +125,13 @@ class Shooting(BaseAlgorithm):
             J_i = M
             J_slice = slice(nOdes*arc_idx, nOdes*(arc_idx+1))
             J[:,J_slice] = J_i
+
+        dq = np.zeros(nquads)
+        for ii in range(nquads):
+            dq[ii] = dq[ii] + h
+            f = bc_func(t0, y0, q0 + dq, tf, yf, qf + dq, parameters, nondynamical_params, aux)
+            Q[:, ii] = (f-fx)/h
+            dq[ii] = dq[ii] - h
 
         for arc_idx, phi in zip(it.count(), phi_full_list):
             for ii in range(parameters.size):
@@ -152,10 +161,8 @@ class Shooting(BaseAlgorithm):
             Ptemp[:, ii] = (f-fx)/h
             nondynamical_params[ii] = nondynamical_params[ii] - h
         P2 += Ptemp
-        J_i = np.hstack((P1, P2))
-        J_slice = slice(nOdes * num_arcs, nOdes * num_arcs + (parameters.size + nondynamical_params.size))
-        J[:, J_slice] = J_i
-        return J
+
+        return np.hstack((J, Q, P1, P2))
 
     def _bc_func_multiple_shooting(self, bc_func=None):
         def _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux):
@@ -352,18 +359,15 @@ class Shooting(BaseAlgorithm):
                     dy0, *_ = np.linalg.lstsq(J, -res)
                     dy0 = alpha*beta*dy0
 
-                # Apply corrections to states and parameters (if any)
+                # Apply corrections to states, quads, and parameters
                 d_ya = np.reshape(dy0[:nOdes * num_arcs], (num_arcs, nOdes), order='C')
-
-                if nParams > 0:
-                    dp1 = dy0[nOdes * num_arcs:nOdes * num_arcs + paramGuess.size]
-                    dp2 = dy0[nOdes * num_arcs + paramGuess.size:]
-                    paramGuess += dp1
-                    nondynamical_parameter_guess += dp2
-                    ya = ya + d_ya
-                else:
-                    ya = ya + d_ya
-
+                dq = dy0[nOdes * num_arcs:nOdes * num_arcs + nquads]
+                dp1 = dy0[nOdes * num_arcs + nquads:nOdes * num_arcs + nquads + paramGuess.size]
+                dp2 = dy0[nOdes * num_arcs + paramGuess.size + nquads:]
+                ya = ya + d_ya
+                q0g += dq
+                paramGuess += dp1
+                nondynamical_parameter_guess += dp2
                 n_iter += 1
                 logging.debug('Iteration #' + str(n_iter))
 
