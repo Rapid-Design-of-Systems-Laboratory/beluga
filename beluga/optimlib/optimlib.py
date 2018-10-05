@@ -37,8 +37,6 @@ def init_workspace(ocp, guess):
                                 for c_type, c_list in constraints.items()
                                 if c_type != 'path'}
 
-    workspace['constraints_adjoined'] = ocp.constraints().adjoined
-
     workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction', 'start_eps'))
                                      for c_obj in constraints.get('path', [])]
 
@@ -50,7 +48,7 @@ def init_workspace(ocp, guess):
     return workspace
 
 
-def make_augmented_cost(cost, constraints, constraints_adjoined, location):
+def make_augmented_cost(cost, constraints, location):
     r"""
     Augments the cost function with the given list of constraints.
 
@@ -62,33 +60,26 @@ def make_augmented_cost(cost, constraints, constraints_adjoined, location):
 
     :param cost: The cost function, :math:`f`.
     :param constraints: List of constraint to adjoin to the cost function, :math:`g`.
-    :param constraints_adjoined: Boolean value on whether or not the adjoined method is used. Skips if `False`.
     :param location: Location of each constraint.
 
     Returns the augmented cost function
     """
 
-    if not constraints_adjoined:
-        return cost
-
-    lagrange_mult = make_augmented_params(constraints, constraints_adjoined, location)
+    lagrange_mult = make_augmented_params(constraints, location)
     aug_cost_expr = cost.expr + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
 
     aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
     return aug_cost
 
 
-def make_augmented_params(constraints, constraints_adjoined, location):
+def make_augmented_params(constraints, location):
     r"""
     Make the lagrange multiplier terms for adjoining boundary conditions.
 
     :param constraints: List of constraints at the boundaries.
-    :param constraints_adjoined: Boolean value on whether or not the adjoined method is used.
     :param location: Location of each constraint.
     :return: Lagrange multipliers for the given constraints.
     """
-    if not constraints_adjoined:
-        return []
 
     def make_lagrange_mult(c, ind = 1):
         return sympify('lagrange_' + location + '_' + str(ind))
@@ -98,14 +89,13 @@ def make_augmented_params(constraints, constraints_adjoined, location):
     return lagrange_mult
 
 
-def make_boundary_conditions(constraints, constraints_adjoined, states, costates, cost, derivative_fn, location,
+def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location,
                              prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
                                          ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
     """
     Creates boundary conditions for initial and terminal constraints.
 
     :param constraints: List of boundary constraints.
-    :param constraints_adjoined: Boolean value on whether or not constraints are adjoined with Lagrange multipliers.
     :param states: List of state variables.
     :param costates: List of costate variables.
     :param cost: Cost function.
@@ -118,12 +108,7 @@ def make_boundary_conditions(constraints, constraints_adjoined, states, costates
     bc_list = [sanitize_constraint_expr(x, states, location, prefix_map) for x in constraints[location]]
     *_, sign = dict(prefix_map)[location]
     cost_expr = sign * cost
-
-    if constraints_adjoined:
-        bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
-    else:
-        refd = [sum(derivative_fn(c, s) for c in constraints[location]) for s in states]
-        bc_list += [str(costate - derivative_fn(cost_expr, state)) for i, (state, costate) in enumerate(zip(states,costates)) if refd[i] == False]
+    bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
 
     return bc_list
 

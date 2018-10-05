@@ -43,32 +43,16 @@ def test_make_augmented_cost():
                    for c_type, c_list in constraints.items()
                    if c_type != 'path'}
 
-    constraints_adjoined = False
     location = 'initial'
 
-    lambdas = make_augmented_params(constraints, constraints_adjoined, location)
-    result = make_augmented_cost(cost, constraints, constraints_adjoined, location)
-    assert result == 1
-    assert len(lambdas) == 0
-
-    constraints_adjoined = True
-
-    lambdas = make_augmented_params(constraints, constraints_adjoined, location)
-    result = make_augmented_cost(cost, constraints, constraints_adjoined, location)
+    lambdas = make_augmented_params(constraints, location)
+    result = make_augmented_cost(cost, constraints, location)
     assert result == lambdas[0]*constraints['initial'][0] + lambdas[1]*constraints['initial'][1] + cost
     assert len(lambdas) == 2
 
-    constraints_adjoined = False
     location = 'terminal'
 
-    lambdas = make_augmented_params(constraints, constraints_adjoined, location)
-    result = make_augmented_cost(cost, constraints, constraints_adjoined, location)
-    assert result == 1
-    assert len(lambdas) == 0
-
-    constraints_adjoined = True
-
-    lambdas = make_augmented_params(constraints, constraints_adjoined, location)
-    result = make_augmented_cost(cost, constraints, constraints_adjoined, location)
+    lambdas = make_augmented_params(constraints, location)
+    result = make_augmented_cost(cost, constraints, location)
     assert result == lambdas[0] * constraints['terminal'][0] + cost
     assert len(lambdas) == 1

@@ -51,15 +51,7 @@ For the Brachistochrone, we want to minimize time of travel. Therefore by integr
     ocp.terminal('x-x_f', 'm')
     ocp.terminal('y-y_f', 'm')
 
-We are fixing :math:`x` to start at the position :math:`x_0`, or rather the boundary condition :math:`x - x_0 = 0` must be satisfied. The astute dynamicist will recognize that :math:`v_f` is free. :code:`beluga` can interpret a multitude of boundary conditions. With the Brachistochrone problem, these boundary conditions are relatively simple so let's not adjoin them::
-
-    ocp.constraints().set_adjoined(False)
-
-Say we want the bead to not end at a specific point, but rather a set of points. Maybe :math:`(x_f + y_f)^2 = 1`. In such a complicated scenario, the standard method may not be able to handle the boundary conditions so we would turn on adjoining with::
-
-    ocp.constraints().set_adjoined(True)
-
-Next, define the units in terms of states that have been define so the solver knows how to automatically scale all the variables::
+We are fixing :math:`x` to start at the position :math:`x_0`, or rather the boundary condition :math:`x - x_0 = 0` must be satisfied. The astute dynamicist will recognize that :math:`v_f` is free. :code:`beluga` can interpret a multitude of boundary conditions. Next, define the units in terms of states that have been define so the solver knows how to automatically scale all the variables::
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
