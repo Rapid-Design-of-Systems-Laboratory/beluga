@@ -14,7 +14,7 @@ from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
 
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, quantity_vars, ham, constraint_name=None, is_icrm=False):
+def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, quantity_vars, ham, is_icrm=False):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
@@ -24,12 +24,6 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
     u_args = [*states, *costates, *parameters, *constants]
 
-    if constraint_name is not None:
-        ham_args.append(constraint_name)
-        u_args.append(constraint_name)
-    else:
-        ham_args.append('___dummy_arg___')
-        u_args.append('___dummy_arg___')
     control_opt_mat = sym.Matrix([[option.get(u, '0')
                                    for u in unknowns]
                                   for option in control_opts])
@@ -40,7 +34,6 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     num_options = len(control_opts)
     num_states = len(states)
     num_params = len(parameters)
-    constraint_name = str(constraint_name)
     if is_icrm:
         def compute_control_fn(t, X, p, aux):
             return X[num_states*2:]
@@ -48,18 +41,17 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
         def compute_control_fn(t, X, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
-            s_val = aux['constraint'].get((constraint_name, 1), -1)
-            u_list = control_opt_fn(*X, *p, *C, s_val)
+            u_list = control_opt_fn(*X, *p, *C)
             ham_val = np.zeros(num_options)
             for i in range(num_options):
-                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i], s_val)
+                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
 
             return u_list[np.argmin(ham_val)]
 
     return compute_control_fn, ham_fn
 
 
-def make_deriv_func(deriv_list, states, costates, parameters, constants, controls, quantity_vars, compute_control, constraint_name=None, is_icrm=False):
+def make_deriv_func(deriv_list, states, costates, parameters, constants, controls, quantity_vars, compute_control, is_icrm=False):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
@@ -67,42 +59,32 @@ def make_deriv_func(deriv_list, states, costates, parameters, constants, control
     parameters = sym.Matrix(parameters)
     unknowns = list(controls)
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, *parameters, *constants]
 
-    if constraint_name is not None:
-        ham_args.append(constraint_name)
-        u_args.append(constraint_name)
-    else:
-        ham_args.append('___dummy_arg___')
-        u_args.append('___dummy_arg___')
     eom_fn = [make_sympy_fn(ham_args, eom.subs(quantity_vars)) for eom in deriv_list]
 
     num_states = len(states)
     num_params = len(parameters)
-    constraint_name = str(constraint_name)
     num_eoms = len(eom_fn)
 
     if is_icrm:
-        def deriv_func(t, X, p, aux, arc_idx=None):
+        def deriv_func(t, X, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
-            s_val = aux['constraint'].get((constraint_name, 1), -1)
             u = compute_control(t, X, p, aux)
             eom_vals = np.zeros(num_eoms)
             _X = X[:2*num_states]
             for ii in range(num_eoms):
-                eom_vals[ii] = eom_fn[ii](*_X, *p, *C, *u, s_val)
+                eom_vals[ii] = eom_fn[ii](*_X, *p, *C, *u)
 
             return eom_vals
     else:
-        def deriv_func(t, X, p, aux, arc_idx=None):
+        def deriv_func(t, X, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
-            s_val = aux['constraint'].get((constraint_name, 1), -1)
             u = compute_control(t, X, p, aux)
             eom_vals = np.zeros(num_eoms)
             for ii in range(num_eoms):
-                eom_vals[ii] = eom_fn[ii](*X, *p, *C, *u, s_val)
+                eom_vals[ii] = eom_fn[ii](*X, *p, *C, *u)
 
             return eom_vals
 
@@ -128,13 +110,12 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
     num_nondynamical_params = len(nondynamical_parameters)
     constraint_name = str(constraint_name)
 
-    def bc_func_left(_y, u, p, ndp, aux, arc_seq, pi_seq, bcf=bc_initial):
+    def bc_func_left(_y, u, p, ndp, aux, bcf=bc_initial):
         C = aux['const'].values()
         p = p[:num_dynamical_params]
-        s_val = aux['constraint'].get((constraint_name, 1), -1)
         _x0 = aux['initial']
         _xf = aux['terminal']
-        ham_args_num = (*_y, *p, *C, *u, s_val)
+        ham_args_num = (*_y, *p, *C, *u)
         _H = ham_fn(*ham_args_num)
         ii = 0
         for a in states:
@@ -168,13 +149,12 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
 
         return np.array(bc)
 
-    def bc_func_right(_y, u, p, ndp, aux, arc_seq, pi_seq, bcf=bc_terminal):
+    def bc_func_right(_y, u, p, ndp, aux, bcf=bc_terminal):
         C = aux['const'].values()
         p = p[:num_dynamical_params]
-        s_val = aux['constraint'].get((constraint_name, 1), -1)
         _x0 = aux['initial']
         _xf = aux['terminal']
-        ham_args_num = (*_y, *p, *C, *u, s_val)
+        ham_args_num = (*_y, *p, *C, *u)
         _H = ham_fn(*ham_args_num)
         ii = 0
         for a in states:
@@ -210,21 +190,17 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
 
     if is_icrm:
         def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
-            arc_seq = aux.get('arc_seq', (0,))
-            pi_seq = aux.get('pi_seq', (None,))
             u0 = compute_control(t0, y0, p, aux)
             uf = compute_control(tf, yf, p, aux)
-            res_left = bc_func_left(y0[:2*num_states], u0, p, ndp, aux, arc_seq, pi_seq)
-            res_right = bc_func_right(yf[:2*num_states], uf, p, ndp, aux, arc_seq, pi_seq)
+            res_left = bc_func_left(y0[:2*num_states], u0, p, ndp, aux)
+            res_right = bc_func_right(yf[:2*num_states], uf, p, ndp, aux)
             return np.hstack((res_left, res_right))
     else:
         def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
-            arc_seq = aux.get('arc_seq', (0,))
-            pi_seq = aux.get('pi_seq', (None,))
             u0 = compute_control(t0, y0, p, aux)
             uf = compute_control(tf, yf, p, aux)
-            res_left = bc_func_left(y0, u0, p, ndp, aux, arc_seq, pi_seq)
-            res_right = bc_func_right(yf, uf, p, ndp, aux, arc_seq, pi_seq)
+            res_left = bc_func_left(y0, u0, p, ndp, aux)
+            res_right = bc_func_right(yf, uf, p, ndp, aux)
             return np.hstack((res_left.flatten(), res_right.flatten()))
 
     return bc_func
@@ -236,7 +212,6 @@ def make_functions(problem_data):
     costates = problem_data['costates']
     nondynamical_parameters = problem_data['nondynamical_parameters']
     dynamical_parameters = problem_data['dynamical_parameters']
-    parameters = dynamical_parameters + nondynamical_parameters
     constants = problem_data['constants']
     controls = problem_data['controls']
     quantity_vars = problem_data['quantity_vars']
@@ -291,7 +266,7 @@ def make_sympy_fn(args, fn_expr):
         return make_jit_fn(args, fn_expr)
 
 
-def preprocess(problem_data, use_numba=False):
+def preprocess(problem_data):
     r"""
     Code generation and compilation before running solver.
 

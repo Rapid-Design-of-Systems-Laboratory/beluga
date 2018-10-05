@@ -81,17 +81,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp_ws['problem_data']['custom_functions'] = ocp.custom_functions()
     solinit = Solution()
 
-    solinit.aux['const'] = OrderedDict((str(const.name),float(const.value))
-                                for const in ocp_ws['constants'])
+    solinit.aux['const'] = OrderedDict((str(const.name),float(const.value)) for const in ocp_ws['constants'])
 
     solinit.aux['dynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['dynamical_parameters']]
     solinit.aux['nondynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['nondynamical_parameters']]
 
-    # For path constraints
-    solinit.aux['constraint'] = cl.defaultdict(float)
-
-    solinit.aux['arc_seq'] = (0,)
-    solinit.aux['pi_seq'] = (None,)
     bvp = preprocess(ocp_ws['problem_data'])
     solinit = ocp_ws['guess'].generate(bvp, solinit)
 

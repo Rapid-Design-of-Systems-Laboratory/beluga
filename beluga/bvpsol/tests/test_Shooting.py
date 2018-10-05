@@ -8,7 +8,7 @@ def test_Shooting_1():
     # Full 2PBVP test problem
     # This is the simplest BVP
 
-    def odefun(t, X, p, const, arc):
+    def odefun(t, X, p, const):
         return (X[1], -abs(X[0]))
 
     def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, aux):
@@ -32,7 +32,7 @@ def test_Shooting_2():
     # This is calculating the 4th eigenvalue of Mathieu's Equation
     # This problem contains an adjustable parameter.
 
-    def odefun(t, X, p, const, arc):
+    def odefun(t, X, p, const):
         return (X[1], -(p[0] - 2 * 5 * np.cos(2 * t)) * X[0])
 
     def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, aux):
@@ -56,7 +56,7 @@ def test_Shooting_3():
     # This problem contains a parameter, but it is not explicit in the BCs.
     # Since time is buried in the ODEs, this tests if the BVP solver calculates
     # sensitivities with respect to parameters.
-    def odefun(t, X, p, const, arc):
+    def odefun(t, X, p, const):
         return 1 * p[0]
 
     def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, aux):
@@ -74,10 +74,10 @@ def test_Shooting_4():
     # This problem contains a quad and tests if the bvp solver correctly
     # integrates the quadfun.
 
-    def odefun(t, x, p, const, arc):
+    def odefun(t, x, p, const):
         return -x[1], x[0]
 
-    def quadfun(t, x, p, const, arc):
+    def quadfun(t, x, p, const):
         return x[0]
 
     def bcfun(t0, X0, q0, tf, Xf, qf, params, ndp, aux):

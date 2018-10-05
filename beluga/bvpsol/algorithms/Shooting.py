@@ -114,7 +114,7 @@ class Shooting(BaseAlgorithm):
                 dy = np.dot(phi, dx)
                 gamma = Trajectory(np.hstack(t_list), np.vstack(y_list) + dy[:,:,arc_idx])
                 if nquads > 0:
-                    gamma = reconstruct(quad_func, gamma, q0, parameters, aux, (0,))
+                    gamma = reconstruct(quad_func, gamma, q0, parameters, aux)
                     f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, nondynamical_params, aux)
                 else:
                     f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, nondynamical_params, aux)
@@ -132,7 +132,7 @@ class Shooting(BaseAlgorithm):
                 dy = np.dot(phi, dx)
                 gamma = Trajectory(np.hstack(t_list), np.vstack(y_list) + dy[:, :, arc_idx])
                 if nquads > 0:
-                    gamma = reconstruct(quad_func, gamma, q0, parameters, aux, (0,))
+                    gamma = reconstruct(quad_func, gamma, q0, parameters, aux)
                     f = bc_func(t0, gamma.y[0], gamma.q[0], tf, gamma.y[-1], gamma.q[-1], parameters, nondynamical_params, aux)
                 else:
                     f = bc_func(t0, gamma.y[0], [], tf, gamma.y[-1], [], parameters, nondynamical_params, aux)
@@ -164,17 +164,13 @@ class Shooting(BaseAlgorithm):
             # bc2 = np.array([y0[:, ii + 1] - yf[:, ii] for ii in range(narcs - 1)]).flatten()
             # bc = np.hstack((bc1,bc2))
             return bc1
-
-        def wrapper(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux):
-            return _bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, aux)
-
-        return wrapper
+        return _bc_func
 
     @staticmethod
     def make_stmode(odefn, nOdes, StepSize=1e-6):
         Xh = np.eye(nOdes)*StepSize
 
-        def _stmode_fd(t, _X, p, const, arc_idx):
+        def _stmode_fd(t, _X, p, aux):
             """ Finite difference version of state transition matrix """
             nParams = p.size
             F = np.empty((nOdes, nOdes+nParams))
@@ -182,24 +178,22 @@ class Shooting(BaseAlgorithm):
             X = _X[0:nOdes]  # Just states
 
             # Compute Jacobian matrix, F using finite difference
-            fx = np.squeeze([odefn(t, X, p, const, arc_idx)])
+            fx = np.squeeze([odefn(t, X, p, aux)])
 
             for i in range(nOdes):
-                fxh = odefn(t, X + Xh[i, :], p, const, arc_idx)
+                fxh = odefn(t, X + Xh[i, :], p, aux)
                 F[:, i] = (fxh-fx)/StepSize
 
             for i in range(nParams):
                 p[i] += StepSize
-                fxh = odefn(t, X, p, const, arc_idx)
+                fxh = odefn(t, X, p, aux)
                 F[:, i+nOdes] = (fxh - fx).real / StepSize
                 p[i] -= StepSize
 
             phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))), np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
             return np.hstack((fx, np.reshape(phiDot, (nOdes * (nOdes + nParams)))))
 
-        def wrapper(t, _X, p, const, arc_idx):  # needed for scipy
-            return _stmode_fd(t, _X, p, const, arc_idx)
-        return wrapper
+        return _stmode_fd
 
     def solve(self, solinit):
         """
@@ -243,18 +237,6 @@ class Shooting(BaseAlgorithm):
         if sol.arcs is None:
             sol.arcs = [(0, len(solinit.t)-1)]
 
-        arc_seq = sol.aux['arc_seq']
-        num_arcs = len(arc_seq)
-        # if len(sol.arcs) % 2 == 0:
-        #     raise Exception('Number of arcs must be odd!')
-
-        # TODO: These are specific to an old implementation of path constraints see I51
-        left_idx, right_idx = map(np.array, zip(*sol.arcs))
-        ya = sol.y[left_idx, :]
-        yb = sol.y[right_idx, :]
-        tmp = np.arange(num_arcs+1, dtype=np.float32)*sol.t[-1] # TODO: I51
-        tspan_list = [(a, b) for a, b in zip(tmp[:-1], tmp[1:])] # TODO: I51
-
         # sol.set_interpolate_function('cubic')
         ya = None
         tspan_list = []
@@ -295,43 +277,20 @@ class Shooting(BaseAlgorithm):
                 t_list = []
                 y_list = []
                 q_list = []
-                if self.pool is None:
-                    for arc_idx, tspan in enumerate(tspan_list):
-                        y0stm[:nOdes] = ya[arc_idx, :]
-                        y0stm[nOdes:] = stm0[:]
-                        sol_ivp = prop(self.stm_ode_func, self.quadrature_function, tspan, y0stm, q0g, paramGuess, sol.aux, 0) # TODO: arc_idx is hardcoded as 0 here, this'll change with path constraints. I51
-                        t = sol_ivp.t
-                        yy = sol_ivp.y
-                        qq = sol_ivp.q
-                        t_list.append(t)
-                        y_list.append(yy[:, :nOdes])
-                        if nquads > 0:
-                            q_list.append(qq[:, :nquads])
-                        yb[arc_idx, :] = yy[-1, :nOdes]
-                        phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
-                        phi_full_list.append(np.copy(phi_full))
-                else:
-                    raise NotImplementedError
-                    y0stm = [np.hstack((ya[arc_idx, :],stm0[:])) for arc_idx, tspan in enumerate(tspan_list)]
-                    q0 = []
-                    sol_set = [self.pool.apply_async(prop, args=(self.stm_ode_func, None, tspan, y0s, q0, paramGuess, sol.aux, 0)) for tspan, y0s in zip(tspan_list, y0stm)]
-                    sol_ivp = [traj.get() for traj in sol_set]
-                    t_list = [s.t for s in sol_ivp]
-                    y_list = [s.y for s in sol_ivp]
-                    yb = [s.y[-1] for s in sol_ivp]
-                    keyboard() # TODO: Parallelize multiple shooting. This is as far as I got.
-                    for arc_idx, tspan in enumerate(tspan_list):
-                        y0stm[:nOdes] = ya[arc_idx, :]
-                        y0stm[nOdes:] = stm0[:]
-                        q0 = []
-                        sol_ivp = prop(self.stm_ode_func, None, tspan, y0stm, q0, paramGuess, sol.aux, 0)
-                        t = sol_ivp.t
-                        yy = sol_ivp.y
-                        y_list.append(yy[:, :nOdes])
-                        t_list.append(t)
-                        yb[arc_idx, :] = yy[-1, :nOdes]
-                        phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
-                        phi_full_list.append(np.copy(phi_full))
+                for arc_idx, tspan in enumerate(tspan_list):
+                    y0stm[:nOdes] = ya[arc_idx, :]
+                    y0stm[nOdes:] = stm0[:]
+                    sol_ivp = prop(self.stm_ode_func, self.quadrature_function, tspan, y0stm, q0g, paramGuess, sol.aux)
+                    t = sol_ivp.t
+                    yy = sol_ivp.y
+                    qq = sol_ivp.q
+                    t_list.append(t)
+                    y_list.append(yy[:, :nOdes])
+                    if nquads > 0:
+                        q_list.append(qq[:, :nquads])
+                    yb[arc_idx, :] = yy[-1, :nOdes]
+                    phi_full = np.reshape(yy[:, nOdes:], (len(t), nOdes, nOdes+nParams))
+                    phi_full_list.append(np.copy(phi_full))
 
                 # Break cycle if it exceeds the max number of iterations
                 if n_iter > self.max_iterations:
