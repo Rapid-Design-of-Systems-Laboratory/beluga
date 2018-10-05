@@ -210,21 +210,6 @@ class ConstraintList(dict):
                 constraint_args=constraint_args)
     terminal = partialmethod(add_constraint, constraint_type='terminal',
                 constraint_args=constraint_args)
-    equality = partialmethod(add_constraint, constraint_type='equality',
-                constraint_args=constraint_args)
-    interior_point = partialmethod(add_constraint, constraint_type='interior_point',
-                constraint_args=constraint_args)
-    independent = partialmethod(add_constraint, constraint_type='independent',
-                constraint_args=constraint_args)
-    path = partialmethod(add_constraint, constraint_type='path',
-                constraint_args=('name', 'expr', 'direction', 'bound', 'unit', 'start_eps')
-                )
-
-    # def get(self, constraint_type):
-    #     """
-    #     Returns list of constraints of a specific type
-    #     """
-    #     return [c for c in self if c.type == constraint_type]
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """Combines positional and keyword arguments
@@ -416,19 +401,12 @@ class GuessGenerator(object):
         else:
             u0 = self.control_guess
 
-        # Add time of integration to states
-
-        # x0 = np.append(x0, self.time_integrate)
-
         # Guess zeros for missing parameters
-        # TODO: Automatically generate parameter guess values
-
         if param_guess is None:
             param_guess = np.zeros(len(solinit.aux['dynamical_parameters']))
         elif len(param_guess) < len(solinit.aux['dynamical_parameters']):
             param_guess += np.zeros(len(solinit.aux['dynamical_parameters']) - len(param_guess))
         elif len(param_guess) > len(solinit.aux['dynamical_parameters']):
-            # TODO: Write a better error message
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.zeros(len(solinit.aux['nondynamical_parameters']))
 
