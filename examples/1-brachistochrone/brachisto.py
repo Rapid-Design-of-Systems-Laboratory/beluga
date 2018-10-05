@@ -33,9 +33,6 @@ ocp.constraints() \
     .terminal('x-x_f', 'm')   \
     .terminal('y-y_f', 'm')
 
-# Use the "adjoined method" to solve for the constraints. (Default is False)
-ocp.constraints().set_adjoined(True)
-
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('Shooting')
@@ -58,7 +55,7 @@ continuation_steps.add_step('bisection') \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol = beluga.solve(ocp,
-             method='icrm',
+             method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)

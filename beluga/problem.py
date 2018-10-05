@@ -188,11 +188,7 @@ class OCP(object):
 class ConstraintList(dict):
     def __new__(cls, *args, **kwargs):
         obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
-        obj.adjoined = kwargs.get('adjoined', False)
         return obj
-
-    def set_adjoined(self, bool):
-        self.adjoined = bool
 
     def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """

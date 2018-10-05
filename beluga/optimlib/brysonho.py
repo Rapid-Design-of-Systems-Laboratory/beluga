@@ -16,19 +16,18 @@ def ocp_to_bvp(ocp, guess):
     constants = ws['constants']
     constants_of_motion = ws['constants_of_motion']
     constraints = ws['constraints']
-    constraints_adjoined = ws['constraints_adjoined']
     quantities = ws['quantities']
     initial_cost = ws['initial_cost']
     terminal_cost = ws['terminal_cost']
     path_cost = ws['path_cost']
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
-    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, constraints_adjoined, location='initial')
-    initial_lm_params = make_augmented_params(constraints, constraints_adjoined, location='initial')
-    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, constraints_adjoined, location='terminal')
-    terminal_lm_params = make_augmented_params(constraints, constraints_adjoined, location='terminal')
+    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
+    initial_lm_params = make_augmented_params(constraints, location='initial')
+    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
+    terminal_lm_params = make_augmented_params(constraints, location='terminal')
     hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
-    bc_initial = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_initial_cost, derivative_fn, location='initial')
-    bc_terminal = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
+    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
     bc_terminal = make_time_bc(constraints, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nond_parameters = initial_lm_params + terminal_lm_params
