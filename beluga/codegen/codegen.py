@@ -90,7 +90,7 @@ def make_deriv_func(deriv_list, states, costates, parameters, constants, control
 
     return deriv_func
 
-def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, compute_control, ham_fn, constraint_name=None, is_icrm=False):
+def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, compute_control, ham_fn, is_icrm=False):
     controls = sym.Matrix([_._sym for _ in controls])
     constants = sym.Matrix([_._sym for _ in constants])
     states = sym.Matrix([_.name for _ in states])
@@ -99,16 +99,9 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
     unknowns = list(controls)
     ham_args = [*states, *costates, *dynamical_parameters, *constants, *unknowns]
     u_args = [*states, *costates, *dynamical_parameters, *constants]
-    if constraint_name is not None:
-        ham_args.append(constraint_name)
-        u_args.append(constraint_name)
-    else:
-        ham_args.append('___dummy_arg___')
-        u_args.append('___dummy_arg___')
     num_states = len(states)
     num_dynamical_params = len(dynamical_parameters)
     num_nondynamical_params = len(nondynamical_parameters)
-    constraint_name = str(constraint_name)
 
     def bc_func_left(_y, u, p, ndp, aux, bcf=bc_initial):
         C = aux['const'].values()
