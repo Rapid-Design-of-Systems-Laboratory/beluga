@@ -18,9 +18,6 @@ ocp.control('theta','rad')
 
 # Define constants
 ocp.constant('g', -9.81, 'm/s^2')
-ocp.constant('x_0', 0, 'm')
-ocp.constant('y_0', 0, 'm')
-ocp.constant('v_0', 0, 'm/s')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('y_f', 0, 'm')
 
@@ -32,9 +29,9 @@ ocp.path_cost('1', '1')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x-x_0', 'm')    \
-    .initial('y-y_0', 'm') \
-    .initial('v-v_0', 'm/s')  \
+    .initial('x', 'm')    \
+    .initial('y', 'm') \
+    .initial('v', 'm/s')  \
     .terminal('x-x_f', 'm')   \
     .terminal('y-y_f', 'm')
 

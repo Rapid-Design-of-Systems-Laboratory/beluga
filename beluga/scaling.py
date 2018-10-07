@@ -8,7 +8,7 @@ from beluga.utils import sympify
 import copy
 
 class Scaling(dict):
-    excluded_aux = ['initial', 'terminal', 'function']
+    excluded_aux = ['function']
 
     def __init__(self):
         self.units = {}
@@ -132,16 +132,12 @@ class Scaling(dict):
         """Scales a BVP solution"""
         solout = copy.deepcopy(sol)
 
-        # Additional aux entries for initial and terminal BCs
-        extras = [{'type':'initial','vars':self.problem_data['state_list']},
-                  {'type':'terminal','vars':self.problem_data['state_list']}]
-
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
             solout.y[:, idx] /= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
-        for aux in (self.problem_data['aux_list']+extras):
+        for aux in (self.problem_data['aux_list']):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
                     solout.aux[aux['type']][var] /= self.scale_vals[aux['type']][var]
@@ -156,16 +152,12 @@ class Scaling(dict):
         """ Unscales a solution object"""
         solout = copy.deepcopy(sol)
 
-        # Additional aux entries for initial and terminal BCs
-        extras = [{'type': 'initial', 'vars': self.problem_data['state_list']},
-                  {'type': 'terminal', 'vars': self.problem_data['state_list']}]
-
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
             solout.y[:, idx] *= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
-        for aux in (self.problem_data['aux_list']+extras):
+        for aux in (self.problem_data['aux_list']):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
                     solout.aux[aux['type']][var] *= self.scale_vals[aux['type']][var]

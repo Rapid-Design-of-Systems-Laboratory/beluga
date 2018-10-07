@@ -108,11 +108,11 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     bc_list = []
     for x in constraints[location]:
         bc = sanitize_constraint_expr(x, states, location, prefix_map)
-        bc_list.append(str(bc))
+        bc_list.append(bc)
 
     *_, sign = dict(prefix_map)[location]
     cost_expr = sign * cost
-    bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
+    bc_list += [costate - derivative_fn(cost_expr, state) for state, costate in zip(states, costates)]
     return bc_list
 
 
@@ -202,10 +202,10 @@ def make_time_bc(constraints, hamiltonian, bc_terminal):
     """
     time_constraints = constraints.get('independent', [])
     if len(time_constraints) > 0:
+        raise NotImplementedError
         return bc_terminal+['tf - 1']
     else:
-        # Add free final time boundary condition
-        return bc_terminal+[str(hamiltonian) + ' - 0']
+        return bc_terminal+[hamiltonian - 0]
 
 
 def process_quantities(quantities):

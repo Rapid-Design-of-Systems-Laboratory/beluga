@@ -103,6 +103,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
     num_states = len(states)
     num_dynamical_params = len(dynamical_parameters)
     num_nondynamical_params = len(nondynamical_parameters)
+    bc = bc_terminal[-1]
     bc_fn_initial = [make_jit_fn(bc_args, bc) for bc in bc_initial]
     bc_fn_terminal = [make_jit_fn(bc_args, bc) for bc in bc_terminal]
     num_bcs_initial = len(bc_fn_initial)
@@ -119,7 +120,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
             ii += 1
 
         for jj in range(num_bcs_terminal):
-            bc_vals[ii] = bc_fn_initial[jj](*Xf, *params, *ndp, *C, *uf)
+            bc_vals[ii] = bc_fn_terminal[jj](*Xf, *params, *ndp, *C, *uf)
             ii += 1
 
         return bc_vals

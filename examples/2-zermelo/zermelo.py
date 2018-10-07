@@ -28,14 +28,16 @@ ocp.control('theta', 'rad')
 # Define constants
 ocp.constant('V', 10, 'm/s')
 ocp.constant('epsilon', 0.001, '1')
+ocp.constant('x_f', 0, 'm')
+ocp.constant('y_f', 0, 'm')
 
 # Define costs
 ocp.path_cost('1', '1')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x-x_0', 'm') \
-    .initial('y-y_0', 'm') \
+    .initial('x', 'm') \
+    .initial('y', 'm') \
     .terminal('x-x_f', 'm') \
     .terminal('y-y_f', 'm')
 
@@ -59,11 +61,11 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
-                .terminal('x', 10)
+                .const('x_f', 10)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
-                .terminal('y', 10)
+                .const('y_f', 10)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
