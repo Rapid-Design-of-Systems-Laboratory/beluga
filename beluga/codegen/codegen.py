@@ -99,87 +99,30 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
     unknowns = list(controls)
     ham_args = [*states, *costates, *dynamical_parameters, *constants, *unknowns]
     u_args = [*states, *costates, *dynamical_parameters, *constants]
+    bc_args = [*states, *costates, *dynamical_parameters, *nondynamical_parameters, *constants, *unknowns]
     num_states = len(states)
     num_dynamical_params = len(dynamical_parameters)
     num_nondynamical_params = len(nondynamical_parameters)
+    bc_fn_initial = [make_jit_fn(bc_args, bc) for bc in bc_initial]
+    bc_fn_terminal = [make_jit_fn(bc_args, bc) for bc in bc_terminal]
+    num_bcs_initial = len(bc_fn_initial)
+    num_bcs_terminal = len(bc_fn_terminal)
 
-    def bc_func_left(_y, u, p, ndp, aux, bcf=bc_initial):
+    def bc_func_all(t0, X0, q0, tf, Xf, qf, params, ndp, aux):
         C = aux['const'].values()
-        p = p[:num_dynamical_params]
-        _x0 = aux['initial']
-        _xf = aux['terminal']
-        ham_args_num = (*_y, *p, *C, *u)
-        _H = ham_fn(*ham_args_num)
+        u0 = compute_control(t0, X0, params, aux)
+        uf = compute_control(tf, Xf, params, aux)
+        bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
         ii = 0
-        for a in states:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+        for jj in range(num_bcs_initial):
+            bc_vals[ii] = bc_fn_initial[jj](*X0, *params, *ndp, *C, *u0)
             ii += 1
 
-        for a in costates:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
+        for jj in range(num_bcs_terminal):
+            bc_vals[ii] = bc_fn_initial[jj](*Xf, *params, *ndp, *C, *uf)
             ii += 1
 
-        for a in dynamical_parameters:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        for a in constants:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        for a in unknowns:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        ii = 0
-        for a in nondynamical_parameters:
-            exec(str(a) + ' = ' + 'ndp[' + str(ii) + ']')
-            ii += 1
-
-        bc = []
-        for s in bcf:
-            exec('bc.append(' + s + ')')
-
-        return np.array(bc)
-
-    def bc_func_right(_y, u, p, ndp, aux, bcf=bc_terminal):
-        C = aux['const'].values()
-        p = p[:num_dynamical_params]
-        _x0 = aux['initial']
-        _xf = aux['terminal']
-        ham_args_num = (*_y, *p, *C, *u)
-        _H = ham_fn(*ham_args_num)
-        ii = 0
-        for a in states:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        for a in costates:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        for a in dynamical_parameters:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        for a in constants:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        for a in unknowns:
-            exec(str(a) + ' = ' + 'ham_args_num[' + str(ii) + ']')
-            ii += 1
-
-        ii = 0
-        for a in nondynamical_parameters:
-            exec(str(a) + ' = ' + 'ndp[' + str(ii) + ']')
-            ii += 1
-
-        bc = []
-        for s in bcf:
-            exec('bc.append(' + s + ')')
-
-        return np.array(bc)
+        return bc_vals
 
     if is_icrm:
         def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
@@ -189,12 +132,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
             res_right = bc_func_right(yf[:2*num_states], uf, p, ndp, aux)
             return np.hstack((res_left, res_right))
     else:
-        def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
-            u0 = compute_control(t0, y0, p, aux)
-            uf = compute_control(tf, yf, p, aux)
-            res_left = bc_func_left(y0, u0, p, ndp, aux)
-            res_right = bc_func_right(yf, uf, p, ndp, aux)
-            return np.hstack((res_left.flatten(), res_right.flatten()))
+        bc_func = bc_func_all
 
     return bc_func
 

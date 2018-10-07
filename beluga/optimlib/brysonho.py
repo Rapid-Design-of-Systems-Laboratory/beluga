@@ -28,7 +28,7 @@ def ocp_to_bvp(ocp, guess):
     hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
     bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
     bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
-    bc_terminal = make_time_bc(constraints, bc_terminal)
+    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nond_parameters = initial_lm_params + terminal_lm_params
     control_law = make_control_law(dHdu, controls)
