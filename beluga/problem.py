@@ -15,7 +15,7 @@ from functools import partialmethod
 from collections import namedtuple, ChainMap
 from itertools import zip_longest
 
-from beluga.bvpsol import Scaling
+from .scaling import Scaling
 from beluga.utils import sympify, tic, toc
 from beluga.ivpsol import Propagator
 

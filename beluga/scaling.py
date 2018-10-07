@@ -1,12 +1,14 @@
 import numbers as num
 
+from collections import OrderedDict
+
 from sympy import *
 from beluga.utils import sympify
 
 import copy
 
 class Scaling(dict):
-    excluded_aux = ['function']
+    excluded_aux = ['initial', 'terminal', 'function']
 
     def __init__(self):
         self.units = {}
@@ -104,7 +106,6 @@ class Scaling(dict):
             return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
 
     def compute_scaling(self, sol):
-        from collections import OrderedDict
         # Units should be stored in order to be used as function arguments
         self.scale_factors = OrderedDict()
         # Evaluate scaling factors for each base unit

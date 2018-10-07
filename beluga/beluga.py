@@ -82,6 +82,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     solinit = Solution()
 
     solinit.aux['const'] = OrderedDict((str(const.name),float(const.value)) for const in ocp_ws['constants'])
+    for const in ocp_ws['problem_data']['constants']:
+        if not str(const) in solinit.aux['const'].keys():
+            solinit.aux['const'][str(const)] = 0
 
     solinit.aux['dynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['dynamical_parameters']]
     solinit.aux['nondynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['nondynamical_parameters']]
@@ -97,8 +100,14 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
 
-    solinit.aux['initial'] = initial_bc
-    solinit.aux['terminal'] = terminal_bc
+    for ii in initial_bc:
+        if ii+'_0' in solinit.aux['const'].keys():
+            solinit.aux['const'][ii+'_0'] = initial_bc[ii]
+
+    for ii in terminal_bc:
+        if ii+'_f' in solinit.aux['const'].keys():
+            solinit.aux['const'][ii+'_f'] = terminal_bc[ii]
+
     tic()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?

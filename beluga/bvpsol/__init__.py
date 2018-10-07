@@ -1,6 +1,4 @@
-from .Scaling import Scaling
 from .Solution import Solution
-# from .bvpinit import bvpinit
 
 
 # __all__ = ['Algorithm','Solution','BVP','FunctionTemplate','bvpinit']
