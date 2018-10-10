@@ -29,12 +29,20 @@ class Solution(Trajectory):
 
         if t is not None:
             t = np.array(t, dtype=np.float64)
+        else:
+            t = np.array([], dtype=np.float64)
         if y is not None:
             y = np.array(y, dtype=np.float64)
+        else:
+            y = np.array([], dtype=np.float64)
         if q is not None:
             q = np.array(q, dtype=np.float64)
+        else:
+            q = np.array([], dtype=np.float64)
         if u is not None:
             u = np.array(u, dtype=np.float64)
+        else:
+            u = np.array([], dtype=np.float64)
 
         obj = super(Solution, cls).__new__(cls, t, y, q, u)
 

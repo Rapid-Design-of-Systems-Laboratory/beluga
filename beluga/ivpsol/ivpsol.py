@@ -179,13 +179,29 @@ class Trajectory(object):
             return y_val, q_val, u_val
 
         if len(self.y.shape) == 1:
-            dim = 1
+            ydim = 1
         else:
-            dim = self.y.shape[1]
+            ydim = self.y.shape[1]
+
+        if len(self.q.shape) == 1:
+            if self.q.shape[0] == 0:
+                qdim = 0
+            else:
+                qdim = 1
+        else:
+            qdim = self.q.shape[1]
+
+        if len(self.u.shape) == 1:
+            if self.u.shape[0] == 0:
+                udim = 0
+            else:
+                udim = 1
+        else:
+            udim = self.u.shape[1]
 
         # This builds the interpolation function on the most up to date data
-        if dim == 1:
-            f = self.interpolate(self.t, self.y.T)
+        if ydim == 1:
+            f = self.interpolate(self.t, self.y.T[0])
             if t.shape == ():
                 y_val = np.array([f(t)])
             else:
@@ -194,8 +210,37 @@ class Trajectory(object):
             y_val = y_val.T
 
         else:
-            f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(dim)]
-            y_val = np.array([f[ii](t) for ii in range(dim)]).T
+            f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(ydim)]
+            y_val = np.array([f[ii](t) for ii in range(ydim)]).T
+
+
+        if qdim == 1:
+            f = self.interpolate(self.t, self.q.T[0])
+            if t.shape == ():
+                q_val = np.array([f(t)])
+            else:
+                q_val = f(t)
+
+            q_val = q_val.T
+
+        else:
+            f = [self.interpolate(self.t, self.q.T[ii]) for ii in range(qdim)]
+            q_val = np.array([f[ii](t) for ii in range(qdim)]).T
+
+
+        if udim == 1:
+            f = self.interpolate(self.t, self.u.T)
+            if t.shape == ():
+                u_val = np.array([f(t)])
+            else:
+                u_val = f(t)
+
+            u_val = u_val.T
+
+        else:
+            f = [self.interpolate(self.t, self.q.T[ii]) for ii in range(udim)]
+            u_val = np.array([f[ii](t) for ii in range(udim)]).T
+
 
         return y_val, q_val, u_val
 
