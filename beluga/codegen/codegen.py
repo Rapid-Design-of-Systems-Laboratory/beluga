@@ -109,10 +109,8 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
     num_bcs_initial = len(bc_fn_initial)
     num_bcs_terminal = len(bc_fn_terminal)
 
-    def bc_func_all(t0, X0, q0, tf, Xf, qf, params, ndp, aux):
+    def bc_func_all(t0, X0, q0, u0, tf, Xf, qf, uf, params, ndp, aux):
         C = aux['const'].values()
-        u0 = compute_control(t0, X0, params, aux)
-        uf = compute_control(tf, Xf, params, aux)
         bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
         ii = 0
         for jj in range(num_bcs_initial):
@@ -129,11 +127,12 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
         def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
             u0 = compute_control(t0, y0, p, aux)
             uf = compute_control(tf, yf, p, aux)
-            res_left = bc_func_left(y0[:2*num_states], u0, p, ndp, aux)
-            res_right = bc_func_right(yf[:2*num_states], uf, p, ndp, aux)
-            return np.hstack((res_left, res_right))
+            return bc_func_all(t0, y0[:2*num_states], q0, u0, tf, yf[:2*num_states], qf, uf, p, ndp, aux)
     else:
-        bc_func = bc_func_all
+        def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
+            u0 = compute_control(t0, y0, p, aux)
+            uf = compute_control(tf, yf, p, aux)
+            return bc_func_all(t0, y0, q0, u0, tf, yf, qf, uf, p, ndp, aux)
 
     return bc_func
 
