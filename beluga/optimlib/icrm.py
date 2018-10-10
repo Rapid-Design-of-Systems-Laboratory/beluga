@@ -21,9 +21,12 @@ def ocp_to_bvp(ocp, guess):
     augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, location='terminal')
     hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
+    for var in quantity_vars.keys():
+        hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
+
     bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
     bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
-    bc_terminal = make_time_bc(constraints, bc_terminal)
+    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nondyn_parameters = initial_lm_params + terminal_lm_params
     costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, nondyn_parameters, constants, quantity_vars, hamiltonian)

@@ -18,6 +18,8 @@ ocp.control('theta','rad')
 
 # Define constants
 ocp.constant('g', -9.81, 'm/s^2')
+ocp.constant('x_f', 0, 'm')
+ocp.constant('y_f', 0, 'm')
 
 ocp.constant_of_motion('c1', 'lamX', '1/m')
 ocp.constant_of_motion('c2', 'lamY', '1/m')
@@ -27,9 +29,9 @@ ocp.path_cost('1', '1')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x-x_0', 'm')    \
-    .initial('y-y_0', 'm') \
-    .initial('v-v_0', 'm/s')  \
+    .initial('x', 'm')    \
+    .initial('y', 'm') \
+    .initial('v', 'm/s')  \
     .terminal('x-x_f', 'm')   \
     .terminal('y-y_f', 'm')
 
@@ -49,8 +51,8 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(21) \
-                .terminal('x', 10) \
-                .terminal('y',-10)
+                .const('x_f', 10) \
+                .const('y_f',-10)
 
 beluga.add_logger(logging_level=logging.DEBUG)
 

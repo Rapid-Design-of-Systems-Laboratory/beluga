@@ -45,13 +45,13 @@ In a single given optimization problem, gravity will not change, therefore the :
 For the Brachistochrone, we want to minimize time of travel. Therefore by integrating :math:`\int 1 \circ \gamma \; dt= \int 1 \; dt = t_f - t_0`, we are minimizing :math:`t_f - t_0`. We would like the bead to start and stop at specific locations, so let's set some boundary conditions::
 
     ocp.constraints()
-    ocp.initial('x-x_0', 'm')
-    ocp.initial('y-y_0', 'm')
-    ocp.initial('v-v_0', 'm/s')
+    ocp.initial('x', 'm')
+    ocp.initial('y', 'm')
+    ocp.initial('v', 'm/s')
     ocp.terminal('x-x_f', 'm')
     ocp.terminal('y-y_f', 'm')
 
-We are fixing :math:`x` to start at the position :math:`x_0`, or rather the boundary condition :math:`x - x_0 = 0` must be satisfied. The astute dynamicist will recognize that :math:`v_f` is free. :code:`beluga` can interpret a multitude of boundary conditions. Next, define the units in terms of states that have been define so the solver knows how to automatically scale all the variables::
+We are fixing :math:`x` to start at the position, or rather the boundary condition :math:`x = 0` must be satisfied. The astute dynamicist will recognize that :math:`v_f` is free. :code:`beluga` can interpret a multitude of boundary conditions. Next, define the units in terms of states that have been define so the solver knows how to automatically scale all the variables::
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
@@ -72,8 +72,8 @@ So we guessed that :code:`beluga` will automatically handle us propagating forwa
     continuation_steps = beluga.init_continuation()
     continuation_steps.add_step('bisection')
     continuation_steps[-1].num_cases(21)
-    continuation_steps[-1].terminal('x', 10)
-    continuation_steps[-1].terminal('y',-10)
+    continuation_steps[-1].const('x_f', 10)
+    continuation_steps[-1].const('y_f',-10)
 
 So when we created :code:`continuation_steps`, it behaves likes a :code:`Python list()`. In this case there's only 1 continuation set. What this continuation set does is it drags out the terminal boundary conditions, :math:`x_f` and :math:`y_f`, to (10, -10). It will do this in 21 evenly spaced steps, using the previous solution as an initial guess into the next. Optimal control theory can be difficult, and even the simplest of problems won't converge, so lets use our :code:`logging` package to keep track of the output and progress::
 

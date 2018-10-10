@@ -56,7 +56,7 @@ class Propagator(Algorithm):
         """
 
         obj = super().__new__(cls, *args, **kwargs)
-        obj.abstol = kwargs.get('abstol', 1e-8)
+        obj.abstol = kwargs.get('abstol', 1e-6)
         obj.maxstep = kwargs.get('maxstep', 0.1)
         obj.reltol = kwargs.get('reltol', 1e-6)
         obj.program = kwargs.get('program', 'scipy').lower()

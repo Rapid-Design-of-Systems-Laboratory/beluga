@@ -9,7 +9,7 @@ from sympy import Symbol, im
 from sympy.core.function import AppliedUndef
 import functools as ft
 import itertools as it
-import re as _re
+import re
 from beluga.problem import SymVar
 
 
@@ -89,9 +89,7 @@ def make_augmented_params(constraints, location):
     return lagrange_mult
 
 
-def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location,
-                             prefix_map=(('initial',(r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
-                                         ('terminal',(r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))):
+def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location):
     """
     Creates boundary conditions for initial and terminal constraints.
 
@@ -101,15 +99,20 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     :param cost: Cost function.
     :param derivative_fn: Total derivative function.
     :param location: Location of each boundary constraint.
-    :param prefix_map: Prefix mapping.
     :return: List of boundary conditions.
     """
+    prefix_map = (('initial', (r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
+                  ('terminal', (r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))
     prefix_map = dict(prefix_map)
-    bc_list = [sanitize_constraint_expr(x, states, location, prefix_map) for x in constraints[location]]
+
+    bc_list = []
+    for x in constraints[location]:
+        bc = sanitize_constraint_expr(x, states, location, prefix_map)
+        bc_list.append(bc)
+
     *_, sign = dict(prefix_map)[location]
     cost_expr = sign * cost
-    bc_list += [str(costate - derivative_fn(cost_expr, state)) for state, costate in zip(states, costates)]
-
+    bc_list += [costate - derivative_fn(cost_expr, state) for state, costate in zip(states, costates)]
     return bc_list
 
 
@@ -188,20 +191,21 @@ def make_ham_lamdot(states, path_cost, derivative_fn):
     yield make_costate_rates(ham, states, costate_names, derivative_fn)
 
 
-def make_time_bc(constraints, bc_terminal):
+def make_time_bc(constraints, hamiltonian, bc_terminal):
     """
     Makes free or fixed final time boundary conditions.
 
     :param constraints: List of constraints.
+    :param hamiltonian: A Hamiltonian function.
     :param bc_terminal: Terminal boundary condition.
     :return: New terminal boundary condition.
     """
     time_constraints = constraints.get('independent', [])
     if len(time_constraints) > 0:
+        raise NotImplementedError
         return bc_terminal+['tf - 1']
     else:
-        # Add free final time boundary condition
-        return bc_terminal+['_H - 0']
+        return bc_terminal+[hamiltonian - 0]
 
 
 def process_quantities(quantities):
@@ -236,8 +240,9 @@ def process_quantities(quantities):
 
 def sanitize_constraint_expr(constraint, states, location, prefix_map):
     """
-    Checks the initial/terminal constraint expression for invalid symbols
-    Also updates the constraint expression to reflect what would be in code
+    Checks the initial/terminal constraint expression for invalid symbols.
+
+    Returns symbols representing constants in the expressions.
 
     :param constraint: List of constraints.
     :param states: List of state variables.
@@ -249,13 +254,20 @@ def sanitize_constraint_expr(constraint, states, location, prefix_map):
         raise ValueError('Invalid constraint type')
 
     pattern, prefix, _ = dict(prefix_map)[location]
-    m = _re.findall(pattern, str(constraint.expr))
+    m = re.findall(pattern, str(constraint.expr))
     invalid = [x for x in m if x not in states]
 
     if not all(x is None for x in invalid):
-        raise ValueError('Invalid expression(s) in boundary constraint:\n'+str([x for x in invalid if x is not None]))
+        raise ValueError('Invalid expression(s) in boundary constraint:\n' + str([x for x in invalid if x is not None]))
 
-    return _re.sub(pattern, prefix, str(constraint.expr))
+    # new_consts = []
+    # for term in m:
+    #     if location == 'initial':
+    #         new_consts.append(SymVar({'name':term + '_0'}))
+    #     elif location == 'terminal':
+    #         new_consts.append(SymVar({'name':term + '_f'}))
+
+    return constraint
 
 
 def total_derivative(expr, var, dependent_vars=None):

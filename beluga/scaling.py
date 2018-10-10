@@ -1,5 +1,7 @@
 import numbers as num
 
+from collections import OrderedDict
+
 from sympy import *
 from beluga.utils import sympify
 
@@ -104,7 +106,6 @@ class Scaling(dict):
             return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
 
     def compute_scaling(self, sol):
-        from collections import OrderedDict
         # Units should be stored in order to be used as function arguments
         self.scale_factors = OrderedDict()
         # Evaluate scaling factors for each base unit
@@ -131,16 +132,12 @@ class Scaling(dict):
         """Scales a BVP solution"""
         solout = copy.deepcopy(sol)
 
-        # Additional aux entries for initial and terminal BCs
-        extras = [{'type':'initial','vars':self.problem_data['state_list']},
-                  {'type':'terminal','vars':self.problem_data['state_list']}]
-
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
             solout.y[:, idx] /= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
-        for aux in (self.problem_data['aux_list']+extras):
+        for aux in (self.problem_data['aux_list']):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
                     solout.aux[aux['type']][var] /= self.scale_vals[aux['type']][var]
@@ -155,16 +152,12 @@ class Scaling(dict):
         """ Unscales a solution object"""
         solout = copy.deepcopy(sol)
 
-        # Additional aux entries for initial and terminal BCs
-        extras = [{'type': 'initial', 'vars': self.problem_data['state_list']},
-                  {'type': 'terminal', 'vars': self.problem_data['state_list']}]
-
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['state_list']):
             solout.y[:, idx] *= self.scale_vals['states'][state]
 
         # Scale auxiliary variables
-        for aux in (self.problem_data['aux_list']+extras):
+        for aux in (self.problem_data['aux_list']):
             if aux['type'] not in Scaling.excluded_aux:
                 for var in aux['vars']:
                     solout.aux[aux['type']][var] *= self.scale_vals[aux['type']][var]

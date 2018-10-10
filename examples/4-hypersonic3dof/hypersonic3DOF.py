@@ -35,7 +35,7 @@ ocp.terminal_cost('-v', 'm/s')
 ocp.constraints() \
     .initial('h-h_0', 'm') \
     .initial('theta-theta_0', 'rad') \
-    .initial('phi-phi_0', 'rad') \
+    .initial('phi', 'rad') \
     .initial('v-v_0', 'm/s') \
     .initial('gam-gam_0', 'rad') \
     .initial('psi-psi_0', 'rad') \
@@ -51,6 +51,14 @@ ocp.constant('mass', 750/2.2046226, 'kg')  # Mass of vehicle, kg
 ocp.constant('re', 6378000, 'm')  # Radius of planet, m
 ocp.constant('Aref', pi*(24*.0254/2)**2, 'm**2')  # Reference area of vehicle, m**2
 ocp.constant('rn', 1/12*0.3048, 'm')  # Nose radius, m
+ocp.constant('h_0', 40000, 'm')
+ocp.constant('theta_0', 0, 'rad')
+ocp.constant('v_0', 2000, 'm/s')
+ocp.constant('gam_0', -(90-10)*pi/180, 'rad')
+ocp.constant('psi_0', 0, 'rad')
+ocp.constant('h_f', 0, 'm')
+ocp.constant('theta_f', 0, 'rad')
+ocp.constant('phi_f', 0, 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
@@ -74,18 +82,18 @@ guess_maker = beluga.guess_generator('auto',
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection').num_cases(21) \
-    .terminal('h', 0) \
-    .terminal('theta', 6945.9/6378000)
+    .const('h_f', 0) \
+    .const('theta_f', 6945.9/6378000)
 
 continuation_steps.add_step('bisection').num_cases(21) \
-    .terminal('theta', 0.5*pi/180)
+    .const('theta_f', 0.5*pi/180)
 
 continuation_steps.add_step('bisection').num_cases(41) \
-    .initial('gam', 0) \
-    .terminal('theta', 3*pi/180)
+    .const('gam_0', 0) \
+    .const('theta_f', 3*pi/180)
 
 continuation_steps.add_step('bisection').num_cases(41) \
-    .terminal('phi', 2*pi/180)
+    .const('phi_f', 2*pi/180)
 
 beluga.add_logger(logging_level=logging.DEBUG)
 

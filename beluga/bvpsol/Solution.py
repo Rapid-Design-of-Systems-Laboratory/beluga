@@ -49,7 +49,7 @@ class Solution(Trajectory):
             obj.nondynamical_parameters = np.array([])
 
         if aux is None:
-            obj.aux = {"initial": [], "terminal": [], "const": {}, "parameters": [], "arc_seq": (0,)}
+            obj.aux = {"const": {}, "parameters": []}
         else:
             obj.aux = aux
 
