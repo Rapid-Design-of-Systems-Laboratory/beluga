@@ -72,7 +72,7 @@ def test_Shooting_3():
 
 def test_Shooting_4():
     # This problem contains a quad and tests if the bvp solver correctly
-    # integrates the quadfun.
+    # integrates the quadfun. Also tests multiple shooting.
 
     def odefun(t, x, p, const):
         return -x[1], x[0]
@@ -83,7 +83,7 @@ def test_Shooting_4():
     def bcfun(t0, X0, q0, tf, Xf, qf, params, ndp, aux):
         return X0[0], X0[1] - 1, qf[0] - 1.0
 
-    algo = Shooting(odefun, quadfun, bcfun)
+    algo = Shooting(odefun, quadfun, bcfun, num_arcs=4)
     solinit = Solution()
     solinit.t = np.linspace(0, np.pi / 2, 2)
     solinit.y = np.array([[1, 0], [1, 0]])

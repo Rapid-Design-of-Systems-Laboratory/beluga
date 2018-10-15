@@ -73,7 +73,13 @@ class Collocation(BaseAlgorithm):
         reconstruct = False
         if self.number_of_nodes != number_of_datapoints:
             new_t = np.linspace(sol.t[0], sol.t[-1], self.number_of_nodes)
-            (new_y, new_q, new_u) = sol(new_t)
+            new_y, new_q, new_u = sol(new_t[0])
+            for ti in new_t[1:]:
+                yy, qq, uu = sol(ti)
+                new_y = np.vstack((new_y, yy))
+                new_q = np.vstack((new_q, qq))
+                new_u = np.vstack((new_u, uu))
+
             sol.t = new_t
             sol.y = new_y
             sol.q = new_q
@@ -94,7 +100,7 @@ class Collocation(BaseAlgorithm):
         self.number_of_odes = sol.y.shape[1]
 
         # TODO: The following if-then structure is silly, but I can't resolve this until some optimlib corrections are made
-        if sol.q is None:
+        if sol.q.size == 0:
             self.number_of_quads = 0
             sol.q = np.array([], dtype=np.float64)
         elif len(sol.q) == 0:
