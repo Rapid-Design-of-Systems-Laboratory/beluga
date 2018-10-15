@@ -178,35 +178,44 @@ class Trajectory(object):
         if len(self.t) == 0:
             return y_val, q_val, u_val
 
+        ycolumn = False
         if len(self.y.shape) == 1:
             ydim = 1
         else:
+            ycolumn = True
             ydim = self.y.shape[1]
 
+        qcolumn = False
         if len(self.q.shape) == 1:
             if self.q.shape[0] == 0:
                 qdim = 0
             else:
                 qdim = 1
         else:
+            qcolumn = True
             qdim = self.q.shape[1]
 
+        ucolumn = False
         if len(self.u.shape) == 1:
             if self.u.shape[0] == 0:
                 udim = 0
             else:
                 udim = 1
         else:
+            ucolumn = True
             udim = self.u.shape[1]
 
         # This builds the interpolation function on the most up to date data
         if ydim == 1:
-            f = self.interpolate(self.t, self.y.T[0])
+            if ycolumn:
+                f = self.interpolate(self.t, self.y.T[0])
+            else:
+                f = self.interpolate(self.t, self.y)
+
             if t.shape == ():
                 y_val = np.array([f(t)])
             else:
-                y_val = f(t)
-
+                y_val = np.array(f(t))
             y_val = y_val.T
 
         else:
@@ -215,7 +224,10 @@ class Trajectory(object):
 
 
         if qdim == 1:
-            f = self.interpolate(self.t, self.q.T[0])
+            if qcolumn:
+                f = self.interpolate(self.t, self.q.T[0])
+            else:
+                f = self.interpolate(self.t, self.q)
             if t.shape == ():
                 q_val = np.array([f(t)])
             else:
@@ -229,7 +241,10 @@ class Trajectory(object):
 
 
         if udim == 1:
-            f = self.interpolate(self.t, self.u.T)
+            if ucolumn:
+                f = self.interpolate(self.t, self.u.T[0])
+            else:
+                f = self.interpolate(self.t, self.u)
             if t.shape == ():
                 u_val = np.array([f(t)])
             else:
