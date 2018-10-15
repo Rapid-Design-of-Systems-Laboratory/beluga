@@ -135,7 +135,7 @@ class Shooting(BaseAlgorithm):
         gamma_set_perturbed = copy.copy(gamma_set)
         for ii, phi in zip(range(len(gamma_set)), phi_full_list):
             for jj in range(parameters.size):
-                parameters[ii] = parameters[ii] + h
+                parameters[jj] = parameters[jj] + h
                 kk = jj + nOdes
                 dx[kk] = dx[kk] + h
                 dy = np.dot(phi, dx)
@@ -146,9 +146,9 @@ class Shooting(BaseAlgorithm):
                 gamma_set_perturbed[ii] = perturbed_trajectory
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
                 gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
-                Ptemp[:, ii] = (f-fx)/h
+                Ptemp[:, jj] = (f-fx)/h
                 dx[jj] = dx[jj] - h
-                parameters[ii] = parameters[ii] - h
+                parameters[jj] = parameters[jj] - h
             P1 += Ptemp
             Ptemp = np.zeros((nBCs, parameters.size))
 
