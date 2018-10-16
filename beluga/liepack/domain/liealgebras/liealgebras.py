@@ -176,7 +176,7 @@ class rn(LieAlgebra):
         for i in range(n):
             mat[i, -1] = vector[i]
 
-        self.data = mat
+        np.copyto(self, mat)
 
 
 class so(LieAlgebra):
@@ -225,7 +225,7 @@ class so(LieAlgebra):
                 mat[i-1,j-1] = (-1)**(i+j)*vector[k]
                 k += 1
 
-        self.data = mat - mat.T
+        np.copyto(self, mat - mat.T)
 
 
 class sp(LieAlgebra):
@@ -314,4 +314,5 @@ class sp(LieAlgebra):
         C = C + C.T - np.diag(C.diagonal())
         top = np.hstack((A, B))
         bot = np.hstack((C, -A.T))
-        self.data = np.vstack((top, bot))
+
+        np.copyto(self, np.vstack((top, bot)))
