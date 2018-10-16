@@ -6,7 +6,9 @@ import numpy as np
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
 from beluga.bvpsol import Solution
-from multiprocessing_on_dill import pool
+import multiprocessing_on_dill as multiprocessing
+from multiprocessing import Pool
+import dill
 
 
 class Shooting(BaseAlgorithm):
@@ -79,9 +81,6 @@ class Shooting(BaseAlgorithm):
         # Set up the boundary condition function
         if self.boundarycondition_function is not None:
             self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
-
-        if self.num_cpus > 1:
-            self.pool = pool.Pool(processes=self.num_cpus)
 
     def _bc_jac_multi(self, gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
         h = StepSize
@@ -222,6 +221,11 @@ class Shooting(BaseAlgorithm):
         sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
 
+        if self.num_cpus > 1:
+            self.num_cpus = min(multiprocessing.cpu_count(), self.num_cpus)
+            pool = multiprocessing.pool.Pool(processes=self.num_cpus)
+            # pool = Pool(processes=self.num_cpus)
+
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
         if self.quadrature_function is None or all(np.isnan(sol.q)):
@@ -278,25 +282,40 @@ class Shooting(BaseAlgorithm):
         try:
             while True:
                 phi_full_list = []
+                tspan = []
+                y0g = []
+                q0g = []
                 for ii in range(len(gamma_set)):
-                    tspan = gamma_set[ii].t
-                    y0g, q0g, u0g = gamma_set[ii](tspan[0])
-                    y0stm[:nOdes] = y0g
+                    _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
+                    y0stm[:nOdes] = _y0g
                     y0stm[nOdes:] = stm0[:]
+                    tspan.append(copy.copy(gamma_set[ii].t))
+                    y0g.append(copy.copy(y0stm))
+                    q0g.append(copy.copy(_q0g))
 
-                    gamma = prop(self.stm_ode_func, self.quadrature_function, tspan, y0stm, q0g, paramGuess, sol.aux)
-                    t_set = gamma.t
-                    y_set = gamma.y[:, :nOdes]
-                    q_set = gamma.q
-                    u_set = gamma.u
-                    gamma_set[ii] = Solution(t=t_set, y=y_set, q=q_set, u=u_set)
+                def preload(T, Y, Q):
+                    return prop(self.stm_ode_func, self.quadrature_function, T, Y, Q, paramGuess, sol.aux)
 
-                    if ii > 0 and nquads > 0:
-                        qdiff = gamma_set[ii-1].q[-1] - gamma_set[ii].q[0]
-                        gamma_set[ii].q += qdiff
+                if self.num_cpus > 1:
+                    _results = [pool.apply_async(preload, (T,Y,Q)) for T,Y,Q in zip(tspan, y0g, q0g)]
+                    gamma_set_new = [result.get() for result in _results]
+                else:
+                    gamma_set_new = [preload(T, Y, Q) for T,Y,Q in zip(tspan, y0g, q0g)]
 
-                    phi_temp = np.reshape(gamma.y[:, nOdes:], (len(gamma.t), nOdes, nOdes+nParams))
+                for ii in range(len(gamma_set_new)):
+                    t_set = gamma_set_new[ii].t
+                    y_set = gamma_set_new[ii].y[:, :nOdes]
+                    q_set = gamma_set_new[ii].q
+                    u_set = gamma_set_new[ii].u
+                    gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
+                    phi_temp = np.reshape(gamma_set_new[ii].y[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
                     phi_full_list.append(np.copy(phi_temp))
+
+                if ii > 0 and nquads > 0:
+                    qdiff = gamma_set[ii-1].q[-1] - gamma_set[ii].q[0]
+                    gamma_set[ii].q += qdiff
+
+
 
                 # Break cycle if it exceeds the max number of iterations
                 if n_iter > self.max_iterations:
@@ -376,9 +395,6 @@ class Shooting(BaseAlgorithm):
             traceback.print_exc()
 
         if converged:
-            # sol.arcs = []
-            timestep_ctr = 0
-
             sol.t = np.hstack([g.t for g in gamma_set])
             sol.y = np.vstack([g.y for g in gamma_set])
             sol.q = np.vstack([g.q for g in gamma_set])
@@ -389,5 +405,7 @@ class Shooting(BaseAlgorithm):
             # Return a copy of the original guess if the problem fails to converge
             sol = copy.deepcopy(solinit)
 
+        if self.num_cpus > 1:
+            pool.close()
         sol.converged = converged
         return sol
