@@ -3,6 +3,7 @@ import numpy as np
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
+from scipy.optimize import minimize
 import copy
 
 
@@ -53,6 +54,78 @@ class Shooting(BaseAlgorithm):
     +------------------------+-----------------+-----------------+
 
     """
+    @staticmethod
+    def _dy0_to_corrections(dy0, nOdes, nquads, nparams, narcs):
+        dy = np.reshape(dy0[:nOdes * narcs], (narcs, nOdes), order='C')
+        dq = dy0[nOdes * narcs:nOdes * narcs + nquads]
+        dparams = dy0[nOdes * narcs + nquads:nOdes * narcs + nquads + nparams]
+        dnonparams = dy0[nOdes * narcs + nparams + nquads:]
+        return dy, dq, dparams, dnonparams
+
+    def _propagate_gammas(self, gamma_set, paramGuess, sol, prop, pool, nOdes, nquads, nParams):
+        tspan = []
+        y0g = []
+        q0g = []
+        for ii in range(len(gamma_set)):
+            _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
+            tspan.append(copy.copy(gamma_set[ii].t))
+            y0g.append(copy.copy(_y0g))
+            q0g.append(copy.copy(_q0g))
+
+        def preload(args):
+            return prop(self.derivative_function, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
+
+        if pool is not None:
+            gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+        else:
+            gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
+
+        for ii in range(len(gamma_set_new)):
+            t_set = gamma_set_new[ii].t
+            y_set = gamma_set_new[ii].y
+            q_set = gamma_set_new[ii].q
+            u_set = gamma_set_new[ii].u
+            gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
+
+        if ii > 0 and nquads > 0:
+            qdiff = gamma_set[ii - 1].q[-1] - gamma_set[ii].q[0]
+            gamma_set[ii].q += qdiff
+        return gamma_set
+
+    def _propagate_gammas_and_stt(self, gamma_set, y0stm, stm0, paramGuess, sol, prop, pool, nOdes, nquads, nParams):
+        phi_full_list = []
+        tspan = []
+        y0g = []
+        q0g = []
+        for ii in range(len(gamma_set)):
+            _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
+            y0stm[:nOdes] = _y0g
+            y0stm[nOdes:] = stm0[:]
+            tspan.append(copy.copy(gamma_set[ii].t))
+            y0g.append(copy.copy(y0stm))
+            q0g.append(copy.copy(_q0g))
+
+        def preload(args):
+            return prop(self.stm_ode_func, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
+
+        if pool is not None:
+            gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+        else:
+            gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
+
+        for ii in range(len(gamma_set_new)):
+            t_set = gamma_set_new[ii].t
+            y_set = gamma_set_new[ii].y[:, :nOdes]
+            q_set = gamma_set_new[ii].q
+            u_set = gamma_set_new[ii].u
+            gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
+            phi_temp = np.reshape(gamma_set_new[ii].y[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
+            phi_full_list.append(np.copy(phi_temp))
+
+        if ii > 0 and nquads > 0:
+            qdiff = gamma_set[ii - 1].q[-1] - gamma_set[ii].q[0]
+            gamma_set[ii].q += qdiff
+        return gamma_set, phi_full_list
 
     def __new__(cls, *args, **kwargs):
         obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
@@ -223,7 +296,7 @@ class Shooting(BaseAlgorithm):
 
         nOdes = y0g.shape[0]
         nquads = q0g.shape[0]
-        paramGuess = sol.dynamical_parameters
+        parameter_guess = sol.dynamical_parameters
         nondynamical_parameter_guess = sol.nondynamical_parameters
 
         # Make the state-transition ode matrix
@@ -259,140 +332,94 @@ class Shooting(BaseAlgorithm):
 
         # Ref: Solving Nonlinear Equations with Newton's Method By C. T. Kelley # TODO: Reference this in the docstring
         # Global Convergence and Armijo's Rule, pg. 11
-        alpha = 1
-        beta = 1
-        r0 = None
         prop = Propagator(**self.ivp_args)
         y0stm = np.zeros((len(stm0)+nOdes))
 
-        n_iter = 1  # Initialize iteration counter
         converged = False  # Convergence flag
-        try:
-            while True:
-                phi_full_list = []
-                tspan = []
-                y0g = []
-                q0g = []
-                for ii in range(len(gamma_set)):
-                    _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
-                    y0stm[:nOdes] = _y0g
-                    y0stm[nOdes:] = stm0[:]
-                    tspan.append(copy.copy(gamma_set[ii].t))
-                    y0g.append(copy.copy(y0stm))
-                    q0g.append(copy.copy(_q0g))
+        n_iter = 0  # Initialize iteration counter
+        err = -1
+        while not converged and n_iter <= self.max_iterations and err < self.max_error:
+            # Begin by propagating the full trajectory and STT
+            gamma_set, phi_full_list = self._propagate_gammas_and_stt(gamma_set, y0stm, stm0, parameter_guess, sol, prop, pool, nOdes, nquads, nParams)
 
-                def preload(args):
-                    return prop(self.stm_ode_func, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
+            # Determine the error vector
+            residual = self.bc_func_ms(gamma_set, parameter_guess, nondynamical_parameter_guess, sol.aux)
 
-                if pool is not None:
-                    gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
-                    # _results = [pool.apply_async(preload, [(T,Y,Q)]) for T,Y,Q in zip(tspan, y0g, q0g)]
-                    # gamma_set_new = [result.get() for result in _results]
-                else:
-                    gamma_set_new = [preload([T, Y, Q]) for T,Y,Q in zip(tspan, y0g, q0g)]
-
-                for ii in range(len(gamma_set_new)):
-                    t_set = gamma_set_new[ii].t
-                    y_set = gamma_set_new[ii].y[:, :nOdes]
-                    q_set = gamma_set_new[ii].q
-                    u_set = gamma_set_new[ii].u
-                    gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
-                    phi_temp = np.reshape(gamma_set_new[ii].y[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
-                    phi_full_list.append(np.copy(phi_temp))
-
-                if ii > 0 and nquads > 0:
-                    qdiff = gamma_set[ii-1].q[-1] - gamma_set[ii].q[0]
-                    gamma_set[ii].q += qdiff
+            # Break cycle if there are any NaNs in our error vector
+            if any(np.isnan(residual)):
+                raise RuntimeError("Nan in residual")
+            err = np.linalg.norm(residual)
+            logging.debug('Residual: ' + str(err))
 
 
+            # Compute Jacobian of boundary conditions
+            nBCs = len(residual)
 
-                # Break cycle if it exceeds the max number of iterations
-                if n_iter > self.max_iterations:
-                    logging.warning("Maximum iterations exceeded!")
-                    break
+            J = self._bc_jac_multi(gamma_set, phi_full_list, parameter_guess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
+            correction_vector = np.linalg.solve(J, -residual)
 
-                # Determine the error vector
-                res = self.bc_func_ms(gamma_set, paramGuess, nondynamical_parameter_guess, sol.aux)
-
-                # Break cycle if there are any NaNs in our error vector
-                if any(np.isnan(res)):
-                    print(res)
-                    raise RuntimeError("Nan in residual")
-
-                r1 = max(abs(res))
-                r1 = np.linalg.norm(res)
-                logging.debug('Residual: ' + str(r1))
-                if r1 > self.max_error:
-                    raise RuntimeError('Error exceeded max_error')
-
-                # Solution converged if BCs are satisfied to tolerance
-                if r1 <= self.tolerance and n_iter > 1:
-                    logging.info("Converged in "+str(n_iter)+" iterations.")
-                    converged = True
-                    break
-
-                # Compute Jacobian of boundary conditions
-                nBCs = len(res)
-
-                J = self._bc_jac_multi(gamma_set, phi_full_list, paramGuess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
-
-                # Compute correction vector
-                if r0 is not None:
-                    # if r1/r0 > 2:
-                    #     logging.error('Residue increased more than 2x in one iteration!')
-                    #     break
-                    # beta = (r0-r1)/(alpha*r0)
-                    beta = 1
-                    if beta < 0:
-                        beta = 1
-
-                if r1 > 1:
-                    alpha = 1/(2*r1)
-                else:
-                    alpha = 1
-
-                r0 = r1
-
-                # No damping if error within one order of magnitude of tolerance
-                if r1 < min(10*self.tolerance, 1e-3):
-                    alpha, beta = 1, 1
-
-                try:
-                    dy0 = alpha*beta*np.linalg.solve(J, -res)
-                except:
-                    dy0, *_ = np.linalg.lstsq(J, -res)
-                    dy0 = alpha*beta*dy0
-
-                # Apply corrections to states, quads, and parameters
-                d_ya = np.reshape(dy0[:nOdes * self.num_arcs], (self.num_arcs, nOdes), order='C')
-                dq = dy0[nOdes * self.num_arcs:nOdes * self.num_arcs + nquads]
+            def minfun(x):
+                g = copy.deepcopy(gamma_set)
+                dy0 = x*correction_vector
+                _dy, _dq, _dparams, _dnonparams = self._dy0_to_corrections(dy0, nOdes, nquads, nParams, self.num_arcs)
                 for ii in range(self.num_arcs):
-                    gamma_set[ii].y[0] += d_ya[ii,:]
+                    g[ii].y[0] += _dy[ii]
                     if nquads > 0:
-                        gamma_set[ii].q[0] += dq
+                        g[ii].q[0] += _dq
+                _p1 = parameter_guess + _dparams
+                _p2 = nondynamical_parameter_guess + _dnonparams
+                g = self._propagate_gammas(g, _p1, sol, prop, pool, nOdes, nquads, nParams)
+                return np.linalg.norm(self.bc_func_ms(g, _p1, _p2, sol.aux))**2
 
-                dp1 = dy0[nOdes * self.num_arcs + nquads:nOdes * self.num_arcs + nquads + paramGuess.size]
-                dp2 = dy0[nOdes * self.num_arcs + paramGuess.size + nquads:]
-                paramGuess += dp1
-                nondynamical_parameter_guess += dp2
-                n_iter += 1
-                logging.debug('Iteration #' + str(n_iter))
+            opt = minimize(minfun, np.array([1]), args=(), method='Nelder-Mead', tol=1e-3)
+            scale = opt.x
+            # breakpoint()
 
-        except Exception as e:
-            logging.warning(e)
-            import traceback
-            traceback.print_exc()
+            # # Compute correction vector
+            # beta = 1
+            # if err > 1:
+            #     alpha = 1/(2*err)
+            # else:
+            #     alpha = 1
 
-        if converged:
-            sol.t = np.hstack([g.t for g in gamma_set])
-            sol.y = np.vstack([g.y for g in gamma_set])
-            sol.q = np.vstack([g.q for g in gamma_set])
-            sol.dynamical_parameters = paramGuess
-            sol.nondynamical_parameters = nondynamical_parameter_guess
+            # # No damping if error within one order of magnitude of tolerance
+            # if err < min(10*self.tolerance, 1e-3):
+            #     alpha, beta = 1, 1
 
-        else:
-            # Return a copy of the original guess if the problem fails to converge
-            sol = copy.deepcopy(solinit)
+            try:
+                dy0 = scale*np.linalg.solve(J, -residual)
+            except:
+                dy0, *_ = np.linalg.lstsq(J, -residual)
+                dy0 = scale*dy0
 
+            # Apply corrections to states, quads, and parameters
+            dy, dq, dparams, dnonparams = self._dy0_to_corrections(dy0, nOdes, nquads, nParams, self.num_arcs)
+            for ii in range(self.num_arcs):
+                gamma_set[ii].y[0] += dy[ii]
+                if nquads > 0:
+                    gamma_set[ii].q[0] += dq
+
+            parameter_guess += dparams
+            nondynamical_parameter_guess += dnonparams
+            n_iter += 1
+            logging.debug('Iteration #' + str(n_iter))
+
+            # Solution converged if BCs are satisfied to tolerance
+            if err <= self.tolerance:
+                logging.info("Converged in " + str(n_iter) + " iterations.")
+                converged = True
+
+        # Post loop checks
+        if n_iter > self.max_iterations:
+            logging.warning('Max iterations exceeded.')
+
+        if err > self.max_error:
+            raise RuntimeError('Error exceeded max_error')
+
+        sol.t = np.hstack([g.t for g in gamma_set])
+        sol.y = np.vstack([g.y for g in gamma_set])
+        sol.q = np.vstack([g.q for g in gamma_set])
+        sol.dynamical_parameters = parameter_guess
+        sol.nondynamical_parameters = nondynamical_parameter_guess
         sol.converged = converged
         return sol
