@@ -1,16 +1,9 @@
-import copy
-import itertools as it
 import logging
 import numpy as np
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
-from beluga.bvpsol import Solution
-import multiprocessing_on_dill as multiprocessing
-import pathos
-from multiprocessing import Pool
 import copy
-import dill
 
 
 class Shooting(BaseAlgorithm):
