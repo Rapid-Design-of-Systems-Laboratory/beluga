@@ -7,7 +7,9 @@ from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
 from beluga.bvpsol import Solution
 import multiprocessing_on_dill as multiprocessing
+import pathos
 from multiprocessing import Pool
+import copy
 import dill
 
 
@@ -56,8 +58,6 @@ class Shooting(BaseAlgorithm):
     +------------------------+-----------------+-----------------+
     | num_arcs               | 1               | > 0             |
     +------------------------+-----------------+-----------------+
-    | num_cpus               | 1               | > 0             |
-    +------------------------+-----------------+-----------------+
 
     """
 
@@ -69,9 +69,7 @@ class Shooting(BaseAlgorithm):
         obj.max_error = kwargs.get('max_error', 100)
         obj.max_iterations = kwargs.get('max_iterations', 100)
         obj.num_arcs = kwargs.get('num_arcs', 1)
-        obj.num_cpus = kwargs.get('num_cpus', 1)
 
-        obj.pool = None
         obj.stm_ode_func = None
         obj.bc_func_ms = None
 
@@ -202,7 +200,7 @@ class Shooting(BaseAlgorithm):
 
         return _stmode_fd
 
-    def solve(self, solinit):
+    def solve(self, solinit, **kwargs):
         """
         Solve a two-point boundary value problem using the shooting method.
 
@@ -221,10 +219,7 @@ class Shooting(BaseAlgorithm):
         sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
 
-        if self.num_cpus > 1:
-            self.num_cpus = min(multiprocessing.cpu_count(), self.num_cpus)
-            pool = multiprocessing.pool.Pool(processes=self.num_cpus)
-            # pool = Pool(processes=self.num_cpus)
+        pool = kwargs.get('pool', None)
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
@@ -254,7 +249,7 @@ class Shooting(BaseAlgorithm):
 
         for trajectory_number in range(self.num_arcs):
             y0t, q0t, u0t = sol(tn[trajectory_number])
-            yft, qft, uft = sol(tn[trajectory_number])
+            yft, qft, uft = sol(tn[trajectory_number+1])
             t_set = np.hstack((tn[trajectory_number], tn[trajectory_number+1]))
             y_set = np.vstack((y0t, yft))
             q_set = np.vstack((q0t, qft))
@@ -293,14 +288,15 @@ class Shooting(BaseAlgorithm):
                     y0g.append(copy.copy(y0stm))
                     q0g.append(copy.copy(_q0g))
 
-                def preload(T, Y, Q):
-                    return prop(self.stm_ode_func, self.quadrature_function, T, Y, Q, paramGuess, sol.aux)
+                def preload(args):
+                    return prop(self.stm_ode_func, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
 
-                if self.num_cpus > 1:
-                    _results = [pool.apply_async(preload, (T,Y,Q)) for T,Y,Q in zip(tspan, y0g, q0g)]
-                    gamma_set_new = [result.get() for result in _results]
+                if pool is not None:
+                    gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+                    # _results = [pool.apply_async(preload, [(T,Y,Q)]) for T,Y,Q in zip(tspan, y0g, q0g)]
+                    # gamma_set_new = [result.get() for result in _results]
                 else:
-                    gamma_set_new = [preload(T, Y, Q) for T,Y,Q in zip(tspan, y0g, q0g)]
+                    gamma_set_new = [preload([T, Y, Q]) for T,Y,Q in zip(tspan, y0g, q0g)]
 
                 for ii in range(len(gamma_set_new)):
                     t_set = gamma_set_new[ii].t
@@ -331,8 +327,8 @@ class Shooting(BaseAlgorithm):
                     raise RuntimeError("Nan in residual")
 
                 r1 = max(abs(res))
+                r1 = np.linalg.norm(res)
                 logging.debug('Residual: ' + str(r1))
-
                 if r1 > self.max_error:
                     raise RuntimeError('Error exceeded max_error')
 
@@ -405,7 +401,5 @@ class Shooting(BaseAlgorithm):
             # Return a copy of the original guess if the problem fails to converge
             sol = copy.deepcopy(solinit)
 
-        if self.num_cpus > 1:
-            pool.close()
         sol.converged = converged
         return sol

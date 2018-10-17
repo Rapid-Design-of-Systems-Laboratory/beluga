@@ -54,7 +54,7 @@ class Collocation(BaseAlgorithm):
         obj.verbose = verbose
         return obj
     
-    def solve(self, solinit):
+    def solve(self, solinit, **kwargs):
         """
         Solve a two-point boundary value problem using the collocation method.
 

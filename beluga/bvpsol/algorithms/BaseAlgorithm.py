@@ -41,7 +41,7 @@ class BaseAlgorithm(object):
         self.quadrature_function = quadrature_function
 
     @abc.abstractmethod
-    def solve(self, solinit):
+    def solve(self, solinit, **kwargs):
         raise NotImplementedError()
 
     def close(self):
