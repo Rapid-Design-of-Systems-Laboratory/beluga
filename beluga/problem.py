@@ -391,12 +391,12 @@ class GuessGenerator(object):
         x0 = np.array(self.start)
 
         # Add costates
-        if isinstance(self.costate_guess, float):
+        if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
             x0 = np.r_[x0, self.costate_guess * np.ones(len(self.start))]
         else:
             x0 = np.r_[x0, self.costate_guess]
 
-        if isinstance(self.control_guess, float):
+        if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
             u0 = self.control_guess*np.ones(self.dae_num_states)
         else:
             u0 = self.control_guess

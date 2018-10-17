@@ -15,6 +15,7 @@ from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from .utils import tic, toc
 from collections import OrderedDict
+import pathos
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='Shooting',
@@ -62,10 +63,22 @@ def set_output_file(output_file=None):
         config['output_file'] = output_file
 
 
-def solve(ocp, method, bvp_algorithm, steps, guess_generator):
+def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     """
     Solves the OCP using specified method
     """
+    num_cpus = int(kwargs.get('num_cpus', 1))
+
+    if num_cpus < 1:
+        raise ValueError('Number of cpus must be greater than 1.')
+
+    if num_cpus > 1:
+        logging.debug('Starting processing pool with ' + str(num_cpus) + 'cpus... ')
+        pool = pathos.multiprocessing.Pool(processes=num_cpus)
+        logging.debug('Done.')
+    else:
+        pool = None
+
     output_file = config['output_file']
     logging.info("Computing the necessary conditions of optimality")
 
@@ -118,7 +131,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp._scaling.initialize(ocp_ws)
     ocp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, solinit, bvp)
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, solinit, bvp, pool)
     total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -140,13 +153,16 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     qvars = {str(k): str(v) for k, v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
 
+    if pool is not None:
+        pool.close()
+
     with open(output_file, 'wb') as outfile:
         pickle.dump(out, outfile)
 
     return out['solution'][-1][-1]
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
@@ -176,7 +192,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
                 s.compute_scaling(sol_guess)
                 sol_guess = s.scale(sol_guess)
 
-                sol = bvp_algo.solve(sol_guess)
+                sol = bvp_algo.solve(sol_guess, pool=pool)
                 step.last_sol.converged = sol.converged
                 sol = s.unscale(sol)
 

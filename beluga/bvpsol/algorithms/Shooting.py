@@ -6,7 +6,11 @@ import numpy as np
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
 from beluga.bvpsol import Solution
-from multiprocessing_on_dill import pool
+import multiprocessing_on_dill as multiprocessing
+import pathos
+from multiprocessing import Pool
+import copy
+import dill
 
 
 class Shooting(BaseAlgorithm):
@@ -54,8 +58,6 @@ class Shooting(BaseAlgorithm):
     +------------------------+-----------------+-----------------+
     | num_arcs               | 1               | > 0             |
     +------------------------+-----------------+-----------------+
-    | num_cpus               | 1               | > 0             |
-    +------------------------+-----------------+-----------------+
 
     """
 
@@ -67,9 +69,7 @@ class Shooting(BaseAlgorithm):
         obj.max_error = kwargs.get('max_error', 100)
         obj.max_iterations = kwargs.get('max_iterations', 100)
         obj.num_arcs = kwargs.get('num_arcs', 1)
-        obj.num_cpus = kwargs.get('num_cpus', 1)
 
-        obj.pool = None
         obj.stm_ode_func = None
         obj.bc_func_ms = None
 
@@ -79,9 +79,6 @@ class Shooting(BaseAlgorithm):
         # Set up the boundary condition function
         if self.boundarycondition_function is not None:
             self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
-
-        if self.num_cpus > 1:
-            self.pool = pool.Pool(processes=self.num_cpus)
 
     def _bc_jac_multi(self, gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
         h = StepSize
@@ -203,7 +200,7 @@ class Shooting(BaseAlgorithm):
 
         return _stmode_fd
 
-    def solve(self, solinit):
+    def solve(self, solinit, **kwargs):
         """
         Solve a two-point boundary value problem using the shooting method.
 
@@ -221,6 +218,8 @@ class Shooting(BaseAlgorithm):
         sol.q = np.array(sol.q, dtype=np.float64)
         sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
+
+        pool = kwargs.get('pool', None)
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
@@ -250,7 +249,7 @@ class Shooting(BaseAlgorithm):
 
         for trajectory_number in range(self.num_arcs):
             y0t, q0t, u0t = sol(tn[trajectory_number])
-            yft, qft, uft = sol(tn[trajectory_number])
+            yft, qft, uft = sol(tn[trajectory_number+1])
             t_set = np.hstack((tn[trajectory_number], tn[trajectory_number+1]))
             y_set = np.vstack((y0t, yft))
             q_set = np.vstack((q0t, qft))
@@ -278,25 +277,41 @@ class Shooting(BaseAlgorithm):
         try:
             while True:
                 phi_full_list = []
+                tspan = []
+                y0g = []
+                q0g = []
                 for ii in range(len(gamma_set)):
-                    tspan = gamma_set[ii].t
-                    y0g, q0g, u0g = gamma_set[ii](tspan[0])
-                    y0stm[:nOdes] = y0g
+                    _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
+                    y0stm[:nOdes] = _y0g
                     y0stm[nOdes:] = stm0[:]
+                    tspan.append(copy.copy(gamma_set[ii].t))
+                    y0g.append(copy.copy(y0stm))
+                    q0g.append(copy.copy(_q0g))
 
-                    gamma = prop(self.stm_ode_func, self.quadrature_function, tspan, y0stm, q0g, paramGuess, sol.aux)
-                    t_set = gamma.t
-                    y_set = gamma.y[:, :nOdes]
-                    q_set = gamma.q
-                    u_set = gamma.u
-                    gamma_set[ii] = Solution(t=t_set, y=y_set, q=q_set, u=u_set)
+                def preload(args):
+                    return prop(self.stm_ode_func, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
 
-                    if ii > 0 and nquads > 0:
-                        qdiff = gamma_set[ii-1].q[-1] - gamma_set[ii].q[0]
-                        gamma_set[ii].q += qdiff
+                if pool is not None:
+                    gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+                    # _results = [pool.apply_async(preload, [(T,Y,Q)]) for T,Y,Q in zip(tspan, y0g, q0g)]
+                    # gamma_set_new = [result.get() for result in _results]
+                else:
+                    gamma_set_new = [preload([T, Y, Q]) for T,Y,Q in zip(tspan, y0g, q0g)]
 
-                    phi_temp = np.reshape(gamma.y[:, nOdes:], (len(gamma.t), nOdes, nOdes+nParams))
+                for ii in range(len(gamma_set_new)):
+                    t_set = gamma_set_new[ii].t
+                    y_set = gamma_set_new[ii].y[:, :nOdes]
+                    q_set = gamma_set_new[ii].q
+                    u_set = gamma_set_new[ii].u
+                    gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
+                    phi_temp = np.reshape(gamma_set_new[ii].y[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
                     phi_full_list.append(np.copy(phi_temp))
+
+                if ii > 0 and nquads > 0:
+                    qdiff = gamma_set[ii-1].q[-1] - gamma_set[ii].q[0]
+                    gamma_set[ii].q += qdiff
+
+
 
                 # Break cycle if it exceeds the max number of iterations
                 if n_iter > self.max_iterations:
@@ -312,8 +327,8 @@ class Shooting(BaseAlgorithm):
                     raise RuntimeError("Nan in residual")
 
                 r1 = max(abs(res))
+                r1 = np.linalg.norm(res)
                 logging.debug('Residual: ' + str(r1))
-
                 if r1 > self.max_error:
                     raise RuntimeError('Error exceeded max_error')
 
@@ -376,9 +391,6 @@ class Shooting(BaseAlgorithm):
             traceback.print_exc()
 
         if converged:
-            # sol.arcs = []
-            timestep_ctr = 0
-
             sol.t = np.hstack([g.t for g in gamma_set])
             sol.y = np.vstack([g.y for g in gamma_set])
             sol.q = np.vstack([g.q for g in gamma_set])
