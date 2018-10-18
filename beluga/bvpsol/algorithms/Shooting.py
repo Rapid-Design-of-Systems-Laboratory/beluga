@@ -42,6 +42,8 @@ class Shooting(BaseAlgorithm):
     +------------------------+-----------------+-----------------+
     | Valid kwargs           | Default Value   | Valid Values    |
     +========================+=================+=================+
+    | algorithm              | {'SLSQP'}       | see `scipy.optimize.minimize` |
+    +------------------------+-----------------+-----------------+
     | ivp_args               | {}              | see `ivpsol`    |
     +------------------------+-----------------+-----------------+
     | tolerance              | 1e-4            | > 0             |
@@ -76,7 +78,9 @@ class Shooting(BaseAlgorithm):
             return prop(self.derivative_function, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
 
         if pool is not None:
-            gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+            # gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+            _temp = [pool.apply_async(preload, [(T, Y, Q)]) for T, Y, Q in zip(tspan, y0g, q0g)]
+            gamma_set_new = [_.get() for _ in _temp]
         else:
             gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
 
@@ -115,21 +119,23 @@ class Shooting(BaseAlgorithm):
 
         for ii in range(len(gamma_set_new)):
             t_set = gamma_set_new[ii].t
-            y_set = gamma_set_new[ii].y[:, :nOdes]
+            temp = gamma_set_new[ii].y
+            y_set = temp[:, :nOdes]
             q_set = gamma_set_new[ii].q
             u_set = gamma_set_new[ii].u
-            gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
-            phi_temp = np.reshape(gamma_set_new[ii].y[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
+            gamma_set_new[ii] = Trajectory(t_set, y_set, q_set, u_set)
+            phi_temp = np.reshape(temp[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
             phi_full_list.append(np.copy(phi_temp))
 
         if ii > 0 and nquads > 0:
-            qdiff = gamma_set[ii - 1].q[-1] - gamma_set[ii].q[0]
-            gamma_set[ii].q += qdiff
-        return gamma_set, phi_full_list
+            qdiff = gamma_set_new[ii - 1].q[-1] - gamma_set_new[ii].q[0]
+            gamma_set_new[ii].q += qdiff
+        return gamma_set_new, phi_full_list
 
     def __new__(cls, *args, **kwargs):
         obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
 
+        obj.algorithm = kwargs.get('algorithm', 'SLSQP')
         obj.ivp_args = kwargs.get('ivp_args', dict())
         obj.tolerance = kwargs.get('tolerance', 1e-4)
         obj.max_error = kwargs.get('max_error', 100)
@@ -177,8 +183,8 @@ class Shooting(BaseAlgorithm):
                 perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
                 if nquads > 0:
                     perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set[ii].q[0], parameters, aux)
-
                 gamma_set_perturbed[ii] = perturbed_trajectory
+
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
                 gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
                 M[:, jj] = (f-fx)/h
@@ -312,7 +318,6 @@ class Shooting(BaseAlgorithm):
         t0 = sol.t[0]
         tf = sol.t[-1]
         tn = np.linspace(t0, tf, self.num_arcs+1)
-
         for trajectory_number in range(self.num_arcs):
             y0t, q0t, u0t = sol(tn[trajectory_number])
             yft, qft, uft = sol(tn[trajectory_number+1])
@@ -338,6 +343,69 @@ class Shooting(BaseAlgorithm):
         converged = False  # Convergence flag
         n_iter = 0  # Initialize iteration counter
         err = -1
+
+        bypass = True
+        if bypass:
+            def _wrap_y0(gamma_set, parameters, nondynamical_parameters):
+                out = np.zeros(len(gamma_set)*nOdes + len(parameters) + len(nondynamical_parameters))
+                ii = 0
+                for trajectory in gamma_set:
+                    for initial_pt in trajectory.y[0]:
+                        out[ii] = initial_pt
+                        ii += 1
+
+                for initial_pt in gamma_set[0].q[0]:
+                    out[ii] = initial_pt
+                    ii += 1
+
+                for initial_pt in parameters:
+                    out[ii] = initial_pt
+                    ii += 1
+
+                for initial_pt in nondynamical_parameters:
+                    out[ii] = initial_pt
+                    ii += 1
+                return out
+
+            Xinit = _wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
+            def _consfun(X):
+                g = copy.deepcopy(gamma_set)
+                _y, _q, _params, _nonparams = self._dy0_to_corrections(X, nOdes, nquads, nParams, self.num_arcs)
+                for ii in range(self.num_arcs):
+                    g[ii].y[0] = _y[ii]
+                    if nquads > 0:
+                        g[ii].q[0] = _q
+                g = self._propagate_gammas(g, _params, sol, prop, pool, nOdes, nquads, nParams)
+                return self.bc_func_ms(g, _params, _nonparams, sol.aux)
+
+            def _jac_fun(X):
+                g = copy.deepcopy(gamma_set)
+                _y, _q, _params, _nonparams = self._dy0_to_corrections(X, nOdes, nquads, nParams, self.num_arcs)
+                for ii in range(self.num_arcs):
+                    g[ii].y[0] = _y[ii]
+                    if nquads > 0:
+                        g[ii].q[0] = _q
+
+                g, phi_full_list = self._propagate_gammas_and_stt(g, y0stm, stm0, _params, sol, prop, pool, nOdes, nquads, nParams)
+                J = self._bc_jac_multi(g, phi_full_list, _params, _nonparams, sol.aux, self.quadrature_function, self.bc_func_ms, StepSize=1e-6)
+                return J
+
+            constraint = {'type': 'eq', 'fun': _consfun}
+            cost = lambda x: 0
+            if not (self.algorithm == 'COBYLA' or self.algorithm == 'SLSQP' or self.algorithm == 'trust-constr'):
+                cost = lambda x: np.linalg.norm(_consfun(x)) ** 2
+
+            opt = minimize(cost, Xinit, args=(), method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter':self.max_iterations})
+            # breakpoint()
+            y, q, parameter_guess, nondynamical_parameter_guess = self._dy0_to_corrections(opt.x, nOdes, nquads, nParams, self.num_arcs)
+            for ii in range(self.num_arcs):
+                gamma_set[ii].y[0] = y[ii]
+                if nquads > 0:
+                    gamma_set[ii].q[0] = q
+            gamma_set = self._propagate_gammas(gamma_set, parameter_guess, sol, prop, pool, nOdes, nquads, nParams)
+            n_iter = opt.nit
+            converged = opt.success
+
         while not converged and n_iter <= self.max_iterations and err < self.max_error:
             # Begin by propagating the full trajectory and STT
             gamma_set, phi_full_list = self._propagate_gammas_and_stt(gamma_set, y0stm, stm0, parameter_guess, sol, prop, pool, nOdes, nquads, nParams)
@@ -351,8 +419,6 @@ class Shooting(BaseAlgorithm):
             err = np.linalg.norm(residual)
             logging.debug('Residual: ' + str(err))
 
-
-            # Compute Jacobian of boundary conditions
             nBCs = len(residual)
 
             J = self._bc_jac_multi(gamma_set, phi_full_list, parameter_guess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
@@ -406,7 +472,6 @@ class Shooting(BaseAlgorithm):
 
             # Solution converged if BCs are satisfied to tolerance
             if err <= self.tolerance:
-                logging.info("Converged in " + str(n_iter) + " iterations.")
                 converged = True
 
         # Post loop checks
@@ -415,6 +480,9 @@ class Shooting(BaseAlgorithm):
 
         if err > self.max_error:
             raise RuntimeError('Error exceeded max_error')
+
+        if err < self.tolerance:
+            logging.info("Converged in " + str(n_iter) + " iterations.")
 
         sol.t = np.hstack([g.t for g in gamma_set])
         sol.y = np.vstack([g.y for g in gamma_set])

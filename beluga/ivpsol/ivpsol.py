@@ -253,7 +253,7 @@ class Trajectory(object):
             u_val = u_val.T
 
         else:
-            f = [self.interpolate(self.t, self.q.T[ii]) for ii in range(udim)]
+            f = [self.interpolate(self.t, self.u.T[ii]) for ii in range(udim)]
             u_val = np.array([f[ii](t) for ii in range(udim)]).T
 
 
