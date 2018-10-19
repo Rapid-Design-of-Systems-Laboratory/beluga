@@ -1,10 +1,12 @@
+import copy
 import logging
 import numpy as np
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, Trajectory, reconstruct
 from scipy.optimize import minimize
-import copy
+scipy_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+                    'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}
 
 
 class Shooting(BaseAlgorithm):
@@ -39,23 +41,43 @@ class Shooting(BaseAlgorithm):
     .. math::
         J = \left[M, P, Q_0+Q_f \right]
 
-    +------------------------+-----------------+-----------------+
-    | Valid kwargs           | Default Value   | Valid Values    |
-    +========================+=================+=================+
+    +------------------------+-----------------+-------------------------------+
+    | Valid kwargs           | Default Value   | Valid Values                  |
+    +========================+=================+===============================+
     | algorithm              | {'SLSQP'}       | see `scipy.optimize.minimize` |
-    +------------------------+-----------------+-----------------+
-    | ivp_args               | {}              | see `ivpsol`    |
-    +------------------------+-----------------+-----------------+
-    | tolerance              | 1e-4            | > 0             |
-    +------------------------+-----------------+-----------------+
-    | max_error              | 100             | > 0             |
-    +------------------------+-----------------+-----------------+
-    | max_iterations         | 100             | > 0             |
-    +------------------------+-----------------+-----------------+
-    | num_arcs               | 1               | > 0             |
-    +------------------------+-----------------+-----------------+
+    +------------------------+-----------------+-------------------------------+
+    | ivp_args               | {}              | see `ivpsol`                  |
+    +------------------------+-----------------+-------------------------------+
+    | tolerance              | 1e-4            | > 0                           |
+    +------------------------+-----------------+-------------------------------+
+    | max_error              | 100             | > 0                           |
+    +------------------------+-----------------+-------------------------------+
+    | max_iterations         | 100             | > 0                           |
+    +------------------------+-----------------+-------------------------------+
+    | num_arcs               | 1               | > 0                           |
+    +------------------------+-----------------+-------------------------------+
 
     """
+    def __new__(cls, *args, **kwargs):
+        obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
+
+        obj.algorithm = kwargs.get('algorithm', 'SLSQP')
+        obj.ivp_args = kwargs.get('ivp_args', dict())
+        obj.tolerance = kwargs.get('tolerance', 1e-4)
+        obj.max_error = kwargs.get('max_error', 100)
+        obj.max_iterations = kwargs.get('max_iterations', 100)
+        obj.num_arcs = kwargs.get('num_arcs', 1)
+
+        obj.stm_ode_func = None
+        obj.bc_func_ms = None
+
+        return obj
+
+    def __init__(self, *args, **kwargs):
+        # Set up the boundary condition function
+        if self.boundarycondition_function is not None:
+            self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
+
     @staticmethod
     def _wrap_y0(gamma_set, parameters, nondynamical_parameters):
         n_odes = len(gamma_set[0].y[0])
@@ -156,26 +178,6 @@ class Shooting(BaseAlgorithm):
             qdiff = gamma_set_new[ii - 1].q[-1] - gamma_set_new[ii].q[0]
             gamma_set_new[ii].q += qdiff
         return gamma_set_new, phi_full_list
-
-    def __new__(cls, *args, **kwargs):
-        obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
-
-        obj.algorithm = kwargs.get('algorithm', 'SLSQP')
-        obj.ivp_args = kwargs.get('ivp_args', dict())
-        obj.tolerance = kwargs.get('tolerance', 1e-4)
-        obj.max_error = kwargs.get('max_error', 100)
-        obj.max_iterations = kwargs.get('max_iterations', 100)
-        obj.num_arcs = kwargs.get('num_arcs', 1)
-
-        obj.stm_ode_func = None
-        obj.bc_func_ms = None
-
-        return obj
-
-    def __init__(self, *args, **kwargs):
-        # Set up the boundary condition function
-        if self.boundarycondition_function is not None:
-            self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
 
     def _bc_jac_multi(self, gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
         h = StepSize
@@ -370,8 +372,7 @@ class Shooting(BaseAlgorithm):
         n_iter = 0  # Initialize iteration counter
         err = -1
 
-        bypass = True
-        if bypass:
+        if self.algorithm in scipy_algorithms:
             # Set up the initial guess vector
             Xinit = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
 
@@ -420,73 +421,57 @@ class Shooting(BaseAlgorithm):
             n_iter = opt.nit
             converged = opt.success
 
-        while not converged and n_iter <= self.max_iterations and err < self.max_error:
-            # Begin by propagating the full trajectory and STT
-            gamma_set, phi_full_list = self._propagate_gammas_and_stt(gamma_set, y0stm, stm0, parameter_guess, sol, prop, pool, nOdes, nquads, nParams)
+        elif self.algorithm.lower() == 'traditional':
+            while not converged and n_iter <= self.max_iterations and err < self.max_error:
+                # Begin by propagating the full trajectory and STT
+                gamma_set, phi_full_list = self._propagate_gammas_and_stt(gamma_set, y0stm, stm0, parameter_guess, sol, prop, pool, n_odes, n_quads, n_dynparams)
 
-            # Determine the error vector
-            residual = self.bc_func_ms(gamma_set, parameter_guess, nondynamical_parameter_guess, sol.aux)
+                # Determine the error vector
+                residual = self.bc_func_ms(gamma_set, parameter_guess, nondynamical_parameter_guess, sol.aux)
 
-            # Break cycle if there are any NaNs in our error vector
-            if any(np.isnan(residual)):
-                raise RuntimeError("Nan in residual")
-            err = np.linalg.norm(residual)
-            logging.debug('Residual: ' + str(err))
+                # Break cycle if there are any NaNs in our error vector
+                if any(np.isnan(residual)):
+                    raise RuntimeError("Nan in residual")
+                err = np.linalg.norm(residual)
+                logging.debug('Residual: ' + str(err))
 
-            nBCs = len(residual)
+                nBCs = len(residual)
 
-            J = self._bc_jac_multi(gamma_set, phi_full_list, parameter_guess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
-            correction_vector = np.linalg.solve(J, -residual)
+                J = self._bc_jac_multi(gamma_set, phi_full_list, parameter_guess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
+                correction_vector = np.linalg.solve(J, -residual)
 
-            def minfun(x):
-                g = copy.deepcopy(gamma_set)
-                dy0 = x*correction_vector
-                _dy, _dq, _dparams, _dnonparams = self._dy0_to_corrections(dy0, nOdes, nquads, nParams, self.num_arcs)
+                # Compute correction vector
+                beta = 1
+                if err > 1:
+                    alpha = 1/(2*err)
+                else:
+                    alpha = 1
+
+                # No damping if error within one order of magnitude of tolerance
+                if err < min(10*self.tolerance, 1e-3):
+                    alpha, beta = 1, 1
+
+                try:
+                    dy0 = alpha*beta*np.linalg.solve(J, -residual)
+                except:
+                    dy0, *_ = np.linalg.lstsq(J, -residual)
+                    dy0 = alpha*beta*dy0
+
+                # Apply corrections to states, quads, and parameters
+                dy, dq, dparams, dnonparams = self._unwrap_y0(dy0, n_odes, n_quads, n_dynparams, self.num_arcs)
                 for ii in range(self.num_arcs):
-                    g[ii].y[0] += _dy[ii]
-                    if nquads > 0:
-                        g[ii].q[0] += _dq
-                _p1 = parameter_guess + _dparams
-                _p2 = nondynamical_parameter_guess + _dnonparams
-                g = self._propagate_gammas(g, _p1, sol, prop, pool, nOdes, nquads, nParams)
-                return np.linalg.norm(self.bc_func_ms(g, _p1, _p2, sol.aux))**2
+                    gamma_set[ii].y[0] += dy[ii]
+                    if n_quads > 0:
+                        gamma_set[ii].q[0] += dq
 
-            opt = minimize(minfun, np.array([1]), args=(), method='Nelder-Mead', tol=1e-3)
-            scale = opt.x
-            # breakpoint()
+                parameter_guess += dparams
+                nondynamical_parameter_guess += dnonparams
+                n_iter += 1
+                logging.debug('Iteration #' + str(n_iter))
 
-            # # Compute correction vector
-            # beta = 1
-            # if err > 1:
-            #     alpha = 1/(2*err)
-            # else:
-            #     alpha = 1
-
-            # # No damping if error within one order of magnitude of tolerance
-            # if err < min(10*self.tolerance, 1e-3):
-            #     alpha, beta = 1, 1
-
-            try:
-                dy0 = scale*np.linalg.solve(J, -residual)
-            except:
-                dy0, *_ = np.linalg.lstsq(J, -residual)
-                dy0 = scale*dy0
-
-            # Apply corrections to states, quads, and parameters
-            dy, dq, dparams, dnonparams = self._dy0_to_corrections(dy0, nOdes, nquads, nParams, self.num_arcs)
-            for ii in range(self.num_arcs):
-                gamma_set[ii].y[0] += dy[ii]
-                if nquads > 0:
-                    gamma_set[ii].q[0] += dq
-
-            parameter_guess += dparams
-            nondynamical_parameter_guess += dnonparams
-            n_iter += 1
-            logging.debug('Iteration #' + str(n_iter))
-
-            # Solution converged if BCs are satisfied to tolerance
-            if err <= self.tolerance:
-                converged = True
+                # Solution converged if BCs are satisfied to tolerance
+                if err <= self.tolerance:
+                    converged = True
 
         # Post loop checks
         if n_iter > self.max_iterations:
