@@ -1,3 +1,4 @@
+import cloudpickle as pickle
 import copy
 import logging
 import numpy as np
@@ -113,73 +114,62 @@ class Shooting(BaseAlgorithm):
         dnonparams = X[n_odes * n_arcs + n_dynparams + n_quads:]
         return y0, q0, dparams, dnonparams
 
-    def _propagate_gammas(self, gamma_set, paramGuess, sol, prop, pool, nOdes, nquads, nParams):
-        tspan = []
-        y0g = []
-        q0g = []
+    @staticmethod
+    def _make_gammas(derivative_function, quadrature_function, gamma_set, paramGuess, sol, prop, pool, nquads):
+        n_arcs = len(gamma_set)
+        tspan = [None]*n_arcs
+        y0g = [None]*n_arcs
+        q0g = [None]*n_arcs
         for ii in range(len(gamma_set)):
             _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
-            tspan.append(copy.copy(gamma_set[ii].t))
-            y0g.append(copy.copy(_y0g))
-            q0g.append(copy.copy(_q0g))
+            tspan[ii] = gamma_set[ii].t
+            y0g[ii] = _y0g
+            q0g[ii] = _q0g
 
         def preload(args):
-            return prop(self.derivative_function, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
+            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
         else:
             gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
 
-        for ii in range(len(gamma_set_new)):
-            t_set = gamma_set_new[ii].t
-            y_set = gamma_set_new[ii].y
-            q_set = gamma_set_new[ii].q
-            u_set = gamma_set_new[ii].u
-            gamma_set[ii] = Trajectory(t_set, y_set, q_set, u_set)
+        if n_arcs > 1 and nquads > 0:
+            for ii in range(n_arcs-1):
+                qdiff = gamma_set_new[ii].q[-1] - gamma_set_new[ii+1].q[0]
+                gamma_set_new[ii+1].q += qdiff
 
-        if ii > 0 and nquads > 0:
-            qdiff = gamma_set[ii - 1].q[-1] - gamma_set[ii].q[0]
-            gamma_set[ii].q += qdiff
-        return gamma_set
+        return gamma_set_new
 
-    def _propagate_gammas_and_stt(self, gamma_set, y0stm, stm0, paramGuess, sol, prop, pool, nOdes, nquads, nParams):
-        phi_full_list = []
-        tspan = []
-        y0g = []
-        q0g = []
+    @staticmethod
+    def _make_gammas_parallel(derivative_function, quadrature_function, gamma_set, paramGuess, sol, prop, pool, nquads):
+        n_arcs = len(gamma_set)
+        tspan = [None] * n_arcs
+        y0g = [None] * n_arcs
+        q0g = [None] * n_arcs
         for ii in range(len(gamma_set)):
             _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
-            y0stm[:nOdes] = _y0g
-            y0stm[nOdes:] = stm0[:]
-            tspan.append(copy.copy(gamma_set[ii].t))
-            y0g.append(copy.copy(y0stm))
-            q0g.append(copy.copy(_q0g))
+            tspan[ii] = gamma_set[ii].t
+            y0g[ii] = _y0g
+            q0g[ii] = _q0g
 
         def preload(args):
-            return prop(self.stm_ode_func, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
+            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], paramGuess, sol.aux)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
         else:
             gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
 
-        for ii in range(len(gamma_set_new)):
-            t_set = gamma_set_new[ii].t
-            temp = gamma_set_new[ii].y
-            y_set = temp[:, :nOdes]
-            q_set = gamma_set_new[ii].q
-            u_set = gamma_set_new[ii].u
-            gamma_set_new[ii] = Trajectory(t_set, y_set, q_set, u_set)
-            phi_temp = np.reshape(temp[:, nOdes:], (len(gamma_set_new[ii].t), nOdes, nOdes + nParams))
-            phi_full_list.append(np.copy(phi_temp))
+        if n_arcs > 1 and nquads > 0:
+            for ii in range(n_arcs - 1):
+                qdiff = gamma_set_new[ii].q[-1] - gamma_set_new[ii + 1].q[0]
+                gamma_set_new[ii + 1].q += qdiff
 
-        if ii > 0 and nquads > 0:
-            qdiff = gamma_set_new[ii - 1].q[-1] - gamma_set_new[ii].q[0]
-            gamma_set_new[ii].q += qdiff
-        return gamma_set_new, phi_full_list
+        return gamma_set_new
 
-    def _bc_jac_multi(self, gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
+    @staticmethod
+    def _bc_jac_multi(gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
         h = StepSize
         t0 = gamma_set[0].t[0]
         y0, q0, u0 = gamma_set[0](t0)
@@ -258,7 +248,8 @@ class Shooting(BaseAlgorithm):
 
         return np.hstack((J, Q, P1, P2))
 
-    def _bc_func_multiple_shooting(self, bc_func=None):
+    @staticmethod
+    def _bc_func_multiple_shooting(bc_func=None):
         def _bc_func(gamma_set, paramGuess, nondynamical_parameters, *args):
             t0 = gamma_set[0].t[0]
             y0, q0, u0 = gamma_set[0](t0)
@@ -360,87 +351,125 @@ class Shooting(BaseAlgorithm):
 
         # Initial state of STM is an identity matrix with an additional column of zeros per parameter
         stm0 = np.hstack((np.eye(n_odes), np.zeros((n_odes, n_dynparams)))).reshape(n_odes*(n_odes + n_dynparams))
+        y0stm = np.zeros((len(stm0) + n_odes))
 
         prop = Propagator(**self.ivp_args)
-        y0stm = np.zeros((len(stm0) + n_odes))
 
         converged = False  # Convergence flag
         n_iter = 0  # Initialize iteration counter
         err = -1
 
+        # Set up the initial guess vector
+        Xinit = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
+
+        # Pickle the functions for faster execution
+        if pool is not None:
+            pick_deriv = pickle.dumps(self.derivative_function)
+            pick_quad = pickle.dumps(self.quadrature_function)
+            pick_stm = pickle.dumps(self.stm_ode_func)
+            _gamma_maker = self._make_gammas_parallel
+        else:
+            pick_deriv = self.derivative_function
+            pick_quad = self.quadrature_function
+            pick_stm = self.stm_ode_func
+            _gamma_maker = self._make_gammas
+
+        # Set up the constraint function
+        def _constraint_function(X, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs, aux):
+            g = copy.deepcopy(gamma_set)
+            _y, _q, _params, _nonparams = self._unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs)
+            for ii in range(n_arcs):
+                g[ii].y[0] = _y[ii]
+                if n_quads > 0:
+                    g[ii].q[0] = _q
+            g = _gamma_maker(deriv_func, quad_func, g, _params, sol, prop, pool, n_quads)
+            return self.bc_func_ms(g, _params, _nonparams, aux)
+
+        def _constraint_function_wrapper(X):
+            return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs, sol.aux)
+
+        # Set up the jacobian of the constraint function
+        def _jacobian_function(X, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs):
+            g = copy.deepcopy(gamma_set)
+            _y, _q, _params, _nonparams = self._unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs)
+            for ii in range(n_arcs):
+                g[ii].y[0] = _y[ii]
+                if n_quads > 0:
+                    g[ii].q[0] = _q
+
+            phi_full_list = []
+            for ii in range(n_arcs):
+                t0 = g[ii].t[0]
+                _y0g, _q0g, _u0g = g[ii](t0)
+                tf = g[ii].t[-1]
+                _yfg, _qfg, _ufg = g[ii](tf)
+                stm0 = np.hstack((np.eye(n_odes), np.zeros((n_odes, n_dynparams)))).reshape(
+                    n_odes * (n_odes + n_dynparams))
+                y0stm = np.zeros((len(stm0) + n_odes))
+                stmf = np.hstack((np.eye(n_odes), np.zeros((n_odes, n_dynparams)))).reshape(
+                    n_odes * (n_odes + n_dynparams))
+                yfstm = np.zeros((len(stmf) + n_odes))
+                y0stm[:n_odes] = _y0g
+                y0stm[n_odes:] = stm0[:]
+                yfstm[:n_odes] = _yfg
+                yfstm[n_odes:] = stmf[:]
+                g[ii].t = np.hstack((t0, tf))
+                g[ii].y = np.vstack((y0stm, yfstm))
+                g[ii].q = np.vstack((_q0g, _qfg))
+                g[ii].u = np.vstack((_u0g, _ufg))
+
+            gamma_set_new = _gamma_maker(deriv_func, quad_func, g, _params, sol, prop, pool, n_quads)
+            for ii in range(len(gamma_set_new)):
+                t_set = gamma_set_new[ii].t
+                temp = gamma_set_new[ii].y
+                y_set = temp[:, :n_odes]
+                q_set = gamma_set_new[ii].q
+                u_set = gamma_set_new[ii].u
+                gamma_set_new[ii] = Trajectory(t_set, y_set, q_set, u_set)
+                phi_temp = np.reshape(temp[:, n_odes:], (len(gamma_set_new[ii].t), n_odes, n_odes + n_dynparams))
+                phi_full_list.append(np.copy(phi_temp))
+
+            J = self._bc_jac_multi(gamma_set_new, phi_full_list, _params, _nonparams, sol.aux, self.quadrature_function,
+                                   self.bc_func_ms, StepSize=1e-6)
+            return J
+
+        def _jacobian_function_wrapper(X):
+            return _jacobian_function(X, pick_stm, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs)
+
+        constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
+
+        # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
+        cost = lambda x: 0
+
+
+        """
+        Run the root-solving process
+        """
         if self.algorithm in scipy_algorithms:
-            # Set up the initial guess vector
-            Xinit = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
-
-            # Set up the constraint function
-            def _constraint_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, n_arcs, aux):
-                g = copy.copy(gamma_set)
-                _y, _q, _params, _nonparams = self._unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs)
-                for ii in range(n_arcs):
-                    g[ii].y[0] = _y[ii]
-                    if n_quads > 0:
-                        g[ii].q[0] = _q
-                g = self._propagate_gammas(g, _params, sol, prop, pool, n_odes, n_quads, n_dynparams)
-                return self.bc_func_ms(g, _params, _nonparams, aux)
-            _constraint_function_wrapper = lambda X: _constraint_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, self.num_arcs, sol.aux)
-
-            # Set up the jacobian of the constraint function
-            def _jacobian_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, n_arcs, aux):
-                g = copy.deepcopy(gamma_set)
-                _y, _q, _params, _nonparams = self._unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs)
-                for ii in range(self.num_arcs):
-                    g[ii].y[0] = _y[ii]
-                    if n_quads > 0:
-                        g[ii].q[0] = _q
-
-                g, phi_full_list = self._propagate_gammas_and_stt(g, y0stm, stm0, _params, sol, prop, pool, n_odes, n_quads, n_dynparams)
-                J = self._bc_jac_multi(g, phi_full_list, _params, _nonparams, sol.aux, self.quadrature_function, self.bc_func_ms, StepSize=1e-6)
-                return J
-            _jacobian_function_wrapper = lambda X: _jacobian_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, self.num_arcs, sol.aux)
-            constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac':_jacobian_function_wrapper}
-
-            # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
-            cost = lambda x: 0
             if not (self.algorithm == 'COBYLA' or self.algorithm == 'SLSQP' or self.algorithm == 'trust-constr'):
                 cost = lambda x: np.linalg.norm(_constraint_function_wrapper(x)) ** 2
 
-            # This runs the actual
             opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter':self.max_iterations})
-
-            # Unwrap the solution from the solver to put in a readable format
-            y, q, parameter_guess, nondynamical_parameter_guess = self._unwrap_y0(opt.x, n_odes, n_quads, n_dynparams, self.num_arcs)
-            for ii in range(self.num_arcs):
-                gamma_set[ii].y[0] = y[ii]
-                if n_quads > 0:
-                    gamma_set[ii].q[0] = q
-            gamma_set = self._propagate_gammas(gamma_set, parameter_guess, sol, prop, pool, n_odes, n_quads, n_dynparams)
+            Xinit = opt.x
             n_iter = opt.nit
             converged = opt.success
 
         elif self.algorithm.lower() == 'traditional':
             while not converged and n_iter <= self.max_iterations and err < self.max_error:
-                # Begin by propagating the full trajectory and STT
-                gamma_set, phi_full_list = self._propagate_gammas_and_stt(gamma_set, y0stm, stm0, parameter_guess, sol, prop, pool, n_odes, n_quads, n_dynparams)
+                residual = _constraint_function_wrapper(Xinit)
 
-                # Determine the error vector
-                residual = self.bc_func_ms(gamma_set, parameter_guess, nondynamical_parameter_guess, sol.aux)
-
-                # Break cycle if there are any NaNs in our error vector
                 if any(np.isnan(residual)):
                     raise RuntimeError("Nan in residual")
+
                 err = np.linalg.norm(residual)
-                logging.debug('Residual: ' + str(err))
+                J = _jacobian_function_wrapper(Xinit)
 
-                J = self._bc_jac_multi(gamma_set, phi_full_list, parameter_guess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
-
-                # Compute correction vector
                 beta = 1
                 if err > 1:
                     alpha = 1/(2*err)
                 else:
                     alpha = 1
 
-                # No damping if error within one order of magnitude of tolerance
                 if err < min(10*self.tolerance, 1e-3):
                     alpha, beta = 1, 1
 
@@ -450,23 +479,24 @@ class Shooting(BaseAlgorithm):
                     dy0, *_ = np.linalg.lstsq(J, -residual)
                     dy0 = alpha*beta*dy0
 
-                # Apply corrections to states, quads, and parameters
-                dy, dq, dparams, dnonparams = self._unwrap_y0(dy0, n_odes, n_quads, n_dynparams, self.num_arcs)
-                for ii in range(self.num_arcs):
-                    gamma_set[ii].y[0] += dy[ii]
-                    if n_quads > 0:
-                        gamma_set[ii].q[0] += dq
-
-                parameter_guess += dparams
-                nondynamical_parameter_guess += dnonparams
+                Xinit += dy0
                 n_iter += 1
-                logging.debug('Iteration #' + str(n_iter))
 
-                # Solution converged if BCs are satisfied to tolerance
                 if err <= self.tolerance:
                     converged = True
 
-        # Post loop checks
+        """
+        Post optimization checks and formatting
+        """
+
+        # Unwrap the solution from the solver to put in a readable format
+        y, q, parameter_guess, nondynamical_parameter_guess = self._unwrap_y0(Xinit, n_odes, n_quads, n_dynparams, self.num_arcs)
+        for ii in range(self.num_arcs):
+            gamma_set[ii].y[0] = y[ii]
+            if n_quads > 0:
+                gamma_set[ii].q[0] = q
+        gamma_set = _gamma_maker(pick_deriv, pick_quad, gamma_set, parameter_guess, sol, prop, pool, n_quads)
+
         if n_iter > self.max_iterations:
             logging.warning('Max iterations exceeded.')
 
@@ -476,9 +506,23 @@ class Shooting(BaseAlgorithm):
         if err < self.tolerance and converged:
             logging.info("Converged in " + str(n_iter) + " iterations.")
 
-        sol.t = np.hstack([g.t for g in gamma_set])
-        sol.y = np.vstack([g.y for g in gamma_set])
-        sol.q = np.vstack([g.q for g in gamma_set])
+        # Stitch the arcs together to make a single trajectory, removing the boundary points inbetween each arc
+        t_out = gamma_set[0].t
+        y_out = gamma_set[0].y
+        q_out = gamma_set[0].q
+        u_out = gamma_set[0].u
+
+        for ii in range(self.num_arcs - 1):
+            t_out = np.hstack((t_out, gamma_set[ii + 1].t[1:]))
+            y_out = np.vstack((y_out, gamma_set[ii + 1].y[1:]))
+            q_out = np.vstack((q_out, gamma_set[ii + 1].q[1:]))
+            u_out = np.vstack((u_out, gamma_set[ii + 1].u[1:]))
+
+        sol.t = t_out
+        sol.y = y_out
+        sol.q = q_out
+        sol.u = u_out
+
         sol.dynamical_parameters = parameter_guess
         sol.nondynamical_parameters = nondynamical_parameter_guess
         sol.converged = converged
