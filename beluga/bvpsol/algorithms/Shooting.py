@@ -2,7 +2,7 @@ import logging
 import numpy as np
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
-from beluga.ivpsol import Propagator, integrate_quads, Trajectory, reconstruct
+from beluga.ivpsol import Propagator, Trajectory, reconstruct
 from scipy.optimize import minimize
 import copy
 
@@ -57,12 +57,39 @@ class Shooting(BaseAlgorithm):
 
     """
     @staticmethod
-    def _dy0_to_corrections(dy0, nOdes, nquads, nparams, narcs):
-        dy = np.reshape(dy0[:nOdes * narcs], (narcs, nOdes), order='C')
-        dq = dy0[nOdes * narcs:nOdes * narcs + nquads]
-        dparams = dy0[nOdes * narcs + nquads:nOdes * narcs + nquads + nparams]
-        dnonparams = dy0[nOdes * narcs + nparams + nquads:]
-        return dy, dq, dparams, dnonparams
+    def _wrap_y0(gamma_set, parameters, nondynamical_parameters):
+        n_odes = len(gamma_set[0].y[0])
+        n_quads = len(gamma_set[0].q[0])
+        n_dynparams = len(parameters)
+        n_nondynparams = len(nondynamical_parameters)
+        out = np.zeros(len(gamma_set) * n_odes + n_quads + n_dynparams + n_nondynparams)
+
+        ii = 0
+        for trajectory in gamma_set:
+            for initial_pt in trajectory.y[0]:
+                out[ii] = initial_pt
+                ii += 1
+
+        for initial_pt in gamma_set[0].q[0]:
+            out[ii] = initial_pt
+            ii += 1
+
+        for initial_pt in parameters:
+            out[ii] = initial_pt
+            ii += 1
+
+        for initial_pt in nondynamical_parameters:
+            out[ii] = initial_pt
+            ii += 1
+        return out
+
+    @staticmethod
+    def _unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs):
+        y0 = np.reshape(X[:n_odes * n_arcs], (n_arcs, n_odes), order='C')
+        q0 = X[n_odes * n_arcs:n_odes * n_arcs + n_quads]
+        dparams = X[n_odes * n_arcs + n_quads:n_odes * n_arcs + n_quads + n_dynparams]
+        dnonparams = X[n_odes * n_arcs + n_dynparams + n_quads:]
+        return y0, q0, dparams, dnonparams
 
     def _propagate_gammas(self, gamma_set, paramGuess, sol, prop, pool, nOdes, nquads, nParams):
         tspan = []
@@ -78,9 +105,7 @@ class Shooting(BaseAlgorithm):
             return prop(self.derivative_function, self.quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
 
         if pool is not None:
-            # gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
-            _temp = [pool.apply_async(preload, [(T, Y, Q)]) for T, Y, Q in zip(tspan, y0g, q0g)]
-            gamma_set_new = [_.get() for _ in _temp]
+            gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
         else:
             gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
 
@@ -216,7 +241,7 @@ class Shooting(BaseAlgorithm):
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
                 gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
                 Ptemp[:, jj] = (f-fx)/h
-                dx[jj] = dx[jj] - h
+                dx[kk] = dx[kk] - h
                 parameters[jj] = parameters[jj] - h
             P1 += Ptemp
             Ptemp = np.zeros((nBCs, parameters.size))
@@ -300,10 +325,18 @@ class Shooting(BaseAlgorithm):
         else:
             q0g = sol.q[0, :]
 
-        nOdes = y0g.shape[0]
-        nquads = q0g.shape[0]
         parameter_guess = sol.dynamical_parameters
         nondynamical_parameter_guess = sol.nondynamical_parameters
+
+        # Get some info on the size of the problem
+        n_odes = y0g.shape[0]
+        n_quads = q0g.shape[0]
+        if sol.dynamical_parameters is None:
+            n_dynparams = 0
+        else:
+            n_dynparams = sol.dynamical_parameters.shape[0]
+        n_nondynparams = nondynamical_parameter_guess.shape[0]
+
 
         # Make the state-transition ode matrix
         if self.stm_ode_func is None:
@@ -327,18 +360,11 @@ class Shooting(BaseAlgorithm):
             u_set = np.vstack((u0t, uft))
             gamma_set.append(Trajectory(t_set, y_set, q_set, u_set))
 
-        if sol.dynamical_parameters is None:
-            nParams = 0
-        else:
-            nParams = sol.dynamical_parameters.size
-
         # Initial state of STM is an identity matrix with an additional column of zeros per parameter
-        stm0 = np.hstack((np.eye(nOdes), np.zeros((nOdes,nParams)))).reshape(nOdes*(nOdes+nParams))
+        stm0 = np.hstack((np.eye(n_odes), np.zeros((n_odes, n_dynparams)))).reshape(n_odes*(n_odes + n_dynparams))
 
-        # Ref: Solving Nonlinear Equations with Newton's Method By C. T. Kelley # TODO: Reference this in the docstring
-        # Global Convergence and Armijo's Rule, pg. 11
         prop = Propagator(**self.ivp_args)
-        y0stm = np.zeros((len(stm0)+nOdes))
+        y0stm = np.zeros((len(stm0) + n_odes))
 
         converged = False  # Convergence flag
         n_iter = 0  # Initialize iteration counter
@@ -346,63 +372,51 @@ class Shooting(BaseAlgorithm):
 
         bypass = True
         if bypass:
-            def _wrap_y0(gamma_set, parameters, nondynamical_parameters):
-                out = np.zeros(len(gamma_set)*nOdes + len(parameters) + len(nondynamical_parameters))
-                ii = 0
-                for trajectory in gamma_set:
-                    for initial_pt in trajectory.y[0]:
-                        out[ii] = initial_pt
-                        ii += 1
+            # Set up the initial guess vector
+            Xinit = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
 
-                for initial_pt in gamma_set[0].q[0]:
-                    out[ii] = initial_pt
-                    ii += 1
+            # Set up the constraint function
+            def _constraint_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, n_arcs, aux):
+                g = copy.copy(gamma_set)
+                _y, _q, _params, _nonparams = self._unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs)
+                for ii in range(n_arcs):
+                    g[ii].y[0] = _y[ii]
+                    if n_quads > 0:
+                        g[ii].q[0] = _q
+                g = self._propagate_gammas(g, _params, sol, prop, pool, n_odes, n_quads, n_dynparams)
+                return self.bc_func_ms(g, _params, _nonparams, aux)
+            _constraint_function_wrapper = lambda X: _constraint_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, self.num_arcs, sol.aux)
 
-                for initial_pt in parameters:
-                    out[ii] = initial_pt
-                    ii += 1
-
-                for initial_pt in nondynamical_parameters:
-                    out[ii] = initial_pt
-                    ii += 1
-                return out
-
-            Xinit = _wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
-            def _consfun(X):
+            # Set up the jacobian of the constraint function
+            def _jacobian_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, n_arcs, aux):
                 g = copy.deepcopy(gamma_set)
-                _y, _q, _params, _nonparams = self._dy0_to_corrections(X, nOdes, nquads, nParams, self.num_arcs)
+                _y, _q, _params, _nonparams = self._unwrap_y0(X, n_odes, n_quads, n_dynparams, n_arcs)
                 for ii in range(self.num_arcs):
                     g[ii].y[0] = _y[ii]
-                    if nquads > 0:
-                        g[ii].q[0] = _q
-                g = self._propagate_gammas(g, _params, sol, prop, pool, nOdes, nquads, nParams)
-                return self.bc_func_ms(g, _params, _nonparams, sol.aux)
-
-            def _jac_fun(X):
-                g = copy.deepcopy(gamma_set)
-                _y, _q, _params, _nonparams = self._dy0_to_corrections(X, nOdes, nquads, nParams, self.num_arcs)
-                for ii in range(self.num_arcs):
-                    g[ii].y[0] = _y[ii]
-                    if nquads > 0:
+                    if n_quads > 0:
                         g[ii].q[0] = _q
 
-                g, phi_full_list = self._propagate_gammas_and_stt(g, y0stm, stm0, _params, sol, prop, pool, nOdes, nquads, nParams)
+                g, phi_full_list = self._propagate_gammas_and_stt(g, y0stm, stm0, _params, sol, prop, pool, n_odes, n_quads, n_dynparams)
                 J = self._bc_jac_multi(g, phi_full_list, _params, _nonparams, sol.aux, self.quadrature_function, self.bc_func_ms, StepSize=1e-6)
                 return J
+            _jacobian_function_wrapper = lambda X: _jacobian_function(X, n_odes, n_quads, n_dynparams, n_nondynparams, self.num_arcs, sol.aux)
+            constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac':_jacobian_function_wrapper}
 
-            constraint = {'type': 'eq', 'fun': _consfun}
+            # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
             cost = lambda x: 0
             if not (self.algorithm == 'COBYLA' or self.algorithm == 'SLSQP' or self.algorithm == 'trust-constr'):
-                cost = lambda x: np.linalg.norm(_consfun(x)) ** 2
+                cost = lambda x: np.linalg.norm(_constraint_function_wrapper(x)) ** 2
 
-            opt = minimize(cost, Xinit, args=(), method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter':self.max_iterations})
-            # breakpoint()
-            y, q, parameter_guess, nondynamical_parameter_guess = self._dy0_to_corrections(opt.x, nOdes, nquads, nParams, self.num_arcs)
+            # This runs the actual
+            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter':self.max_iterations})
+
+            # Unwrap the solution from the solver to put in a readable format
+            y, q, parameter_guess, nondynamical_parameter_guess = self._unwrap_y0(opt.x, n_odes, n_quads, n_dynparams, self.num_arcs)
             for ii in range(self.num_arcs):
                 gamma_set[ii].y[0] = y[ii]
-                if nquads > 0:
+                if n_quads > 0:
                     gamma_set[ii].q[0] = q
-            gamma_set = self._propagate_gammas(gamma_set, parameter_guess, sol, prop, pool, nOdes, nquads, nParams)
+            gamma_set = self._propagate_gammas(gamma_set, parameter_guess, sol, prop, pool, n_odes, n_quads, n_dynparams)
             n_iter = opt.nit
             converged = opt.success
 
