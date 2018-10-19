@@ -333,12 +333,8 @@ class Shooting(BaseAlgorithm):
         # Get some info on the size of the problem
         n_odes = y0g.shape[0]
         n_quads = q0g.shape[0]
-        if sol.dynamical_parameters is None:
-            n_dynparams = 0
-        else:
-            n_dynparams = sol.dynamical_parameters.shape[0]
+        n_dynparams = sol.dynamical_parameters.shape[0]
         n_nondynparams = nondynamical_parameter_guess.shape[0]
-
 
         # Make the state-transition ode matrix
         if self.stm_ode_func is None:
@@ -435,10 +431,7 @@ class Shooting(BaseAlgorithm):
                 err = np.linalg.norm(residual)
                 logging.debug('Residual: ' + str(err))
 
-                nBCs = len(residual)
-
                 J = self._bc_jac_multi(gamma_set, phi_full_list, parameter_guess, nondynamical_parameter_guess, sol.aux, self.quadrature_function, self.bc_func_ms)
-                correction_vector = np.linalg.solve(J, -residual)
 
                 # Compute correction vector
                 beta = 1
@@ -480,7 +473,7 @@ class Shooting(BaseAlgorithm):
         if err > self.max_error:
             raise RuntimeError('Error exceeded max_error')
 
-        if err < self.tolerance:
+        if err < self.tolerance and converged:
             logging.info("Converged in " + str(n_iter) + " iterations.")
 
         sol.t = np.hstack([g.t for g in gamma_set])
