@@ -39,7 +39,7 @@ def test_brachistochrone_shooting():
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-    shooting_solver = beluga.bvp_algorithm('Shooting')
+    shooting_solver = beluga.bvp_algorithm('Shooting', algorithm='traditional')
 
     guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
 
