@@ -484,6 +484,42 @@ class Shooting(BaseAlgorithm):
 
                 if err <= self.tolerance:
                     converged = True
+        elif self.algorithm.lower() == 'armijo':
+            while not converged and n_iter <= self.max_iterations and err < self.max_error:
+                residual = _constraint_function_wrapper(Xinit)
+
+                if any(np.isnan(residual)):
+                    raise RuntimeError("Nan in residual")
+
+                err = np.linalg.norm(residual)
+                J = _jacobian_function_wrapper(Xinit)
+
+                try:
+                    dy0 = np.linalg.solve(J, -residual)
+                except np.linalg.LinAlgError as error:
+                    logging.warning(error)
+                    dy0, *_ = np.linalg.lstsq(J, -residual)
+
+                a = 1e-4
+                reduct = 0.5
+                ll = 1
+                r_try = float('Inf')
+
+                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance):
+                    step = ll*dy0
+                    res_try = _constraint_function_wrapper(Xinit + step)
+                    r_try = np.linalg.norm(res_try)
+                    ll *= reduct
+
+                Xinit += step
+                err = r_try
+                n_iter += 1
+                if ll <= 0.1:
+                    err = r_try
+                    break
+
+                if err <= self.tolerance:
+                    converged = True
 
         """
         Post optimization checks and formatting
