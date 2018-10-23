@@ -15,6 +15,7 @@ from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from .utils import tic, toc
 from collections import OrderedDict
+import pathos
 
 config = dict(logfile='beluga.log',
               default_bvp_solver='Shooting',
@@ -62,10 +63,22 @@ def set_output_file(output_file=None):
         config['output_file'] = output_file
 
 
-def solve(ocp, method, bvp_algorithm, steps, guess_generator):
+def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     """
     Solves the OCP using specified method
     """
+    num_cpus = int(kwargs.get('num_cpus', 1))
+
+    if num_cpus < 1:
+        raise ValueError('Number of cpus must be greater than 1.')
+
+    if num_cpus > 1:
+        logging.debug('Starting processing pool with ' + str(num_cpus) + 'cpus... ')
+        pool = pathos.multiprocessing.Pool(processes=num_cpus)
+        logging.debug('Done.')
+    else:
+        pool = None
+
     output_file = config['output_file']
     logging.info("Computing the necessary conditions of optimality")
 
@@ -81,16 +94,14 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp_ws['problem_data']['custom_functions'] = ocp.custom_functions()
     solinit = Solution()
 
-    solinit.aux['const'] = OrderedDict((str(const.name),float(const.value))
-                                for const in ocp_ws['constants'])
+    solinit.aux['const'] = OrderedDict((str(const.name),float(const.value)) for const in ocp_ws['constants'])
+    for const in ocp_ws['problem_data']['constants']:
+        if not str(const) in solinit.aux['const'].keys():
+            solinit.aux['const'][str(const)] = 0
 
-    solinit.aux['parameters'] = ocp_ws['problem_data']['parameter_list']
+    solinit.aux['dynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['dynamical_parameters']]
+    solinit.aux['nondynamical_parameters'] = [str(p) for p in ocp_ws['problem_data']['nondynamical_parameters']]
 
-    # For path constraints
-    solinit.aux['constraint'] = cl.defaultdict(float)
-
-    solinit.aux['arc_seq'] = (0,)
-    solinit.aux['pi_seq'] = (None,)
     bvp = preprocess(ocp_ws['problem_data'])
     solinit = ocp_ws['guess'].generate(bvp, solinit)
 
@@ -102,8 +113,14 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
 
-    solinit.aux['initial'] = initial_bc
-    solinit.aux['terminal'] = terminal_bc
+    for ii in initial_bc:
+        if ii+'_0' in solinit.aux['const'].keys():
+            solinit.aux['const'][ii+'_0'] = initial_bc[ii]
+
+    for ii in terminal_bc:
+        if ii+'_f' in solinit.aux['const'].keys():
+            solinit.aux['const'][ii+'_f'] = terminal_bc[ii]
+
     tic()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?
@@ -114,7 +131,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     ocp._scaling.initialize(ocp_ws)
     ocp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, solinit, bvp)
+    out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, solinit, bvp, pool)
     total_time = toc()
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -123,8 +140,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     # Final time is appended as a parameter, so scale the output x variables to show the correct time
     for continuation_set in out['solution']:
         for sol in continuation_set:
-            tf_ind = [i for i, s in enumerate(out['problem_data']['parameter_list']) if s is 'tf'][0]
-            tf = sol.parameters[tf_ind]
+            tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
+            tf = sol.dynamical_parameters[tf_ind]
             sol.t = sol.t*tf
 
     # Save data
@@ -136,13 +153,16 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator):
     qvars = {str(k): str(v) for k, v in qvars.items()}
     out['problem_data']['quantity_vars'] = qvars
 
+    if pool is not None:
+        pool.close()
+
     with open(output_file, 'wb') as outfile:
         pickle.dump(out, outfile)
 
     return out['solution'][-1][-1]
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
@@ -172,7 +192,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
                 s.compute_scaling(sol_guess)
                 sol_guess = s.scale(sol_guess)
 
-                sol = bvp_algo.solve(sol_guess)
+                sol = bvp_algo.solve(sol_guess, pool=pool)
                 step.last_sol.converged = sol.converged
                 sol = s.unscale(sol)
 
@@ -191,7 +211,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp):
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.parameters, sol.aux)
+                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
                     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
                     # keyboard()
 

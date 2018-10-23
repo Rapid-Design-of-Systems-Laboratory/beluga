@@ -16,23 +16,24 @@ def ocp_to_bvp(ocp, guess):
     constants = ws['constants']
     constants_of_motion = ws['constants_of_motion']
     constraints = ws['constraints']
-    constraints_adjoined = ws['constraints_adjoined']
     quantities = ws['quantities']
     initial_cost = ws['initial_cost']
     terminal_cost = ws['terminal_cost']
     path_cost = ws['path_cost']
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
-    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, constraints_adjoined, location='initial')
-    initial_lm_params = make_augmented_params(constraints, constraints_adjoined, location='initial')
-    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, constraints_adjoined, location='terminal')
-    terminal_lm_params = make_augmented_params(constraints, constraints_adjoined, location='terminal')
+    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
+    initial_lm_params = make_augmented_params(constraints, location='initial')
+    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
+    terminal_lm_params = make_augmented_params(constraints, location='terminal')
     hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
-    bc_initial = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_initial_cost, derivative_fn, location='initial')
-    bc_terminal = make_boundary_conditions(constraints, constraints_adjoined, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
-    bc_terminal = make_time_bc(constraints, bc_terminal)
+    for var in quantity_vars.keys():
+        hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
+
+    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
+    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-    parameters = make_parameters(initial_lm_params, terminal_lm_params)
-    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian)
+    nond_parameters = initial_lm_params + terminal_lm_params
     control_law = make_control_law(dHdu, controls)
     # Generate the problem data
     tf_var = sympify('tf')
@@ -44,19 +45,19 @@ def ocp_to_bvp(ocp, guess):
         'problem_name': problem_name,
         'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
         'state_list':[str(x) for x in it.chain(states, costates)],
-        'parameter_list': [str(tf_var)] + [str(p) for p in parameters],
         'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in costates],
         'states': states,
         'costates': costates,
         'constants': constants,
         'constants_of_motion': constants_of_motion,
-        'parameters': [tf_var] + parameters,
+        'dynamical_parameters': [tf_var],
+        'nondynamical_parameters': nond_parameters,
         'control_list': [str(x) for x in it.chain(controls)],
         'controls': controls,
         'quantity_vars': quantity_vars,
         'hamiltonian': hamiltonian,
         'num_states': 2 * len(states),
-        'num_params': len(parameters) + 1,
+        'num_params': len(nond_parameters) + 1,
         'dHdu': dHdu,
         'bc_initial': [_ for _ in bc_initial],
         'bc_terminal': [_ for _ in bc_terminal],

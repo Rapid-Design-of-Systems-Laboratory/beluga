@@ -56,7 +56,7 @@ class Propagator(Algorithm):
         """
 
         obj = super().__new__(cls, *args, **kwargs)
-        obj.abstol = kwargs.get('abstol', 1e-8)
+        obj.abstol = kwargs.get('abstol', 1e-6)
         obj.maxstep = kwargs.get('maxstep', 0.1)
         obj.reltol = kwargs.get('reltol', 1e-6)
         obj.program = kwargs.get('program', 'scipy').lower()
@@ -178,24 +178,84 @@ class Trajectory(object):
         if len(self.t) == 0:
             return y_val, q_val, u_val
 
+        ycolumn = False
         if len(self.y.shape) == 1:
-            dim = 1
+            ydim = 1
         else:
-            dim = self.y.shape[1]
+            ycolumn = True
+            ydim = self.y.shape[1]
+
+        qcolumn = False
+        if len(self.q.shape) == 1:
+            if self.q.shape[0] == 0:
+                qdim = 0
+            else:
+                qdim = 1
+        else:
+            qcolumn = True
+            qdim = self.q.shape[1]
+
+        ucolumn = False
+        if len(self.u.shape) == 1:
+            if self.u.shape[0] == 0:
+                udim = 0
+            else:
+                udim = 1
+        else:
+            ucolumn = True
+            udim = self.u.shape[1]
 
         # This builds the interpolation function on the most up to date data
-        if dim == 1:
-            f = self.interpolate(self.t, self.y.T)
+        if ydim == 1:
+            if ycolumn:
+                f = self.interpolate(self.t, self.y.T[0])
+            else:
+                f = self.interpolate(self.t, self.y)
+
             if t.shape == ():
                 y_val = np.array([f(t)])
             else:
-                y_val = f(t)
-
+                y_val = np.array(f(t))
             y_val = y_val.T
 
         else:
-            f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(dim)]
-            y_val = np.array([f[ii](t) for ii in range(dim)]).T
+            f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(ydim)]
+            y_val = np.array([f[ii](t) for ii in range(ydim)]).T
+
+
+        if qdim == 1:
+            if qcolumn:
+                f = self.interpolate(self.t, self.q.T[0])
+            else:
+                f = self.interpolate(self.t, self.q)
+            if t.shape == ():
+                q_val = np.array([f(t)])
+            else:
+                q_val = f(t)
+
+            q_val = q_val.T
+
+        else:
+            f = [self.interpolate(self.t, self.q.T[ii]) for ii in range(qdim)]
+            q_val = np.array([f[ii](t) for ii in range(qdim)]).T
+
+
+        if udim == 1:
+            if ucolumn:
+                f = self.interpolate(self.t, self.u.T[0])
+            else:
+                f = self.interpolate(self.t, self.u)
+            if t.shape == ():
+                u_val = np.array([f(t)])
+            else:
+                u_val = f(t)
+
+            u_val = u_val.T
+
+        else:
+            f = [self.interpolate(self.t, self.u.T[ii]) for ii in range(udim)]
+            u_val = np.array([f[ii](t) for ii in range(udim)]).T
+
 
         return y_val, q_val, u_val
 

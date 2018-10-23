@@ -15,7 +15,7 @@ from functools import partialmethod
 from collections import namedtuple, ChainMap
 from itertools import zip_longest
 
-from beluga.bvpsol import Scaling
+from .scaling import Scaling
 from beluga.utils import sympify, tic, toc
 from beluga.ivpsol import Propagator
 
@@ -188,11 +188,7 @@ class OCP(object):
 class ConstraintList(dict):
     def __new__(cls, *args, **kwargs):
         obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
-        obj.adjoined = kwargs.get('adjoined', False)
         return obj
-
-    def set_adjoined(self, bool):
-        self.adjoined = bool
 
     def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
         """
@@ -214,21 +210,6 @@ class ConstraintList(dict):
                 constraint_args=constraint_args)
     terminal = partialmethod(add_constraint, constraint_type='terminal',
                 constraint_args=constraint_args)
-    equality = partialmethod(add_constraint, constraint_type='equality',
-                constraint_args=constraint_args)
-    interior_point = partialmethod(add_constraint, constraint_type='interior_point',
-                constraint_args=constraint_args)
-    independent = partialmethod(add_constraint, constraint_type='independent',
-                constraint_args=constraint_args)
-    path = partialmethod(add_constraint, constraint_type='path',
-                constraint_args=('name', 'expr', 'direction', 'bound', 'unit', 'start_eps')
-                )
-
-    # def get(self, constraint_type):
-    #     """
-    #     Returns list of constraints of a specific type
-    #     """
-    #     return [c for c in self if c.type == constraint_type]
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """Combines positional and keyword arguments
@@ -410,30 +391,24 @@ class GuessGenerator(object):
         x0 = np.array(self.start)
 
         # Add costates
-        if isinstance(self.costate_guess, float):
+        if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
             x0 = np.r_[x0, self.costate_guess * np.ones(len(self.start))]
         else:
             x0 = np.r_[x0, self.costate_guess]
 
-        if isinstance(self.control_guess, float):
+        if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
             u0 = self.control_guess*np.ones(self.dae_num_states)
         else:
             u0 = self.control_guess
 
-        # Add time of integration to states
-
-        # x0 = np.append(x0, self.time_integrate)
-
         # Guess zeros for missing parameters
-        # TODO: Automatically generate parameter guess values
-
         if param_guess is None:
-            param_guess = np.zeros(len(solinit.aux['parameters']))
-        elif len(param_guess) < len(solinit.aux['parameters']):
-            param_guess += np.zeros(len(solinit.aux['parameters']) - len(param_guess))
-        elif len(param_guess) > len(solinit.aux['parameters']):
-            # TODO: Write a better error message
+            param_guess = np.zeros(len(solinit.aux['dynamical_parameters']))
+        elif len(param_guess) < len(solinit.aux['dynamical_parameters']):
+            param_guess += np.zeros(len(solinit.aux['dynamical_parameters']) - len(param_guess))
+        elif len(param_guess) > len(solinit.aux['dynamical_parameters']):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
+        nondynamical_param_guess = np.zeros(len(solinit.aux['nondynamical_parameters']))
 
         param_guess[0] = self.time_integrate
 
@@ -461,5 +436,6 @@ class GuessGenerator(object):
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y
-        solinit.parameters = param_guess
+        solinit.dynamical_parameters = param_guess
+        solinit.nondynamical_parameters = nondynamical_param_guess
         return solinit

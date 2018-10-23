@@ -34,6 +34,10 @@ ocp.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
 ocp.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
 ocp.constant('re',6378000,'m') # Radius of planet, m
 ocp.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
+ocp.constant('h_0', 80000, 'm')
+ocp.constant('v_0', 4000, 'm/s')
+ocp.constant('h_f', 80000, 'm')
+ocp.constant('theta_f', 0, 'rad')
 
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
@@ -41,7 +45,7 @@ ocp.terminal_cost('-v^2','m^2/s^2')
 # Define constraints
 ocp.constraints() \
     .initial('h-h_0','m') \
-    .initial('theta-theta_0','rad') \
+    .initial('theta','rad') \
     .initial('v-v_0','m/s') \
     .terminal('h-h_f','m')  \
     .terminal('theta-theta_f','rad')
@@ -65,12 +69,12 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .terminal('h',0) \
-                .terminal('theta',0.01*pi/180)
+                .const('h_f',0) \
+                .const('theta_f',0.01*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .terminal('theta',5.0*pi/180) \
+                .const('theta_f',5.0*pi/180) \
 
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \

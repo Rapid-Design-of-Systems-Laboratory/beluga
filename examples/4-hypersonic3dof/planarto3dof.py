@@ -41,10 +41,14 @@ ocp.control('alfa','rad')
 ocp.constant('mu', 3.986e5*1e9, 'm^3/s^2') # Gravitational parameter, m^3/s^2
 ocp.constant('rho0', 0.0001*1.2, 'kg/m^3') # Sea-level atmospheric density, kg/m^3
 ocp.constant('H', 7500, 'm') # Scale height for atmosphere of Earth, m
-
 ocp.constant('mass',750/2.2046226,'kg') # Mass of vehicle, kg
 ocp.constant('re',6378000,'m') # Radius of planet, m
 ocp.constant('Aref',pi*(24*.0254/2)**2,'m^2') # Reference area of vehicle, m^2
+ocp.constant('h_0', 80000, 'm')
+ocp.constant('v_0', 4000, 'm/s')
+ocp.constant('gam_0', (-90)*pi/180, 'rad')
+ocp.constant('h_f', 80000, 'm')
+ocp.constant('theta_f', 0, 'rad')
 
 # Define costs
 ocp.terminal_cost('-v^2','m^2/s^2')
@@ -52,7 +56,7 @@ ocp.terminal_cost('-v^2','m^2/s^2')
 # Define constraints
 ocp.constraints() \
     .initial('h-h_0','m') \
-    .initial('theta-theta_0','rad') \
+    .initial('theta','rad') \
     .initial('v-v_0','m/s') \
     .initial('gam-gam_0','rad') \
     .terminal('h-h_f','m')  \
@@ -78,7 +82,7 @@ continuation_steps = beluga.init_continuation()
 # Start by flying straight towards the ground
 continuation_steps.add_step('bisection') \
                 .num_cases(5) \
-                .terminal('h',0)
+                .const('h_f',0)
 
 # Slowly turn up the density
 continuation_steps.add_step('bisection') \
@@ -88,18 +92,18 @@ continuation_steps.add_step('bisection') \
 # Move downrange out a tad
 continuation_steps.add_step('bisection') \
                 .num_cases(3) \
-                .terminal('theta',0.01*pi/180)
+                .const('theta_f',0.01*pi/180)
 
 # Bring flight-path angle up slightly to activate the control
 continuation_steps.add_step('bisection') \
                 .num_cases(11) \
-                .initial('gam', -80*pi/180) \
-                .terminal('theta', 0.5*pi/180)
+                .const('gam_0', -80*pi/180) \
+                .const('theta_f', 0.5*pi/180)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(31) \
-                .initial('gam', -0*pi/180) \
-                .terminal('theta', 3*pi/180)
+                .const('gam_0', -0*pi/180) \
+                .const('theta_f', 3*pi/180)
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
@@ -161,6 +165,15 @@ ocp_2.constant('mass', 750/2.2046226, 'kg')  # Mass of vehicle, kg
 ocp_2.constant('re', 6378000, 'm')  # Radius of planet, m
 ocp_2.constant('Aref', pi*(24*.0254/2)**2, 'm**2')  # Reference area of vehicle, m**2
 ocp_2.constant('rn', 1/12*0.3048, 'm')  # Nose radius, m
+ocp_2.constant('h_0', sol.y[0,0], 'm')
+ocp_2.constant('theta_0', sol.y[0,1], 'rad')
+ocp_2.constant('phi_0', 0, 'rad')
+ocp_2.constant('v_0', sol.y[0,2], 'm/s')
+ocp_2.constant('gam_0', sol.y[0,3], 'rad')
+ocp_2.constant('psi_0', 0, 'rad')
+ocp_2.constant('h_f', sol.y[-1,0], 'm')
+ocp_2.constant('theta_f', sol.y[-1,1], 'rad')
+ocp_2.constant('phi_f', 0, 'rad')
 
 ocp_2.scale(m='h', s='h/v', kg='mass', rad=1)
 
@@ -183,12 +196,12 @@ guess_maker_2 = beluga.guess_generator('auto',
 continuation_steps_2 = beluga.init_continuation()
 
 continuation_steps_2.add_step('bisection').num_cases(3) \
-    .terminal('h', sol.y[-1,0]) \
-    .terminal('theta', sol.y[-1,1]) \
-    .terminal('phi', 0)
+    .const('h_f', sol.y[-1,0]) \
+    .const('theta_f', sol.y[-1,1]) \
+    .const('phi_f', 0)
 
 continuation_steps_2.add_step('bisection').num_cases(41) \
-    .terminal('phi', 2*pi/180)
+    .const('phi_f', 2*pi/180)
 
 sol = beluga.solve(ocp_2,
              method='traditional',

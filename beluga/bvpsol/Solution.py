@@ -20,7 +20,8 @@ class Solution(Trajectory):
         y = kwargs.get('y', None)
         q = kwargs.get('q', None)
         u = kwargs.get('u', None)
-        parameters = kwargs.get('parameters', None)
+        dynamical_parameters = kwargs.get('dynamical_parameters', None)
+        nondynamical_parameters = kwargs.get('nondynamical_parameters', None)
         aux = kwargs.get('aux', None)
         state_list = kwargs.get('state_list', None)
         control_list = kwargs.get('control_list', None)
@@ -28,22 +29,35 @@ class Solution(Trajectory):
 
         if t is not None:
             t = np.array(t, dtype=np.float64)
+        else:
+            t = np.array([], dtype=np.float64)
         if y is not None:
             y = np.array(y, dtype=np.float64)
+        else:
+            y = np.array([], dtype=np.float64)
         if q is not None:
             q = np.array(q, dtype=np.float64)
+        else:
+            q = np.array([], dtype=np.float64)
         if u is not None:
             u = np.array(u, dtype=np.float64)
+        else:
+            u = np.array([], dtype=np.float64)
 
         obj = super(Solution, cls).__new__(cls, t, y, q, u)
 
-        if parameters is not None:
-            obj.parameters = np.array(parameters, dtype=np.float64)
+        if dynamical_parameters is not None:
+            obj.dynamical_parameters = np.array(dynamical_parameters, dtype=np.float64)
         else:
-            obj.parameters = np.array([])
+            obj.dynamical_parameters = np.array([])
+
+        if nondynamical_parameters is not None:
+            obj.nondynamical_parameters = np.array(nondynamical_parameters, dtype=np.float64)
+        else:
+            obj.nondynamical_parameters = np.array([])
 
         if aux is None:
-            obj.aux = {"initial": [], "terminal": [], "const": {}, "parameters": [], "arc_seq": (0,)}
+            obj.aux = {"const": {}, "parameters": []}
         else:
             obj.aux = aux
 
@@ -84,7 +98,7 @@ class Solution(Trajectory):
             (new_y, new_u) = self.interpolate(new_t, new_arcs, overwrite=overwrite)
         else:
             new_t, new_y, new_u, new_arcs = self.t, self.y, self.u, self.arcs
-        t, y, u, p, arcs = self.t, self.y, self.u, self.parameters, self.arcs
+        t, y, u, p, arcs = self.t, self.y, self.u, self.dynamical_parameters, self.arcs
         if not overwrite:
             t, y, u, arcs = new_t, new_y, new_u, new_arcs
 
@@ -105,7 +119,7 @@ class Solution(Trajectory):
                       for idx, control in enumerate(problem_data['control_list'])]
 
         t_list = []
-        tf_ind = problem_data['parameter_list'].index('tf')
+        tf_ind = [str(p) for p in problem_data['dynamical_parameters']].index('tf')
         last_t = 0
         for arc_start, arc_end in arcs:
             start_t = t[arc_start]
