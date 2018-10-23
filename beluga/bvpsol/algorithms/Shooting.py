@@ -2,6 +2,7 @@ import cloudpickle as pickle
 import copy
 import logging
 import numpy as np
+from math import isclose
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, Trajectory, reconstruct
@@ -439,20 +440,21 @@ class Shooting(BaseAlgorithm):
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 
         # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
-        cost = lambda x: 0
-
+        def cost(_): return 0
 
         """
         Run the root-solving process
         """
         if self.algorithm in scipy_algorithms:
             if not (self.algorithm == 'COBYLA' or self.algorithm == 'SLSQP' or self.algorithm == 'trust-constr'):
-                cost = lambda x: np.linalg.norm(_constraint_function_wrapper(x)) ** 2
+                def cost(x):
+                    return np.linalg.norm(_constraint_function_wrapper(x)) ** 2
 
-            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter':self.max_iterations})
+            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint],
+                           options={'maxiter': self.max_iterations})
             Xinit = opt.x
             n_iter = opt.nit
-            converged = opt.success
+            converged = opt.success and isclose(opt.fun, 0, abs_tol=self.tolerance)
 
         elif self.algorithm.lower() == 'traditional':
             while not converged and n_iter <= self.max_iterations and err < self.max_error:
