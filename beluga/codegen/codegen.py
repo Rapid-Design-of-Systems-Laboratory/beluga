@@ -164,16 +164,15 @@ def make_functions(problem_data):
 
 
 def make_jit_fn(args, fn_expr):
-    fn_str = lambdastr(args, fn_expr).replace('MutableDenseMatrix', '') \
-        .replace('(([[', '[') \
-        .replace(']]))', ']')
-
+    fn_str = 'lambda ' + ','.join([str(a) for a in args]) + ':' + str(fn_expr)
     f = eval(fn_str)
+
     try:
         jit_fn = numba.jit(nopython=True)(f)
         jit_fn(*np.ones(len(args), dtype=float))
     except:
         jit_fn = f
+
     return jit_fn
 
 
