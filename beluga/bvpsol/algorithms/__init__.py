@@ -1,7 +1,6 @@
 from .BaseAlgorithm import BaseAlgorithm
 from .Shooting import Shooting
 from .Collocation import Collocation
-from .ArmijoShooting import ArmijoShooting
 
 import os
 import glob
