@@ -6,10 +6,12 @@ from math import isclose
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, Trajectory, reconstruct
-from scipy.optimize import minimize
-scipy_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-                    'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}
 
+from scipy.optimize import minimize, root, fsolve
+scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+                    'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}
+scipy_root_algorithms = {'hybr', 'lm', 'broyden1', 'broyden2', 'anderson', 'linearmixing', 'diagbroyden',
+                         'excitingmixing', 'krylov', 'df-sane'}
 
 class Shooting(BaseAlgorithm):
     r"""
@@ -46,7 +48,7 @@ class Shooting(BaseAlgorithm):
     +------------------------+-----------------+-------------------------------+
     | Valid kwargs           | Default Value   | Valid Values                  |
     +========================+=================+===============================+
-    | algorithm              | {'SLSQP'}       | see `scipy.optimize.minimize` |
+    | algorithm              | 'Armijo'        | see `scipy.optimize.minimize` |
     +------------------------+-----------------+-------------------------------+
     | ivp_args               | {}              | see `ivpsol`                  |
     +------------------------+-----------------+-------------------------------+
@@ -63,7 +65,7 @@ class Shooting(BaseAlgorithm):
     def __new__(cls, *args, **kwargs):
         obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
 
-        obj.algorithm = kwargs.get('algorithm', 'SLSQP')
+        obj.algorithm = kwargs.get('algorithm', 'Armijo')
         obj.ivp_args = kwargs.get('ivp_args', dict())
         obj.tolerance = kwargs.get('tolerance', 1e-4)
         obj.max_error = kwargs.get('max_error', 100)
@@ -445,49 +447,31 @@ class Shooting(BaseAlgorithm):
         """
         Run the root-solving process
         """
-        if self.algorithm in scipy_algorithms:
+        if self.algorithm in scipy_minimize_algorithms:
             if not (self.algorithm == 'COBYLA' or self.algorithm == 'SLSQP' or self.algorithm == 'trust-constr'):
                 def cost(x):
                     return np.linalg.norm(_constraint_function_wrapper(x)) ** 2
 
-            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint],
-                           options={'maxiter': self.max_iterations})
+            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter': self.max_iterations})
             Xinit = opt.x
             n_iter = opt.nit
             converged = opt.success and isclose(opt.fun, 0, abs_tol=self.tolerance)
 
-        elif self.algorithm.lower() == 'traditional':
-            while not converged and n_iter <= self.max_iterations and err < self.max_error:
-                residual = _constraint_function_wrapper(Xinit)
+        elif self.algorithm in scipy_root_algorithms:
+            opt = root(_constraint_function_wrapper, Xinit, jac=_jacobian_function_wrapper, method=self.algorithm, tol=self.tolerance, options={'maxiter': self.max_iterations})
+            Xinit = opt.x
+            n_iter = -1
+            converged = opt.success
 
-                if any(np.isnan(residual)):
-                    raise RuntimeError("Nan in residual")
+        elif self.algorithm.lower() == 'fsolve':
+            x = fsolve(_constraint_function_wrapper, Xinit, fprime=_jacobian_function_wrapper, xtol=self.tolerance)
+            Xinit = x
+            n_iter = -1
+            converged = isclose(np.linalg.norm(_constraint_function_wrapper(Xinit))**2, 0, abs_tol=self.tolerance)
 
-                err = np.linalg.norm(residual)
-                J = _jacobian_function_wrapper(Xinit)
-
-                beta = 1
-                if err > 1:
-                    alpha = 1/(2*err)
-                else:
-                    alpha = 1
-
-                if err < min(10*self.tolerance, 1e-3):
-                    alpha, beta = 1, 1
-
-                try:
-                    dy0 = alpha*beta*np.linalg.solve(J, -residual)
-                except:
-                    dy0, *_ = np.linalg.lstsq(J, -residual)
-                    dy0 = alpha*beta*dy0
-
-                Xinit += dy0
-                n_iter += 1
-
-                if err <= self.tolerance:
-                    converged = True
         elif self.algorithm.lower() == 'armijo':
-            while not converged and n_iter <= self.max_iterations and err < self.max_error:
+            ll = 1
+            while not converged and n_iter <= self.max_iterations and err < self.max_error and ll > 0.1:
                 residual = _constraint_function_wrapper(Xinit)
 
                 if any(np.isnan(residual)):
@@ -522,6 +506,8 @@ class Shooting(BaseAlgorithm):
 
                 if err <= self.tolerance:
                     converged = True
+        else:
+            raise NotImplementedError('Method \'' + self.algorithm + '\' is not implemented.')
 
         """
         Post optimization checks and formatting
@@ -542,7 +528,10 @@ class Shooting(BaseAlgorithm):
             raise RuntimeError('Error exceeded max_error')
 
         if err < self.tolerance and converged:
-            logging.info("Converged in " + str(n_iter) + " iterations.")
+            if n_iter == -1:
+                logging.info("Converged in an unknown number of iterations.")
+            else:
+                logging.info("Converged in " + str(n_iter) + " iterations.")
 
         # Stitch the arcs together to make a single trajectory, removing the boundary points inbetween each arc
         t_out = gamma_set[0].t

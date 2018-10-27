@@ -52,12 +52,7 @@ ocp.constraints() \
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
-                        derivative_method='fd',
-                        tolerance=1e-4,
-                        max_iterations=100,
-                        max_error=100
-             )
+bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 
 guess_maker = beluga.guess_generator('auto',
                 start=[80000,0,4000,-90*pi/180],

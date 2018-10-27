@@ -39,7 +39,7 @@ def test_brachistochrone_shooting():
 
     ocp.scale(m='y', s='y/v', kg=1, rad=1)
 
-    shooting_solver = beluga.bvp_algorithm('Shooting', algorithm='traditional')
+    shooting_solver = beluga.bvp_algorithm('Shooting')
 
     guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
 
@@ -357,7 +357,7 @@ def test_planarhypersonic():
 
     ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-    bvp_solver = beluga.bvp_algorithm('Shooting', tolerance=1e-6)
+    bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP', tolerance=1e-6)
 
     guess_maker = beluga.guess_generator('auto', start=[80000, 0, 4000, -90 * pi / 180], direction='forward', costate_guess=-0.1)
 
