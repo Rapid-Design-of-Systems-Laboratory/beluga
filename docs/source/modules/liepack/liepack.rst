@@ -27,9 +27,9 @@ Base Class Reference
 
 .. autofunction:: group2algebra
 
-.. autoclass:: Adjoint
+.. autofunction:: Adjoint
 
-.. autoclass:: Commutator
+.. autofunction:: commutator
 
 .. autofunction:: dexpinv
 

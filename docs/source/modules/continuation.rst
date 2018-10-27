@@ -11,9 +11,6 @@ This module handles numerical continuation in the solver.
 Base Class Reference
 --------------------
 
-.. autoclass:: ActivateConstraint
-    :members:
-
 .. autoclass:: ContinuationList
     :members:
 
