@@ -4,6 +4,7 @@ import copy
 import csv
 import os
 from beluga.liepack import *
+from beluga.liepack.domain.hspaces import HManifold
 
 # The following math import statements appear to be unused, but they are required on import of the specific
 # methods since an eval() is called
@@ -131,13 +132,13 @@ class RKMK(TimeStepper):
         :return: (y_low, y_high, errest) - A "low" quality and "high" quality estimate for solutions, and an error estimate.
         """
         g = group2algebra(y.shape)
-        Kj = [g(y.shape.shape) for _ in range(self.method.RKns)]
+        Kj = [HManifold(y) for _ in range(self.method.RKns)]
         Yr = [copy.copy(y) for _ in range(self.method.RKns)]
         if self.method.RKtype == 'explicit':
             Kj[0] = vf(t0, y)
             for ii in range(self.method.RKns - 1):
                 U = sum([elem*dt*coeff for elem, coeff in zip(Kj[:ii+1], self.method.RKa[ii+1, :ii+1])])
-                Yr[ii+1] = Left(exp(U), y)
+                Yr[ii+1].left([exp(U)])
                 K = vf(t0 + dt*self.method.RKc[ii+1], Yr[ii+1])
                 Kj[ii+1] = dexpinv(U, K, order=self.method.RKord-1)
 
@@ -158,7 +159,8 @@ class RKMK(TimeStepper):
 
 
         Ulow = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKb)])
-        ylow = Left(exp(Ulow), y)
+        ylow = copy.copy(y)
+        ylow.left([exp(Ulow)])
         errest = -1
         yhigh = None
 
@@ -167,7 +169,8 @@ class RKMK(TimeStepper):
                 raise NotImplementedError(self.method.name + ' does not support variable stepsize.')
 
             Uhigh = sum([Kval*dt*coeff for Kval, coeff in zip(Kj, self.method.RKbhat)])
-            yhigh = Left(exp(Uhigh), y)
+            yhigh = copy.copy(y)
+            yhigh.left([exp(Uhigh)])
             errest = np.linalg.norm(Ulow.get_vector() - Uhigh.get_vector())
 
         return ylow, yhigh, errest

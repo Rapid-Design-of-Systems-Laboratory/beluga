@@ -18,6 +18,7 @@ Various domains are provided to solve equations on.
 
     domain/liealgebras.rst
     domain/liegroups.rst
+    domain/hspaces.rst
 
 
 Base Class Reference
@@ -34,5 +35,3 @@ Base Class Reference
 .. autofunction:: dexpinv
 
 .. autofunction:: exp
-
-.. autofunction:: Left

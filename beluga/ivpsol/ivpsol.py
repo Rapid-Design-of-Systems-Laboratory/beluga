@@ -4,7 +4,7 @@ import scipy.interpolate
 import copy
 
 from beluga.ivpsol import RKMK, Flow
-from beluga.liepack.domain.hspaces import HLie
+from beluga.liepack.domain.hspaces import HManifold
 from beluga.liepack.domain.liegroups import RN
 from beluga.liepack.domain.liealgebras import rn
 from beluga.liepack import exp
@@ -87,16 +87,16 @@ class Propagator(Algorithm):
 
         elif self.program == 'lie':
             dim = y0.shape[0]
-            g = rn(dim)
+            g = rn(dim+1)
             g.set_vector(y0)
-            y = HLie(RN(dim), exp(g).data)
+            y = HManifold(RN(dim+1, exp(g)))
             vf = VectorField(y)
             vf.set_equationtype('general')
 
             def M2g(t, y):
-                vec = y.data[:-1,-1]
+                vec = y[:-1,-1]
                 out = eom_func(t, vec, *args)
-                g = rn(dim)
+                g = rn(dim+1)
                 g.set_vector(out)
                 return g
 
@@ -109,7 +109,7 @@ class Propagator(Algorithm):
             ts.setmethod(self.stepper)
             f = Flow(ts, vf, variablestep=self.variable_step)
             ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
-            gamma = Trajectory(ti, np.vstack([_.data[:-1,-1] for _ in yi])) # Hardcoded assuming RN
+            gamma = Trajectory(ti, np.vstack([_[:-1,-1] for _ in yi])) # Hardcoded assuming RN
 
         if quad_func is not None:
             gamma = reconstruct(quad_func, gamma, q0, *args)
