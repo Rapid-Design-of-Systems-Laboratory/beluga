@@ -5,7 +5,7 @@ Contains class/functions related to defining the optimal control problems.
 
 import scipy.optimize
 import numpy as np
-import dill
+import cloudpickle as dill
 
 import json
 import logging
