@@ -256,19 +256,9 @@ def sanitize_constraint_expr(constraint, states, location, prefix_map):
 
     pattern, prefix, _ = dict(prefix_map)[location]
     m = re.findall(pattern, str(constraint))
-    invalid = [x for x in m if x not in states]
-    try:
-        if not all(x is None for x in invalid):
-            raise ValueError('Invalid expression(s) in boundary constraint:\n' + str([x for x in invalid if x is not None]))
-    except:
-        breakpoint()
-
-    # new_consts = []
-    # for term in m:
-    #     if location == 'initial':
-    #         new_consts.append(SymVar({'name':term + '_0'}))
-    #     elif location == 'terminal':
-    #         new_consts.append(SymVar({'name':term + '_f'}))
+    invalid = [x for x in m if x not in [str(s) for s in states]]
+    if not all(x is None for x in invalid):
+        raise ValueError('Invalid expression(s) in boundary constraint:\n' + str([x for x in invalid if x is not None]))
 
     return constraint
 
