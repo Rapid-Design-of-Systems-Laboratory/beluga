@@ -21,13 +21,24 @@ def ocp_to_bvp(ocp, guess):
     terminal_cost = ws['terminal_cost']
     path_cost = ws['path_cost']
 
+    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
+
     Q = Manifold(states, 'State_Space')
     R = Manifold([independent_variable], 'Independent_Space')
     tau_Q = FiberBundle(Q, R, 'State_Bundle')
     TsQ = JetBundle(tau_Q, 1, 'Cotangent_Bundle')
+    num_states = len(TsQ.vertical.base_coords)
+    pi = 0
+    for ii in range(int(num_states / 2)):
+        pi += WedgeProduct(TsQ.base_vectors[ii], TsQ.base_vectors[int(ii + num_states/2)])
+
+    hamiltonian = 0
+    for ii in range(num_states):
+        pass
+
     breakpoint()
 
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
+
     augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
     augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
@@ -177,9 +188,9 @@ class FiberBundle(Manifold):
 
 
 class JetBundle(FiberBundle):
-    jet_identifier = '^'
+    jet_identifier = '_'
+
     def __new__(cls, *args):
-        obj = super(Manifold, cls).__new__(cls)
         if not isinstance(args[0], FiberBundle):
             raise ValueError('Jet bundles must be constructed from a fiber bundle.')
 
@@ -191,41 +202,41 @@ class JetBundle(FiberBundle):
         else:
             name = args[0].name + '_jetbundle'
 
-        obj.horizontal = args[0]
-        obj.jetorder = args[1]
+        bundle_input = args[0]
 
-        hor_dim = obj.horizontal.dimension
-        base_coords = [str(x) for x in obj.vertical.base_coords]
-        coords = [str(x) for x in obj.vertical.base_coords]
-        for ii in range(obj.jetorder):
+        horizontal = bundle_input.horizontal
+
+        jetorder = args[1]
+        ver_dim = len(bundle_input.vertical.base_coords)
+        hor_dim = len(bundle_input.horizontal.base_coords)
+        base_coords = [str(x) for x in bundle_input.vertical.base_coords]
+        coords = [str(x) for x in bundle_input.vertical.base_coords]
+        for ii in range(jetorder):
             vals = [list(range(hor_dim)) for _ in range(ii+1)]
             for jord in itertools.product(*vals):
                 for state in base_coords:
                     str_to_append = [str(_) for _ in jord]
                     coords.append(state + cls.jet_identifier + str(cls.jet_identifier.join(str_to_append)))
 
-        obj.vertical = Manifold(coords, obj.vertical.name + '_jet')
-        obj.base_coords = obj.vertical.base_coords + obj.horizontal.base_coords
-        obj.base_forms = obj.vertical.base_oneforms + obj.horizontal.base_oneforms
-        obj.base_vectors = obj.vertical.base_vectors + obj.horizontal.base_vectors
-        obj.dimension = obj.vertical.dimension + obj.horizontal.dimension
-
+        vertical = Manifold(coords, 'J' + bundle_input.vertical.name)
+        obj = super(JetBundle, cls).__new__(cls, vertical, horizontal, name)
 
         return obj
 
 
-class SymplecticManifold(Manifold):
-    def __new__(cls, *args, verbose=False):
-        obj = super(SymplecticManifold, cls).__new__(cls, *args, verbose=verbose)
-        if obj.dimension % 2 == 1:
-            raise ValueError
-        obj.symplecticform = 0
-        return obj
-
-    def __init__(self, *args, verbose=False):
-        super(SymplecticManifold, self).__init__(*args, verbose=verbose)
-        d = int(self.dimension/2)
-        self.symplecticform = sum([WedgeProduct(dx,dy) for (dx, dy) in zip(self.base_oneforms[:d], self.base_oneforms[d:])])
+# TODO: Delete this?
+# class SymplecticManifold(Manifold):
+#     def __new__(cls, *args, verbose=False):
+#         obj = super(SymplecticManifold, cls).__new__(cls, *args, verbose=verbose)
+#         if obj.dimension % 2 == 1:
+#             raise ValueError
+#         obj.symplecticform = 0
+#         return obj
+#
+#     def __init__(self, *args, verbose=False):
+#         super(SymplecticManifold, self).__init__(*args, verbose=verbose)
+#         d = int(self.dimension/2)
+#         self.symplecticform = sum([WedgeProduct(dx,dy) for (dx, dy) in zip(self.base_oneforms[:d], self.base_oneforms[d:])])
 
 
 def make_control_law(dhdu, controls):
