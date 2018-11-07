@@ -13,6 +13,7 @@ from beluga import problem, helpers
 from beluga.bvpsol import algorithms, Solution
 from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
+from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
 from .utils import tic, toc
 from collections import OrderedDict
 import pathos
@@ -67,6 +68,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     """
     Solves the OCP using specified method
     """
+    scale = kwargs.get('scale', True)
     num_cpus = int(kwargs.get('num_cpus', 1))
 
     if num_cpus < 1:
@@ -86,6 +88,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
         ocp_ws = BH_ocp_to_bvp(ocp, guess_generator)
     elif method.lower() == 'icrm':
         ocp_ws = ICRM_ocp_to_bvp(ocp, guess_generator)
+    elif method.lower() == 'diffyg':
+        ocp_ws = DIFFYG_ocp_to_bvp(ocp, guess_generator)
     else:
         raise NotImplementedError
 

@@ -8,7 +8,6 @@ import sympy
 from sympy import Symbol, im
 from sympy.core.function import AppliedUndef
 import functools as ft
-import itertools as it
 import re
 
 
