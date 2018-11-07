@@ -50,7 +50,7 @@ def ocp_to_bvp(ocp, guess):
         'problem_name': problem_name,
         'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
         'state_list':[str(x) for x in it.chain(states, costates)],
-        'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in costates],
+        'deriv_list': [tf_var * rate for rate in states_rates] + [tf_var * rate for rate in costates_rates],
         'states': states,
         'costates': costates,
         'constants': constants,
