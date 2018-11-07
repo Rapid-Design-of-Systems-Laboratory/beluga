@@ -1,5 +1,6 @@
 from .optimlib import *
 import sympy as sym
+import itertools as it
 
 
 def ocp_to_bvp(ocp, guess):

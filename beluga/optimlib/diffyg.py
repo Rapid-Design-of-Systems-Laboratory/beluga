@@ -3,10 +3,82 @@ from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, We
 from sympy.printing import pprint
 from sympy.simplify import simplify
 import itertools
-from beluga.utils import keyboard
+import logging
+import itertools as it
+from .optimlib import *
+
+def ocp_to_bvp(ocp, guess):
+    ws = init_workspace(ocp, guess)
+    problem_name = ws['problem_name']
+    independent_variable = ws['indep_var']
+    states = ws['states']
+    controls = ws['controls']
+    constants = ws['constants']
+    constants_of_motion = ws['constants_of_motion']
+    constraints = ws['constraints']
+    quantities = ws['quantities']
+    initial_cost = ws['initial_cost']
+    terminal_cost = ws['terminal_cost']
+    path_cost = ws['path_cost']
+
+    Q = Manifold(states, 'State_Space')
+    R = Manifold([independent_variable], 'Independent_Space')
+    tau_Q = FiberBundle(Q, R, 'State_Bundle')
+    TsQ = JetBundle(tau_Q, 1, 'Cotangent_Bundle')
+    breakpoint()
+
+    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
+    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
+    initial_lm_params = make_augmented_params(constraints, location='initial')
+    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
+    terminal_lm_params = make_augmented_params(constraints, location='terminal')
+    hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
+    for var in quantity_vars.keys():
+        hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
+
+    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn,
+                                          location='initial')
+    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn,
+                                           location='terminal')
+    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+    nond_parameters = initial_lm_params + terminal_lm_params
+    control_law = make_control_law(dHdu, controls)
+    # Generate the problem data
+    tf_var = sympify('tf')
+    out = ws
+    out['costates'] = costates
+    out['initial_lm_params'] = initial_lm_params
+    out['terminal_lm_params'] = terminal_lm_params
+    out['problem_data'] = {'method': 'brysonho',
+       'problem_name': problem_name,
+       'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+       'state_list': [str(x) for x in it.chain(states, costates)],
+       'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in
+                                                                 costates],
+       'states': states,
+       'costates': costates,
+       'constants': constants,
+       'constants_of_motion': constants_of_motion,
+       'dynamical_parameters': [tf_var],
+       'nondynamical_parameters': nond_parameters,
+       'control_list': [str(x) for x in it.chain(controls)],
+       'controls': controls,
+       'quantity_vars': quantity_vars,
+       'hamiltonian': hamiltonian,
+       'num_states': 2 * len(states),
+       'num_params': len(nond_parameters) + 1,
+       'dHdu': dHdu,
+       'bc_initial': [_ for _ in bc_initial],
+       'bc_terminal': [_ for _ in bc_terminal],
+       'control_options': control_law,
+       'num_controls': len(controls),
+       'quantity_list': quantity_list,
+       'nOdes': 2 * len(states)}
+    return out
 
 class Manifold(object):
-    def __new__(cls, *args, verbose=False):
+    def __new__(cls, *args):
         obj = super(Manifold, cls).__new__(cls)
         if len(args) >= 1:
             dependent = args[0]
@@ -20,24 +92,17 @@ class Manifold(object):
         obj.dimension = len(dependent)
         obj._manifold = sympyManifold(obj.name, obj.dimension)
         obj._patch = Patch('Atlas', obj._manifold)
-        obj._coordsystem = CoordSystem('Coordinates', obj._patch, names=dependent)
+        obj._coordsystem = CoordSystem('Coordinates', obj._patch, names=[str(d) for d in dependent])
         return obj
 
     def __init__(self, *args, verbose=False):
-        if verbose:
-            print('The manifold `{}` has been created'.format(self.name))
-
+        logging.info('The manifold \'{}\' has been created'.format(self.name))
         self.base_coords = self._coordsystem.coord_functions()
-        if verbose:
-            pprint('The following coordinates have been created: ' + str(self.base_coords))
-
+        logging.info('The following coordinates have been created: ' + str(self.base_coords))
         self.base_vectors = self._coordsystem.base_vectors()
-        if verbose:
-            pprint('The following base vectors have been created: ' + str(self.base_vectors))
-
+        logging.info('The following base vectors have been created: ' + str(self.base_vectors))
         self.base_oneforms = self._coordsystem.base_oneforms()
-        if verbose:
-            pprint('The following base one forms have been created: ' + str(self.base_oneforms))
+        logging.info('The following base one forms have been created: ' + str(self.base_oneforms))
 
     def sharp(self, f):
         set1d = dict(zip(self.base_oneforms, self.base_vectors))
@@ -59,11 +124,11 @@ class Manifold(object):
 
         # If's f's grade is 1 or higher, we still need to implement this
         if order > 0:
-            raise NotImplementedError
+            raise NotImplementedError('Exterior derivative of forms higher order than 1 is not implemented.')
 
 
 class FiberBundle(Manifold):
-    def __new__(cls, *args, verbose=False):
+    def __new__(cls, *args):
         if len(args) < 2:
             raise ValueError('Fiber bundles must be constructed with two manifolds.')
 
@@ -78,7 +143,7 @@ class FiberBundle(Manifold):
         Ax = [str(x) for x in A.base_coords]
         Bx = [str(x) for x in B.base_coords]
 
-        obj = super(FiberBundle, cls).__new__(cls, Ax + Bx, name, verbose=verbose)
+        obj = super(FiberBundle, cls).__new__(cls, Ax + Bx, name)
         obj.vertical = A
         obj.horizontal = B
 
@@ -112,17 +177,21 @@ class FiberBundle(Manifold):
 
 
 class JetBundle(FiberBundle):
-    def __new__(cls, *args, verbose=False):
+    jet_identifier = '^'
+    def __new__(cls, *args):
+        obj = super(Manifold, cls).__new__(cls)
         if not isinstance(args[0], FiberBundle):
             raise ValueError('Jet bundles must be constructed from a fiber bundle.')
 
         if not isinstance(args[1], int):
             raise ValueError('Jet bundles must have a jet order.')
 
-        if len(args) < 3:
+        if len(args) >= 3:
+            name = args[2]
+        else:
             name = args[0].name + '_jetbundle'
 
-        obj = args[0]
+        obj.horizontal = args[0]
         obj.jetorder = args[1]
 
         hor_dim = obj.horizontal.dimension
@@ -133,13 +202,14 @@ class JetBundle(FiberBundle):
             for jord in itertools.product(*vals):
                 for state in base_coords:
                     str_to_append = [str(_) for _ in jord]
-                    coords.append(state + '_' + str('_'.join(str_to_append)))
+                    coords.append(state + cls.jet_identifier + str(cls.jet_identifier.join(str_to_append)))
 
-        obj.vertical = Manifold(coords, obj.vertical.name + '_jet', verbose=verbose)
+        obj.vertical = Manifold(coords, obj.vertical.name + '_jet')
         obj.base_coords = obj.vertical.base_coords + obj.horizontal.base_coords
         obj.base_forms = obj.vertical.base_oneforms + obj.horizontal.base_oneforms
         obj.base_vectors = obj.vertical.base_vectors + obj.horizontal.base_vectors
         obj.dimension = obj.vertical.dimension + obj.horizontal.dimension
+
 
         return obj
 
@@ -156,3 +226,25 @@ class SymplecticManifold(Manifold):
         super(SymplecticManifold, self).__init__(*args, verbose=verbose)
         d = int(self.dimension/2)
         self.symplecticform = sum([WedgeProduct(dx,dy) for (dx, dy) in zip(self.base_oneforms[:d], self.base_oneforms[d:])])
+
+
+def make_control_law(dhdu, controls):
+    r"""
+    Solves control equation to get control law.
+
+    .. math::
+        \frac{dH}{d\textbf{u}} = 0
+
+    :param dhdu: The expression for :math:`dH / d\textbf{u}`.
+    :param controls: A list of control variables, :math:`[u_1, u_2, \cdots, u_n]`.
+    :return: Control law options.
+    """
+    var_list = list(controls)
+    from sympy import __version__
+    logging.info("Attempting using SymPy (v" + __version__ + ")...")
+    logging.debug("dHdu = "+str(dhdu))
+    ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
+    logging.info('Control found')
+    logging.debug(ctrl_sol)
+    control_options = ctrl_sol
+    return control_options
