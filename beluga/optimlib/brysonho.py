@@ -10,22 +10,27 @@ import logging
 def ocp_to_bvp(ocp, guess):
     ws = init_workspace(ocp, guess)
     problem_name = ws['problem_name']
-    independent_variable = ws['indep_var']
+    independent_variable = ws['independent_var']
     states = ws['states']
+    states_rates = ws['states_rates']
     controls = ws['controls']
     constants = ws['constants']
     constants_of_motion = ws['constants_of_motion']
     constraints = ws['constraints']
     quantities = ws['quantities']
     initial_cost = ws['initial_cost']
+    initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
+    terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
-    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
+    augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
-    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
+    augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, location='terminal')
-    hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
+    hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
+    costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
+
     for var in quantity_vars.keys():
         hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
 

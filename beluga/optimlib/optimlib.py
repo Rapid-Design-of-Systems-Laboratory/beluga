@@ -10,12 +10,11 @@ from sympy.core.function import AppliedUndef
 import functools as ft
 import itertools as it
 import re
-from beluga.problem import SymVar
 
 
 def init_workspace(ocp, guess):
     r"""
-    Initializes the workspace using an OCP definition.
+    Initializes the symbolic workspace using an OCP definition.
 
     All the strings in the original definition are converted into symbolic
     expressions for computation.
@@ -26,29 +25,36 @@ def init_workspace(ocp, guess):
 
     workspace = {}
     workspace['problem_name'] = ocp.name
-    workspace['indep_var'] = SymVar(ocp._properties['independent'])
-    workspace['states'] = [SymVar(s) for s in ocp.states()]
-    workspace['controls'] = [SymVar(u) for u in ocp.controls()]
-    workspace['constants'] = [SymVar(k) for k in ocp.constants()]
-    workspace['constants_of_motion'] = [SymVar(k) for k in ocp.constants_of_motion()]
+    workspace['independent_var'] = Symbol(ocp._properties['independent']['name'])
+    workspace['independent_var_units'] = sympify(ocp._properties['independent']['unit'])
+    workspace['states'] = [Symbol(s['name']) for s in ocp.states()]
+    workspace['states_rates'] = [sympify(s['eom']) for s in ocp.states()]
+    workspace['states_units'] = [sympify(s['unit']) for s in ocp.states()]
+    workspace['controls'] = [Symbol(u['name']) for u in ocp.controls()]
+    workspace['controls_units'] = [sympify(u['unit']) for u in ocp.controls()]
+    workspace['constants'] = [Symbol(k['name']) for k in ocp.constants()]
+    workspace['constants_value'] = [k['value'] for k in ocp.constants()]
+    workspace['constants_units'] = [sympify(k['unit']) for k in ocp.constants()]
+    workspace['constants_of_motion'] = [Symbol(k['name']) for k in ocp.constants_of_motion()]
 
     constraints = ocp.constraints()
-    workspace['constraints'] = {c_type: [SymVar(c_obj, sym_key='expr') for c_obj in c_list]
+    workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
                                 for c_type, c_list in constraints.items()
                                 if c_type != 'path'}
+    workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
 
-    workspace['path_constraints'] = [SymVar(c_obj, sym_key='expr', excluded=('direction', 'start_eps'))
-                                     for c_obj in constraints.get('path', [])]
-
-    workspace['quantities'] = [SymVar(q) for q in ocp.quantities()]
-    workspace['initial_cost'] = SymVar(ocp.get_cost('initial'), sym_key='expr')
-    workspace['terminal_cost'] = SymVar(ocp.get_cost('terminal'), sym_key='expr')
-    workspace['path_cost'] = SymVar(ocp.get_cost('path'), sym_key='expr')
+    workspace['quantities'] = [sympify(q) for q in ocp.quantities()]
+    workspace['initial_cost'] = sympify(ocp.get_cost('initial')['expr'])
+    workspace['initial_cost_units'] = sympify(ocp.get_cost('initial')['unit'])
+    workspace['terminal_cost'] = sympify(ocp.get_cost('terminal')['expr'])
+    workspace['terminal_cost_units'] = sympify(ocp.get_cost('terminal')['unit'])
+    workspace['path_cost'] = sympify(ocp.get_cost('path')['expr'])
+    workspace['path_cost_units'] = sympify(ocp.get_cost('path')['unit'])
     guess.dae_num_states = 0
     return workspace
 
 
-def make_augmented_cost(cost, constraints, location):
+def make_augmented_cost(cost, cost_units, constraints, location):
     r"""
     Augments the cost function with the given list of constraints.
 
@@ -66,10 +72,8 @@ def make_augmented_cost(cost, constraints, location):
     """
 
     lagrange_mult = make_augmented_params(constraints, location)
-    aug_cost_expr = cost.expr + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
-
-    aug_cost = SymVar({'expr':aug_cost_expr, 'unit': cost.unit}, sym_key='expr')
-    return aug_cost
+    aug_cost_expr = cost + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
+    return aug_cost_expr, cost_units
 
 
 def make_augmented_params(constraints, location):
@@ -141,19 +145,18 @@ def make_costate_names(states):
     return [sympify('lam'+str(s.name).upper()) for s in states]
 
 
-def make_costate_rates(ham, states, costate_names, derivative_fn):
+def make_costate_rates(hamiltonian, states, costates, derivative_fn):
     """
     Makes a list of rates of change for each of the costates.
 
-    :param ham: Hamiltonian function.
+    :param hamiltonian: Hamiltonian function.
     :param states: List of state variables.
-    :param costate_names: List of costate variables.
+    :param costates: List of costate variables.
     :param derivative_fn: Total derivative function.
     :return: Rates of change for each costate.
     """
-
-    costates = [SymVar({'name': lam, 'eom':derivative_fn(-1*(ham), s)}) for s, lam in zip(states, costate_names)]
-    return costates
+    costates_rates = [derivative_fn(-1*(hamiltonian), s) for s in states]
+    return costates_rates
 
 
 #TODO: Determine if make_dhdu() is ever even used. Like 2 of the functions show up as not imported.
@@ -174,21 +177,19 @@ def make_dhdu(ham, controls, derivative_fn):
     return dHdu
 
 
-def make_ham_lamdot(states, path_cost, derivative_fn):
+def make_hamiltonian(states, states_rates, path_cost):
     r"""
-    Creates a Hamiltonian function and costate rates.
+    Creates a Hamiltonian function.
 
     :param states: A list of state variables, :math:`x`.
-    :param constraints: A set of constraints.
+    :param states_rates: A list of rates of change for the state variables :math:`\dot{x} = f'.
     :param path_cost: The path cost to be minimized.
-    :param derivative_fn: The derivative function.
     :return: A Hamiltonian function, :math:`H`.
     :return: A list of costate rates, :math:`\dot{\lambda}_x`
     """
-    costate_names = make_costate_names(states)
-    ham = path_cost.expr + sum([lam*s.eom for s, lam in zip(states, costate_names)])
-    yield ham
-    yield make_costate_rates(ham, states, costate_names, derivative_fn)
+    costates = make_costate_names(states)
+    hamiltonian = path_cost + sum([rate*lam for rate, lam in zip(states_rates, costates)])
+    return hamiltonian, costates
 
 
 def make_time_bc(constraints, hamiltonian, bc_terminal):
@@ -254,11 +255,13 @@ def sanitize_constraint_expr(constraint, states, location, prefix_map):
         raise ValueError('Invalid constraint type')
 
     pattern, prefix, _ = dict(prefix_map)[location]
-    m = re.findall(pattern, str(constraint.expr))
+    m = re.findall(pattern, str(constraint))
     invalid = [x for x in m if x not in states]
-
-    if not all(x is None for x in invalid):
-        raise ValueError('Invalid expression(s) in boundary constraint:\n' + str([x for x in invalid if x is not None]))
+    try:
+        if not all(x is None for x in invalid):
+            raise ValueError('Invalid expression(s) in boundary constraint:\n' + str([x for x in invalid if x is not None]))
+    except:
+        breakpoint()
 
     # new_consts = []
     # for term in m:
