@@ -503,9 +503,6 @@ class Shooting(BaseAlgorithm):
                 Xinit += step
                 err = r_try
                 n_iter += 1
-                if ll <= 0.1:
-                    err = r_try
-                    break
 
                 if err <= self.tolerance:
                     converged = True

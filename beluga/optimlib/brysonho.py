@@ -29,8 +29,10 @@ def ocp_to_bvp(ocp, guess):
     for var in quantity_vars.keys():
         hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
 
-    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
-    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn,
+                                          location='initial')
+    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn,
+                                           location='terminal')
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nond_parameters = initial_lm_params + terminal_lm_params
@@ -41,10 +43,11 @@ def ocp_to_bvp(ocp, guess):
     out['costates'] = costates
     out['initial_lm_params'] = initial_lm_params
     out['terminal_lm_params'] = terminal_lm_params
-    out['problem_data'] = {'method': 'brysonho',
+    out['problem_data'] = {
+        'method': 'brysonho',
         'problem_name': problem_name,
         'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-        'state_list':[str(x) for x in it.chain(states, costates)],
+        'state_list': [str(x) for x in it.chain(states, costates)],
         'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in costates],
         'states': states,
         'costates': costates,
@@ -82,7 +85,7 @@ def make_control_law(dhdu, controls):
     var_list = list(controls)
     from sympy import __version__
     logging.info("Attempting using SymPy (v" + __version__ + ")...")
-    logging.debug("dHdu = "+str(dhdu))
+    logging.debug("dHdu = " + str(dhdu))
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
     logging.info('Control found')
     logging.debug(ctrl_sol)
