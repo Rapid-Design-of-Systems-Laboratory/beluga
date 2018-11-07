@@ -15,9 +15,9 @@ scipy_root_algorithms = {'hybr', 'lm', 'broyden1', 'broyden2', 'anderson', 'line
 
 class Shooting(BaseAlgorithm):
     r"""
-    Shooting algorithm for solving boundary value problems.
+    Reduced dimensional shooting algorithm for solving boundary value problems.
 
-    Given a system of ordinary differential equations :eq:`ordinarydifferentialequation`, define the sensitivities as
+    Given a system of ordinary differential equations, define the sensitivities as
 
     .. math::
         A(t) = \left[\frac{\partial \mathbf{f}}{\partial \mathbf{x}}, \frac{\partial \mathbf{f}}{\partial \mathbf{p}}\right]
@@ -34,16 +34,16 @@ class Shooting(BaseAlgorithm):
 
     .. math::
         \begin{aligned}
-            M &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{x}_0} \\
-            P &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{p}} \\
-            Q_0 &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_0} \\
-            Q_f &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_f}
+            M &= \frac{\mathrm{d} \mathbf{\Phi}}{\mathrm{d} \mathbf{x}_0} \\
+            Q &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_0} + \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_f} \\
+            P_1 &= \frac{\mathrm{d} \mathbf{\Phi}}{\mathrm{d} \mathbf{p}} \\
+            P_2 &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{\lambda}}
         \end{aligned}
 
     The Jacobian matrix is then the concatenation of these sensitivities
 
     .. math::
-        J = \left[M, P, Q_0+Q_f \right]
+        J = \left[M, Q, P_1, P_2 \right]
 
     +------------------------+-----------------+-----------------+
     | Valid kwargs           | Default Value   | Valid Values    |
@@ -184,23 +184,23 @@ class Shooting(BaseAlgorithm):
 
         gamma_set_perturbed = copy.copy(gamma_set)
 
-        nOdes = len(y0)
+        n_odes = len(y0)
         nquads = len(q0)
         num_arcs = len(gamma_set)
 
         fx = bc_func(gamma_set, parameters, nondynamical_params, aux)
         nBCs = len(fx)
 
-        M = np.zeros((nBCs, nOdes))
+        Mi = np.zeros((nBCs, n_odes))
+        M = np.zeros((nBCs, (n_odes) * num_arcs))
         Q = np.zeros((nBCs, nquads))
         P1 = np.zeros((nBCs, parameters.size))
         P2 = np.zeros((nBCs, nondynamical_params.size))
-        Ptemp = np.zeros((nBCs, parameters.size))
-        J = np.zeros((nBCs, (nOdes)*num_arcs))
-        dx = np.zeros((nOdes + parameters.size))
+
+        dx = np.zeros((n_odes + parameters.size))
 
         for ii, phi in zip(range(len(gamma_set)), phi_full_list):
-            for jj in range(nOdes):
+            for jj in range(n_odes):
                 dx[jj] = dx[jj] + h
                 dy = np.dot(phi, dx)
                 perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
@@ -210,11 +210,10 @@ class Shooting(BaseAlgorithm):
 
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
                 gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
-                M[:, jj] = (f-fx)/h
+                Mi[:, jj] = (f-fx)/h
                 dx[jj] = dx[jj] - h
-            J_i = M
-            J_slice = slice(nOdes * ii, nOdes * (ii + 1))
-            J[:, J_slice] = J_i
+            M_slice = slice(n_odes * ii, n_odes * (ii + 1))
+            M[:, M_slice] = Mi
 
         dq = np.zeros(nquads)
         for ii in range(nquads):
@@ -228,7 +227,7 @@ class Shooting(BaseAlgorithm):
         for ii, phi in zip(range(len(gamma_set)), phi_full_list):
             for jj in range(parameters.size):
                 parameters[jj] = parameters[jj] + h
-                kk = jj + nOdes
+                kk = jj + n_odes
                 dx[kk] = dx[kk] + h
                 dy = np.dot(phi, dx)
                 perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
@@ -238,21 +237,18 @@ class Shooting(BaseAlgorithm):
                 gamma_set_perturbed[ii] = perturbed_trajectory
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
                 gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
-                Ptemp[:, jj] = (f-fx)/h
+                P1[:, jj] = (f-fx)/h
                 dx[kk] = dx[kk] - h
                 parameters[jj] = parameters[jj] - h
-            P1 += Ptemp
-            Ptemp = np.zeros((nBCs, parameters.size))
 
-        Ptemp = np.zeros((nBCs, nondynamical_params.size))
         for ii in range(nondynamical_params.size):
             nondynamical_params[ii] = nondynamical_params[ii] + h
             f = bc_func(gamma_set, parameters, nondynamical_params, aux)
-            Ptemp[:, ii] = (f-fx)/h
+            P2[:, ii] = (f-fx)/h
             nondynamical_params[ii] = nondynamical_params[ii] - h
-        P2 += Ptemp
 
-        return np.hstack((J, Q, P1, P2))
+        J = np.hstack((M, Q, P1, P2))
+        return J
 
     @staticmethod
     def _bc_func_multiple_shooting(bc_func=None):
