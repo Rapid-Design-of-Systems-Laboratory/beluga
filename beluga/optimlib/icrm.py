@@ -5,22 +5,28 @@ import sympy as sym
 def ocp_to_bvp(ocp, guess):
     ws = init_workspace(ocp, guess)
     problem_name = ws['problem_name']
-    independent_variable = ws['indep_var']
+    independent_variable = ws['independent_var']
     states = ws['states']
+    states_rates = ws['states_rates']
     controls = ws['controls']
     constants = ws['constants']
     constants_of_motion = ws['constants_of_motion']
     constraints = ws['constraints']
     quantities = ws['quantities']
+    quantities_values = ws['quantities_values']
     initial_cost = ws['initial_cost']
+    initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
+    terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
-    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
+    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
+    augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
-    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
+    augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, location='terminal')
-    hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
+    hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
+    costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
+
     for var in quantity_vars.keys():
         hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
 
@@ -29,8 +35,8 @@ def ocp_to_bvp(ocp, guess):
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nondyn_parameters = initial_lm_params + terminal_lm_params
-    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, controls, nondyn_parameters, constants, quantity_vars, hamiltonian)
-    dae_states, dae_equations, dae_bc, guess, temp_dgdX, temp_dgdU = make_control_dae(states, costates, controls, dHdu, guess, derivative_fn)
+    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, costates_rates, controls, nondyn_parameters, constants, quantity_vars, hamiltonian)
+    dae_states, dae_equations, dae_bc, guess, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, guess, derivative_fn)
 
     # Generate the problem data
     tf_var = sympify('tf')
@@ -56,7 +62,7 @@ def ocp_to_bvp(ocp, guess):
         'problem_name': problem_name,
         'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
         'state_list':[str(x) for x in it.chain(states, costates)],
-        'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in costates] + [tf_var*dae_eom for dae_eom in dae_equations],
+        'deriv_list': [tf_var * rate for rate in states_rates] + [tf_var * rate for rate in costates_rates] + [tf_var*dae_eom for dae_eom in dae_equations],
         'states': states,
         'costates': costates,
         'constants': constants,
@@ -86,7 +92,7 @@ def ocp_to_bvp(ocp, guess):
     return out
 
 
-def make_control_dae(states, costates, controls, dhdu, guess, derivative_fn):
+def make_control_dae(states, costates, states_rates, costates_rates, controls, dhdu, guess, derivative_fn):
     """
     Make's control law for dae (ICRM) formulation.
 
@@ -104,8 +110,7 @@ def make_control_dae(states, costates, controls, dhdu, guess, derivative_fn):
     g = dhdu
     X = [state for state in states] + [costate for costate in costates]
     U = [c for c in controls]
-
-    xdot = sym.Matrix([sympify(state.eom) for state in states] + [sympify(lam.eom) for lam in costates])
+    xdot = sym.Matrix([sympify(state) for state in states_rates] + [sympify(lam) for lam in costates_rates])
     # Compute Jacobian
     dgdX = sym.Matrix([[derivative_fn(g_i, x_i) for x_i in X] for g_i in g])
     dgdU = sym.Matrix([[derivative_fn(g_i, u_i) for u_i in U] for g_i in g])

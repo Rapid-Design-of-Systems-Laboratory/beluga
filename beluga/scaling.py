@@ -44,8 +44,7 @@ class Scaling(dict):
         # TODO: Automate the following sections
 
         # Scaling functions for constants
-        self.scale_func['const'] = {str(const): self.create_scale_fn(const.unit)
-                                    for const in ws['constants']}
+        self.scale_func['const'] = {str(const): self.create_scale_fn(unit) for const, unit in zip(ws['constants'], ws['constants_units'])}
 
         # Cost function used for scaling costates
         cost_keys = ['path_cost', 'terminal_cost', 'initial_cost']
@@ -54,16 +53,14 @@ class Scaling(dict):
             raise ValueError('At least one cost function must be specified as nonzero!')
 
         if cost_used == 'path_cost':
-            cost_unit = str(ws[cost_used].unit) + '*' + str(ws['indep_var'].unit)
+            cost_unit = str(ws[cost_used + '_units']) + '*' + str(ws['independent_var_units'])
         else:
-            cost_unit = str(ws[cost_used].unit)
+            cost_unit = str(ws[cost_used + '_units'])
 
         # Scaling functions for states & costates (combined)
         self.scale_func['states'] = {}
-        self.scale_func['states'] = {str(state): self.create_scale_fn(state.unit)
-                                     for state in ws['states']}
-        costate_units = {str(costate): self.create_scale_fn('('+cost_unit+')/('+str(state.unit)+')')
-                         for state, costate in zip(ws['states'],ws['costates']) }
+        self.scale_func['states'] = {str(state): self.create_scale_fn(unit) for state, unit in zip(ws['states'], ws['states_units'])}
+        costate_units = {str(costate): self.create_scale_fn('('+cost_unit+')/('+str(state_unit)+')') for state, costate, state_unit in zip(ws['states'],ws['costates'],ws['states_units']) }
         self.scale_func['states'].update(costate_units)
 
         self.scale_func['initial'] = self.scale_func['states']
@@ -73,14 +70,14 @@ class Scaling(dict):
         self.scale_func['parameters'] = {}
 
         # Scaling function for the independent variable
-        # TODO: Fix hardcoding
-        self.scale_func['parameters']['tf'] = self.create_scale_fn(ws['indep_var'].unit)
+        self.scale_func['parameters']['tf'] = self.create_scale_fn(ws['independent_var_units'])
 
         self.scale_func['constraints'] = {}
 
         for c_type, c_list in ws['constraints'].items():
-            for c, mul_var in zip(c_list, ws.get(c_type+'_lm_params',[])):
-                mul_unit = '('+cost_unit+')/('+str(c.unit)+')'
+            c_units = ws['constraints_units'][c_type]
+            for c, c_unit, mul_var in zip(c_list, c_units, ws.get(c_type+'_lm_params', [])):
+                mul_unit = '('+cost_unit+')/('+str(c_unit)+')'
                 self.scale_func['parameters'][str(mul_var)] = self.create_scale_fn(mul_unit)
 
     def create_scale_fn(self,unit_expr):

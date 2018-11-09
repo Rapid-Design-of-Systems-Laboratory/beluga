@@ -41,9 +41,14 @@ def init_workspace(ocp, guess):
     workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
                                 for c_type, c_list in constraints.items()
                                 if c_type != 'path'}
-    workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
 
-    workspace['quantities'] = [sympify(q) for q in ocp.quantities()]
+    workspace['constraints_units'] = {c_type: [sympify(c_obj['unit']) for c_obj in c_list]
+                                for c_type, c_list in constraints.items()
+                                if c_type != 'path'}
+
+    workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
+    workspace['quantities'] = [sympify(q['name']) for q in ocp.quantities()]
+    workspace['quantities_values'] = [sympify(q['value']) for q in ocp.quantities()]
     workspace['initial_cost'] = sympify(ocp.get_cost('initial')['expr'])
     workspace['initial_cost_units'] = sympify(ocp.get_cost('initial')['unit'])
     workspace['terminal_cost'] = sympify(ocp.get_cost('terminal')['expr'])
@@ -120,7 +125,7 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     return bc_list
 
 
-def make_constrained_arc_fns(states, costates, controls, parameters, constants, quantity_vars, hamiltonian):
+def make_constrained_arc_fns(states, costates, costates_rates, controls, parameters, constants, quantity_vars, hamiltonian):
     """
     Creates constrained arc control functions.
 
@@ -128,7 +133,7 @@ def make_constrained_arc_fns(states, costates, controls, parameters, constants, 
     :return:
     """
     tf_var = sympify('tf')
-    costate_eoms = [ {'eom':[str(_.eom*tf_var) for _ in costates], 'arctype':0} ]
+    costate_eoms = [{'eom':[str(rate*tf_var) for rate in costates_rates], 'arctype':0}]
     bc_list = []  # Unconstrained arc placeholder
 
     return costate_eoms, bc_list
@@ -209,7 +214,7 @@ def make_time_bc(constraints, hamiltonian, bc_terminal):
         return bc_terminal+[hamiltonian - 0]
 
 
-def process_quantities(quantities):
+def process_quantities(quantities, quantities_values):
     """
     Performs preprocessing on quantity definitions. Creates a new total
     derivative operator that takes considers these definitions.
@@ -222,7 +227,7 @@ def process_quantities(quantities):
     if len(quantities) == 0:
         return dict(), list(), total_derivative
 
-    quantity_subs = [(q.name, q.value) for q in quantities]
+    quantity_subs = [(q, q_val) for q, q_val in zip(quantities, quantities_values)]
     quantity_sym, quantity_expr = zip(*quantity_subs)
     quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
 
