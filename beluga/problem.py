@@ -230,49 +230,9 @@ def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
     {'foo':1, 'bar':2, 'baz': 3}
     """
-    pos_args = {key: val for (key, val) in
-                zip_longest(arg_list, args, fillvalue=fillvalue)}
+    pos_args = {key: val for (key, val) in zip_longest(arg_list, args, fillvalue=fillvalue)}
     arg_dict = dict(ChainMap(kwargs, pos_args))
     return (arg_dict)
-
-
-class SymVar(object):
-    """
-    Represents an object that can be used in SymPy and is created from a dict
-    """
-
-    def __init__(self, param_dict, sym_key='name', excluded=()):
-        self.__dict__ = {k: sympify(v) if k not in excluded else v
-                         for k, v in param_dict.items()}
-        self.param_list = list(param_dict.keys())
-        if sym_key is not None:
-            self._sym = self.__dict__[sym_key]
-        else:
-            self._sym = None
-
-    def _sympy_(self):
-        """
-        Makes the object usable in sympy expressions directly
-        """
-        return self._sym
-
-    def __hash__(self):
-        return hash(self._sym)
-
-    def __eq__(self, other):
-        return self._sym == other._sym
-
-    def __repr__(self):
-        return str(self._sym)
-
-    def keys(self):
-        return self.param_list
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __eq__(self, other):
-        return str(self._sym) == str(other)
 
 
 BVP = namedtuple('BVP', 'deriv_func bc_func compute_control path_constraints')

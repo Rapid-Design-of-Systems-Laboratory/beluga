@@ -15,10 +15,10 @@ from sympy import I #TODO: This doesn't fix complex step derivatives.
 
 
 def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, quantity_vars, ham, is_icrm=False):
-    controls = sym.Matrix([_._sym for _ in controls])
-    constants = sym.Matrix([_._sym for _ in constants])
-    states = sym.Matrix([_.name for _ in states])
-    costates = sym.Matrix([_.name for _ in costates])
+    controls = sym.Matrix([_ for _ in controls])
+    constants = sym.Matrix([_ for _ in constants])
+    states = sym.Matrix([_ for _ in states])
+    costates = sym.Matrix([_ for _ in costates])
     parameters = sym.Matrix(parameters)
     unknowns = list(controls)
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
@@ -52,10 +52,10 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
 
 
 def make_deriv_func(deriv_list, states, costates, parameters, constants, controls, quantity_vars, compute_control, is_icrm=False):
-    controls = sym.Matrix([_._sym for _ in controls])
-    constants = sym.Matrix([_._sym for _ in constants])
-    states = sym.Matrix([_.name for _ in states])
-    costates = sym.Matrix([_.name for _ in costates])
+    controls = sym.Matrix([_ for _ in controls])
+    constants = sym.Matrix([_ for _ in constants])
+    states = sym.Matrix([_ for _ in states])
+    costates = sym.Matrix([_ for _ in costates])
     parameters = sym.Matrix(parameters)
     unknowns = list(controls)
     ham_args = [*states, *costates, *parameters, *constants, *unknowns]
@@ -91,10 +91,10 @@ def make_deriv_func(deriv_list, states, costates, parameters, constants, control
     return deriv_func
 
 def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, compute_control, ham_fn, is_icrm=False):
-    controls = sym.Matrix([_._sym for _ in controls])
-    constants = sym.Matrix([_._sym for _ in constants])
-    states = sym.Matrix([_.name for _ in states])
-    costates = sym.Matrix([_.name for _ in costates])
+    controls = sym.Matrix([_ for _ in controls])
+    constants = sym.Matrix([_ for _ in constants])
+    states = sym.Matrix([_ for _ in states])
+    costates = sym.Matrix([_ for _ in costates])
     dynamical_parameters = sym.Matrix(dynamical_parameters)
     unknowns = list(controls)
     ham_args = [*states, *costates, *dynamical_parameters, *constants, *unknowns]
