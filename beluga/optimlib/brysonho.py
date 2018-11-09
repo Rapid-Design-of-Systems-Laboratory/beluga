@@ -18,12 +18,13 @@ def ocp_to_bvp(ocp, guess):
     constants_of_motion = ws['constants_of_motion']
     constraints = ws['constraints']
     quantities = ws['quantities']
+    quantities_values = ws['quantities_values']
     initial_cost = ws['initial_cost']
     initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
     terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
+    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
     augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
