@@ -26,23 +26,32 @@ def ocp_to_bvp(ocp, guess):
     Q = Manifold(states, 'State_Space')
     R = Manifold([independent_variable], 'Independent_Space')
     tau_Q = FiberBundle(Q, R, 'State_Bundle')
-    TsQ = JetBundle(tau_Q, 1, 'Cotangent_Bundle')
-    num_states = len(TsQ.vertical.base_coords)
+    J1tau_Q = JetBundle(tau_Q, 1, 'Jet_Bundle')
+    num_states = len(states)
+    num_states_total = len(J1tau_Q.vertical.base_coords)
+    setx = dict(zip(states, J1tau_Q.vertical.base_coords[:num_states]))
+
     pi = 0
-    for ii in range(int(num_states / 2)):
-        pi += WedgeProduct(TsQ.base_vectors[ii], TsQ.base_vectors[int(ii + num_states/2)])
+    for ii in range(num_states):
+        pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
+
+    for t in states:
+        t.subs(setx, simultaneous=True)
+        breakpoint()
+
+    breakpoint()
 
     hamiltonian = 0
     for ii in range(num_states):
         pass
 
     breakpoint()
-
-
     augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
     augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, location='terminal')
+
+
     hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
     for var in quantity_vars.keys():
         hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
