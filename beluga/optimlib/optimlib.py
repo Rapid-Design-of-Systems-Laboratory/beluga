@@ -121,7 +121,6 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
 
     *_, sign = dict(prefix_map)[location]
     cost_expr = sign * cost
-    breakpoint()
     bc_list += [costate - derivative_fn(cost_expr, state) for state, costate in zip(states, costates)]
     return bc_list
 

@@ -39,16 +39,23 @@ def ocp_to_bvp(ocp, guess):
     num_states_total = len(J1tau_Q.vertical.base_coords)
     hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
+
+    # Change original terms to be written on manifolds so the diffy g calculations are handled properly
     states = [x.subs(setx, simultaneous=True) for x in states]
     states_rates = [x.subs(setx, simultaneous=True) for x in states_rates]
     costates = J1tau_Q.vertical.base_coords[num_states:]
     constants_of_motion_values = [x.subs(setx, simultaneous=True) for x in constants_of_motion_values]
+    constraints['initial'] = [x.subs(setx, simultaneous=True) for x in constraints['initial']]
+    constraints['terminal'] = [x.subs(setx, simultaneous=True) for x in constraints['terminal']]
+    initial_cost = initial_cost.subs(setx, simultaneous=True)
+    terminal_cost = terminal_cost.subs(setx, simultaneous=True)
+
 
     pi = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
 
-    hamiltonian = 0
+    hamiltonian = 1
     for ii in range(num_states):
         hamiltonian += states_rates[ii] * J1tau_Q.base_coords[ii + num_states]
 
@@ -79,6 +86,15 @@ def ocp_to_bvp(ocp, guess):
     do_stage1_reduction = False
     do_stage2_reduction = False
 
+    if do_stage1_reduction:
+        raise NotImplemented
+
+        if do_stage2_reduction:
+            raise NotImplementedError
+
+    equations_of_motion = X_(hamiltonian)
+    equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
+
     augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
     augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
@@ -86,9 +102,10 @@ def ocp_to_bvp(ocp, guess):
 
     # for var in quantity_vars.keys():
     #     hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
-
-    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
-    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+    dV_cost_initial = J1tau_Q.verticalexteriorderivative(augmented_initial_cost)
+    dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
+    bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
+    bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nond_parameters = initial_lm_params + terminal_lm_params
@@ -103,8 +120,7 @@ def ocp_to_bvp(ocp, guess):
        'problem_name': problem_name,
        'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
        'state_list': [str(x) for x in it.chain(states, costates)],
-       'deriv_list': [tf_var * state.eom for state in states] + [tf_var * costate.eom for costate in
-                                                                 costates],
+       'deriv_list': [tf_var * eom for eom in equations_of_motion_list],
        'states': states,
        'costates': costates,
        'constants': constants,
