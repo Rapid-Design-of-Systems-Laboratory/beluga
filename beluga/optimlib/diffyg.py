@@ -17,6 +17,7 @@ def ocp_to_bvp(ocp, guess):
     constants = ws['constants']
     constants_of_motion = ws['constants_of_motion']
     constants_of_motion_values = ws['constants_of_motion_values']
+    symmetries = ws['symmetries']
     constraints = ws['constraints']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
@@ -28,7 +29,6 @@ def ocp_to_bvp(ocp, guess):
     path_cost_units = ws['path_cost_units']
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
-
     Q = Manifold(states, 'State_Space')
     E = Manifold(states + controls, 'Input_Space')
     R = Manifold([independent_variable], 'Independent_Space')
@@ -39,17 +39,20 @@ def ocp_to_bvp(ocp, guess):
     num_states_total = len(J1tau_Q.vertical.base_coords)
     hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
+    vector_names = [Symbol('D_' + str(x)) for x in states]
+    settangent = dict(zip(vector_names, J1tau_Q.vertical.base_vectors[:num_states]))
 
     # Change original terms to be written on manifolds so the diffy g calculations are handled properly
     states = [x.subs(setx, simultaneous=True) for x in states]
     states_rates = [x.subs(setx, simultaneous=True) for x in states_rates]
     costates = J1tau_Q.vertical.base_coords[num_states:]
     constants_of_motion_values = [x.subs(setx, simultaneous=True) for x in constants_of_motion_values]
+    symmetries = [x.subs(setx, simultaneous=True) for x in symmetries]
+    symmetries = [x.subs(settangent, simultaneous=True) for x in symmetries]
     constraints['initial'] = [x.subs(setx, simultaneous=True) for x in constraints['initial']]
     constraints['terminal'] = [x.subs(setx, simultaneous=True) for x in constraints['terminal']]
     initial_cost = initial_cost.subs(setx, simultaneous=True)
     terminal_cost = terminal_cost.subs(setx, simultaneous=True)
-
 
     pi = 0
     for ii in range(num_states):

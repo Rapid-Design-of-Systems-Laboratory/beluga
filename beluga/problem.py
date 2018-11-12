@@ -43,6 +43,8 @@ class OCP(object):
     +--------------------------------+--------------------------------+--------------------------------+
     | constant_of_motion             | (name, function, unit)         | (string, string, string)       |
     +--------------------------------+--------------------------------+--------------------------------+
+    | symmetry                       | (function)                     | (string)                       |
+    +--------------------------------+--------------------------------+--------------------------------+
     | path_cost                      | (function, unit)               | (string, string)               |
     +--------------------------------+--------------------------------+--------------------------------+
     | initial_cost                   | (function, unit)               | (string, string)               |
@@ -116,9 +118,9 @@ class OCP(object):
     state = partialmethod(set_property, property_name='states', property_args=('name', 'eom', 'unit'))
     control = partialmethod(set_property, property_name='controls', property_args=('name', 'unit'))
     constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
-    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
-                                       property_args=('name', 'function', 'unit'))
+    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
+    symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
     custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','handle'))
 
     states = partialmethod(get_property, property_name='states')
@@ -126,6 +128,7 @@ class OCP(object):
     constants = partialmethod(get_property, property_name='constants')
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     quantities = partialmethod(get_property, property_name='quantities')
+    symmetries = partialmethod(get_property, property_name='symmetries')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
 
     # TODO: Maybe write as separate function?
