@@ -2,64 +2,93 @@ from sympy.diffgeom import Manifold as sympyManifold
 from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, WedgeProduct
 from sympy.printing import pprint
 from sympy.simplify import simplify
-import itertools
 import logging
+import numpy as np
 import itertools as it
 from .optimlib import *
 
 def ocp_to_bvp(ocp, guess):
     ws = init_workspace(ocp, guess)
     problem_name = ws['problem_name']
-    independent_variable = ws['indep_var']
+    independent_variable = ws['independent_var']
     states = ws['states']
+    states_rates = ws['states_rates']
     controls = ws['controls']
     constants = ws['constants']
     constants_of_motion = ws['constants_of_motion']
+    constants_of_motion_values = ws['constants_of_motion_values']
     constraints = ws['constraints']
     quantities = ws['quantities']
+    quantities_values = ws['quantities_values']
     initial_cost = ws['initial_cost']
+    initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
+    terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
+    path_cost_units = ws['path_cost_units']
 
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities)
+    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
 
     Q = Manifold(states, 'State_Space')
+    E = Manifold(states + controls, 'Input_Space')
     R = Manifold([independent_variable], 'Independent_Space')
     tau_Q = FiberBundle(Q, R, 'State_Bundle')
+    tau_E = FiberBundle(E, R, 'Input_Bundle')
     J1tau_Q = JetBundle(tau_Q, 1, 'Jet_Bundle')
     num_states = len(states)
     num_states_total = len(J1tau_Q.vertical.base_coords)
-    setx = dict(zip(states, J1tau_Q.vertical.base_coords[:num_states]))
+    hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
+    setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
+    states = [x.subs(setx, simultaneous=True) for x in states]
+    states_rates = [x.subs(setx, simultaneous=True) for x in states_rates]
+    costates = J1tau_Q.vertical.base_coords[num_states:]
+    constants_of_motion_values = [x.subs(setx, simultaneous=True) for x in constants_of_motion_values]
 
     pi = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
 
-    for t in states:
-        t.subs(setx, simultaneous=True)
-        breakpoint()
-
-    breakpoint()
-
     hamiltonian = 0
     for ii in range(num_states):
-        pass
+        hamiltonian += states_rates[ii] * J1tau_Q.base_coords[ii + num_states]
 
-    breakpoint()
-    augmented_initial_cost = make_augmented_cost(initial_cost, constraints, location='initial')
+    def X_(arg):
+        return pi.rcall(None, arg)
+
+    do_stage1_reduction = False
+    do_stage2_reduction = False
+    if len(constants_of_motion) > 0:
+        do_stage1_reduction = True
+        logging.info('Checking commutation relations... ')
+        commutation_relations = []
+        for c1, c2 in it.product(constants_of_motion_values, constants_of_motion_values):
+            commutation_relations.append(pi.rcall(c1,c2))
+
+        commutation_relations_valid = [False]*len(commutation_relations)
+        for ii in range(len(commutation_relations)):
+            if commutation_relations[ii] == 0:
+                commutation_relations_valid[ii] = True
+
+        logging.info('Done.')
+        if all(commutation_relations_valid):
+            do_stage2_reduction = True
+        else:
+            logging.warning('Commutation relations do not vanish. Skipping stage 2 reduction.')
+
+    # TODO: Overriding the reductions. Implement these later
+    do_stage1_reduction = False
+    do_stage2_reduction = False
+
+    augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
-    augmented_terminal_cost = make_augmented_cost(terminal_cost, constraints, location='terminal')
+    augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, location='terminal')
 
+    # for var in quantity_vars.keys():
+    #     hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
 
-    hamiltonian, costates = make_ham_lamdot(states, path_cost, derivative_fn)
-    for var in quantity_vars.keys():
-        hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
-
-    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn,
-                                          location='initial')
-    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn,
-                                           location='terminal')
+    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
+    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nond_parameters = initial_lm_params + terminal_lm_params
@@ -197,7 +226,7 @@ class FiberBundle(Manifold):
 
 
 class JetBundle(FiberBundle):
-    jet_identifier = '_'
+    jet_identifier = ''
 
     def __new__(cls, *args):
         if not isinstance(args[0], FiberBundle):
@@ -222,7 +251,7 @@ class JetBundle(FiberBundle):
         coords = [str(x) for x in bundle_input.vertical.base_coords]
         for ii in range(jetorder):
             vals = [list(range(hor_dim)) for _ in range(ii+1)]
-            for jord in itertools.product(*vals):
+            for jord in it.product(*vals):
                 for state in base_coords:
                     str_to_append = [str(_) for _ in jord]
                     coords.append(state + cls.jet_identifier + str(cls.jet_identifier.join(str_to_append)))
