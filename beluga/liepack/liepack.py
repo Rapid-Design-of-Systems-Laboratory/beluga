@@ -134,16 +134,16 @@ def dexpinv(g, h, order=5):
 
     k = 0
     stack = h
-    out = B(k) * h
+    out = B[k] * h
 
     k = 1
     stack = adg(stack)
-    out += B(k) * stack
+    out += B[k] * stack
     k += 1
 
     while k < order:
         stack = adg(stack)
-        out += B(k) / factorial(k) * stack
+        out += B[k] / factorial(k) * stack
         k += 2
 
     return out
@@ -187,31 +187,3 @@ def killing(g,h):
     for ii in range(len(basis)):
         k += adg(adh(basis[ii])).get_vector()[ii]
     return k
-
-
-def Left(G, M):
-    r"""
-    Left action of group :math:`G` on homogeneous space :math:`M`.
-
-    .. math::
-        \begin{aligned}
-            \text{Left} : G \times M &\rightarrow M \\
-            (G,M) &\mapsto GM
-        \end{aligned}
-
-    :param G: Lie group.
-    :param M: Homogeneous space.
-    :return: Homogeneous space.
-    """
-    if not isinstance(G, LieGroup):
-        raise ValueError
-    Mout = HManifold(M)
-    Mout = np.dot(G, Mout.data)
-    return Mout
-
-def Right(G, M):
-    if not isinstance(G, LieGroup):
-        raise ValueError
-    Mout = HManifold(M)
-    Mout = np.dot(Mout.data, G)
-    return Mout

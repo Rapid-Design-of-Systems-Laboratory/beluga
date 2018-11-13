@@ -1,49 +1,62 @@
-from beluga.liepack.domain.liegroups import LieGroup
 import copy
 from scipy.linalg import expm
 import numpy as np
 
-class HManifold(object):
+class HManifold(np.ndarray):
     def __new__(cls, *args, **kwargs):
-        obj = super(HManifold, cls).__new__(cls)
-        obj.shape = None
-        obj.data = None
-        if len(args) > 0 and isinstance(args[0], HManifold):
+        if isinstance(args[0], HManifold):
             obj = copy.copy(args[0])
-        if len(args) > 0 and isinstance(args[0], LieGroup):
-            obj.shape = args[0]
+            return obj
 
-        if len(args) > 1:
-            obj.data = args[1]
-
+        shape = sum([_.get_shape() for _ in args])
+        obj = super(HManifold, cls).__new__(cls, (shape, shape), **kwargs)
+        obj.actions = len(args)
+        np.copyto(obj, np.zeros((shape, shape)))
+        cls.set_data(obj, args)
         return obj
 
-    def __init__(self, *args, **kwargs):
-        if self.data is not None:
-            self.setdata(np.array(self.data, dtype=np.float64))
+    def __repr__(self):
+        if len(self.shape) == 0:
+            return super(HManifold, self).__str__()
+        else:
+            return self.__class__.__name__ + '(' + str(self.shape[0]) + ', ' + super(HManifold, self).__str__() + ')'
 
-    def __getitem__(self, item):
-        return self.data[item]
+    def set_data(self, Gset):
+        ii = 0
+        for G in Gset:
+            np.copyto(self[ii:G.get_shape()+ii, ii:G.get_shape()+ii], G)
+            ii += G.get_shape()
 
-    def setdata(self, data):
-        self.data = data
+    def left(self, Gset):
+        r"""
+        Left action of a set of groups :math:`\{G_1, G_2, \cdots, G_i\}` on homogeneous space :math:`M`.
 
-    def getdata(self):
-        return self.data
+        .. math::
+            \begin{aligned}
+                \text{Left} : G_1 \times G_2 \times \cdots \times G_i M &\rightarrow M \\
+                (G,M) &\mapsto GM
+            \end{aligned}
 
-class HLie(HManifold):
-    def __new__(cls, *args, **kwargs):
-        obj = super(HLie, cls).__new__(cls, *args, **kwargs)
-        return obj
+        :param Gset: A list of Lie groups.
+        """
+        ii = 0
+        for G in Gset:
+            self[ii:G.get_shape()+ii, ii:G.get_shape()+ii] = np.dot(G, self[ii:G.get_shape()+ii, ii:G.get_shape()+ii])
+            ii += G.get_shape()
 
-    # def left(self, element, coord):
-    #     if coord == 'exp':
-    #         self.data = np.dot(expm(element.data), self.data)
-    #     else:
-    #         return NotImplementedError
-    #
-    # def right(self, element, coord):
-    #     if coord == 'exp':
-    #         self.data = np.dot(self.data, expm(element.data))
-    #     else:
-    #         return NotImplementedError
+    def right(self, Gset):
+        r"""
+        Right action of a set of groups :math:`\{G_1, G_2, \cdots, G_i\}` on homogeneous space :math:`M`.
+
+        .. math::
+            \begin{aligned}
+                \text{Left} : G_1 \times G_2 \times \cdots \times G_i M &\rightarrow M \\
+                (G,M) &\mapsto MG
+            \end{aligned}
+
+        :param Gset: A list of Lie groups.
+        """
+        ii = 0
+        for G in Gset:
+            self[ii:G.get_shape()+ii, ii:G.get_shape()+ii] = np.dot(self[ii:G.get_shape()+ii, ii:G.get_shape()+ii], G)
+            ii += G.get_shape()
