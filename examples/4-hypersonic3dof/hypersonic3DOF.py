@@ -67,6 +67,7 @@ bvp_solver = beluga.bvp_algorithm('Shooting',
                                   tolerance=1e-4,
                                   max_iterations=100,
                                   max_error=400,
+                                  algorithm='SLSQP'
                                   )
 
 guess_maker = beluga.guess_generator('auto',

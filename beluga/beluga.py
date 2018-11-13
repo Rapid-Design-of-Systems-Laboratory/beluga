@@ -94,7 +94,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     ocp_ws['problem_data']['custom_functions'] = ocp.custom_functions()
     solinit = Solution()
 
-    solinit.aux['const'] = OrderedDict((str(const.name),float(const.value)) for const in ocp_ws['constants'])
+    solinit.aux['const'] = OrderedDict((str(const),float(val)) for const, val in zip(ocp_ws['constants'], ocp_ws['constants_value']))
     for const in ocp_ws['problem_data']['constants']:
         if not str(const) in solinit.aux['const'].keys():
             solinit.aux['const'][str(const)] = 0
