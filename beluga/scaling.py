@@ -101,7 +101,7 @@ class Scaling(dict):
             var_dict = dict(variables)
 
             # Evaluate expression to get scaling factor
-            return float(sympify(scale_expr).subs(var_dict,dtype=float).evalf())
+            return float(sympify(scale_expr).subs(var_dict, dtype=float).evalf())
 
     def compute_scaling(self, sol):
         # Units should be stored in order to be used as function arguments
