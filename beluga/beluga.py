@@ -118,12 +118,12 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     terminal_bc = dict(zip(state_names,terminal_states))
 
     for ii in initial_bc:
-        if ii+'_0' in solinit.aux['const'].keys():
-            solinit.aux['const'][ii+'_0'] = initial_bc[ii]
+        if str(ii)+'_0' in solinit.aux['const'].keys():
+            solinit.aux['const'][str(ii)+'_0'] = initial_bc[ii]
 
     for ii in terminal_bc:
-        if ii+'_f' in solinit.aux['const'].keys():
-            solinit.aux['const'][ii+'_f'] = terminal_bc[ii]
+        if str(ii)+'_f' in solinit.aux['const'].keys():
+            solinit.aux['const'][str(ii)+'_f'] = terminal_bc[ii]
 
     tic()
     # TODO: Start from specific step for restart capability
