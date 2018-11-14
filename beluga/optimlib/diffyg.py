@@ -46,6 +46,8 @@ def ocp_to_bvp(ocp, guess):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
+    dynamical_parameters = []
+
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     Q = Manifold(states, 'State_Space')
     E = Manifold(states + controls, 'Input_Space')
@@ -86,6 +88,7 @@ def ocp_to_bvp(ocp, guess):
 
     do_stage1_reduction = False
     do_stage2_reduction = False
+    quadratures_list = []
     if len(constants_of_motion) > 0:
         do_stage1_reduction = True
         logging.info('Checking commutation relations... ')
@@ -105,11 +108,42 @@ def ocp_to_bvp(ocp, guess):
             logging.warning('Commutation relations do not vanish. Skipping stage 2 reduction.')
 
     # TODO: Overriding the reductions. Implement these later
-    do_stage1_reduction = False
     do_stage2_reduction = False
 
+    reduction_1_success = False
+    reduced_states = states + costates
     if do_stage1_reduction:
-        raise NotImplemented
+        free_vars = set()
+        for c in constants_of_motion_values:
+            free_vars |= c.atoms(states[0])
+
+        logging.info('Attempting simultaneous stage 1 reduction... ')
+
+        eq_set = [constants_of_motion[ii] - constants_of_motion_values[ii] for ii in range(len(constants_of_motion))]
+        constants_sol = sympy.solve(eq_set, list(free_vars), dict=False, minimal=True, simplify=False)
+        reduced_states = []
+        reduced_vectors = []
+        reduced_forms = []
+        removed_states = []
+        removed_vectors = []
+        removed_forms = []
+        for ii, x in enumerate(states + costates):
+            if x in constants_sol.keys():
+                removed_states.append(x)
+                removed_vectors.append(J1tau_Q.vertical.base_vectors[ii])
+                removed_forms.append(J1tau_Q.vertical.base_oneforms[ii])
+            else:
+                reduced_states.append(x)
+                reduced_vectors.append(J1tau_Q.vertical.base_vectors[ii])
+                reduced_forms.append(J1tau_Q.vertical.base_oneforms[ii])
+
+        for c in constants_sol.keys():
+            dynamical_parameters.append(c)
+
+        hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
+        pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
+        reduction_1_success = True
+        logging.info('Done.')
 
         if do_stage2_reduction:
             raise NotImplementedError
@@ -118,8 +152,13 @@ def ocp_to_bvp(ocp, guess):
     else:
         logging.info('Skipping stage 1 and 2 reductions.')
 
-    equations_of_motion = X_(hamiltonian)
-    equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
+    equations_of_motion = pi.rcall(None, hamiltonian)
+    if reduction_1_success:
+        equations_of_motion_list = []
+        for D_x in reduced_vectors:
+            equations_of_motion_list.append(J1tau_Q.flat(equations_of_motion).rcall(D_x))
+    else:
+        equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
     augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
@@ -336,7 +375,7 @@ def make_control_law(dhdu, controls):
     var_list = list(controls)
     from sympy import __version__
     logging.info("Attempting using SymPy (v" + __version__ + ")...")
-    logging.debug("dHdu = "+str(dhdu))
+    logging.debug("dHdu = " + str(dhdu))
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
     logging.info('Control found')
     logging.debug(ctrl_sol)
