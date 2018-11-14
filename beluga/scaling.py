@@ -80,7 +80,6 @@ class Scaling(dict):
             var_dict = dict(variables)
 
             # Evaluate expression to get scaling factor
-            breakpoint()
             return float(sympify(scale_expr).subs(var_dict, dtype=float).evalf())
 
     def compute_scaling(self, sol):
