@@ -237,7 +237,7 @@ class Shooting(BaseAlgorithm):
                 gamma_set_perturbed[ii] = perturbed_trajectory
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
                 gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
-                P1[:, jj] = (f-fx)/h
+                P1[:, jj] += (f-fx)/h
                 dx[kk] = dx[kk] - h
                 parameters[jj] = parameters[jj] - h
 

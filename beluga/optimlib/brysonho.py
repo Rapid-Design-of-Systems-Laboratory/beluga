@@ -4,6 +4,7 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 
 from .optimlib import *
 from beluga.utils import sympify
+import itertools as it
 import logging
 
 

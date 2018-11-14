@@ -8,7 +8,6 @@ import sympy
 from sympy import Symbol, im
 from sympy.core.function import AppliedUndef
 import functools as ft
-import itertools as it
 import re
 
 
@@ -36,6 +35,9 @@ def init_workspace(ocp, guess):
     workspace['constants_value'] = [k['value'] for k in ocp.constants()]
     workspace['constants_units'] = [sympify(k['unit']) for k in ocp.constants()]
     workspace['constants_of_motion'] = [Symbol(k['name']) for k in ocp.constants_of_motion()]
+    workspace['constants_of_motion_values'] = [sympify(k['function']) for k in ocp.constants_of_motion()]
+    workspace['constants_of_motion_units'] = [sympify(k['unit']) for k in ocp.constants_of_motion()]
+    workspace['symmetries'] = [sympify(k['function']) for k in ocp.symmetries()]
 
     constraints = ocp.constraints()
     workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
@@ -113,7 +115,6 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     prefix_map = (('initial', (r'([\w\d\_]+)_0', r"_x0['\1']", sympify('-1'))),
                   ('terminal', (r'([\w\d\_]+)_f', r"_xf['\1']", sympify('1'))))
     prefix_map = dict(prefix_map)
-
     bc_list = []
     for x in constraints[location]:
         bc = sanitize_constraint_expr(x, states, location, prefix_map)
