@@ -14,15 +14,14 @@ from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
 
 
-def make_control_and_ham_fn(control_opts, states, costates, parameters, constants, controls, quantity_vars, ham, is_icrm=False):
+def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, quantity_vars, ham, is_icrm=False):
     controls = sym.Matrix([_ for _ in controls])
     constants = sym.Matrix([_ for _ in constants])
     states = sym.Matrix([_ for _ in states])
-    costates = sym.Matrix([_ for _ in costates])
     parameters = sym.Matrix(parameters)
     unknowns = list(controls)
-    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
-    u_args = [*states, *costates, *parameters, *constants]
+    ham_args = [*states, *parameters, *constants, *unknowns]
+    u_args = [*states, *parameters, *constants]
 
     control_opt_mat = sym.Matrix([[option.get(u, '0')
                                    for u in unknowns]
@@ -36,7 +35,7 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     num_params = len(parameters)
     if is_icrm:
         def compute_control_fn(t, X, p, aux):
-            return X[num_states*2:]
+            return X[num_states:]
     else:
         def compute_control_fn(t, X, p, aux):
             C = aux['const'].values()
@@ -51,14 +50,13 @@ def make_control_and_ham_fn(control_opts, states, costates, parameters, constant
     return compute_control_fn, ham_fn
 
 
-def make_deriv_func(deriv_list, states, costates, parameters, constants, controls, quantity_vars, compute_control, is_icrm=False):
+def make_deriv_func(deriv_list, states, parameters, constants, controls, quantity_vars, compute_control, is_icrm=False):
     controls = sym.Matrix([_ for _ in controls])
     constants = sym.Matrix([_ for _ in constants])
     states = sym.Matrix([_ for _ in states])
-    costates = sym.Matrix([_ for _ in costates])
     parameters = sym.Matrix(parameters)
     unknowns = list(controls)
-    ham_args = [*states, *costates, *parameters, *constants, *unknowns]
+    ham_args = [*states, *parameters, *constants, *unknowns]
 
     eom_fn = [make_sympy_fn(ham_args, eom.subs(quantity_vars)) for eom in deriv_list]
 
@@ -72,7 +70,7 @@ def make_deriv_func(deriv_list, states, costates, parameters, constants, control
             p = p[:num_params]
             u = compute_control(t, X, p, aux)
             eom_vals = np.zeros(num_eoms)
-            _X = X[:2*num_states]
+            _X = X[:num_states]
             for ii in range(num_eoms):
                 eom_vals[ii] = eom_fn[ii](*_X, *p, *C, *u)
 
@@ -90,16 +88,15 @@ def make_deriv_func(deriv_list, states, costates, parameters, constants, control
 
     return deriv_func
 
-def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, compute_control, ham_fn, is_icrm=False):
+def make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, compute_control, ham_fn, is_icrm=False):
     controls = sym.Matrix([_ for _ in controls])
     constants = sym.Matrix([_ for _ in constants])
     states = sym.Matrix([_ for _ in states])
-    costates = sym.Matrix([_ for _ in costates])
     dynamical_parameters = sym.Matrix(dynamical_parameters)
     unknowns = list(controls)
-    ham_args = [*states, *costates, *dynamical_parameters, *constants, *unknowns]
-    u_args = [*states, *costates, *dynamical_parameters, *constants]
-    bc_args = [*states, *costates, *dynamical_parameters, *nondynamical_parameters, *constants, *unknowns]
+    ham_args = [*states, *dynamical_parameters, *constants, *unknowns]
+    u_args = [*states, *dynamical_parameters, *constants]
+    bc_args = [*states, *dynamical_parameters, *nondynamical_parameters, *constants, *unknowns]
     num_states = len(states)
     num_dynamical_params = len(dynamical_parameters)
     num_nondynamical_params = len(nondynamical_parameters)
@@ -127,7 +124,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
         def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
             u0 = compute_control(t0, y0, p, aux)
             uf = compute_control(tf, yf, p, aux)
-            return bc_func_all(t0, y0[:2*num_states], q0, u0, tf, yf[:2*num_states], qf, uf, p, ndp, aux)
+            return bc_func_all(t0, y0[:num_states], q0, u0, tf, yf[:num_states], qf, uf, p, ndp, aux)
     else:
         def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
             u0 = compute_control(t0, y0, p, aux)
@@ -139,8 +136,7 @@ def make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters
 
 def make_functions(problem_data):
     unc_control_law = problem_data['control_options']
-    states = problem_data['states']
-    costates = problem_data['costates']
+    states = problem_data['state_list']
     nondynamical_parameters = problem_data['nondynamical_parameters']
     dynamical_parameters = problem_data['dynamical_parameters']
     constants = problem_data['constants']
@@ -149,16 +145,16 @@ def make_functions(problem_data):
     is_icrm = problem_data['method'].lower() == 'icrm'
     ham = problem_data['hamiltonian']
     logging.info('Making unconstrained control')
-    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, costates, dynamical_parameters, constants, controls, quantity_vars, ham, is_icrm=is_icrm)
+    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters, constants, controls, quantity_vars, ham, is_icrm=is_icrm)
 
     logging.info('Making derivative function and bc function')
     deriv_list = problem_data['deriv_list']
 
-    deriv_func = make_deriv_func(deriv_list, states, costates, dynamical_parameters, constants, controls, quantity_vars, control_fn, is_icrm=is_icrm)
+    deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, quantity_vars, control_fn, is_icrm=is_icrm)
 
     bc_initial = problem_data['bc_initial']
     bc_terminal = problem_data['bc_terminal']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, costates, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, control_fn, ham_fn, is_icrm=is_icrm)
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynamical_parameters, constants, controls, quantity_vars, control_fn, ham_fn, is_icrm=is_icrm)
 
     return deriv_func, bc_func, control_fn, ham_fn
 
