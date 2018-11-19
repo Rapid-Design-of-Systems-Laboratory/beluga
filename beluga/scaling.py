@@ -67,10 +67,11 @@ class Scaling(dict):
         self.scale_func['terminal'] = self.scale_func['states']
 
         # Scaling functions for constraint multipliers and other parameters
-        self.scale_func['parameters'] = {}
-
-        # Scaling function for the independent variable
-        self.scale_func['parameters']['tf'] = self.create_scale_fn(ws['independent_var_units'])
+        self.scale_func['parameters'] = {
+            str(parameter): self.create_scale_fn(unit) for parameter, unit in zip(ws['parameters'], ws['parameters_units'])
+        }
+        self.scale_func['parameters'] = {
+            **self.scale_func['parameters'], str('tf'): self.create_scale_fn(ws['independent_var_units'])}
 
         self.scale_func['constraints'] = {}
 
