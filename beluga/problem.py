@@ -121,6 +121,7 @@ class OCP(object):
     constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
+    parameter = partialmethod(set_property, property_name='parameters', property_args=('name','unit'))
     custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','handle'))
 
     states = partialmethod(get_property, property_name='states')
@@ -129,6 +130,7 @@ class OCP(object):
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     quantities = partialmethod(get_property, property_name='quantities')
     symmetries = partialmethod(get_property, property_name='symmetries')
+    parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
 
     # TODO: Maybe write as separate function?

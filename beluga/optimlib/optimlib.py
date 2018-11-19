@@ -38,6 +38,8 @@ def init_workspace(ocp, guess):
     workspace['constants_of_motion_values'] = [sympify(k['function']) for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_units'] = [sympify(k['unit']) for k in ocp.constants_of_motion()]
     workspace['symmetries'] = [sympify(k['function']) for k in ocp.symmetries()]
+    workspace['parameters'] = [sympify(k['name']) for k in ocp.parameters()]
+    workspace['parameters_units'] = [sympify(k['unit']) for k in ocp.parameters()]
 
     constraints = ocp.constraints()
     workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
