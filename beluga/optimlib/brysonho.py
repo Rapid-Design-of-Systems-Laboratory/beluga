@@ -20,6 +20,7 @@ def ocp_to_bvp(ocp, guess):
     constraints = ws['constraints']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
+    parameters = ws['parameters']
     initial_cost = ws['initial_cost']
     initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
@@ -40,10 +41,11 @@ def ocp_to_bvp(ocp, guess):
     bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-    nond_parameters = initial_lm_params + terminal_lm_params
     control_law = make_control_law(dHdu, controls)
     # Generate the problem data
     tf_var = sympify('tf')
+    dyna_parameters = [tf_var] + parameters
+    nond_parameters = initial_lm_params + terminal_lm_params
     out = ws
     out['costates'] = costates
     out['initial_lm_params'] = initial_lm_params
@@ -57,7 +59,7 @@ def ocp_to_bvp(ocp, guess):
         'costates': costates,
         'constants': constants,
         'constants_of_motion': constants_of_motion,
-        'dynamical_parameters': [tf_var],
+        'dynamical_parameters': dyna_parameters,
         'nondynamical_parameters': nond_parameters,
         'control_list': [str(x) for x in it.chain(controls)],
         'controls': controls,
