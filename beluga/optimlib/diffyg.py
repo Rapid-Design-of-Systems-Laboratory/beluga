@@ -21,6 +21,7 @@ def ocp_to_bvp(ocp, guess):
     constraints = ws['constraints']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
+    parameters = ws['parameters']
     initial_cost = ws['initial_cost']
     initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
@@ -128,7 +129,7 @@ def ocp_to_bvp(ocp, guess):
        'costates': costates,
        'constants': constants,
        'constants_of_motion': constants_of_motion,
-       'dynamical_parameters': [tf_var],
+       'dynamical_parameters': [tf_var] + parameters,
        'nondynamical_parameters': nond_parameters,
        'control_list': [str(x) for x in it.chain(controls)],
        'controls': controls,
