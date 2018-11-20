@@ -21,17 +21,18 @@ def ocp_to_bvp(ocp, guess):
     terminal_cost = ws['terminal_cost']
     terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
+
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
+    for var in quantity_vars.keys():
+        for ii in range(len(states_rates)):
+            states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+
     augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
     initial_lm_params = make_augmented_params(constraints, location='initial')
     augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
     terminal_lm_params = make_augmented_params(constraints, location='terminal')
     hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
-
-    for var in quantity_vars.keys():
-        hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
-
     bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
     bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
@@ -63,21 +64,17 @@ def ocp_to_bvp(ocp, guess):
     out['problem_data'] = {'method': 'icrm',
         'problem_name': problem_name,
         'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-        'state_list':[str(x) for x in it.chain(states, costates)],
-        'deriv_list': [tf_var * rate for rate in states_rates] + [tf_var * rate for rate in costates_rates] + [tf_var*dae_eom for dae_eom in dae_equations],
-        'states': states,
-        'costates': costates,
-        'constants': constants,
-        'constants_of_motion': constants_of_motion,
-        'dynamical_parameters': [tf_var] + parameters,
-        'nondynamical_parameters': nondyn_parameters,
-        'controls': controls,
-        'quantity_vars': quantity_vars,
+        'states':[str(x) for x in it.chain(states, costates)],
+        'deriv_list': [str(tf_var * rate) for rate in states_rates] + [str(tf_var * rate) for rate in costates_rates] + [str(tf_var*dae_eom) for dae_eom in dae_equations],
+        'constants': [str(c) for c in constants],
+        'constants_of_motion': [str(c) for c in constants_of_motion],
+        'dynamical_parameters': [str(tf_var)] + [str(p) for p in parameters],
+        'nondynamical_parameters': [str(p) for p in nondyn_parameters],
+        'controls': [str(u) for u in controls],
         'dae_var_list': [str(dae_state) for dae_state in dae_states],
-        'dae_eom_list': ['(tf)*(' + str(dae_eom) + ')' for dae_eom in dae_equations],
+        'dae_eom_list': [str(tf_var*dae_eom) for dae_eom in dae_equations],
         'dae_var_num': len(dae_states),
-        'costate_eoms': costate_eoms,
-        'hamiltonian': hamiltonian,
+        'hamiltonian': str(hamiltonian),
         'num_states': 2 * len(states),
         'dHdu': [str(_) for _ in it.chain(dHdu)],
         'bc_initial': [str(_) for _ in bc_initial],
@@ -87,7 +84,6 @@ def ocp_to_bvp(ocp, guess):
         'control_list': [str(u) for u in controls],
         'num_controls': len(controls),
         'ham_expr': str(hamiltonian),
-        'quantity_list': quantity_list,
         'dgdX': dgdX,
         'dgdU': dgdU,
         'nOdes': 2 * len(states) + len(dae_states)}
