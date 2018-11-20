@@ -109,7 +109,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     bvp = preprocess(ocp_ws['problem_data'])
     solinit = ocp_ws['guess'].generate(bvp, solinit)
 
-    state_names = ocp_ws['problem_data']['state_list']
+    state_names = ocp_ws['problem_data']['states']
 
     initial_states = solinit.y[0, :]
     terminal_states = solinit.y[-1, :]
@@ -148,18 +148,10 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
             tf = sol.dynamical_parameters[tf_ind]
             sol.t = sol.t*tf
 
-    # Save data
-    # del out['problem_data']['s_list']
-    del out['problem_data']['states']
-    del out['problem_data']['costates']
-
-    qvars = out['problem_data']['quantity_vars']
-    qvars = {str(k): str(v) for k, v in qvars.items()}
-    out['problem_data']['quantity_vars'] = qvars
-
     if pool is not None:
         pool.close()
 
+    # Save data
     with open(output_file, 'wb') as outfile:
         pickle.dump(out, outfile)
 

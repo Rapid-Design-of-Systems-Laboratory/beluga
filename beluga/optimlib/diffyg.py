@@ -114,7 +114,9 @@ def ocp_to_bvp(ocp, guess):
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nond_parameters = initial_lm_params + terminal_lm_params
     control_law = make_control_law(dHdu, controls)
+
     # Generate the problem data
+    control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
     tf_var = sympify('tf')
     out = ws
     out['costates'] = costates
@@ -123,27 +125,21 @@ def ocp_to_bvp(ocp, guess):
     out['problem_data'] = {'method': 'brysonho',
        'problem_name': problem_name,
        'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-       'state_list': [str(x) for x in it.chain(states, costates)],
-       'deriv_list': [tf_var * eom for eom in equations_of_motion_list],
-       'states': states,
-       'costates': costates,
-       'constants': constants,
-       'constants_of_motion': constants_of_motion,
-       'dynamical_parameters': [tf_var] + parameters,
-       'nondynamical_parameters': nond_parameters,
+       'states': [str(x) for x in it.chain(states, costates)],
+       'deriv_list': [str(tf_var * eom) for eom in equations_of_motion_list],
+       'constants': [str(c) for c in constants],
+       'constants_of_motion': [str(c) for c in constants_of_motion],
+       'dynamical_parameters': [str(tf_var)] + [str(p) for p in parameters],
+       'nondynamical_parameters': [str(p) for p in nond_parameters],
        'control_list': [str(x) for x in it.chain(controls)],
-       'controls': controls,
-       'quantity_vars': quantity_vars,
-       'hamiltonian': hamiltonian,
+       'controls': [str(u) for u in controls],
+       'hamiltonian': str(hamiltonian),
        'num_states': 2 * len(states),
-       'num_params': len(nond_parameters) + 1,
-       'dHdu': dHdu,
-       'bc_initial': [_ for _ in bc_initial],
-       'bc_terminal': [_ for _ in bc_terminal],
+       'dHdu': str(dHdu),
+       'bc_initial': [str(_) for _ in bc_initial],
+       'bc_terminal': [str(_) for _ in bc_terminal],
        'control_options': control_law,
-       'num_controls': len(controls),
-       'quantity_list': quantity_list,
-       'nOdes': 2 * len(states)}
+       'num_controls': len(controls)}
     return out
 
 class Manifold(object):
