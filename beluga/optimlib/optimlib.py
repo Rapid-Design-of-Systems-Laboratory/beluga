@@ -32,7 +32,7 @@ def init_workspace(ocp, guess):
     workspace['controls'] = [Symbol(u['name']) for u in ocp.controls()]
     workspace['controls_units'] = [sympify(u['unit']) for u in ocp.controls()]
     workspace['constants'] = [Symbol(k['name']) for k in ocp.constants()]
-    workspace['constants_value'] = [k['value'] for k in ocp.constants()]
+    workspace['constants_values'] = [k['value'] for k in ocp.constants()]
     workspace['constants_units'] = [sympify(k['unit']) for k in ocp.constants()]
     workspace['constants_of_motion'] = [Symbol(k['name']) for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_values'] = [sympify(k['function']) for k in ocp.constants_of_motion()]
@@ -63,7 +63,7 @@ def init_workspace(ocp, guess):
     return workspace
 
 
-def make_augmented_cost(cost, cost_units, constraints, location):
+def make_augmented_cost(cost, cost_units, constraints, constraints_units, location):
     r"""
     Augments the cost function with the given list of constraints.
 
@@ -80,16 +80,17 @@ def make_augmented_cost(cost, cost_units, constraints, location):
     Returns the augmented cost function
     """
 
-    lagrange_mult = make_augmented_params(constraints, location)
+    lagrange_mult, lagrange_mult_units = make_augmented_params(constraints, constraints_units, cost_units, location)
     aug_cost_expr = cost + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
-    return aug_cost_expr, cost_units
+    return aug_cost_expr, cost_units, lagrange_mult, lagrange_mult_units
 
 
-def make_augmented_params(constraints, location):
+def make_augmented_params(constraints, constraints_units, cost_units, location):
     r"""
     Make the lagrange multiplier terms for adjoining boundary conditions.
 
     :param constraints: List of constraints at the boundaries.
+    :param cost_units: Units of the cost function.
     :param location: Location of each constraint.
     :return: Lagrange multipliers for the given constraints.
     """
@@ -98,8 +99,8 @@ def make_augmented_params(constraints, location):
         return sympify('lagrange_' + location + '_' + str(ind))
 
     lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(constraints[location], 1)]
-
-    return lagrange_mult
+    lagrange_mult_cost = [cost_units/c_units for c_units in constraints_units[location]]
+    return lagrange_mult, lagrange_mult_cost
 
 
 def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location):
@@ -185,19 +186,24 @@ def make_dhdu(ham, controls, derivative_fn):
     return dHdu
 
 
-def make_hamiltonian(states, states_rates, path_cost):
+def make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_units):
     r"""
     Creates a Hamiltonian function.
 
     :param states: A list of state variables, :math:`x`.
     :param states_rates: A list of rates of change for the state variables :math:`\dot{x} = f'.
+    :param states_units: A list of units for each state variable.
     :param path_cost: The path cost to be minimized.
+    :param path_cost_units: The units on the path cost.
     :return: A Hamiltonian function, :math:`H`.
     :return: A list of costate rates, :math:`\dot{\lambda}_x`
+    :return: A list of units for each costate variable.
     """
     costates = make_costate_names(states)
+    costates_units = [path_cost_units / state_units for state_units in states_units]
     hamiltonian = path_cost + sum([rate*lam for rate, lam in zip(states_rates, costates)])
-    return hamiltonian, costates
+    hamiltonian_units = path_cost_units
+    return hamiltonian, hamiltonian_units, costates, costates_units
 
 
 def make_time_bc(constraints, hamiltonian, bc_terminal):
