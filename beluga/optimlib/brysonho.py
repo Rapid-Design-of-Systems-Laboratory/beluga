@@ -22,6 +22,7 @@ def ocp_to_bvp(ocp, guess):
     constants_units = ws['constants_units']
     constants_values = ws['constants_values']
     constants_of_motion = ws['constants_of_motion']
+    constants_of_motion_values = ws['constants_of_motion_values']
     constants_of_motion_units = ws['constants_of_motion_units']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']

@@ -136,7 +136,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     out = dict()
 
     out['problem_data'] = bvp_ws
-    ocp._scaling.initialize(bvp_ws, ocp)
+    ocp._scaling.initialize(bvp_ws)
     bvp_ws['scaling'] = ocp._scaling
 
     out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, pool, autoscale)

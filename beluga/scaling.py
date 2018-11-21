@@ -46,18 +46,6 @@ class Scaling(dict):
         # Scaling functions for constants
         self.scale_func['const'] = {str(const): self.create_scale_fn(unit) for const, unit in zip(ws['constants'], ws['constants_units'])}
 
-        # # Cost function used for scaling costates
-        # cost_keys = ['path_cost', 'terminal_cost', 'initial_cost']
-        # cost_used = next(key for key in cost_keys if str(ws[key]) != '0')
-        # if len(cost_used) < 1:
-        #     raise ValueError('At least one cost function must be specified as nonzero!')
-        #
-        # if cost_used == 'path_cost':
-        #     cost_unit = str(ws[cost_used + '_units']) + '*' + str(ws['independent_var_units'])
-        # else:
-        #     cost_unit = str(ws[cost_used + '_units'])
-
-        cost_unit = ws['hamiltonian_units']
         # Scaling functions for states & costates (combined)
         self.scale_func['states'] = {}
         self.scale_func['states'] = {str(state): self.create_scale_fn(unit) for state, unit in zip(ws['states'], ws['states_units'])}
