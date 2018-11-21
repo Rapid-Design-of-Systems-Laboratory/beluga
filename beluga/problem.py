@@ -16,7 +16,7 @@ from collections import namedtuple, ChainMap
 from itertools import zip_longest
 
 from .scaling import Scaling
-from beluga.utils import sympify, tic, toc
+import time
 from beluga.ivpsol import Propagator
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
@@ -394,10 +394,10 @@ class GuessGenerator(object):
         if self.direction == 'reverse':
             tspan = [0, -1]
 
-        tic()
+        time0 = time.time()
         prop = Propagator()
         solivp = prop(bvp_fn.deriv_func, None, tspan, x0, [], param_guess, solinit.aux)
-        elapsed_time = toc()
+        elapsed_time = time.time() - time0
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y

@@ -45,15 +45,6 @@ def Bernoulli(num):
         m += 1
     return float(B[-1])
 
-def tic():
-    _tstart_stack.append(time.time())
-
-def toc(show=False,fmt="Elapsed: %s s"):
-    if show:
-        print(fmt % (time.time() - _tstart_stack.pop()))
-    else:
-        return (time.time() - _tstart_stack.pop())
-
 class Timer(object):
     def __init__(self, name=None):
         self.name = name

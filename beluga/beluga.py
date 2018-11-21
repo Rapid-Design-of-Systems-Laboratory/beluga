@@ -14,7 +14,7 @@ from beluga.bvpsol import algorithms, Solution
 from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
-from .utils import tic, toc
+import time
 from collections import OrderedDict
 import pathos
 
@@ -125,7 +125,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
         if ii+'_f' in solinit.aux['const'].keys():
             solinit.aux['const'][ii+'_f'] = terminal_bc[ii]
 
-    tic()
+    time0 = time.time()
     # TODO: Start from specific step for restart capability
     # TODO: Make class to store result from continuation set?
     out = dict()
@@ -136,7 +136,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     ocp_ws['scaling'] = ocp._scaling
 
     out['solution'] = run_continuation_set(ocp_ws, bvp_algorithm, steps, solinit, bvp, pool)
-    total_time = toc()
+    total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
@@ -183,7 +183,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool):
                 sol_guess.aux = aux
 
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
-                tic()
+                time0 = time.time()
 
                 s.compute_scaling(sol_guess)
                 sol_guess = s.scale(sol_guess)
@@ -215,10 +215,10 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool):
                     # iteration
                     solution_set[step_idx].append(copy.deepcopy(sol))
                     sol_guess = copy.deepcopy(sol)
-                    elapsed_time = toc()
+                    elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 else:
-                    elapsed_time = toc()
+                    elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
     except Exception as e:
         import traceback
