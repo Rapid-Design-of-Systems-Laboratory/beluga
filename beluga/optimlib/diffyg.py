@@ -37,8 +37,14 @@ def ocp_to_bvp(ocp, guess):
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
 
-    # TODO: Add test case and properly handle initial, path, and terminal cost functions
-    cost_units = path_cost_units * independent_variable_units
+    if initial_cost != 0:
+        cost_units = initial_cost_units
+    elif terminal_cost != 0:
+        cost_units = terminal_cost_units
+    elif path_cost != 0:
+        cost_units = path_cost_units*independent_variable_units
+    else:
+        raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     Q = Manifold(states, 'State_Space')
