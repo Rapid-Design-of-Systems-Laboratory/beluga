@@ -7,6 +7,7 @@ import scipy.optimize
 import numpy as np
 import cloudpickle as dill
 
+import copy
 import json
 import logging
 import os.path
@@ -347,11 +348,11 @@ class GuessGenerator(object):
         self.control_guess = control_guess
         self.use_control_guess = use_control_guess
 
-    def auto(self, bvp_fn, solinit, param_guess=None):
+    def auto(self, bvp_fn, solinit, guess_mapper, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
         # Assume normalized time from 0 to 1
-        tspan = [0, 1]
+        tspan = np.array([0, 1])
 
         x0 = np.array(self.start)
 
@@ -396,11 +397,18 @@ class GuessGenerator(object):
 
         time0 = time.time()
         prop = Propagator()
-        solivp = prop(bvp_fn.deriv_func, None, tspan, x0, [], param_guess, solinit.aux)
+        solinit.t = tspan
+        solinit.y = np.array([x0])
+        solinit.u = np.array(u0)
+        solinit.dynamical_parameters = param_guess
+        solinit.nondynamical_parameters = nondynamical_param_guess
+        sol = guess_mapper(solinit)
+        solivp = prop(bvp_fn.deriv_func, None, sol.t, sol.y[0], [], sol.dynamical_parameters, sol.aux)
         elapsed_time = time.time() - time0
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y
+        solinit.u = np.array([])
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         return solinit
