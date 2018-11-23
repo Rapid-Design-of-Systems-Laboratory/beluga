@@ -59,7 +59,6 @@ class Scaling(dict):
         self.scale_func['parameters'] = {p: self.create_scale_fn(unit) for p, unit in zip(ws['dynamical_parameters'], ws['dynamical_parameters_units'])}
         self.scale_func['parameters'].update({p: self.create_scale_fn(unit) for p, unit in zip(ws['nondynamical_parameters'], ws['nondynamical_parameters_units'])})
 
-
     def create_scale_fn(self,unit_expr):
         return lambdify(self.units_sym,sympify(unit_expr))
 

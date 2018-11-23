@@ -376,6 +376,9 @@ class GuessGenerator(object):
         nondynamical_param_guess = np.zeros(len(solinit.aux['nondynamical_parameters']))
 
         param_guess[0] = self.time_integrate
+        param_guess[1] = -0.1
+        param_guess[2] = -0.1
+        x0[2] = 0
 
         if self.dae_num_states > 0:
             dae_guess = u0
