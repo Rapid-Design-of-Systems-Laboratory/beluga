@@ -40,7 +40,7 @@ ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 
 guess_maker = beluga.guess_generator('auto',
-                start=[0,0],          # Starting values for states in order
+                start=[0,0,0],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1,
                 control_guess=[-pi/2],
@@ -57,7 +57,7 @@ continuation_steps.add_step('bisection') \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol = beluga.solve(ocp,
-             method='diffyg',
+             method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker, autoscale=True)
