@@ -1,10 +1,12 @@
 from .optimlib import *
 import sympy as sym
 import itertools as it
+import numpy as np
+import copy
 
 
-def ocp_to_bvp(ocp, guess):
-    ws = init_workspace(ocp, guess)
+def ocp_to_bvp(ocp):
+    ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
     independent_variable_units = ws['independent_var_units']
@@ -56,7 +58,7 @@ def ocp_to_bvp(ocp, guess):
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     costate_eoms, bc_list = make_constrained_arc_fns(states, costates, costates_rates, controls, nondynamical_parameters, constants, quantity_vars, hamiltonian)
-    dae_states, dae_equations, dae_bc, guess, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, guess, derivative_fn)
+    dae_states, dae_equations, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, derivative_fn)
 
     # Generate the problem data
     tf_var = sympify('tf')
@@ -108,10 +110,17 @@ def ocp_to_bvp(ocp, guess):
            'dgdX': dgdX,
            'dgdU': dgdU,
            'nOdes': 2 * len(states) + len(dae_states)}
-    return out
+
+    def guess_mapper(sol):
+        solout = copy.copy(sol)
+        solout.y = np.array([np.hstack((sol.y[0], sol.u))])
+        sol.u = np.array([])
+        return solout
+
+    return out, guess_mapper
 
 
-def make_control_dae(states, costates, states_rates, costates_rates, controls, dhdu, guess, derivative_fn):
+def make_control_dae(states, costates, states_rates, costates_rates, controls, dhdu, derivative_fn):
     """
     Make's control law for dae (ICRM) formulation.
 
@@ -140,11 +149,8 @@ def make_control_dae(states, costates, states_rates, costates_rates, controls, d
     dae_equations = list(udot)
     dae_bc = g
 
-    guess.dae_num_states = len(U)
-
     yield dae_states
     yield dae_equations
     yield dae_bc
-    yield guess
     yield dgdX
     yield dgdU

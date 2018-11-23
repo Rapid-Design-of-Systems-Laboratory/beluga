@@ -8,8 +8,8 @@ import itertools as it
 import logging
 
 
-def ocp_to_bvp(ocp, guess):
-    ws = init_workspace(ocp, guess)
+def ocp_to_bvp(ocp):
+    ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
     independent_variable_units = ws['independent_var_units']
@@ -95,7 +95,11 @@ def ocp_to_bvp(ocp, guess):
            'bc_terminal': [str(_) for _ in bc_terminal],
            'control_options': control_law,
            'num_controls': len(controls)}
-    return out
+
+    def guess_mapper(sol):
+        return sol
+
+    return out, guess_mapper
 
 
 def make_control_law(dhdu, controls):

@@ -2,12 +2,13 @@ from sympy.diffgeom import Manifold as sympyManifold
 from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, WedgeProduct
 import copy
 import logging
+from beluga.bvpsol import Solution
 import numpy as np
 import itertools as it
 from .optimlib import *
 
-def ocp_to_bvp(ocp, guess):
-    ws = init_workspace(ocp, guess)
+def ocp_to_bvp(ocp):
+    ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
     independent_variable_units = ws['independent_var_units']
@@ -74,13 +75,11 @@ def ocp_to_bvp(ocp, guess):
     initial_cost = initial_cost.subs(setx, simultaneous=True)
     terminal_cost = terminal_cost.subs(setx, simultaneous=True)
 
+    hamiltonian = hamiltonian.subs(setx, simultaneous=True)
+
     pi = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
-
-    hamiltonian = 1
-    for ii in range(num_states):
-        hamiltonian += states_rates[ii] * J1tau_Q.base_coords[ii + num_states]
 
     def X_(arg):
         return pi.rcall(None, arg)
@@ -162,6 +161,7 @@ def ocp_to_bvp(ocp, guess):
 
         hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
         pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
+
         for ii in range(len(control_law)):
             for control in control_law[ii]:
                 control_law[ii][control] = control_law[ii][control].subs(constants_sol, simultaneous=True)
@@ -188,7 +188,8 @@ def ocp_to_bvp(ocp, guess):
         equations_of_motion_list = []
         for D_x in reduced_vectors:
             equations_of_motion_list.append(J1tau_Q.flat(equations_of_motion).rcall(D_x))
-        equations_of_motion_list[:2] = equations_of_motion_list_original[:2] # TODO: Don't hardcode this
+
+        equations_of_motion_list[:len(constants_of_motion)] = equations_of_motion_list_original[:len(constants_of_motion)] # TODO: Don't hardcode this
         dynamical_parameters_units += constants_of_motion_units
 
     # Generate the problem data
@@ -220,7 +221,21 @@ def ocp_to_bvp(ocp, guess):
            'bc_terminal': [str(_) for _ in bc_terminal],
            'control_options': control_law,
            'num_controls': len(controls)}
-    return out
+
+    def guess_mapper(sol):
+        n_c = len(constants_of_motion)
+        if n_c == 0:
+            return sol
+        sol_out = Solution()
+        sol_out.t = copy.copy(sol.t)
+        sol_out.y = np.array([sol.y[0][:-n_c]])
+        sol_out.dynamical_parameters = sol.dynamical_parameters
+        sol_out.dynamical_parameters[-n_c:] = sol.y[0][-n_c:]
+        sol_out.nondynamical_parameters = sol.nondynamical_parameters
+        sol_out.aux = sol.aux
+        return sol_out
+
+    return out, guess_mapper
 
 class Manifold(object):
     def __new__(cls, *args):

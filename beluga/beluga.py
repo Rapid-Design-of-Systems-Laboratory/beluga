@@ -73,17 +73,19 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     +========================+=================+=================+
     | autoscale              | True            | bool            |
     +------------------------+-----------------+-----------------+
+    | n_cpus                 | 1               | integer         |
+    +------------------------+-----------------+-----------------+
 
     """
     autoscale = kwargs.get('autoscale', True)
-    num_cpus = int(kwargs.get('num_cpus', 1))
+    n_cpus = int(kwargs.get('n_cpus', 1))
 
-    if num_cpus < 1:
+    if n_cpus < 1:
         raise ValueError('Number of cpus must be greater than 1.')
 
-    if num_cpus > 1:
-        logging.debug('Starting processing pool with ' + str(num_cpus) + 'cpus... ')
-        pool = pathos.multiprocessing.Pool(processes=num_cpus)
+    if n_cpus > 1:
+        logging.debug('Starting processing pool with ' + str(n_cpus) + 'cpus... ')
+        pool = pathos.multiprocessing.Pool(processes=n_cpus)
         logging.debug('Done.')
     else:
         pool = None
@@ -92,11 +94,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     logging.info("Computing the necessary conditions of optimality")
 
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
-        bvp_ws = BH_ocp_to_bvp(ocp, guess_generator)
+        bvp_ws, guess_mapper = BH_ocp_to_bvp(ocp)
     elif method.lower() == 'icrm':
-        bvp_ws = ICRM_ocp_to_bvp(ocp, guess_generator)
+        bvp_ws, guess_mapper = ICRM_ocp_to_bvp(ocp)
     elif method.lower() == 'diffyg':
-        bvp_ws = DIFFYG_ocp_to_bvp(ocp, guess_generator)
+        bvp_ws, guess_mapper = DIFFYG_ocp_to_bvp(ocp)
     else:
         raise NotImplementedError
 
@@ -114,7 +116,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     solinit.aux['nondynamical_parameters'] = bvp_ws['nondynamical_parameters']
 
     bvp = preprocess(bvp_ws)
-    solinit = bvp_ws['guess'].generate(bvp, solinit)
+    solinit = bvp_ws['guess'].generate(bvp, solinit, guess_mapper)
 
     state_names = bvp_ws['states']
 
