@@ -37,7 +37,7 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting')
+bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
@@ -60,4 +60,4 @@ sol = beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             guess_generator=guess_maker)
+             guess_generator=guess_maker, autoscale=True)

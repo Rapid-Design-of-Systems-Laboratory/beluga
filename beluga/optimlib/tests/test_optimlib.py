@@ -14,7 +14,7 @@ def test_init_workspace():
 
     # Throw an error with no independent variable defined.
     with pytest.raises(KeyError):
-        init_workspace(problem, guess)
+        init_workspace(problem)
 
     problem.independent('t', 's')
     problem.state('x', 'v', 'm')
@@ -27,7 +27,7 @@ def test_init_workspace():
     problem.constraints().terminal('x-x_f', 'm')
     problem.scale(m='x', s='x/v', N=1)
 
-    ws = init_workspace(problem, guess)
+    ws = init_workspace(problem)
 
     assert isinstance(ws, dict)
     assert ws['problem_name'] == 'test_problem'

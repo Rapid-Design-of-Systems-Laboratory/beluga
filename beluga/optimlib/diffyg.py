@@ -1,32 +1,52 @@
 from sympy.diffgeom import Manifold as sympyManifold
 from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, WedgeProduct
-from sympy.printing import pprint
-from sympy.simplify import simplify
+import copy
 import logging
+from beluga.bvpsol import Solution
 import numpy as np
 import itertools as it
 from .optimlib import *
 
-def ocp_to_bvp(ocp, guess):
-    ws = init_workspace(ocp, guess)
+def ocp_to_bvp(ocp):
+    ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
+    independent_variable_units = ws['independent_var_units']
     states = ws['states']
     states_rates = ws['states_rates']
+    states_units = ws['states_units']
     controls = ws['controls']
+    controls_units = ws['controls_units']
     constants = ws['constants']
+    constants_units = ws['constants_units']
+    constants_values = ws['constants_values']
     constants_of_motion = ws['constants_of_motion']
     constants_of_motion_values = ws['constants_of_motion_values']
+    constants_of_motion_units = ws['constants_of_motion_units']
     symmetries = ws['symmetries']
     constraints = ws['constraints']
+    constraints_units = ws['constraints_units']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
+    parameters = ws['parameters']
+    parameters_units = ws['parameters_units']
     initial_cost = ws['initial_cost']
     initial_cost_units = ws['initial_cost_units']
     terminal_cost = ws['terminal_cost']
     terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
+
+    if initial_cost != 0:
+        cost_units = initial_cost_units
+    elif terminal_cost != 0:
+        cost_units = terminal_cost_units
+    elif path_cost != 0:
+        cost_units = path_cost_units*independent_variable_units
+    else:
+        raise ValueError('Initial, path, and terminal cost functions are not defined.')
+
+    dynamical_parameters = []
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     Q = Manifold(states, 'State_Space')
@@ -37,7 +57,8 @@ def ocp_to_bvp(ocp, guess):
     J1tau_Q = JetBundle(tau_Q, 1, 'Jet_Bundle')
     num_states = len(states)
     num_states_total = len(J1tau_Q.vertical.base_coords)
-    hamiltonian, costates = make_hamiltonian(states, states_rates, path_cost)
+
+    hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
     vector_names = [Symbol('D_' + str(x)) for x in states]
     settangent = dict(zip(vector_names, J1tau_Q.vertical.base_vectors[:num_states]))
@@ -54,16 +75,37 @@ def ocp_to_bvp(ocp, guess):
     initial_cost = initial_cost.subs(setx, simultaneous=True)
     terminal_cost = terminal_cost.subs(setx, simultaneous=True)
 
+    hamiltonian = hamiltonian.subs(setx, simultaneous=True)
+
     pi = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
 
-    hamiltonian = 1
-    for ii in range(num_states):
-        hamiltonian += states_rates[ii] * J1tau_Q.base_coords[ii + num_states]
-
     def X_(arg):
         return pi.rcall(None, arg)
+
+    reduced_states = states + costates
+    reduced_states_units = states_units + costates_units
+
+    equations_of_motion = pi.rcall(None, hamiltonian)
+    equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
+
+    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
+    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
+
+    dV_cost_initial = J1tau_Q.verticalexteriorderivative(augmented_initial_cost)
+    dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
+    bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
+    bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
+    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+    control_law = make_control_law(dHdu, controls)
+
+    tf_var = sympify('tf')
+    dynamical_parameters = [tf_var] + parameters
+    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    nondynamical_parameters = initial_lm_params + terminal_lm_params
+    nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 
     do_stage1_reduction = False
     do_stage2_reduction = False
@@ -86,64 +128,114 @@ def ocp_to_bvp(ocp, guess):
             logging.warning('Commutation relations do not vanish. Skipping stage 2 reduction.')
 
     # TODO: Overriding the reductions. Implement these later
-    do_stage1_reduction = False
     do_stage2_reduction = False
 
+    reduction_1_success = False
     if do_stage1_reduction:
-        raise NotImplemented
+        free_vars = set()
+        for c in constants_of_motion_values:
+            free_vars |= c.atoms(states[0])
+
+        logging.info('Attempting simultaneous stage 1 reduction... ')
+
+        eq_set = [constants_of_motion[ii] - constants_of_motion_values[ii] for ii in range(len(constants_of_motion))]
+        constants_sol = sympy.solve(eq_set, list(free_vars), dict=False, minimal=True, simplify=False)
+        reduced_states = []
+        reduced_vectors = []
+        reduced_forms = []
+        removed_states = []
+        removed_vectors = []
+        removed_forms = []
+        for ii, x in enumerate(states + costates):
+            if x in constants_sol.keys():
+                removed_states.append(x)
+                removed_vectors.append(J1tau_Q.vertical.base_vectors[ii])
+                removed_forms.append(J1tau_Q.vertical.base_oneforms[ii])
+            else:
+                reduced_states.append(x)
+                reduced_vectors.append(J1tau_Q.vertical.base_vectors[ii])
+                reduced_forms.append(J1tau_Q.vertical.base_oneforms[ii])
+
+        for c in constants_of_motion:
+            dynamical_parameters.append(c)
+
+        hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
+        pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
+
+        for ii in range(len(control_law)):
+            for control in control_law[ii]:
+                control_law[ii][control] = control_law[ii][control].subs(constants_sol, simultaneous=True)
+
+        for ii in range(len(bc_initial)):
+            bc_initial[ii] = bc_initial[ii].subs(constants_sol, simultaneous=True)
+
+        for ii in range(len(bc_terminal)):
+            bc_terminal[ii] = bc_terminal[ii].subs(constants_sol, simultaneous=True)
+
+        reduction_1_success = True
+        logging.info('Done.')
 
         if do_stage2_reduction:
             raise NotImplementedError
+        else:
+            logging.info('Skipping stage 2 reduction.')
+    else:
+        logging.info('Skipping stage 1 and 2 reductions.')
 
-    equations_of_motion = X_(hamiltonian)
-    equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
+    equations_of_motion_list_original = copy.copy(equations_of_motion_list)
+    if reduction_1_success:
+        equations_of_motion = pi.rcall(None, hamiltonian)
+        equations_of_motion_list = []
+        for D_x in reduced_vectors:
+            equations_of_motion_list.append(J1tau_Q.flat(equations_of_motion).rcall(D_x))
 
-    augmented_initial_cost, augmented_initial_cost_units = make_augmented_cost(initial_cost, initial_cost_units, constraints, location='initial')
-    initial_lm_params = make_augmented_params(constraints, location='initial')
-    augmented_terminal_cost, augmented_terminal_cost_units = make_augmented_cost(terminal_cost, terminal_cost_units, constraints, location='terminal')
-    terminal_lm_params = make_augmented_params(constraints, location='terminal')
+        equations_of_motion_list[:len(constants_of_motion)] = equations_of_motion_list_original[:len(constants_of_motion)] # TODO: Don't hardcode this
+        dynamical_parameters_units += constants_of_motion_units
 
-    # for var in quantity_vars.keys():
-    #     hamiltonian = hamiltonian.subs(Symbol(var), quantity_vars[var])
-    dV_cost_initial = J1tau_Q.verticalexteriorderivative(augmented_initial_cost)
-    dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
-    bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
-    bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
-    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
-    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-    nond_parameters = initial_lm_params + terminal_lm_params
-    control_law = make_control_law(dHdu, controls)
     # Generate the problem data
-    tf_var = sympify('tf')
-    out = ws
-    out['costates'] = costates
-    out['initial_lm_params'] = initial_lm_params
-    out['terminal_lm_params'] = terminal_lm_params
-    out['problem_data'] = {'method': 'brysonho',
-       'problem_name': problem_name,
-       'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-       'state_list': [str(x) for x in it.chain(states, costates)],
-       'deriv_list': [tf_var * eom for eom in equations_of_motion_list],
-       'states': states,
-       'costates': costates,
-       'constants': constants,
-       'constants_of_motion': constants_of_motion,
-       'dynamical_parameters': [tf_var],
-       'nondynamical_parameters': nond_parameters,
-       'control_list': [str(x) for x in it.chain(controls)],
-       'controls': controls,
-       'quantity_vars': quantity_vars,
-       'hamiltonian': hamiltonian,
-       'num_states': 2 * len(states),
-       'num_params': len(nond_parameters) + 1,
-       'dHdu': dHdu,
-       'bc_initial': [_ for _ in bc_initial],
-       'bc_terminal': [_ for _ in bc_terminal],
-       'control_options': control_law,
-       'num_controls': len(controls),
-       'quantity_list': quantity_list,
-       'nOdes': 2 * len(states)}
-    return out
+    control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
+
+    out = {'method': 'diffyg',
+           'problem_name': problem_name,
+           'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+           'states': [str(x) for x in reduced_states],
+           'states_units': [str(x) for x in reduced_states_units],
+           'deriv_list': [str(tf_var * rate) for rate in equations_of_motion_list],
+           'constants': [str(c) for c in constants],
+           'constants_units': [str(c) for c in constants_units],
+           'constants_values': [float(c) for c in constants_values],
+           'constants_of_motion': [str(c) for c in constants_of_motion],
+           'dynamical_parameters': [str(c) for c in dynamical_parameters],
+           'dynamical_parameters_units': [str(c) for c in dynamical_parameters_units],
+           'nondynamical_parameters': [str(c) for c in nondynamical_parameters],
+           'nondynamical_parameters_units': [str(c) for c in nondynamical_parameters_units],
+           'independent_variable': str(independent_variable),
+           'independent_variable_units': str(independent_variable_units),
+           'control_list': [str(x) for x in it.chain(controls)],
+           'controls': [str(u) for u in controls],
+           'hamiltonian': str(hamiltonian),
+           'hamiltonian_units': str(hamiltonian_units),
+           'num_states': 2 * len(states),
+           'dHdu': str(dHdu),
+           'bc_initial': [str(_) for _ in bc_initial],
+           'bc_terminal': [str(_) for _ in bc_terminal],
+           'control_options': control_law,
+           'num_controls': len(controls)}
+
+    def guess_mapper(sol):
+        n_c = len(constants_of_motion)
+        if n_c == 0:
+            return sol
+        sol_out = Solution()
+        sol_out.t = copy.copy(sol.t)
+        sol_out.y = np.array([sol.y[0][:-n_c]])
+        sol_out.dynamical_parameters = sol.dynamical_parameters
+        sol_out.dynamical_parameters[-n_c:] = sol.y[0][-n_c:]
+        sol_out.nondynamical_parameters = sol.nondynamical_parameters
+        sol_out.aux = sol.aux
+        return sol_out
+
+    return out, guess_mapper
 
 class Manifold(object):
     def __new__(cls, *args):
@@ -310,7 +402,7 @@ def make_control_law(dhdu, controls):
     var_list = list(controls)
     from sympy import __version__
     logging.info("Attempting using SymPy (v" + __version__ + ")...")
-    logging.debug("dHdu = "+str(dhdu))
+    logging.debug("dHdu = " + str(dhdu))
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
     logging.info('Control found')
     logging.debug(ctrl_sol)

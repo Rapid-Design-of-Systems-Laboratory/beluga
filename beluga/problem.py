@@ -7,6 +7,7 @@ import scipy.optimize
 import numpy as np
 import cloudpickle as dill
 
+import copy
 import json
 import logging
 import os.path
@@ -16,7 +17,7 @@ from collections import namedtuple, ChainMap
 from itertools import zip_longest
 
 from .scaling import Scaling
-from beluga.utils import sympify, tic, toc
+import time
 from beluga.ivpsol import Propagator
 
 Cost = namedtuple('Cost', ['expr', 'unit'])
@@ -41,9 +42,9 @@ class OCP(object):
     +--------------------------------+--------------------------------+--------------------------------+
     | custom_function                | (name, function)               | (string, function handle)      |
     +--------------------------------+--------------------------------+--------------------------------+
-    | constant_of_motion             | (name, function, unit)         | (string, string, string)       |
-    +--------------------------------+--------------------------------+--------------------------------+
     | symmetry                       | (function)                     | (string)                       |
+    +--------------------------------+--------------------------------+--------------------------------+
+    | parameter                      | (function, unit)               | (string, string)               |
     +--------------------------------+--------------------------------+--------------------------------+
     | path_cost                      | (function, unit)               | (string, string)               |
     +--------------------------------+--------------------------------+--------------------------------+
@@ -121,6 +122,7 @@ class OCP(object):
     constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
+    parameter = partialmethod(set_property, property_name='parameters', property_args=('name','unit'))
     custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','handle'))
 
     states = partialmethod(get_property, property_name='states')
@@ -129,6 +131,7 @@ class OCP(object):
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     quantities = partialmethod(get_property, property_name='quantities')
     symmetries = partialmethod(get_property, property_name='symmetries')
+    parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
 
     # TODO: Maybe write as separate function?
@@ -345,11 +348,11 @@ class GuessGenerator(object):
         self.control_guess = control_guess
         self.use_control_guess = use_control_guess
 
-    def auto(self, bvp_fn, solinit, param_guess=None):
+    def auto(self, bvp_fn, solinit, guess_mapper, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
         # Assume normalized time from 0 to 1
-        tspan = [0, 1]
+        tspan = np.array([0, 1])
 
         x0 = np.array(self.start)
 
@@ -392,13 +395,20 @@ class GuessGenerator(object):
         if self.direction == 'reverse':
             tspan = [0, -1]
 
-        tic()
+        time0 = time.time()
         prop = Propagator()
-        solivp = prop(bvp_fn.deriv_func, None, tspan, x0, [], param_guess, solinit.aux)
-        elapsed_time = toc()
+        solinit.t = tspan
+        solinit.y = np.array([x0])
+        solinit.u = np.array(u0)
+        solinit.dynamical_parameters = param_guess
+        solinit.nondynamical_parameters = nondynamical_param_guess
+        sol = guess_mapper(solinit)
+        solivp = prop(bvp_fn.deriv_func, None, sol.t, sol.y[0], [], sol.dynamical_parameters, sol.aux)
+        elapsed_time = time.time() - time0
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y
+        solinit.u = np.array([])
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         return solinit
