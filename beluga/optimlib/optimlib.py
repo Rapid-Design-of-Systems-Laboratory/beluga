@@ -103,7 +103,7 @@ def make_augmented_params(constraints, constraints_units, cost_units, location):
     return lagrange_mult, lagrange_mult_cost
 
 
-def make_boundary_conditions(constraints, states, costates, cost, derivative_fn, location):
+def make_boundary_conditions(constraints, states, costates, parameters, coparameters, cost, derivative_fn, location):
     """
     Creates boundary conditions for initial and terminal constraints.
 
@@ -126,6 +126,9 @@ def make_boundary_conditions(constraints, states, costates, cost, derivative_fn,
     *_, sign = dict(prefix_map)[location]
     cost_expr = sign * cost
     bc_list += [costate - derivative_fn(cost_expr, state) for state, costate in zip(states, costates)]
+    bc_list += [coparameter - derivative_fn(cost_expr, parameter)
+                for parameter, coparameter in zip(parameters, coparameters)]
+
     return bc_list
 
 
@@ -164,11 +167,11 @@ def make_costate_rates(hamiltonian, states, costates, derivative_fn):
     :param derivative_fn: Total derivative function.
     :return: Rates of change for each costate.
     """
-    costates_rates = [derivative_fn(-1*(hamiltonian), s) for s in states]
+    costates_rates = [derivative_fn(-1*hamiltonian, s) for s in states]
     return costates_rates
 
 
-#TODO: Determine if make_dhdu() is ever even used. Like 2 of the functions show up as not imported.
+# TODO: Determine if make_dhdu() is ever even used. Like 2 of the functions show up as not imported.
 def make_dhdu(ham, controls, derivative_fn):
     r"""
     Computes the partial of the hamiltonian w.r.t control variables.
@@ -203,6 +206,7 @@ def make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_un
     costates_units = [path_cost_units / state_units for state_units in states_units]
     hamiltonian = path_cost + sum([rate*lam for rate, lam in zip(states_rates, costates)])
     hamiltonian_units = path_cost_units
+
     return hamiltonian, hamiltonian_units, costates, costates_units
 
 

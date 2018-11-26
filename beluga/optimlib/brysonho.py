@@ -51,22 +51,40 @@ def ocp_to_bvp(ocp):
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
 
-    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
-    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
-    hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
+        make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
+
+    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = \
+        make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
+
+    hamiltonian, hamiltonian_units, costates, costates_units = \
+        make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
-    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
-    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+
+    coparameters = make_costate_names(parameters)
+    coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
+
+    bc_initial = make_boundary_conditions(
+        constraints, states, costates, parameters, coparameters,
+        augmented_initial_cost, derivative_fn, location='initial')
+
+    bc_terminal = make_boundary_conditions(
+        constraints, states, costates, parameters, coparameters,
+        augmented_terminal_cost, derivative_fn, location='terminal')
+
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+
     control_law = make_control_law(dHdu, controls)
 
     # Generate the problem data
     tf_var = sympify('tf')
     dynamical_parameters = [tf_var] + parameters
     dynamical_parameters_units = [independent_variable_units] + parameters_units
-    nondynamical_parameters = initial_lm_params + terminal_lm_params
-    nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
+    nondynamical_parameters = coparameters + initial_lm_params + terminal_lm_params
+    nondynamical_parameters_units = coparameters_units + initial_lm_params_units + terminal_lm_params_units
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
 
     out = {'method': 'brysonho',
