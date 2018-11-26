@@ -64,6 +64,7 @@ def ocp_to_bvp(ocp):
 
     coparameters = make_costate_names(parameters)
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
+    coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)
 
     bc_initial = make_boundary_conditions(
         constraints, states, costates, parameters, coparameters,
@@ -83,16 +84,18 @@ def ocp_to_bvp(ocp):
     tf_var = sympify('tf')
     dynamical_parameters = [tf_var] + parameters
     dynamical_parameters_units = [independent_variable_units] + parameters_units
-    nondynamical_parameters = coparameters + initial_lm_params + terminal_lm_params
+    nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = coparameters_units + initial_lm_params_units + terminal_lm_params_units
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-           'states': [str(x) for x in it.chain(states, costates)],
-           'states_units': [str(x) for x in states_units + costates_units],
-           'deriv_list': [str(tf_var * rate) for rate in states_rates] + [str(tf_var * rate) for rate in costates_rates],
+           'states': [str(x) for x in it.chain(states, costates, coparameters)],
+           'states_units': [str(x) for x in states_units + costates_units + coparameters_units],
+           'deriv_list': [str(tf_var * rate) for rate in states_rates] +
+                         [str(tf_var * rate) for rate in costates_rates] +
+                         [str(tf_var * rate) for rate in coparameters_rates],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],

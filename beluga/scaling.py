@@ -7,6 +7,7 @@ from beluga.utils import sympify
 
 import copy
 
+
 class Scaling(dict):
     excluded_aux = ['function']
 

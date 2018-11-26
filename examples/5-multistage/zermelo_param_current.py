@@ -42,6 +42,7 @@ bvp_solver = beluga.bvp_algorithm(
 guess_maker = beluga.guess_generator(
     'auto',
     start=[0, 0],
+    costate_guess=[-0.01, -0.01, -0.01],
     param_guess=[0],
     control_guess=[0],
     use_control_guess=True,
@@ -51,11 +52,11 @@ guess_maker = beluga.guess_generator(
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(10) \
+                .num_cases(5) \
                 .const('x_f', 10)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(10) \
+                .num_cases(5) \
                 .const('y_f', 10)
 
 beluga.add_logger(logging_level=logging.DEBUG)
