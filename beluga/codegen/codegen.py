@@ -74,6 +74,7 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
 
     return deriv_func
 
+
 def make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control, is_icrm=False):
     ham_args = [*states, *dynamical_parameters, *constants, *controls]
     u_args = [*states, *dynamical_parameters, *constants]

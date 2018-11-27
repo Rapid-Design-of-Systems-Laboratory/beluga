@@ -9,7 +9,7 @@ ocp.independent('t', 's')
 # Define equations of motion
 ocp.state('x', 'V*cos(theta)', 'm')   \
    .state('y', 'V*sin(theta) - cur', 'm') \
-   # .state('cur', '0', 'm/s')
+   .state('cur', '0', 'm/s')
 
 # Define controls
 ocp.control('theta', 'rad')
@@ -19,7 +19,6 @@ ocp.constant('V', 10, 'm/s')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('y_f', 0, 'm')
 
-ocp.parameter('cur', 'm/s')
 
 # Define costs
 ocp.path_cost('1', '1')
@@ -41,9 +40,8 @@ bvp_solver = beluga.bvp_algorithm(
 
 guess_maker = beluga.guess_generator(
     'auto',
-    start=[0, 0],
+    start=[0, 0, 0],
     costate_guess=[-0.01, -0.01, -0.01],
-    param_guess=[0],
     control_guess=[0],
     use_control_guess=True,
     direction='forward'
@@ -61,9 +59,8 @@ continuation_steps.add_step('bisection') \
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-sol = beluga.solve(
-    ocp,
-    method='icrm',
-    bvp_algorithm=bvp_solver,
-    steps=continuation_steps,
-    guess_generator=guess_maker)
+sol = beluga.solve(ocp,
+                   method='brysonho',
+                   bvp_algorithm=bvp_solver,
+                   steps=continuation_steps,
+                   guess_generator=guess_maker)

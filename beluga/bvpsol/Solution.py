@@ -112,11 +112,11 @@ class Solution(Trajectory):
         # Define state variables
         # Have to do in this order to override state values with arrays
         variables += [(state, np.array(y[:, idx], dtype=np.float64))
-                      for idx, state in enumerate(problem_data['state_list'])]
+                      for idx, state in enumerate(problem_data['states'])]
 
         # Define control variables
         variables += [(control, np.array(u[:, idx], dtype=np.float64))
-                      for idx, control in enumerate(problem_data['control_list'])]
+                      for idx, control in enumerate(problem_data['controls'])]
 
         t_list = []
         tf_ind = [str(p) for p in problem_data['dynamical_parameters']].index('tf')
