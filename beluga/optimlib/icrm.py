@@ -125,7 +125,7 @@ def ocp_to_bvp(ocp):
            'dae_eom_list': [str(tf_var*dae_eom) for dae_eom in dae_equations],
            'dae_var_num': len(dae_states),
            'hamiltonian': str(hamiltonian),
-           'num_states': 2 * len(states),
+           'num_states': len(states + costates + coparameters),
            'dHdu': [str(_) for _ in it.chain(dHdu)],
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in it.chain(bc_terminal, dae_bc)],
