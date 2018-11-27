@@ -77,6 +77,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     +------------------------+-----------------+-----------------+
 
     """
+
     autoscale = kwargs.get('autoscale', True)
     n_cpus = int(kwargs.get('n_cpus', 1))
 

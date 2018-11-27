@@ -9,9 +9,10 @@ from beluga.ivpsol import Propagator, Trajectory, reconstruct
 
 from scipy.optimize import minimize, root, fsolve
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-                    'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}
+                             'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}
 scipy_root_algorithms = {'hybr', 'lm', 'broyden1', 'broyden2', 'anderson', 'linearmixing', 'diagbroyden',
                          'excitingmixing', 'krylov', 'df-sane'}
+
 
 class Shooting(BaseAlgorithm):
     r"""
@@ -259,7 +260,7 @@ class Shooting(BaseAlgorithm):
             yf, qf, uf = gamma_set[-1](tf)
             bc1 = np.array(bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, *args)).flatten()
             bc2 = np.array([gamma_set[ii].y[-1] - gamma_set[ii+1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
-            bc = np.hstack((bc1,bc2))
+            bc = np.hstack((bc1, bc2))
             return bc
         return _bc_func
 
@@ -470,7 +471,7 @@ class Shooting(BaseAlgorithm):
 
         elif self.algorithm.lower() == 'armijo':
             ll = 1
-            while not converged and n_iter <= self.max_iterations and err < self.max_error and ll > 0.1:
+            while not converged and n_iter <= self.max_iterations and err < self.max_error:
                 residual = _constraint_function_wrapper(Xinit)
 
                 if any(np.isnan(residual)):
@@ -490,7 +491,7 @@ class Shooting(BaseAlgorithm):
                 ll = 1
                 r_try = float('Inf')
 
-                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance):
+                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance) and ll > 0.1:
                     step = ll*dy0
                     res_try = _constraint_function_wrapper(Xinit + step)
                     r_try = np.linalg.norm(res_try)
@@ -498,6 +499,7 @@ class Shooting(BaseAlgorithm):
 
                 Xinit += step
                 err = r_try
+                # print('Residual: {}'.format(err))
                 n_iter += 1
 
                 if err <= self.tolerance:

@@ -212,10 +212,13 @@ class ConstraintList(dict):
 
     # Aliases for defining constraints of different types
     constraint_args = ('expr', 'unit')
-    initial = partialmethod(add_constraint, constraint_type='initial',
-                constraint_args=constraint_args)
-    terminal = partialmethod(add_constraint, constraint_type='terminal',
-                constraint_args=constraint_args)
+    initial = partialmethod(
+        add_constraint, constraint_type='initial',
+        constraint_args=constraint_args)
+    terminal = partialmethod(
+        add_constraint, constraint_type='terminal',
+        constraint_args=constraint_args)
+
 
 def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """Combines positional and keyword arguments
@@ -369,12 +372,12 @@ class GuessGenerator(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.zeros(len(solinit.aux['dynamical_parameters']))
+            param_guess = np.ones(len(solinit.aux['dynamical_parameters']))
         elif len(param_guess) < len(solinit.aux['dynamical_parameters']):
-            param_guess += np.zeros(len(solinit.aux['dynamical_parameters']) - len(param_guess))
+            param_guess += np.ones(len(solinit.aux['dynamical_parameters']) - len(param_guess))
         elif len(param_guess) > len(solinit.aux['dynamical_parameters']):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
-        nondynamical_param_guess = np.zeros(len(solinit.aux['nondynamical_parameters']))
+        nondynamical_param_guess = np.ones(len(solinit.aux['nondynamical_parameters']))
 
         param_guess[0] = self.time_integrate
 
