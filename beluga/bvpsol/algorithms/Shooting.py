@@ -491,7 +491,7 @@ class Shooting(BaseAlgorithm):
                 ll = 1
                 r_try = float('Inf')
 
-                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance) and ll > 0.1:
+                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance) and ll > 0.05:
                     step = ll*dy0
                     res_try = _constraint_function_wrapper(Xinit + step)
                     r_try = np.linalg.norm(res_try)
