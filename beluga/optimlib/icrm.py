@@ -48,16 +48,39 @@ def ocp_to_bvp(ocp):
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
 
-    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
-    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
-    hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
+        make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
+
+    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = \
+        make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
+
+    hamiltonian, hamiltonian_units, costates, costates_units = \
+        make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
-    bc_initial = make_boundary_conditions(constraints, states, costates, augmented_initial_cost, derivative_fn, location='initial')
-    bc_terminal = make_boundary_conditions(constraints, states, costates, augmented_terminal_cost, derivative_fn, location='terminal')
+
+    coparameters = make_costate_names(parameters)
+    coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
+    coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)
+
+    bc_initial = make_boundary_conditions(
+        constraints, states, costates, parameters, coparameters,
+        augmented_initial_cost, derivative_fn, location='initial')
+
+    bc_terminal = make_boundary_conditions(
+        constraints, states, costates, parameters, coparameters,
+        augmented_terminal_cost, derivative_fn, location='terminal')
+
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+
+    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+
     nondynamical_parameters = initial_lm_params + terminal_lm_params
+
     costate_eoms, bc_list = make_constrained_arc_fns(states, costates, costates_rates, controls, nondynamical_parameters, constants, quantity_vars, hamiltonian)
+
     dae_states, dae_equations, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, derivative_fn)
 
     # Generate the problem data
@@ -82,9 +105,13 @@ def ocp_to_bvp(ocp):
     out = {'method': 'icrm',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-           'states':[str(x) for x in it.chain(states, costates)],
-           'states_units': [str(x) for x in states_units + costates_units],
-           'deriv_list': [str(tf_var * rate) for rate in states_rates] + [str(tf_var * rate) for rate in costates_rates] + [str(tf_var*dae_eom) for dae_eom in dae_equations],
+           'states': [str(x) for x in it.chain(states, costates, coparameters)],
+           'states_units': [str(x) for x in states_units + costates_units + coparameters_units],
+           'deriv_list':
+               [str(tf_var * rate) for rate in states_rates] +
+               [str(tf_var * rate) for rate in costates_rates] +
+               [str(tf_var * rate) for rate in coparameters_rates] +
+               [str(tf_var*dae_eom) for dae_eom in dae_equations],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
