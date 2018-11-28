@@ -402,9 +402,7 @@ def make_control_law(dhdu, controls):
     var_list = list(controls)
     from sympy import __version__
     logging.info("Attempting using SymPy (v" + __version__ + ")...")
-    logging.debug("dHdu = " + str(dhdu))
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
     logging.info('Control found')
-    logging.debug(ctrl_sol)
     control_options = ctrl_sol
     return control_options

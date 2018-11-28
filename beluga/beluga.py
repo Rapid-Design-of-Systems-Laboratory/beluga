@@ -103,6 +103,10 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     else:
         raise NotImplementedError
 
+    logging.debug('Resulting BVP problem:')
+    for key in bvp_ws.keys():
+        logging.debug(str(key) + ': ' + str(bvp_ws[key]))
+
     bvp_ws['problem'] = ocp
     bvp_ws['guess'] = guess_generator
     bvp_ws['custom_functions'] = ocp.custom_functions()
