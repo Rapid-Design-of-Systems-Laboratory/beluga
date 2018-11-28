@@ -49,6 +49,8 @@ class Propagator(Algorithm):
         +------------------------+-----------------+--------------------+
         | method                 | 'RKMK'          |  {'RKMK'}          |
         +------------------------+-----------------+--------------------+
+        | quick_reconstruct      | False           |  bool              |
+        +------------------------+-----------------+--------------------+
         | stepper                | 'RK45'          |  see ivp methods   |
         +------------------------+-----------------+--------------------+
         | variable_step          | True            |  bool              |
@@ -61,6 +63,7 @@ class Propagator(Algorithm):
         obj.reltol = kwargs.get('reltol', 1e-6)
         obj.program = kwargs.get('program', 'scipy').lower()
         obj.method = kwargs.get('method', 'RKMK').upper()
+        obj.quick_reconstruct = kwargs.get('quick_reconstruct', False)
         obj.stepper = kwargs.get('stepper', 'RK45').upper()
         obj.variable_step = kwargs.get('variable_step', True)
         return obj
@@ -112,7 +115,11 @@ class Propagator(Algorithm):
             gamma = Trajectory(ti, np.vstack([_[:-1,-1] for _ in yi])) # Hardcoded assuming RN
 
         if quad_func is not None and len(q0) is not 0:
-            gamma = reconstruct(quad_func, gamma, q0, *args)
+            if self.quick_reconstruct:
+                qf = integrate_quads(quad_func, tspan, gamma, *args)
+                gamma.q = np.vstack((q0, np.zeros((len(gamma.t)-2, len(q0))), qf+q0))
+            else:
+                gamma = reconstruct(quad_func, gamma, q0, *args)
 
         return gamma
 
