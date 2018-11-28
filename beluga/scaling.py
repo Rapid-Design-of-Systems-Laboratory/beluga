@@ -50,8 +50,7 @@ class Scaling(dict):
         # Scaling functions for states & costates (combined)
         self.scale_func['states'] = {}
         self.scale_func['states'] = {str(state): self.create_scale_fn(unit) for state, unit in zip(ws['states'], ws['states_units'])}
-        # costate_units = {str(costate): self.create_scale_fn('('+cost_unit+')/('+str(state_unit)+')') for state, costate, state_unit in zip(ws['states'],ws['costates'],ws['states_units']) }
-        # self.scale_func['states'].update(costate_units)
+        self.scale_func['quads'] = {str(quad): self.create_scale_fn(unit) for quad, unit in zip(ws['quads'], ws['quads_units'])}
 
         self.scale_func['initial'] = self.scale_func['states']
         self.scale_func['terminal'] = self.scale_func['states']
@@ -113,6 +112,9 @@ class Scaling(dict):
         for idx, state in enumerate(self.problem_data['states']):
             solout.y[:, idx] /= self.scale_vals['states'][state]
 
+        for idx, quad in enumerate(self.problem_data['quads']):
+            solout.q[:, idx] /= self.scale_vals['quads'][quad]
+
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']):
             if aux['type'] not in Scaling.excluded_aux:
@@ -132,6 +134,9 @@ class Scaling(dict):
         # Scale the states and costates
         for idx, state in enumerate(self.problem_data['states']):
             solout.y[:, idx] *= self.scale_vals['states'][state]
+
+        for idx, quad in enumerate(self.problem_data['quads']):
+            solout.q[:, idx] *= self.scale_vals['quads'][quad]
 
         # Scale auxiliary variables
         for aux in (self.problem_data['aux_list']):
