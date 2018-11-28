@@ -75,10 +75,47 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
     return deriv_func
 
 
-def make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control, is_icrm=False):
+def make_quad_func(quads_rates, states, quads, parameters, constants, controls, compute_control, is_icrm=False):
+    quads_args = [*states, *parameters, *constants, *controls]
+    quad_fn = [make_sympy_fn(quads_args, eom) for eom in quads_rates]
+
+    num_controls = len(controls)
+    num_params = len(parameters)
+    num_quads = len(quad_fn)
+    if num_quads == 0:
+        def dummy_quad_func(*args, **kwargs):
+            return np.array([])
+        return dummy_quad_func
+
+    if is_icrm:
+        def quad_func(t, X, p, aux):
+            C = aux['const'].values()
+            p = p[:num_params]
+            u = compute_control(t, X, p, aux)
+            quads_vals = np.zeros(num_quads)
+            _X = X[:-num_controls]
+            for ii in range(num_quads):
+                quads_vals[ii] = quad_fn[ii](*_X, *p, *C, *u)
+
+            return quads_vals
+    else:
+        def quad_func(t, X, p, aux):
+            C = aux['const'].values()
+            p = p[:num_params]
+            u = compute_control(t, X, p, aux)
+            quad_vals = np.zeros(num_quads)
+            for ii in range(num_quads):
+                quad_vals[ii] = quad_fn[ii](*X, *p, *C, *u)
+
+            return quad_vals
+
+    return quad_func
+
+
+def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control, is_icrm=False):
     ham_args = [*states, *dynamical_parameters, *constants, *controls]
     u_args = [*states, *dynamical_parameters, *constants]
-    bc_args = [*states, *dynamical_parameters, *nondynamical_parameters, *constants, *controls]
+    bc_args = [*states, *quads, *dynamical_parameters, *nondynamical_parameters, *constants, *controls]
     num_states = len(states)
     num_controls = len(controls)
     num_dynamical_params = len(dynamical_parameters)
@@ -94,11 +131,11 @@ def make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynam
         bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
         ii = 0
         for jj in range(num_bcs_initial):
-            bc_vals[ii] = bc_fn_initial[jj](*X0, *params, *ndp, *C, *u0)
+            bc_vals[ii] = bc_fn_initial[jj](*X0, *q0, *params, *ndp, *C, *u0)
             ii += 1
 
         for jj in range(num_bcs_terminal):
-            bc_vals[ii] = bc_fn_terminal[jj](*Xf, *params, *ndp, *C, *uf)
+            bc_vals[ii] = bc_fn_terminal[jj](*Xf, *qf, *params, *ndp, *C, *uf)
             ii += 1
 
         return bc_vals
@@ -120,6 +157,8 @@ def make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynam
 def make_functions(problem_data):
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
+    quads = problem_data['quads']
+    quads_rates = problem_data['quads_rates']
     nondynamical_parameters = problem_data['nondynamical_parameters']
     dynamical_parameters = problem_data['dynamical_parameters']
     constants = problem_data['constants']
@@ -133,12 +172,12 @@ def make_functions(problem_data):
     deriv_list = problem_data['deriv_list']
 
     deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
-
+    quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
     bc_initial = problem_data['bc_initial']
     bc_terminal = problem_data['bc_terminal']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
 
-    return deriv_func, bc_func, control_fn, ham_fn
+    return deriv_func, quad_func, bc_func, control_fn, ham_fn
 
 
 def make_jit_fn(args, fn_expr):
@@ -186,11 +225,11 @@ def preprocess(problem_data):
     custom_functions = problem_data['custom_functions']
     for f in custom_functions:
         globals()[f['name']] = f['handle']
-    deriv_func, bc_func, compute_control, ham_fn = make_functions(problem_data)
+    deriv_func, quad_func, bc_func, compute_control, ham_fn = make_functions(problem_data)
 
-    bvp = BVP(deriv_func, bc_func, compute_control)
+    bvp = BVP(deriv_func, quad_func, bc_func, compute_control)
 
     return bvp
 
 
-BVP = cl.namedtuple('BVP', 'deriv_func bc_func compute_control')
+BVP = cl.namedtuple('BVP', 'deriv_func quad_func bc_func compute_control')

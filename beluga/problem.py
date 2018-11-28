@@ -329,6 +329,7 @@ class GuessGenerator(object):
     def setup_auto(self, start=None,
                    direction='forward',
                    time_integrate=0.1,
+                   quad_guess=np.array([]),
                    costate_guess=0.1,
                    control_guess=0.1,
                    use_control_guess=False,
@@ -346,6 +347,7 @@ class GuessGenerator(object):
 
         # TODO: Check size against number of states here
         self.start = start
+        self.quad_guess = quad_guess
         self.costate_guess = costate_guess
         self.param_guess = param_guess
         self.control_guess = control_guess
@@ -358,6 +360,7 @@ class GuessGenerator(object):
         tspan = np.array([0, 1])
 
         x0 = np.array(self.start)
+        q0 = np.array(self.quad_guess)
 
         # Add costates
         if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
@@ -402,15 +405,17 @@ class GuessGenerator(object):
         prop = Propagator()
         solinit.t = tspan
         solinit.y = np.array([x0])
+        solinit.q = np.array([q0])
         solinit.u = np.array(u0)
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_mapper(solinit)
-        solivp = prop(bvp_fn.deriv_func, None, sol.t, sol.y[0], [], sol.dynamical_parameters, sol.aux)
+        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.dynamical_parameters, sol.aux)
         elapsed_time = time.time() - time0
         logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
         solinit.t = solivp.t
         solinit.y = solivp.y
+        solinit.q = solivp.q
         solinit.u = np.array([])
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess

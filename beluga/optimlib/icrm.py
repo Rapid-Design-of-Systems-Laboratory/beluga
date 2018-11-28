@@ -105,13 +105,15 @@ def ocp_to_bvp(ocp):
     out = {'method': 'icrm',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
-           'states': [str(x) for x in it.chain(states, costates, coparameters)],
-           'states_units': [str(x) for x in states_units + costates_units + coparameters_units],
+           'states': [str(x) for x in it.chain(states, costates)],
+           'states_units': [str(x) for x in states_units + costates_units],
            'deriv_list':
                [str(tf_var * rate) for rate in states_rates] +
                [str(tf_var * rate) for rate in costates_rates] +
-               [str(tf_var * rate) for rate in coparameters_rates] +
                [str(tf_var*dae_eom) for dae_eom in dae_equations],
+           'quads': [str(x) for x in coparameters],
+           'quads_rates': [str(tf_var * x) for x in coparameters_rates],
+           'quads_units': [str(x) for x in coparameters_units],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],

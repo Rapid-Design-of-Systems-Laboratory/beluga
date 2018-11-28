@@ -42,7 +42,8 @@ bvp_solver = beluga.bvp_algorithm(
 guess_maker = beluga.guess_generator(
     'auto',
     start=[0, 0],
-    costate_guess=[-0.01, -0.01, -0.01],
+    quad_guess=[-0.01],
+    costate_guess=[-0.01, -0.01],
     param_guess=[0],
     control_guess=[0],
     use_control_guess=True,

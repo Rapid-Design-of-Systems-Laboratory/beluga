@@ -111,7 +111,7 @@ class Propagator(Algorithm):
             ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
             gamma = Trajectory(ti, np.vstack([_[:-1,-1] for _ in yi])) # Hardcoded assuming RN
 
-        if quad_func is not None:
+        if quad_func is not None and len(q0) is not 0:
             gamma = reconstruct(quad_func, gamma, q0, *args)
 
         return gamma
