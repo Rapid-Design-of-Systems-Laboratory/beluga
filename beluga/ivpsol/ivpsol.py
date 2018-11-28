@@ -316,19 +316,17 @@ def reconstruct(quadfun, gamma, q0, *args):
 
     l = len(gamma)
     temp_q = np.zeros_like(q0)
-    wrap = False
-    if temp_q.size == 1:
-        wrap = True
-        temp_q = np.array([temp_q])
 
-    for ii in range(l-1):
-        if wrap:
-            qf = np.array([integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii + 1]], gamma, *args)])
-        else:
-            qf = np.array(integrate_quads(quadfun, [gamma.t[ii], gamma.t[ii + 1]], gamma, *args))
-        temp_q = np.vstack((temp_q, temp_q[-1] + qf))
+    dq = np.array([quadfun(time, gamma(time)[0], *args) for time in gamma.t])
 
-    gamma.q = temp_q + q0
+    # Integrate the quad func using numerical quadrature
+    qf_m0 = np.vstack([temp_q] + [simps(dq[:ii+2].T, x=gamma.t[:ii+2]) for ii in range(len(gamma.t)-1)])
+
+    # Add the initial state to get the final state.
+    if len(q0) == 0:
+        q0 = 0
+
+    gamma.q = qf_m0 + q0
     return gamma
 
 
