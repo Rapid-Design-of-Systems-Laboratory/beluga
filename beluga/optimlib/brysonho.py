@@ -85,7 +85,7 @@ def ocp_to_bvp(ocp):
     dynamical_parameters = [tf_var] + parameters
     dynamical_parameters_units = [independent_variable_units] + parameters_units
     nondynamical_parameters = initial_lm_params + terminal_lm_params
-    nondynamical_parameters_units = coparameters_units + initial_lm_params_units + terminal_lm_params_units
+    nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
 
     out = {'method': 'brysonho',
