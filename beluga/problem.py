@@ -414,4 +414,8 @@ class GuessGenerator(object):
         solinit.u = np.array([])
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
+
+        logging.debug('Terminal states of guess:')
+        logging.debug(str(solivp.y[-1, :]))
+
         return solinit

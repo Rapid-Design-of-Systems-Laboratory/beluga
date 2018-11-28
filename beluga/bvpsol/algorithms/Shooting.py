@@ -504,6 +504,9 @@ class Shooting(BaseAlgorithm):
 
                 if err <= self.tolerance:
                     converged = True
+
+                logging.debug('Step {}: Residual = {}'.format(n_iter, err))
+
         else:
             raise NotImplementedError('Method \'' + self.algorithm + '\' is not implemented.')
 
