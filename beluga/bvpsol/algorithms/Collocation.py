@@ -84,7 +84,7 @@ class Collocation(BaseAlgorithm):
             sol.y = new_y
             sol.q = new_q
             sol.u = new_u
-            if self.quadrature_function is not None:
+            if self.quadrature_function is not None and len(sol.q[0]) is not 0:
                 raise NotImplemented # TODO: Put reconstruction of q's in Trajectory()? Or leave in ivpsol?
 
         # Set up some required class functions for collocation

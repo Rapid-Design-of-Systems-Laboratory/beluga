@@ -365,16 +365,21 @@ class Shooting(BaseAlgorithm):
         # Set up the initial guess vector
         Xinit = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
 
+        def quad_wrap(t,X,p,aux):
+            return self.quadrature_function(t, X[:n_odes],p,aux)
+
         # Pickle the functions for faster execution
         if pool is not None:
             pick_deriv = pickle.dumps(self.derivative_function)
             pick_quad = pickle.dumps(self.quadrature_function)
             pick_stm = pickle.dumps(self.stm_ode_func)
+            pick_quad_stm = pickle.dumps(quad_wrap)
             _gamma_maker = self._make_gammas_parallel
         else:
             pick_deriv = self.derivative_function
             pick_quad = self.quadrature_function
             pick_stm = self.stm_ode_func
+            pick_quad_stm = quad_wrap
             _gamma_maker = self._make_gammas
 
         # Set up the constraint function
@@ -437,7 +442,7 @@ class Shooting(BaseAlgorithm):
             return J
 
         def _jacobian_function_wrapper(X):
-            return _jacobian_function(X, pick_stm, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs)
+            return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
 
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 

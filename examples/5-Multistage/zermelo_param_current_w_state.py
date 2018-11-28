@@ -60,7 +60,7 @@ continuation_steps.add_step('bisection') \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol = beluga.solve(ocp,
-                   method='brysonho',
+                   method='icrm',
                    bvp_algorithm=bvp_solver,
                    steps=continuation_steps,
                    guess_generator=guess_maker)
