@@ -316,7 +316,7 @@ class Shooting(BaseAlgorithm):
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
-        if self.quadrature_function is None or all(np.isnan(sol.q)):
+        if self.quadrature_function is None or np.isnan(sol.q).all():
             q0g = np.array([])
         else:
             q0g = sol.q[0, :]
@@ -496,7 +496,7 @@ class Shooting(BaseAlgorithm):
                 ll = 1
                 r_try = float('Inf')
 
-                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance) and ll > 0.05:
+                while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance) and ll > 0.005:
                     step = ll*dy0
                     res_try = _constraint_function_wrapper(Xinit + step)
                     r_try = np.linalg.norm(res_try)
@@ -510,7 +510,7 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
 
-                logging.debug('Step {}: Residual = {}'.format(n_iter, err))
+                logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(J)))
 
         else:
             raise NotImplementedError('Method \'' + self.algorithm + '\' is not implemented.')
