@@ -113,7 +113,7 @@ def ocp_to_bvp(ocp):
            'controls': [str(u) for u in controls],
            'hamiltonian': str(hamiltonian),
            'hamiltonian_units': str(hamiltonian_units),
-           'num_states': len(states + costates + coparameters),
+           'num_states': len(states + costates),
            'dHdu': str(dHdu),
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in bc_terminal],
