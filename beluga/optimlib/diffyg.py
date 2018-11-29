@@ -88,11 +88,15 @@ def ocp_to_bvp(ocp):
     def X_(arg):
         return pi.rcall(None, arg)
 
+    state_2_costate = {s: c for s, c in zip(states, costates)}
+    costate_2_state = {c: s for s, c in zip(states, costates)}
+
     reduced_states = states + costates
     reduced_states_units = states_units + costates_units
 
     equations_of_motion = pi.rcall(None, hamiltonian)
     equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
+    original_eoms = {s: eom for s, eom in zip(states+costates, equations_of_motion_list)}
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
     augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
@@ -160,11 +164,15 @@ def ocp_to_bvp(ocp):
                 reduced_vectors.append(J1tau_Q.vertical.base_vectors[ii])
                 reduced_forms.append(J1tau_Q.vertical.base_oneforms[ii])
 
-        for c in constants_of_motion:
+        for c, u in zip(constants_of_motion, constants_of_motion_units):
             dynamical_parameters.append(c)
+            dynamical_parameters_units.append(u)
 
         hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
         pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
+
+        for ii in range(len(equations_of_motion_list)):
+            equations_of_motion_list[ii] = equations_of_motion_list[ii].subs(constants_sol, simultaneous=True)
 
         for ii in range(len(control_law)):
             for control in control_law[ii]:
@@ -181,24 +189,26 @@ def ocp_to_bvp(ocp):
 
         if do_stage2_reduction:
             raise NotImplementedError
+            equations_of_motion_list_original = copy.copy(equations_of_motion_list)
+            if reduction_1_success:
+                equations_of_motion = pi.rcall(None, hamiltonian)
+                equations_of_motion_list = []
+                for D_x in reduced_vectors:
+                    equations_of_motion_list.append(J1tau_Q.flat(equations_of_motion).rcall(D_x))
+
+                equations_of_motion_list[:len(constants_of_motion)] = equations_of_motion_list_original[:len(
+                    constants_of_motion)]  # TODO: Don't hardcode this
+                dynamical_parameters_units += constants_of_motion_units
         else:
             logging.info('Skipping stage 2 reduction.')
+            ind = [(states+costates).index(x) for x in removed_states]
+            equations_of_motion_list = [equations_of_motion_list[ii] for ii in range(len(equations_of_motion_list)) if ii not in ind]
+
     else:
         logging.info('Skipping stage 1 and 2 reductions.')
 
-    equations_of_motion_list_original = copy.copy(equations_of_motion_list)
-    if reduction_1_success:
-        equations_of_motion = pi.rcall(None, hamiltonian)
-        equations_of_motion_list = []
-        for D_x in reduced_vectors:
-            equations_of_motion_list.append(J1tau_Q.flat(equations_of_motion).rcall(D_x))
-
-        equations_of_motion_list[:len(constants_of_motion)] = equations_of_motion_list_original[:len(constants_of_motion)] # TODO: Don't hardcode this
-        dynamical_parameters_units += constants_of_motion_units
-
     # Generate the problem data
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
-
     out = {'method': 'diffyg',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
@@ -236,6 +246,7 @@ def ocp_to_bvp(ocp):
         sol_out = Solution()
         sol_out.t = copy.copy(sol.t)
         sol_out.y = np.array([sol.y[0][:-n_c]])
+        sol_out.q = sol.q
         sol_out.dynamical_parameters = sol.dynamical_parameters
         sol_out.dynamical_parameters[-n_c:] = sol.y[0][-n_c:]
         sol_out.nondynamical_parameters = sol.nondynamical_parameters
@@ -265,11 +276,11 @@ class Manifold(object):
     def __init__(self, *args, verbose=False):
         logging.info('The manifold \'{}\' has been created'.format(self.name))
         self.base_coords = self._coordsystem.coord_functions()
-        logging.info('The following coordinates have been created: ' + str(self.base_coords))
+        logging.debug('The following coordinates have been created: ' + str(self.base_coords))
         self.base_vectors = self._coordsystem.base_vectors()
-        logging.info('The following base vectors have been created: ' + str(self.base_vectors))
+        logging.debug('The following base vectors have been created: ' + str(self.base_vectors))
         self.base_oneforms = self._coordsystem.base_oneforms()
-        logging.info('The following base one forms have been created: ' + str(self.base_oneforms))
+        logging.debug('The following base one forms have been created: ' + str(self.base_oneforms))
 
     def sharp(self, f):
         set1d = dict(zip(self.base_oneforms, self.base_vectors))

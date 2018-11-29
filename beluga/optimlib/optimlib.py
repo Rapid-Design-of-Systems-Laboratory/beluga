@@ -59,7 +59,6 @@ def init_workspace(ocp):
     workspace['terminal_cost_units'] = sympify(ocp.get_cost('terminal')['unit'])
     workspace['path_cost'] = sympify(ocp.get_cost('path')['expr'])
     workspace['path_cost_units'] = sympify(ocp.get_cost('path')['unit'])
-    # guess.dae_num_states = 0
     return workspace
 
 
