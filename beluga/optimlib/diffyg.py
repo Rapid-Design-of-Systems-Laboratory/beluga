@@ -49,6 +49,10 @@ def ocp_to_bvp(ocp):
     dynamical_parameters = []
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
+    for var in quantity_vars.keys():
+        for ii in range(len(states_rates)):
+            states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+
     Q = Manifold(states, 'State_Space')
     E = Manifold(states + controls, 'Input_Space')
     R = Manifold([independent_variable], 'Independent_Space')
