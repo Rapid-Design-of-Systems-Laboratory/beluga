@@ -77,6 +77,10 @@ def ocp_to_bvp(ocp):
 
     hamiltonian = hamiltonian.subs(setx, simultaneous=True)
 
+    coparameters = make_costate_names(parameters)
+    coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
+    coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)
+
     pi = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
@@ -95,8 +99,8 @@ def ocp_to_bvp(ocp):
 
     dV_cost_initial = J1tau_Q.verticalexteriorderivative(augmented_initial_cost)
     dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
-    bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
-    bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])]
+    bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_initial_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
+    bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_terminal_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
     bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     control_law = make_control_law(dHdu, controls)
@@ -201,6 +205,9 @@ def ocp_to_bvp(ocp):
            'states': [str(x) for x in reduced_states],
            'states_units': [str(x) for x in reduced_states_units],
            'deriv_list': [str(tf_var * rate) for rate in equations_of_motion_list],
+           'quads': [str(x) for x in coparameters],
+           'quads_rates': [str(tf_var * x) for x in coparameters_rates],
+           'quads_units': [str(x) for x in coparameters_units],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
