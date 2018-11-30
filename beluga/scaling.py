@@ -73,8 +73,8 @@ class Scaling(dict):
                     for (aux_name,aux_val) in sol.aux[aux_type].items()
                     ]
             # Have to do in this order to override state values with arrays
-            variables += [(state,max(abs(sol.y[:, idx])))
-                            for idx,state in enumerate(self.problem_data['states'])]
+            variables += [(state,max(abs(sol.y[:, idx]))) for idx, state in enumerate(self.problem_data['states'])]
+            variables += [(quad,max(abs(sol.q[:, idx]))) for idx, quad in enumerate(self.problem_data['quads'])]
 
             var_dict = dict(variables)
 

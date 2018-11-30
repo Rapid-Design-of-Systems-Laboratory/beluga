@@ -1,8 +1,9 @@
 from sympy.diffgeom import Manifold as sympyManifold
-from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, WedgeProduct
+from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, WedgeProduct, TensorProduct
 import copy
 import logging
 from beluga.bvpsol import Solution
+from beluga.codegen import make_jit_fn
 import numpy as np
 import itertools as it
 from .optimlib import *
@@ -85,6 +86,13 @@ def ocp_to_bvp(ocp):
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
     coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)
 
+    quads = []
+    quads_rates = []
+    quads_units = []
+    quads += coparameters
+    quads_rates += coparameters_rates
+    quads_units += coparameters_units
+
     pi = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
@@ -92,15 +100,20 @@ def ocp_to_bvp(ocp):
     def X_(arg):
         return pi.rcall(None, arg)
 
-    state_2_costate = {s: c for s, c in zip(states, costates)}
-    costate_2_state = {c: s for s, c in zip(states, costates)}
+    state_costate_pairing = 0
+    for ii in range(num_states):
+        state_costate_pairing += TensorProduct(J1tau_Q.base_coords[ii + num_states]*J1tau_Q.base_vectors[ii]) + TensorProduct(J1tau_Q.base_coords[ii]*J1tau_Q.base_vectors[ii + num_states])
+
+    constant_2_value = {c: v for c, v in zip(constants_of_motion, constants_of_motion_values)}
+    constant_2_units = {c: u for c, u in zip(constants_of_motion, constants_of_motion_units)}
 
     reduced_states = states + costates
+    original_states = copy.copy(reduced_states)
     reduced_states_units = states_units + costates_units
+    state_2_units = {x: u for x, u in zip(reduced_states, reduced_states_units)}
 
-    equations_of_motion = pi.rcall(None, hamiltonian)
-    equations_of_motion_list = [J1tau_Q.flat(equations_of_motion).rcall(D_x) for D_x in J1tau_Q.vertical.base_vectors]
-    original_eoms = {s: eom for s, eom in zip(states+costates, equations_of_motion_list)}
+    X_H = X_(hamiltonian)
+    equations_of_motion = [X_H.rcall(x) for x in J1tau_Q.vertical.base_coords]
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
     augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
@@ -119,64 +132,56 @@ def ocp_to_bvp(ocp):
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 
-    do_stage1_reduction = False
-    do_stage2_reduction = False
+    subalgebras = []
     if len(constants_of_motion) > 0:
-        do_stage1_reduction = True
         logging.info('Checking commutation relations... ')
-        commutation_relations = []
-        for c1, c2 in it.product(constants_of_motion_values, constants_of_motion_values):
-            commutation_relations.append(pi.rcall(c1,c2))
+        num_consts = len(constants_of_motion)
 
-        commutation_relations_valid = [False]*len(commutation_relations)
-        for ii in range(len(commutation_relations)):
-            if commutation_relations[ii] == 0:
-                commutation_relations_valid[ii] = True
+        commutation_relations = [[None for ii in range(num_consts)] for jj in range(num_consts)]
+        for ii, c1 in enumerate(constants_of_motion_values):
+            for jj, c2 in enumerate(constants_of_motion_values):
+                commutation_relations[ii][jj] = pi.rcall(c1,c2)
 
-        logging.info('Done.')
-        if all(commutation_relations_valid):
-            do_stage2_reduction = True
-        else:
-            logging.warning('Commutation relations do not vanish. Skipping stage 2 reduction.')
+        for ii, c1 in enumerate(constants_of_motion_values):
+            subalgebras.append({constants_of_motion[ii]})
+            for jj in range(0,num_consts):
+                if commutation_relations[ii][jj] != 0:
+                    subalgebras[-1] |= {constants_of_motion[jj]}
 
-    # TODO: Overriding the reductions. Implement these later
-    do_stage2_reduction = False
+        subalgebras = [gs for ii, gs in enumerate(subalgebras) if gs not in subalgebras[ii+1:]]
+        reducible_subalgebras = [len(gs)==1 for gs in subalgebras]
+        logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras)) + ' subalgebras are double reducible.')
 
-    reduction_1_success = False
-    if do_stage1_reduction:
+    for subalgebra in subalgebras:
         free_vars = set()
-        for c in constants_of_motion_values:
-            free_vars |= c.atoms(states[0])
+        dim = len(subalgebra)
 
-        logging.info('Attempting simultaneous stage 1 reduction... ')
+        for c in subalgebra:
+            free_vars |= constant_2_value[c].atoms(reduced_states[0])
 
-        eq_set = [constants_of_motion[ii] - constants_of_motion_values[ii] for ii in range(len(constants_of_motion))]
+        logging.info('Attempting reduction of ' + str(subalgebra) + '...')
+
+        eq_set = [c - constant_2_value[c] for ii,c in enumerate(subalgebra)]
         constants_sol = sympy.solve(eq_set, list(free_vars), dict=False, minimal=True, simplify=False)
-        reduced_states = []
-        reduced_vectors = []
-        reduced_forms = []
-        removed_states = []
-        removed_vectors = []
-        removed_forms = []
-        for ii, x in enumerate(states + costates):
-            if x in constants_sol.keys():
-                removed_states.append(x)
-                removed_vectors.append(J1tau_Q.vertical.base_vectors[ii])
-                removed_forms.append(J1tau_Q.vertical.base_oneforms[ii])
-            else:
-                reduced_states.append(x)
-                reduced_vectors.append(J1tau_Q.vertical.base_vectors[ii])
-                reduced_forms.append(J1tau_Q.vertical.base_oneforms[ii])
+        for x in constants_sol:
+            reduced_states.remove(x)
+            quads.append(state_costate_pairing.rcall(x))
+            quads_rates.append(pi.rcall(state_costate_pairing.rcall(x), hamiltonian))
+            quads_units.append(state_2_units[state_costate_pairing.rcall(x)])
+            reduced_states.remove(state_costate_pairing.rcall(x))
 
-        for c, u in zip(constants_of_motion, constants_of_motion_units):
-            dynamical_parameters.append(c)
-            dynamical_parameters_units.append(u)
+        temp = copy.copy(subalgebra)
+        temp2 = copy.copy(temp)
+        dynamical_parameters.append(temp.pop())
+        dynamical_parameters_units.append(constant_2_units[temp2.pop()])
 
         hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
         pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
+        X_H = X_(hamiltonian)
+        equations_of_motion = [X_H.rcall(x) for x in reduced_states]
 
-        for ii in range(len(equations_of_motion_list)):
-            equations_of_motion_list[ii] = equations_of_motion_list[ii].subs(constants_sol, simultaneous=True)
+        for ii in range(len(quads_rates)):
+            quads_rates[ii] = quads_rates[ii].subs(constants_sol, simultaneous=True)
 
         for ii in range(len(control_law)):
             for control in control_law[ii]:
@@ -188,28 +193,7 @@ def ocp_to_bvp(ocp):
         for ii in range(len(bc_terminal)):
             bc_terminal[ii] = bc_terminal[ii].subs(constants_sol, simultaneous=True)
 
-        reduction_1_success = True
         logging.info('Done.')
-
-        if do_stage2_reduction:
-            raise NotImplementedError
-            equations_of_motion_list_original = copy.copy(equations_of_motion_list)
-            if reduction_1_success:
-                equations_of_motion = pi.rcall(None, hamiltonian)
-                equations_of_motion_list = []
-                for D_x in reduced_vectors:
-                    equations_of_motion_list.append(J1tau_Q.flat(equations_of_motion).rcall(D_x))
-
-                equations_of_motion_list[:len(constants_of_motion)] = equations_of_motion_list_original[:len(
-                    constants_of_motion)]  # TODO: Don't hardcode this
-                dynamical_parameters_units += constants_of_motion_units
-        else:
-            logging.info('Skipping stage 2 reduction.')
-            ind = [(states+costates).index(x) for x in removed_states]
-            equations_of_motion_list = [equations_of_motion_list[ii] for ii in range(len(equations_of_motion_list)) if ii not in ind]
-
-    else:
-        logging.info('Skipping stage 1 and 2 reductions.')
 
     # Generate the problem data
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
@@ -217,11 +201,11 @@ def ocp_to_bvp(ocp):
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'states': [str(x) for x in reduced_states],
-           'states_units': [str(x) for x in reduced_states_units],
-           'deriv_list': [str(tf_var * rate) for rate in equations_of_motion_list],
-           'quads': [str(x) for x in coparameters],
-           'quads_rates': [str(tf_var * x) for x in coparameters_rates],
-           'quads_units': [str(x) for x in coparameters_units],
+           'states_units': [str(state_2_units[x]) for x in reduced_states],
+           'deriv_list': [str(tf_var * rate) for rate in equations_of_motion],
+           'quads': [str(x) for x in quads],
+           'quads_rates': [str(tf_var * x) for x in quads_rates],
+           'quads_units': [str(x) for x in quads_units],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
@@ -236,12 +220,15 @@ def ocp_to_bvp(ocp):
            'controls': [str(u) for u in controls],
            'hamiltonian': str(hamiltonian),
            'hamiltonian_units': str(hamiltonian_units),
-           'num_states': 2 * len(states),
+           'num_states': len(reduced_states),
            'dHdu': str(dHdu),
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in bc_terminal],
            'control_options': control_law,
            'num_controls': len(controls)}
+
+    states_2_constants_fn = [make_jit_fn([str(x) for x in original_states], str(c)) for c in constants_of_motion_values]
+    states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
 
     def guess_mapper(sol):
         n_c = len(constants_of_motion)
@@ -249,10 +236,12 @@ def ocp_to_bvp(ocp):
             return sol
         sol_out = Solution()
         sol_out.t = copy.copy(sol.t)
-        sol_out.y = np.array([sol.y[0][:-n_c]])
+        sol_out.y = np.array([[fn(*sol.y[0]) for fn in states_2_states_fn]])
         sol_out.q = sol.q
+        if len(quads) > 0:
+            sol_out.q = -0.0*np.array([np.ones((len(quads)))])
         sol_out.dynamical_parameters = sol.dynamical_parameters
-        sol_out.dynamical_parameters[-n_c:] = sol.y[0][-n_c:]
+        sol_out.dynamical_parameters[-n_c:] = np.array([fn(*sol.y[0]) for fn in states_2_constants_fn])
         sol_out.nondynamical_parameters = sol.nondynamical_parameters
         sol_out.aux = sol.aux
         return sol_out
@@ -277,8 +266,8 @@ class Manifold(object):
         obj._coordsystem = CoordSystem('Coordinates', obj._patch, names=[str(d) for d in dependent])
         return obj
 
-    def __init__(self, *args, verbose=False):
-        logging.info('The manifold \'{}\' has been created'.format(self.name))
+    def __init__(self, *args):
+        logging.debug('The manifold \'{}\' has been created'.format(self.name))
         self.base_coords = self._coordsystem.coord_functions()
         logging.debug('The following coordinates have been created: ' + str(self.base_coords))
         self.base_vectors = self._coordsystem.base_vectors()
@@ -332,7 +321,7 @@ class FiberBundle(Manifold):
         return obj
 
     def __init__(self, *args, verbose=False):
-        super(FiberBundle, self).__init__(*args, verbose=verbose)
+        super(FiberBundle, self).__init__(*args)
 
         set1x = dict(zip(self.horizontal.base_coords, self.base_coords[self.vertical.dimension:]))
         set1d = dict(zip(self.horizontal.base_oneforms, self.base_oneforms[self.vertical.dimension:]))
