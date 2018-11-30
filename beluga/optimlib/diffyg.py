@@ -3,6 +3,7 @@ from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, We
 import copy
 import logging
 from beluga.bvpsol import Solution
+from beluga.codegen import make_jit_fn
 import numpy as np
 import itertools as it
 from .optimlib import *
@@ -107,6 +108,7 @@ def ocp_to_bvp(ocp):
     constant_2_units = {c: u for c, u in zip(constants_of_motion, constants_of_motion_units)}
 
     reduced_states = states + costates
+    original_states = copy.copy(reduced_states)
     reduced_states_units = states_units + costates_units
     state_2_units = {x: u for x, u in zip(reduced_states, reduced_states_units)}
 
@@ -225,18 +227,21 @@ def ocp_to_bvp(ocp):
            'control_options': control_law,
            'num_controls': len(controls)}
 
+    states_2_constants_fn = [make_jit_fn([str(x) for x in original_states], str(c)) for c in constants_of_motion_values]
+    states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
+
     def guess_mapper(sol):
         n_c = len(constants_of_motion)
         if n_c == 0:
             return sol
         sol_out = Solution()
         sol_out.t = copy.copy(sol.t)
-        sol_out.y = np.array([sol.y[0][:-n_c]])
+        sol_out.y = np.array([[fn(*sol.y[0]) for fn in states_2_states_fn]])
         sol_out.q = sol.q
         if len(quads) > 0:
-            sol_out.q = -0.1*np.array([np.ones((len(quads)))])
+            sol_out.q = -0.0*np.array([np.ones((len(quads)))])
         sol_out.dynamical_parameters = sol.dynamical_parameters
-        sol_out.dynamical_parameters[-n_c:] = sol.y[0][-n_c:]
+        sol_out.dynamical_parameters[-n_c:] = np.array([fn(*sol.y[0]) for fn in states_2_constants_fn])
         sol_out.nondynamical_parameters = sol.nondynamical_parameters
         sol_out.aux = sol.aux
         return sol_out

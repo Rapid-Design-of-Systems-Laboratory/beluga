@@ -13,6 +13,9 @@ ocp.state('x', 'v*cos(theta)', 'm') \
    .state('y', 'v*sin(theta)', 'm') \
    .state('v', 'g*sin(theta)', 'm/s')
 
+ocp.constant_of_motion('c1', 'lamX', 's/m')
+ocp.constant_of_motion('c2', 'lamY', 's/m')
+
 # Define controls
 ocp.control('theta','rad')
 
@@ -20,9 +23,6 @@ ocp.control('theta','rad')
 ocp.constant('g', -9.81, 'm/s^2')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('y_f', 0, 'm')
-
-ocp.constant_of_motion('c1', 'lamX', '1/m')
-ocp.constant_of_motion('c2', 'lamY', '1/m')
 
 # Define costs
 ocp.path_cost('1', '1')

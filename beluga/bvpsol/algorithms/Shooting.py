@@ -5,7 +5,7 @@ import numpy as np
 from math import isclose
 
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
-from beluga.ivpsol import Propagator, Trajectory, reconstruct
+from beluga.ivpsol import Propagator, Trajectory, reconstruct, integrate_quads
 
 from scipy.optimize import minimize, root, fsolve
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
@@ -186,7 +186,7 @@ class Shooting(BaseAlgorithm):
         gamma_set_perturbed = copy.copy(gamma_set)
 
         n_odes = len(y0)
-        nquads = len(q0)
+        n_quads = len(q0)
         num_arcs = len(gamma_set)
 
         fx = bc_func(gamma_set, parameters, nondynamical_params, aux)
@@ -194,7 +194,7 @@ class Shooting(BaseAlgorithm):
 
         Mi = np.zeros((nBCs, n_odes))
         M = np.zeros((nBCs, (n_odes) * num_arcs))
-        Q = np.zeros((nBCs, nquads))
+        Q = np.zeros((nBCs, n_quads))
         P1 = np.zeros((nBCs, parameters.size))
         P2 = np.zeros((nBCs, nondynamical_params.size))
 
@@ -205,8 +205,9 @@ class Shooting(BaseAlgorithm):
                 dx[jj] = dx[jj] + h
                 dy = np.dot(phi, dx)
                 perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
-                if nquads > 0:
+                if n_quads > 0:
                     perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set[ii].q[0], parameters, aux)
+
                 gamma_set_perturbed[ii] = perturbed_trajectory
 
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
@@ -216,8 +217,8 @@ class Shooting(BaseAlgorithm):
             M_slice = slice(n_odes * ii, n_odes * (ii + 1))
             M[:, M_slice] = Mi
 
-        dq = np.zeros(nquads)
-        for ii in range(nquads):
+        dq = np.zeros(n_quads)
+        for ii in range(n_quads):
             dq[ii] = dq[ii] + h
             gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_set]
             f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
@@ -232,7 +233,7 @@ class Shooting(BaseAlgorithm):
                 dx[kk] = dx[kk] + h
                 dy = np.dot(phi, dx)
                 perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
-                if nquads > 0:
+                if n_quads > 0:
                     perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set[ii].q[0], parameters, aux)
 
                 gamma_set_perturbed[ii] = perturbed_trajectory

@@ -128,6 +128,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     initial_states = solinit.y[0, :]
     terminal_states = solinit.y[-1, :]
 
+
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
 
@@ -138,6 +139,22 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     for ii in terminal_bc:
         if ii + '_f' in solinit.aux['const'].keys():
             solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
+
+    quad_names = bvp_ws['quads']
+    n_quads = len(quad_names)
+    if n_quads > 0:
+        initial_quads = solinit.q[0, :]
+        terminal_quads = solinit.q[-1, :]
+        initial_bc = dict(zip(quad_names, initial_quads))
+        terminal_bc = dict(zip(quad_names, terminal_quads))
+
+        for ii in initial_bc:
+            if ii + '_0' in solinit.aux['const'].keys():
+                solinit.aux['const'][ii + '_0'] = initial_bc[ii]
+
+        for ii in terminal_bc:
+            if ii + '_f' in solinit.aux['const'].keys():
+                solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
 
     time0 = time.time()
     out = dict()
