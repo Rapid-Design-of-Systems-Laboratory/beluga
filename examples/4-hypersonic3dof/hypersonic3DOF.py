@@ -24,6 +24,11 @@ ocp \
     .state('gam', '{}*cos(bank)/(mass*v) - mu/(v*{}**2)*cos(gam) + v/{}*cos(gam)'.format(L,r,r), 'rad') \
     .state('psi', '{}*sin(bank)/(mass*cos(gam)*v) - v/{}*cos(gam)*cos(psi)*tan(phi)'.format(L,r), 'rad')
 
+ocp.constant_of_motion('c1', 'lamTHETA', 'm/(s*rad)')
+# ocp.constant_of_motion('c2r', 'lamTHETA + lamPHI*cos(theta) + lamTHETA*tan(phi)*sin(theta) + lamPSI*sin(theta)/cos(phi) + lamPHI*sin(theta) - lamTHETA*tan(phi)*cos(theta) - lamPSI*cos(theta)/cos(phi)', 'm/(s*rad)')
+# ocp.constant_of_motion('c2', 'lamPHI*cos(theta) + lamTHETA*tan(phi)*sin(theta) + lamPSI*sin(theta)/cos(phi)', 'm/(s*rad)')
+# ocp.constant_of_motion('c3', 'lamPHI*sin(theta) - lamTHETA*tan(phi)*cos(theta) - lamPSI*cos(theta)/cos(phi)', 'm/(s*rad)')
+
 # Define controls
 ocp.control('alpha', 'rad') \
    .control('bank', 'rad')

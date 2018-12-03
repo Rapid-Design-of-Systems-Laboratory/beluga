@@ -94,11 +94,10 @@ def ocp_to_bvp(ocp):
     quads_units += coparameters_units
 
     pi = 0
+    omega = 0
     for ii in range(num_states):
         pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
-
-    def X_(arg):
-        return pi.rcall(None, arg)
+        omega += WedgeProduct(J1tau_Q.base_oneforms[ii], J1tau_Q.base_oneforms[ii + num_states])
 
     state_costate_pairing = 0
     for ii in range(num_states):
@@ -112,7 +111,7 @@ def ocp_to_bvp(ocp):
     reduced_states_units = states_units + costates_units
     state_2_units = {x: u for x, u in zip(reduced_states, reduced_states_units)}
 
-    X_H = X_(hamiltonian)
+    X_H = pi.rcall(None, hamiltonian)
     equations_of_motion = [X_H.rcall(x) for x in J1tau_Q.vertical.base_coords]
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
@@ -155,6 +154,8 @@ def ocp_to_bvp(ocp):
     for subalgebra in subalgebras:
         free_vars = set()
         dim = len(subalgebra)
+        if dim > 1:
+            raise NotImplementedError
 
         for c in subalgebra:
             free_vars |= constant_2_value[c].atoms(reduced_states[0])
@@ -162,11 +163,13 @@ def ocp_to_bvp(ocp):
         logging.info('Attempting reduction of ' + str(subalgebra) + '...')
 
         eq_set = [c - constant_2_value[c] for ii,c in enumerate(subalgebra)]
+
         constants_sol = sympy.solve(eq_set, list(free_vars), dict=False, minimal=True, simplify=False)
         for x in constants_sol:
             reduced_states.remove(x)
             quads.append(state_costate_pairing.rcall(x))
-            quads_rates.append(pi.rcall(state_costate_pairing.rcall(x), hamiltonian))
+            quant = [constant_2_value[c] for c in subalgebra][0]
+            quads_rates.append(J1tau_Q.flat(X_H).rcall(pi.rcall(None, quant)))
             quads_units.append(state_2_units[state_costate_pairing.rcall(x)])
             reduced_states.remove(state_costate_pairing.rcall(x))
 
@@ -177,7 +180,7 @@ def ocp_to_bvp(ocp):
 
         hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
         pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
-        X_H = X_(hamiltonian)
+        X_H = pi.rcall(None, hamiltonian)
         equations_of_motion = [X_H.rcall(x) for x in reduced_states]
 
         for ii in range(len(quads_rates)):
