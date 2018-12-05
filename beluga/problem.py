@@ -284,9 +284,9 @@ class GuessGenerator(object):
     def setup_static(self, solinit=None):
         self.solinit = solinit
 
-    def static(self, bvp_fn, solinit):
+    def static(self, bvp_fn, solinit, guess_mapper):
         """Directly specify initial guess structure"""
-        return self.solinit
+        return guess_mapper(self.solinit)
 
     def setup_file(self, filename='', step=0, iteration=0):
         self.filename = filename
@@ -410,17 +410,11 @@ class GuessGenerator(object):
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_mapper(solinit)
-        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.dynamical_parameters, sol.aux)
+        # solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.dynamical_parameters, sol.aux)
+        solout = guess_mapper(solinit)
         elapsed_time = time.time() - time0
-        logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
-        solinit.t = solivp.t
-        solinit.y = solivp.y
-        solinit.q = solivp.q
-        solinit.u = np.array([])
-        solinit.dynamical_parameters = param_guess
-        solinit.nondynamical_parameters = nondynamical_param_guess
-
+        logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
         logging.debug('Terminal states of guess:')
-        logging.debug(str(solivp.y[-1, :]))
+        logging.debug(str(solout.y[-1, :]))
 
-        return solinit
+        return solout

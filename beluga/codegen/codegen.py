@@ -42,6 +42,26 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     return compute_control_fn, ham_fn
 
 
+def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, constants, controls):
+    boundary_args = [*states, *parameters, *constants, *controls]
+    initial_fn = make_jit_fn(boundary_args, initial_cost)
+    path_rn = make_jit_fn(boundary_args, path_cost)
+    terminal_fn = make_jit_fn(boundary_args, terminal_cost)
+    def initial_cost(t0, X0, q0, u0, p, aux):
+        C = aux['const'].values()
+        return initial_fn(*X0, *p, *C, *u0)
+
+    def path_cost(t, X, q, u, p, aux):
+        C = aux['const'].values()
+        return path_rn(*X, *p, *C, *u)
+
+    def terminal_cost(tf, Xf, qf, uf, p, aux):
+        C = aux['const'].values()
+        return terminal_fn(*Xf, *p, *C, *uf)
+
+    return initial_cost, path_cost, terminal_cost
+
+
 def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control, is_icrm=False):
     ham_args = [*states, *parameters, *constants, *controls]
     eom_fn = [make_sympy_fn(ham_args, eom) for eom in deriv_list]
@@ -50,22 +70,32 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
     num_params = len(parameters)
     num_eoms = len(eom_fn)
 
-    if is_icrm:
-        def deriv_func(t, X, p, aux):
-            C = aux['const'].values()
-            p = p[:num_params]
-            u = compute_control(t, X, p, aux)
-            eom_vals = np.zeros(num_eoms)
-            _X = X[:-num_controls]
-            for ii in range(num_eoms):
-                eom_vals[ii] = eom_fn[ii](*_X, *p, *C, *u)
+    if compute_control is not None:
+        if is_icrm:
+            def deriv_func(t, X, p, aux):
+                C = aux['const'].values()
+                p = p[:num_params]
+                u = compute_control(t, X, p, aux)
+                eom_vals = np.zeros(num_eoms)
+                _X = X[:-num_controls]
+                for ii in range(num_eoms):
+                    eom_vals[ii] = eom_fn[ii](*_X, *p, *C, *u)
 
-            return eom_vals
+                return eom_vals
+        else:
+            def deriv_func(t, X, p, aux):
+                C = aux['const'].values()
+                p = p[:num_params]
+                u = compute_control(t, X, p, aux)
+                eom_vals = np.zeros(num_eoms)
+                for ii in range(num_eoms):
+                    eom_vals[ii] = eom_fn[ii](*X, *p, *C, *u)
+
+                return eom_vals
     else:
-        def deriv_func(t, X, p, aux):
+        def deriv_func(t, X, u, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
-            u = compute_control(t, X, p, aux)
             eom_vals = np.zeros(num_eoms)
             for ii in range(num_eoms):
                 eom_vals[ii] = eom_fn[ii](*X, *p, *C, *u)
@@ -125,31 +155,46 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
     bc_fn_terminal = [make_jit_fn(bc_args, bc) for bc in bc_terminal]
     num_bcs_initial = len(bc_fn_initial)
     num_bcs_terminal = len(bc_fn_terminal)
+    if compute_control is not None:
+        def bc_func_all(t0, X0, q0, u0, tf, Xf, qf, uf, params, ndp, aux):
+            C = aux['const'].values()
+            bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
+            ii = 0
+            for jj in range(num_bcs_initial):
+                bc_vals[ii] = bc_fn_initial[jj](*X0, *q0, *params, *ndp, *C, *u0)
+                ii += 1
 
-    def bc_func_all(t0, X0, q0, u0, tf, Xf, qf, uf, params, ndp, aux):
-        C = aux['const'].values()
-        bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
-        ii = 0
-        for jj in range(num_bcs_initial):
-            bc_vals[ii] = bc_fn_initial[jj](*X0, *q0, *params, *ndp, *C, *u0)
-            ii += 1
+            for jj in range(num_bcs_terminal):
+                bc_vals[ii] = bc_fn_terminal[jj](*Xf, *qf, *params, *ndp, *C, *uf)
+                ii += 1
 
-        for jj in range(num_bcs_terminal):
-            bc_vals[ii] = bc_fn_terminal[jj](*Xf, *qf, *params, *ndp, *C, *uf)
-            ii += 1
+            return bc_vals
 
-        return bc_vals
+        if is_icrm:
+            def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
+                u0 = compute_control(t0, y0, p, aux)
+                uf = compute_control(tf, yf, p, aux)
+                return bc_func_all(t0, y0[:-num_controls], q0, u0, tf, yf[:-num_controls], qf, uf, p, ndp, aux)
+        else:
+            def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
+                u0 = compute_control(t0, y0, p, aux)
+                uf = compute_control(tf, yf, p, aux)
+                return bc_func_all(t0, y0, q0, u0, tf, yf, qf, uf, p, ndp, aux)
 
-    if is_icrm:
-        def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
-            u0 = compute_control(t0, y0, p, aux)
-            uf = compute_control(tf, yf, p, aux)
-            return bc_func_all(t0, y0[:-num_controls], q0, u0, tf, yf[:-num_controls], qf, uf, p, ndp, aux)
     else:
-        def bc_func(t0, y0, q0, tf, yf, qf, p, ndp, aux):
-            u0 = compute_control(t0, y0, p, aux)
-            uf = compute_control(tf, yf, p, aux)
-            return bc_func_all(t0, y0, q0, u0, tf, yf, qf, uf, p, ndp, aux)
+        def bc_func(t0, X0, q0, u0, tf, Xf, qf, uf, params, ndp, aux):
+            C = aux['const'].values()
+            bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
+            ii = 0
+            for jj in range(num_bcs_initial):
+                bc_vals[ii] = bc_fn_initial[jj](*X0, *q0, *params, *ndp, *C, *u0)
+                ii += 1
+
+            for jj in range(num_bcs_terminal):
+                bc_vals[ii] = bc_fn_terminal[jj](*Xf, *qf, *params, *ndp, *C, *uf)
+                ii += 1
+
+            return bc_vals
 
     return bc_func
 
@@ -163,10 +208,24 @@ def make_functions(problem_data):
     dynamical_parameters = problem_data['dynamical_parameters']
     constants = problem_data['constants']
     controls = problem_data['controls']
+    initial_cost = problem_data['initial_cost']
+    path_cost = problem_data['path_cost']
+    terminal_cost = problem_data['terminal_cost']
     is_icrm = problem_data['method'].lower() == 'icrm'
     ham = problem_data['hamiltonian']
     logging.info('Making unconstrained control')
-    control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters, constants, controls, ham, is_icrm=is_icrm)
+    if problem_data['method'] is not 'direct':
+        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters, constants, controls, ham, is_icrm=is_icrm)
+        def initial_cost(*args, **kwargs):
+            return 0
+        def path_cost(*args, **kwargs):
+            return 0
+        def terminal_cost(*args, **kwargs):
+            return 0
+    else:
+        control_fn = None
+        ham_fn = None
+        initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states, dynamical_parameters, constants, controls)
 
     logging.info('Making derivative function and bc function')
     deriv_list = problem_data['deriv_list']
@@ -177,7 +236,7 @@ def make_functions(problem_data):
     bc_terminal = problem_data['bc_terminal']
     bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
 
-    return deriv_func, quad_func, bc_func, control_fn, ham_fn
+    return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost
 
 
 def make_jit_fn(args, fn_expr):
@@ -225,11 +284,11 @@ def preprocess(problem_data):
     custom_functions = problem_data['custom_functions']
     for f in custom_functions:
         globals()[f['name']] = f['handle']
-    deriv_func, quad_func, bc_func, compute_control, ham_fn = make_functions(problem_data)
+    deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost = make_functions(problem_data)
 
     bvp = BVP(deriv_func, quad_func, bc_func, compute_control)
 
-    return bvp
+    return bvp, initial_cost, path_cost, terminal_cost
 
 
 BVP = cl.namedtuple('BVP', 'deriv_func quad_func bc_func compute_control')
