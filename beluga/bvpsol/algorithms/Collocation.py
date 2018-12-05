@@ -1,7 +1,9 @@
 from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
+from beluga.ivpsol import Trajectory
 import numpy as np
 import copy
 from scipy.optimize import minimize
+from scipy.integrate import simps
 import logging
 
 class Collocation(BaseAlgorithm):
@@ -87,10 +89,6 @@ class Collocation(BaseAlgorithm):
             if self.quadrature_function is not None and len(sol.q[0]) is not 0:
                 raise NotImplemented # TODO: Put reconstruction of q's in Trajectory()? Or leave in ivpsol?
 
-        # Set up some required class functions for collocation
-        self.path_cost = None # TODO: Assumed to be indirect. This class can handle direct with some work.
-        self.terminal_cost = None # TODO: Assumed to be indirect.
-
         # self.constraint = {'type': 'eq', 'fun': self._collocation_constraint}
         self.constraint_midpoint = {'type': 'eq', 'fun': self._collocation_constraint_midpoint}
         self.constraint_boundary = {'type': 'eq', 'fun': self._collocation_constraint_boundary}
@@ -98,6 +96,7 @@ class Collocation(BaseAlgorithm):
         # Set up initial guess and other info
         self.tspan = sol.t
         self.number_of_odes = sol.y.shape[1]
+        self.number_of_controls = sol.u.shape[1]
 
         # TODO: The following if-then structure is silly, but I can't resolve this until some optimlib corrections are made
         if sol.q.size == 0:
@@ -119,7 +118,21 @@ class Collocation(BaseAlgorithm):
         self.number_of_dynamical_params = len(sol.dynamical_parameters)
         self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
 
-        vectorized = self._wrap_params(sol.y, sol.q, sol.dynamical_parameters, sol.nondynamical_parameters)
+        from numpy import (zeros, array, linalg, append, asfarray, concatenate, finfo,
+                           sqrt, vstack, exp, inf, isfinite, atleast_1d)
+        def approx_jacobian(x, func, epsilon, *args):
+            x0 = asfarray(x)
+            f0 = atleast_1d(func(*((x0,) + args)))
+            jac = zeros([len(x0), len(f0)])
+            dx = zeros(len(x0))
+            for i in range(len(x0)):
+                dx[i] = epsilon
+                jac[i] = (func(*((x0 + dx,) + args)) - f0) / epsilon
+                dx[i] = 0.0
+
+            return jac.transpose()
+
+        vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
 
         self.aux = sol.aux
         sol.converged = False
@@ -128,77 +141,22 @@ class Collocation(BaseAlgorithm):
             logging.info('Running collocation... ')
 
         xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary], tol=self.tolerance, callback=None, options=None)
-
-        if self.verbose:
-            logging.info(xopt['message'])
+        logging.debug(xopt['message'])
 
         if xopt['status'] == 0:
             sol.converged = True
 
         # Organize the output with the sol() structure
         sol.t = self.tspan
-        sol.y, sol.q, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+        sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
         return sol
 
-    def reconstruct(self, time, ivp):
-        # TODO: Rewrite this trash. Use ivpsol(), this should already be done.
-        if time < ivp.sol.x[0] or time > ivp.sol.x[-1]:
-            raise ValueError
-
-        if time == ivp.sol.x[0]:
-            return ivp.sol.x[0], ivp.sol.y[0], ivp.sol.quads
-
-        ind = 1
-        t_high = ivp.sol.x[ind]
-        tf = ivp.sol.x[-1]
-        quads = ivp.sol.quads
-        while t_high < time:
-            if ivp.quadratures is not None:
-                t0 = ivp.sol.x[ind-1]
-                t1 = ivp.sol.x[ind]
-                t12 = (t1 + t0) / 2
-                p0 = ivp.sol.y[ind-1]
-                p1 = ivp.sol.y[ind]
-                dp0 = np.squeeze(ivp.eoms(t0, p0, ivp.sol.params, ivp.sol.consts))
-                dp1 = np.squeeze(ivp.eoms(t1, p1, ivp.sol.params, ivp.sol.consts))
-                midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (len(ivp.sol.x) - 1) / 8 * (dp0 - dp1)
-                dt = ivp.sol.x[ind] - ivp.sol.x[ind-1]
-                dquads = np.squeeze(ivp.quadratures(t0, p0, ivp.sol.params, ivp.sol.consts)) * dt
-                dquads12 = np.squeeze(ivp.quadratures(t12, midpoint_predicted, ivp.sol.params, ivp.sol.consts)) * dt
-                dquads1 = np.squeeze(ivp.quadratures(t1, p1, ivp.sol.params, ivp.sol.consts)) * dt
-                C1, C2, C3, C4 = self._get_poly_coefficients_1_3(quads, dquads, dquads12, dquads1)
-                quads = C1 + C2 + C3 + C4
-            ind += 1
-            t_high = ivp.sol.x[ind]
-
-        dt = ivp.sol.x[ind] - ivp.sol.x[ind - 1]
-        t_temp = (time - ivp.sol.x[ind - 1]) / dt
-        p0 = np.array(ivp.sol.y[ind - 1])
-        dp0 = np.squeeze(ivp.eoms(ivp.sol.x[ind - 1], ivp.sol.y[ind - 1], ivp.sol.params, ivp.sol.consts)) * dt
-        p1 = np.array(ivp.sol.y[ind])
-        dp1 = np.squeeze(ivp.eoms(ivp.sol.x[ind], ivp.sol.y[ind], ivp.sol.params, ivp.sol.consts)) * dt
-        if ivp.quadratures is not None:
-            t0 = ivp.sol.x[ind - 1]
-            t1 = ivp.sol.x[ind]
-            t12 = (t1 + t0) / 2
-            midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (len(ivp.sol.x) - 1) / 8 * (dp0 - dp1)
-            dquads = np.squeeze(ivp.quadratures(t0, p0, ivp.sol.params, ivp.sol.consts)) * dt
-            dquads12 = np.squeeze(ivp.quadratures(t12, midpoint_predicted, ivp.sol.params, ivp.sol.consts)) * dt
-            dquads1 = np.squeeze(ivp.quadratures(t1, p1, ivp.sol.params, ivp.sol.consts)) * dt
-            C1, C2, C3, C4 = self._get_poly_coefficients_1_3(quads, dquads, dquads12, dquads1)
-            quadsf = C1 + C2*t_temp + C3*t_temp**2 + C4*t_temp**3
-        else:
-            quadsf = quads
-
-        C1, C2, C3, C4 = self._get_poly_coefficients_2_2(p0, dp0, p1, dp1)
-        y_new = C1 + C2*t_temp + C3*t_temp**2 + C4*t_temp**3
-        return time, y_new, quadsf
-
     def _collocation_constraint_midpoint(self, vectorized):
-        y, quads0, params, nondyn_params = self._unwrap_params(vectorized)
-        tf = self.tspan[-1]
+        y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        gamma = Trajectory(self.tspan, y, np.array([]), u)
+        tf = gamma.t[-1]
         # dX = np.squeeze(self.derivative_function(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
-        dX = np.squeeze([self.derivative_function(ti, yi, params, self.aux) for ti,yi in zip(self.tspan, y)])
+        dX = np.squeeze([self.derivative_function(ti, yi, ui, params, self.aux) for ti,yi,ui in zip(self.tspan, y, u)])
         if len(dX.shape) == 1:
             dX = np.array([dX]).T
         dp0 = dX[:-1]
@@ -210,44 +168,37 @@ class Collocation(BaseAlgorithm):
         t12 = (t0+t1)/2
         midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (self.number_of_nodes - 1) / 8 * (dp0 - dp1)
         midpoint_derivative_predicted = -3 / 2 * (self.number_of_nodes - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
-        midpoint_derivative_actual = np.squeeze([self.derivative_function(ti, yi, params, self.aux) for ti, yi in zip(t12, midpoint_predicted)]) # TODO: Vectorize, so this one works as well
+        midpoint_derivative_actual = np.squeeze([self.derivative_function(ti, yi, ui, params, self.aux) for ti, yi, ui in zip(t12, midpoint_predicted, u[:-1])]) # TODO: Vectorize, so this one works as well
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
         return outvec.flatten()
 
     def _collocation_constraint_boundary(self, vectorized):
-        X, quads0, params, nondyn_params = self._unwrap_params(vectorized)
-        if len(quads0) == 0:
-            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], [], self.tspan[-1], X[-1], [], params, nondyn_params, self.aux))
-        else:
-            quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
-            return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, nondyn_params, self.aux))
+        X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], [], u[0], self.tspan[-1], X[-1], [], u[-1], params, nondyn_params, self.aux))
+        # else:
+        #     quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
+        #     return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, nondyn_params, self.aux))
 
     def _collocation_cost(self, vectorized):
-        X, quads0, params, nondyn_params = self._unwrap_params(vectorized)
-        return 0
+        X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        c0 = self.initial_cost_function(self.tspan[0], X[0], [], u[0], params, self.aux)
+        cf = self.terminal_cost_function(self.tspan[-1], X[-1], [], u[-1], params, self.aux)
 
-        if self.path_cost is not None:
-            path_cost = self.path_cost(self.tspan, X, params, self.consts)
-            if path_cost is None:
-                path_cost = 0
-            else:
-                path_cost = np.trapz(path_cost, x=self.tspan)
-        else:
-            path_cost = 0
-
-        if self.terminal_cost is not None:
-            terminal_cost = self.terminal_cost(self.tspan[-1], X[-1], params, self.consts)
-            if terminal_cost is None:
-                terminal_cost = 0
-        else:
-            terminal_cost = 0
-        return path_cost + terminal_cost
+        cpath = np.array([self.path_cost_function(ti, yi, [], ui, params, self.aux) for ti, yi, ui in zip(self.tspan, X, u)])
+        cpath = simps(cpath, x=self.tspan)
+        return c0 + cpath + cf
 
     def _unwrap_params(self, vectorized):
-        X = vectorized[:self.number_of_odes*self.number_of_nodes].reshape([self.number_of_nodes, self.number_of_odes])
+        X = vectorized[:self.number_of_odes * self.number_of_nodes].reshape([self.number_of_nodes, self.number_of_odes])
         vectorized = np.delete(vectorized, np.arange(0, self.number_of_odes * self.number_of_nodes))
+
+        quads = vectorized[:self.number_of_quads]
+        vectorized = np.delete(vectorized, np.arange(0, self.number_of_quads))
+
+        u = vectorized[:self.number_of_controls * self.number_of_nodes].reshape([self.number_of_nodes, self.number_of_controls])
+        vectorized = np.delete(vectorized, np.arange(0, self.number_of_controls * self.number_of_nodes))
 
         dynamical_params = vectorized[:self.number_of_dynamical_params]
         vectorized = np.delete(vectorized, np.arange(0, self.number_of_dynamical_params))
@@ -255,12 +206,10 @@ class Collocation(BaseAlgorithm):
         nondynamical_params = vectorized[:self.number_of_nondynamical_params]
         vectorized = np.delete(vectorized, np.arange(0, self.number_of_nondynamical_params))
 
-        quads = vectorized[:self.number_of_quads]
+        return X, quads, u, dynamical_params, nondynamical_params
 
-        return X, quads, dynamical_params, nondynamical_params
-
-    def _wrap_params(self, y, q, params, nondyn_params):
-        return np.concatenate((y.flatten(), q, params, nondyn_params))
+    def _wrap_params(self, y, q, u, params, nondyn_params):
+        return np.concatenate((y.flatten(), q.flatten(), u.flatten(), params, nondyn_params))
 
     @staticmethod
     def _get_poly_coefficients_1_3(p0, dquads0, dquads12, dquads1):

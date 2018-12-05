@@ -14,6 +14,7 @@ from beluga.bvpsol import algorithms, Solution
 from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
+from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 import time
 from collections import OrderedDict
 import pathos
@@ -100,6 +101,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
         bvp_ws, guess_mapper = ICRM_ocp_to_bvp(ocp)
     elif method.lower() == 'diffyg':
         bvp_ws, guess_mapper = DIFFYG_ocp_to_bvp(ocp)
+    elif method.lower() == 'direct':
+        bvp_ws, guess_mapper = DIRECT_ocp_to_bvp(ocp)
     else:
         raise NotImplementedError
 
@@ -120,14 +123,13 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     solinit.aux['dynamical_parameters'] = bvp_ws['dynamical_parameters']
     solinit.aux['nondynamical_parameters'] = bvp_ws['nondynamical_parameters']
 
-    bvp = preprocess(bvp_ws)
+    bvp, initial_cost, path_cost, terminal_cost = preprocess(bvp_ws)
     solinit = bvp_ws['guess'].generate(bvp, solinit, guess_mapper)
 
     state_names = bvp_ws['states']
 
     initial_states = solinit.y[0, :]
     terminal_states = solinit.y[-1, :]
-
 
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
@@ -163,7 +165,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     ocp._scaling.initialize(bvp_ws)
     bvp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, pool, autoscale)
     total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -186,7 +188,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     return out['solution'][-1][-1]
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale):
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, pool, autoscale):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
@@ -197,6 +199,9 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
     bvp_algo.set_derivative_function(bvp.deriv_func)
     bvp_algo.set_quadrature_function(bvp.quad_func)
     bvp_algo.set_boundarycondition_function(bvp.bc_func)
+    bvp_algo.set_initial_cost_function(initial_cost)
+    bvp_algo.set_path_cost_function(path_cost)
+    bvp_algo.set_terminal_cost_function(terminal_cost)
     try:
         sol_guess = solinit
         sol = None
