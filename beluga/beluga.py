@@ -123,7 +123,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     solinit.aux['dynamical_parameters'] = bvp_ws['dynamical_parameters']
     solinit.aux['nondynamical_parameters'] = bvp_ws['nondynamical_parameters']
 
-    bvp, initial_cost, path_cost, terminal_cost = preprocess(bvp_ws)
+    bvp, initial_cost, path_cost, terminal_cost, ineq_constraints = preprocess(bvp_ws)
     solinit = bvp_ws['guess'].generate(bvp, solinit, guess_mapper)
 
     state_names = bvp_ws['states']
@@ -165,7 +165,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     ocp._scaling.initialize(bvp_ws)
     bvp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, pool, autoscale)
+    out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, ineq_constraints, pool, autoscale)
     total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -174,9 +174,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     # Final time is appended as a parameter, so scale the output x variables to show the correct time
     for continuation_set in out['solution']:
         for sol in continuation_set:
-            tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
-            tf = sol.dynamical_parameters[tf_ind]
-            sol.t = sol.t*tf
+            if autoscale:
+                pass
+                # tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
+                # tf = sol.dynamical_parameters[tf_ind]
+                # sol.t = sol.t*tf
 
     if pool is not None:
         pool.close()
@@ -188,7 +190,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     return out['solution'][-1][-1]
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, pool, autoscale):
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, ineq_constraints, pool, autoscale):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
@@ -202,6 +204,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
     bvp_algo.set_initial_cost_function(initial_cost)
     bvp_algo.set_path_cost_function(path_cost)
     bvp_algo.set_terminal_cost_function(terminal_cost)
+    bvp_algo.set_inequality_constraint_function(ineq_constraints)
     try:
         sol_guess = solinit
         sol = None
@@ -243,8 +246,9 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                     ## DAE mode
                     # sol.u = sol.y[problem_data['num_states']:,:]
                     # Non-DAE:
-                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
-                    sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+                    if ocp_ws['method'] is not 'direct':
+                        f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
+                        sol.u = np.array(list(map(f, sol.t, list(sol.y))))
                     # keyboard()
 
                     # Copy solution object for storage and reuse `sol` in next

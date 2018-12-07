@@ -43,12 +43,14 @@ def init_workspace(ocp):
 
     constraints = ocp.constraints()
     workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
-                                for c_type, c_list in constraints.items()
-                                if c_type != 'path'}
+                                for c_type, c_list in constraints.items()}
 
     workspace['constraints_units'] = {c_type: [sympify(c_obj['unit']) for c_obj in c_list]
-                                for c_type, c_list in constraints.items()
-                                if c_type != 'path'}
+                                for c_type, c_list in constraints.items()}
+
+    if 'path' not in workspace['constraints'].keys():
+        workspace['constraints']['path'] = []
+        workspace['constraints_units']['path'] = []
 
     workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
     workspace['quantities'] = [sympify(q['name']) for q in ocp.quantities()]
