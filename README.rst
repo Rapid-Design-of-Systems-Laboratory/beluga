@@ -1,7 +1,7 @@
 beluga
 ======
 
-.. image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/rdsl.png
+.. image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga/rdsl.png
     :align: right
 
 .. _GitHub: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga/releases
@@ -25,7 +25,7 @@ beluga
 .. |docs| image:: https://readthedocs.org/projects/beluga/badge/?version=latest
     :target: Documentation_
 
-.. |coverage| image:: https://rawgit.com/Rapid-Design-of-Systems-Laboratory/beluga/master/coverage.svg
+.. |coverage| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga/coverage.svg
     :target: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
 
 Installation
