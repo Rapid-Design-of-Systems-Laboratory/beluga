@@ -178,19 +178,19 @@ class Shooting(BaseAlgorithm):
 
     @staticmethod
     def _bc_jac_multi(gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
+        gamma_orig = copy.deepcopy(gamma_set)
+        gamma_set_perturbed = copy.copy(gamma_orig)
         h = StepSize
-        t0 = gamma_set[0].t[0]
-        y0, q0, u0 = gamma_set[0](t0)
-        tf = gamma_set[-1].t[-1]
-        yf, qf, uf = gamma_set[-1](tf)
-
-        gamma_set_perturbed = copy.copy(gamma_set)
+        t0 = gamma_orig[0].t[0]
+        y0, q0, u0 = gamma_orig[0](t0)
+        tf = gamma_orig[-1].t[-1]
+        yf, qf, uf = gamma_orig[-1](tf)
 
         n_odes = len(y0)
         n_quads = len(q0)
-        num_arcs = len(gamma_set)
+        num_arcs = len(gamma_orig)
 
-        fx = bc_func(gamma_set, parameters, nondynamical_params, aux)
+        fx = bc_func(gamma_orig, parameters, nondynamical_params, aux)
         nBCs = len(fx)
 
         Mi = np.zeros((nBCs, n_odes))
@@ -200,19 +200,22 @@ class Shooting(BaseAlgorithm):
         P2 = np.zeros((nBCs, nondynamical_params.size))
 
         dx = np.zeros((n_odes + parameters.size))
-
-        for ii, phi in zip(range(len(gamma_set)), phi_full_list):
+        for ii, phi in zip(range(len(gamma_orig)), phi_full_list):
+            gamma_orig = copy.deepcopy(gamma_set)
             for jj in range(n_odes):
                 dx[jj] = dx[jj] + h
                 dy = np.dot(phi, dx)
-                perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
+                perturbed_trajectory = Trajectory(gamma_orig[ii].t, gamma_orig[ii].y + dy)
                 if n_quads > 0:
-                    perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set[ii].q[0], parameters, aux)
-
+                    perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_orig[ii].q[0], parameters, aux)
+                    if ii != num_arcs-1:
+                        dq = perturbed_trajectory.q[-1] - gamma_orig[ii].q[-1]
+                        gamma_set_perturbed[-1].q[-1] += dq
                 gamma_set_perturbed[ii] = perturbed_trajectory
 
                 f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
-                gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
+                gamma_set_perturbed[ii] = copy.deepcopy(gamma_orig[ii])
+                gamma_set_perturbed[-1] = copy.deepcopy(gamma_orig[-1])
                 Mi[:, jj] = (f-fx)/h
                 dx[jj] = dx[jj] - h
             M_slice = slice(n_odes * ii, n_odes * (ii + 1))
@@ -221,32 +224,35 @@ class Shooting(BaseAlgorithm):
         dq = np.zeros(n_quads)
         for ii in range(n_quads):
             dq[ii] = dq[ii] + h
-            gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_set]
+            gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_orig]
             f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
             Q[:, ii] = (f-fx)/h
             dq[ii] = dq[ii] - h
 
-        gamma_set_perturbed = copy.copy(gamma_set)
-        for ii, phi in zip(range(len(gamma_set)), phi_full_list):
-            for jj in range(parameters.size):
-                parameters[jj] = parameters[jj] + h
-                kk = jj + n_odes
-                dx[kk] = dx[kk] + h
+        for ii in range(parameters.size):
+            gamma_set_perturbed = copy.deepcopy(gamma_orig)
+            parameters[ii] = parameters[ii] + h
+            jj = ii + n_odes
+            dx[jj] = dx[jj] + h
+            for kk, phi in zip(range(len(gamma_orig)), phi_full_list):
                 dy = np.dot(phi, dx)
-                perturbed_trajectory = Trajectory(gamma_set[ii].t, gamma_set[ii].y + dy)
+                perturbed_trajectory = Trajectory(gamma_orig[kk].t, gamma_orig[kk].y + dy)
                 if n_quads > 0:
-                    perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set[ii].q[0], parameters, aux)
+                    if kk > 0:
+                        perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set_perturbed[kk-1].q[-1], parameters, aux)
+                    else:
+                        perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_orig[kk].q[0], parameters, aux)
 
-                gamma_set_perturbed[ii] = perturbed_trajectory
-                f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
-                gamma_set_perturbed[ii] = copy.copy(gamma_set[ii])
-                P1[:, jj] += (f-fx)/h
-                dx[kk] = dx[kk] - h
-                parameters[jj] = parameters[jj] - h
+                gamma_set_perturbed[kk] = perturbed_trajectory
+
+            f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
+            P1[:, ii] += (f-fx)/h
+            dx[jj] = dx[jj] - h
+            parameters[ii] = parameters[ii] - h
 
         for ii in range(nondynamical_params.size):
             nondynamical_params[ii] = nondynamical_params[ii] + h
-            f = bc_func(gamma_set, parameters, nondynamical_params, aux)
+            f = bc_func(gamma_orig, parameters, nondynamical_params, aux)
             P2[:, ii] = (f-fx)/h
             nondynamical_params[ii] = nondynamical_params[ii] - h
 
@@ -282,12 +288,12 @@ class Shooting(BaseAlgorithm):
 
             for i in range(nOdes):
                 fxh = odefn(t, X + Xh[i, :], p, aux)
-                F[:, i] = (fxh-fx)/StepSize
+                F[:, i] = (fxh-fx) / StepSize
 
             for i in range(nParams):
                 p[i] += StepSize
                 fxh = odefn(t, X, p, aux)
-                F[:, i+nOdes] = (fxh - fx).real / StepSize
+                F[:, i+nOdes] = (fxh - fx) / StepSize
                 p[i] -= StepSize
 
             phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))), np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]

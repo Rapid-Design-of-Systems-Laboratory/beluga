@@ -43,7 +43,7 @@ class Collocation(BaseAlgorithm):
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
-        number_of_nodes = kwargs.get('number_of_nodes', 40)
+        number_of_nodes = kwargs.get('number_of_nodes', 30)
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
@@ -118,20 +118,6 @@ class Collocation(BaseAlgorithm):
         self.number_of_dynamical_params = len(sol.dynamical_parameters)
         self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
 
-        from numpy import (zeros, array, linalg, append, asfarray, concatenate, finfo,
-                           sqrt, vstack, exp, inf, isfinite, atleast_1d)
-        def approx_jacobian(x, func, epsilon, *args):
-            x0 = asfarray(x)
-            f0 = atleast_1d(func(*((x0,) + args)))
-            jac = zeros([len(x0), len(f0)])
-            dx = zeros(len(x0))
-            for i in range(len(x0)):
-                dx[i] = epsilon
-                jac[i] = (func(*((x0 + dx,) + args)) - f0) / epsilon
-                dx[i] = 0.0
-
-            return jac.transpose()
-
         vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
 
         self.aux = sol.aux
@@ -172,11 +158,13 @@ class Collocation(BaseAlgorithm):
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
-        return outvec.flatten()
+        d2 = outvec.shape[1]
+        outvec = np.hstack([outvec[:,ii][:] for ii in range(d2)])
+        return outvec
 
     def _collocation_constraint_boundary(self, vectorized):
         X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], [], u[0], self.tspan[-1], X[-1], [], u[-1], params, nondyn_params, self.aux))
+        return self.boundarycondition_function(self.tspan[0], X[0], [], u[0], self.tspan[-1], X[-1], [], u[-1], params, nondyn_params, self.aux)
         # else:
         #     quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
         #     return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, nondyn_params, self.aux))
@@ -188,6 +176,7 @@ class Collocation(BaseAlgorithm):
 
         cpath = np.array([self.path_cost_function(ti, yi, [], ui, params, self.aux) for ti, yi, ui in zip(self.tspan, X, u)])
         cpath = simps(cpath, x=self.tspan)
+        # breakpoint()
         return c0 + cpath + cf
 
     def _unwrap_params(self, vectorized):

@@ -54,8 +54,8 @@ def ocp_to_bvp(ocp):
 
     # Generate the problem data
     tf_var = sympify('tf')
-    dynamical_parameters = [tf_var] + parameters
-    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    dynamical_parameters = parameters
+    dynamical_parameters_units = parameters_units
     bc_initial = [c for c in constraints['initial']]
     bc_terminal = [c for c in constraints['terminal']]
 
@@ -70,10 +70,12 @@ def ocp_to_bvp(ocp):
            'terminal_cost_units': str(terminal_cost_units),
            'states': [str(x) for x in it.chain(states)],
            'states_units': [str(x) for x in states_units],
-           'deriv_list': [str(tf_var * rate) for rate in states_rates],
+           'deriv_list': [str(rate) for rate in states_rates],
            'quads': [],
            'quads_rates': [],
            'quads_units': [],
+           'path_constraints': [str(c) for c in constraints['path']],
+           'path_constraints_units': [str(u) for u in constraints_units['path']],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],

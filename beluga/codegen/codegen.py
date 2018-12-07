@@ -54,22 +54,37 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
 
 def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, constants, controls):
     boundary_args = [*states, *parameters, *constants, *controls]
+    path_args = [*states, *parameters, *constants, *controls]
     initial_fn = make_jit_fn(boundary_args, initial_cost)
-    path_rn = make_jit_fn(boundary_args, path_cost)
+    path_fn = make_jit_fn(path_args, path_cost)
     terminal_fn = make_jit_fn(boundary_args, terminal_cost)
     def initial_cost(t0, X0, q0, u0, p, aux):
         C = aux['const'].values()
         return initial_fn(*X0, *p, *C, *u0)
 
-    def path_cost(t, X, q, u, p, aux):
+    def path_cost(t, X, u, p, aux):
         C = aux['const'].values()
-        return path_rn(*X, *p, *C, *u)
+        return path_fn(*X, *p, *C, *u)
 
     def terminal_cost(tf, Xf, qf, uf, p, aux):
         C = aux['const'].values()
         return terminal_fn(*Xf, *p, *C, *uf)
 
     return initial_cost, path_cost, terminal_cost
+
+
+def make_constraint_func(path_constraints, states, parameters, constants, controls):
+    path_args = [*states, *parameters, *constants, *controls]
+    path_fn = [make_jit_fn(path_args, f) for f in path_constraints]
+    num_constraints = len(path_constraints)
+    def path_constraints(t, X, u, p, aux):
+        C = aux['const'].values()
+        constraint_vals = np.zeros(num_constraints)
+        for ii in range(num_constraints):
+            constraint_vals[ii] = path_fn[ii](*X, *p, *C, *u)
+        return constraint_vals
+
+    return path_constraints
 
 
 def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control, is_icrm=False):
@@ -213,6 +228,9 @@ def make_functions(problem_data):
     initial_cost = problem_data['initial_cost']
     path_cost = problem_data['path_cost']
     terminal_cost = problem_data['terminal_cost']
+
+    path_constraints = problem_data['path_constraints']
+
     is_icrm = problem_data['method'].lower() == 'icrm'
     ham = problem_data['hamiltonian']
     logging.info('Making unconstrained control')
@@ -229,6 +247,11 @@ def make_functions(problem_data):
         ham_fn = None
         initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states, dynamical_parameters, constants, controls)
 
+    if problem_data['method'] is not 'direct' and len(path_constraints) > 0:
+        raise NotImplementedError('Path constraints not implemented for indirect-type methods.')
+    else:
+        ineq_constraints = make_constraint_func(path_constraints, states, dynamical_parameters, constants, controls)
+
     logging.info('Making derivative function and bc function')
     deriv_list = problem_data['deriv_list']
 
@@ -238,7 +261,7 @@ def make_functions(problem_data):
     bc_terminal = problem_data['bc_terminal']
     bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
 
-    return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost
+    return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints
 
 
 def make_jit_fn(args, fn_expr):
@@ -286,11 +309,11 @@ def preprocess(problem_data):
     custom_functions = problem_data['custom_functions']
     for f in custom_functions:
         globals()[f['name']] = f['handle']
-    deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost = make_functions(problem_data)
+    deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints = make_functions(problem_data)
 
     bvp = BVP(deriv_func, quad_func, bc_func, compute_control)
 
-    return bvp, initial_cost, path_cost, terminal_cost
+    return bvp, initial_cost, path_cost, terminal_cost, ineq_constraints
 
 
 BVP = cl.namedtuple('BVP', 'deriv_func quad_func bc_func compute_control')
