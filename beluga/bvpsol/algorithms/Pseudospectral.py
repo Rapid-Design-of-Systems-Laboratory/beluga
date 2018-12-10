@@ -2,10 +2,14 @@ from beluga.bvpsol.algorithms import BaseAlgorithm
 from beluga.ivpsol import Trajectory
 from scipy.optimize import minimize
 
+import numba
+
 import logging
 import numpy as np
 import sys
 import copy
+
+from functools import lru_cache
 
 class Pseudospectral(BaseAlgorithm):
     def __new__(cls, *args, **kwargs):
@@ -56,7 +60,7 @@ class Pseudospectral(BaseAlgorithm):
 
     def solve(self, solinit, **kwargs):
         """
-        Solve a two-point boundary value problem using the collocation method.
+        Solve a two-point boundary value problem using the pseudospectral method.
 
         :param deriv_func: The ODE function.
         :param quad_func: The quad func.
@@ -66,8 +70,13 @@ class Pseudospectral(BaseAlgorithm):
         """
         sol = copy.deepcopy(solinit)
         num_eoms = sol.y.shape[1]
-        num_controls = sol.u.shape[1]
+        if len(sol.u)>1:
+            num_controls = sol.u.shape[1]
+        else:
+            num_controls = 0
+        # num_controls=0
         num_params = len(sol.dynamical_parameters)
+        num_nondynamical_params = len(sol.nondynamical_parameters)
         num_quads = 0
 
         t0 = sol.t[0]
@@ -89,33 +98,38 @@ class Pseudospectral(BaseAlgorithm):
             else:
                 q = np.array([])
 
-            u = np.column_stack([linter(sol.t, sol.u[:, ii], tspan) for ii in range(num_controls)])
+            if num_controls > 0:
+                u = np.column_stack([linter(sol.t, sol.u[:, ii], tspan) for ii in range(num_controls)])
+            else:
+                u = np.array([])
+
             sol.t = tspan
             sol.y = y
             sol.q = q
             sol.u = u
 
         tau = lglnodes(self.number_of_nodes - 1)
+        tau2 = lglnodes(self.number_of_nodes - 2)
         weights = lglweights(tau)
+        weights2 = lglweights(tau2)
         D = lglD(tau)
+        D2 = lglD(tau2)
 
-        Xinit = np.hstack([sol.y[:,ii][:] for ii in range(num_eoms)] + [sol.u[:,ii] for ii in range(num_controls)] + [sol.dynamical_parameters])
-        arrrgs = (self.derivative_function, self.boundarycondition_function, self.path_cost_function, self.inequality_constraint_function, num_eoms, num_controls, weights, D, tf, t0, self.number_of_nodes, sol.aux)
+        Xinit = _wrap_params(sol, num_eoms, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
+        arrrgs = (self.derivative_function, self.boundarycondition_function, self.path_cost_function, self.inequality_constraint_function, num_eoms, num_controls, num_params, num_nondynamical_params, weights, D, tf, t0, self.number_of_nodes, sol.aux, tau, tau2, D2)
         constraints = [{'type': 'eq', 'fun': _eq_constraints, 'args': arrrgs}]
         if self.inequality_constraint_function is not None:
-            constraints.append({'type': 'ineq', 'fun': _ineq_constraints, 'args':arrrgs})
+            constraints.append({'type': 'ineq', 'fun': _ineq_constraints, 'args': arrrgs})
 
         iprint = 1
         xopt = minimize(_cost, Xinit, args=arrrgs, method='SLSQP', tol=1e-8, constraints=constraints, options={'ftol':1e-8,'disp':True, 'iprint':iprint})
 
         X = xopt['x']
-        states = [X[(ii) * self.number_of_nodes:(ii + 1) * self.number_of_nodes] for ii in range(num_eoms)]
-        ni = (num_eoms) * self.number_of_nodes
-        controls = [X[ni + ii * self.number_of_nodes:ni + (ii + 1) * self.number_of_nodes] for ii in range(num_controls)]
-        y = np.vstack(states).T
-        u = np.vstack(controls).T
+        y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
         sol.y = y
         sol.u = u
+        sol.dynamical_parameters = params
+        sol.nondynamical_parameters = nondynamical_params
         sol.t = (tau*(tf-t0) + (tf+t0))/2
         sol.converged = True
 
@@ -169,48 +183,69 @@ def lglD(T):
     D[-1,-1] = n*(n+1)/4
     return D
 
-def _cost(X, eom, bc, path, ineq, num_eoms, num_controls, weights, D, tf, t0, n, aux):
-    X = copy.deepcopy(X)
-    states = [X[(ii) * n:(ii + 1) * n] for ii in range(num_eoms)]
-    ni = (num_eoms) * n
-    controls = [X[ni + ii * n:ni + (ii + 1) * n] for ii in range(num_controls)]
-    ni = (num_eoms + num_controls) * n
-    params = X[ni:]
-    y = np.column_stack(states)
-    u = np.column_stack(controls)
-    L = np.hstack([path([], y[ii], u[ii], params, aux) for ii in range(n)])
+def _cost(X, eom, bc, path, ineq, num_eoms, num_controls, num_params, num_nondynamical_params, weights, D, tf, t0, n, aux, tau, tau2, D2):
+    y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, n)
+    if num_controls > 0:
+        L = np.hstack([path([], y[ii], u[ii], params, aux) for ii in range(n)])
+    else:
+        L = np.hstack([path([], y[ii], [], params, aux) for ii in range(n)])
     c = (tf - t0) / 4 * np.inner(weights, L)
     return c
 
-def _eq_constraints(X, eom, bc, path, ineq, num_eoms, num_controls, weights, D, tf, t0, n, aux):
-    states = [X[(ii) * n:(ii + 1) * n] for ii in range(num_eoms)]
-    ni = (num_eoms) * n
-    controls = [X[ni + ii * n:ni + (ii + 1) * n] for ii in range(num_controls)]
-    ni = (num_eoms + num_controls) * n
-    params = X[ni:]
-    y = np.column_stack(states)
-    u = np.column_stack(controls)
-    yd = np.vstack([eom([], y[ii], u[ii], params, aux) for ii in range(n)])
+def _eq_constraints(X, eom, bc, path, ineq, num_eoms, num_controls, num_params, num_nondynamical_params, weights, D, tf, t0, n, aux, tau, tau2, D2):
+    y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, n)
+    y2 = np.column_stack([linter(tau, y[:, ii], tau2) for ii in range(num_eoms)])
+    if num_controls > 0:
+        u2 = np.column_stack([linter(tau, u[:, ii], tau2) for ii in range(num_controls)])
+    else:
+        u2 = np.array([])
+
+    if num_controls > 0:
+        yd = np.vstack([eom([], y2[ii], u2[ii], params, aux) for ii in range(n-1)])
+    else:
+        yd = np.vstack([eom([], y2[ii], params, aux) for ii in range(n-1)])
+
     F = (tf - t0) / 2 * yd
 
-    c0 = bc(t0, y[0], [], u[0], tf, y[-1], [], u[-1], params, [], aux)
-    c1 = np.dot(D, y) - F
+    if num_controls > 0:
+        c0 = bc(t0, y[0], [], u[0], tf, y[-1], [], u[-1], params, nondynamical_params, aux)
+    else:
+        c0 = bc(t0, y[0], [], tf, y[-1], [], params, nondynamical_params, aux)
+    c1 = np.dot(D2, y2) - F
     c1 = np.hstack([c1[:, ii][:] for ii in range(num_eoms)])
     return np.hstack((c0, c1))
 
+def _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, nodes):
+    states = [X[(ii) * nodes:(ii + 1) * nodes] for ii in range(num_eoms)]
+    ni = (num_eoms) * nodes
+    controls = [X[ni + ii * nodes:ni + (ii + 1) * nodes] for ii in range(num_controls)]
+    ni = (num_eoms + num_controls) * nodes
+    params = X[ni:ni + num_params]
+    ni = ni + num_params
+    nondynamical_params = X[ni:]
+    y = np.column_stack(states)
+    if num_controls > 0:
+        u = np.column_stack(controls)
+    else:
+        u = np.array([])
 
-def _ineq_constraints(X, eom, bc, path, ineq, num_eoms, num_controls, weights, D, tf, t0, n, aux):
-    states = [X[(ii) * n:(ii + 1) * n] for ii in range(num_eoms)]
-    ni = (num_eoms) * n
-    controls = [X[ni + ii * n:ni + (ii + 1) * n] for ii in range(num_controls)]
-    ni = (num_eoms + num_controls) * n
-    params = X[ni:]
-    y = np.vstack(states).T
-    u = np.vstack(controls).T
-    cp = np.hstack([ineq([], y[ii], u[ii], params, aux) for ii in range(n)])
+    return y, u, params, nondynamical_params
+
+def _wrap_params(sol, num_eoms, num_controls, num_params, num_nondynamical_params, nodes):
+    X = np.hstack([sol.y[:, ii][:] for ii in range(num_eoms)] + [sol.u[:, ii] for ii in range(num_controls)] +
+                  [sol.dynamical_parameters] + [sol.nondynamical_parameters])
+    return X
+
+def _ineq_constraints(X, eom, bc, path, ineq, num_eoms, num_controls, num_params, num_nondynamical_params, weights, D, tf, t0, n, aux, tau, tau2, D2):
+    y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, n)
+    if num_controls > 0:
+        cp = np.hstack([ineq([], y[ii], u[ii], params, aux) for ii in range(n)])
+    else:
+        cp = np.hstack([ineq([], y[ii], [], params, aux) for ii in range(n)])
     return -cp
 
 
+@numba.jit()
 def linter(x,y,xi):
     n = len(x) - 1
     ni = len(xi)
