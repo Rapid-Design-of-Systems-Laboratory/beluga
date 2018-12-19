@@ -449,8 +449,8 @@ class Shooting(BaseAlgorithm):
         # TODO: Sean if your reading this, the following numerical jacobian function seems to work well.
         # It causes an error on one of the test cases, however, and I haven't had time to debug specifically what
         # is happening here. This is slower, but is more stable.
-        # def _jacobian_function_wrapper(X):
-        #     return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
+        def _jacobian_function_wrapper(X):
+            return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 
         # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
