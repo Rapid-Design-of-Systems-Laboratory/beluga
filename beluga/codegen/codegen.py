@@ -17,10 +17,20 @@ from sympy import I #TODO: This doesn't fix complex step derivatives.
 def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham, is_icrm=False):
     ham_args = [*states, *parameters, *constants, *controls]
     u_args = [*states, *parameters, *constants]
-    control_opt_mat = sym.Matrix([[option.get(u, '0') for u in controls] for option in control_opts])
-    control_opt_fn = make_sympy_fn(u_args, control_opt_mat)
-    ham_fn = make_sympy_fn(ham_args, ham)
+    control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
 
+    u_str = '['
+    for ii in range(len(control_opts)):
+        if ii > 0:
+            u_str += ','
+        u_str += '['
+        u_str += ','.join(control_opt_mat[ii])
+        u_str += ']'
+
+    u_str += ']'
+    control_opt_fn = make_jit_fn(u_args, u_str)
+
+    ham_fn = make_sympy_fn(ham_args, ham)
     num_options = len(control_opts)
     num_states = len(states)
     num_controls = len(controls)
@@ -32,7 +42,7 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
         def compute_control_fn(t, X, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
-            u_list = control_opt_fn(*X, *p, *C)
+            u_list = np.array(control_opt_fn(*X, *p, *C))
             ham_val = np.zeros(num_options)
             for i in range(num_options):
                 ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
@@ -44,32 +54,26 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
 
 def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control, is_icrm=False):
     ham_args = [*states, *parameters, *constants, *controls]
-    eom_fn = [make_sympy_fn(ham_args, eom) for eom in deriv_list]
+    eom_fn = make_jit_fn(ham_args, '(' + ','.join(deriv_list) + ')')
 
     num_controls = len(controls)
     num_params = len(parameters)
-    num_eoms = len(eom_fn)
+    num_eoms = len(deriv_list)
 
     if is_icrm:
         def deriv_func(t, X, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
             u = compute_control(t, X, p, aux)
-            eom_vals = np.zeros(num_eoms)
             _X = X[:-num_controls]
-            for ii in range(num_eoms):
-                eom_vals[ii] = eom_fn[ii](*_X, *p, *C, *u)
-
+            eom_vals = eom_fn(*_X, *p, *C, *u)
             return eom_vals
     else:
         def deriv_func(t, X, p, aux):
             C = aux['const'].values()
             p = p[:num_params]
             u = compute_control(t, X, p, aux)
-            eom_vals = np.zeros(num_eoms)
-            for ii in range(num_eoms):
-                eom_vals[ii] = eom_fn[ii](*X, *p, *C, *u)
-
+            eom_vals = eom_fn(*X, *p, *C, *u)
             return eom_vals
 
     return deriv_func
