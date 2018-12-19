@@ -1,6 +1,6 @@
 from beluga.bvpsol.algorithms import BaseAlgorithm
 from beluga.ivpsol import Trajectory
-from scipy.optimize import minimize
+# from scipy.optimize import minimize
 
 import numba
 
@@ -122,8 +122,10 @@ class Pseudospectral(BaseAlgorithm):
             constraints.append({'type': 'ineq', 'fun': _ineq_constraints, 'args': arrrgs})
 
         iprint = 1
+        from beluga.poptim import minimize
         xopt = minimize(_cost, Xinit, args=arrrgs, method='SLSQP', tol=1e-8, constraints=constraints, options={'ftol':1e-8,'disp':True, 'iprint':iprint})
-
+        # xopt = alm(_cost, Xinit, _eq_constraints, None, arrrgs)
+        # breakpoint()
         X = xopt['x']
         y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
         sol.y = y
@@ -194,14 +196,14 @@ def _cost(X, eom, bc, path, ineq, num_eoms, num_controls, num_params, num_nondyn
 
 def _eq_constraints(X, eom, bc, path, ineq, num_eoms, num_controls, num_params, num_nondynamical_params, weights, D, tf, t0, n, aux, tau, tau2, D2):
     y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, n)
-    y2 = np.column_stack([linter(tau, y[:, ii], tau2) for ii in range(num_eoms)])
-    if num_controls > 0:
-        u2 = np.column_stack([linter(tau, u[:, ii], tau2) for ii in range(num_controls)])
-    else:
-        u2 = np.array([])
+    # y2 = np.column_stack([linter(tau, y[:, ii], tau2) for ii in range(num_eoms)])
+    # if num_controls > 0:
+    #     u2 = np.column_stack([linter(tau, u[:, ii], tau2) for ii in range(num_controls)])
+    # else:
+    #     u2 = np.array([])
 
     if num_controls > 0:
-        yd = np.vstack([eom([], y2[ii], u2[ii], params, aux) for ii in range(n-1)])
+        yd = np.vstack([eom([], y[ii], u[ii], params, aux) for ii in range(n)])
     else:
         yd = np.vstack([eom([], y2[ii], params, aux) for ii in range(n-1)])
 
@@ -211,7 +213,7 @@ def _eq_constraints(X, eom, bc, path, ineq, num_eoms, num_controls, num_params, 
         c0 = bc(t0, y[0], [], u[0], tf, y[-1], [], u[-1], params, nondynamical_params, aux)
     else:
         c0 = bc(t0, y[0], [], tf, y[-1], [], params, nondynamical_params, aux)
-    c1 = np.dot(D2, y2) - F
+    c1 = np.dot(D, y) - F
     c1 = np.hstack([c1[:, ii][:] for ii in range(num_eoms)])
     return np.hstack((c0, c1))
 
