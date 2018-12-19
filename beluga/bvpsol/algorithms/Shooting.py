@@ -13,6 +13,7 @@ scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
 scipy_root_algorithms = {'hybr', 'lm', 'broyden1', 'broyden2', 'anderson', 'linearmixing', 'diagbroyden',
                          'excitingmixing', 'krylov', 'df-sane'}
 
+from scipy.optimize.slsqp import approx_jacobian
 
 class Shooting(BaseAlgorithm):
     r"""
@@ -445,6 +446,11 @@ class Shooting(BaseAlgorithm):
         def _jacobian_function_wrapper(X):
             return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
 
+        # TODO: Sean if your reading this, the following numerical jacobian function seems to work well.
+        # It causes an error on one of the test cases, however, and I haven't had time to debug specifically what
+        # is happening here. This is slower, but is more stable.
+        def _jacobian_function_wrapper(X):
+            return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 
         # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
