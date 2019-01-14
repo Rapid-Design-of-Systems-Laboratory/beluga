@@ -14,6 +14,7 @@ from beluga.bvpsol import algorithms, Solution
 from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
+from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 import time
 from collections import OrderedDict
 import pathos
@@ -100,6 +101,8 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
         bvp_ws, guess_mapper = ICRM_ocp_to_bvp(ocp)
     elif method.lower() == 'diffyg':
         bvp_ws, guess_mapper = DIFFYG_ocp_to_bvp(ocp)
+    elif method.lower() == 'direct':
+        bvp_ws, guess_mapper = DIRECT_ocp_to_bvp(ocp)
     else:
         raise NotImplementedError
 
@@ -120,14 +123,13 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     solinit.aux['dynamical_parameters'] = bvp_ws['dynamical_parameters']
     solinit.aux['nondynamical_parameters'] = bvp_ws['nondynamical_parameters']
 
-    bvp = preprocess(bvp_ws)
+    bvp, initial_cost, path_cost, terminal_cost, ineq_constraints = preprocess(bvp_ws)
     solinit = bvp_ws['guess'].generate(bvp, solinit, guess_mapper)
 
     state_names = bvp_ws['states']
 
     initial_states = solinit.y[0, :]
     terminal_states = solinit.y[-1, :]
-
 
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
@@ -163,7 +165,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     ocp._scaling.initialize(bvp_ws)
     bvp_ws['scaling'] = ocp._scaling
 
-    out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    out['solution'] = run_continuation_set(bvp_ws, bvp_algorithm, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, ineq_constraints, pool, autoscale)
     total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -172,9 +174,10 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     # Final time is appended as a parameter, so scale the output x variables to show the correct time
     for continuation_set in out['solution']:
         for sol in continuation_set:
-            tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
-            tf = sol.dynamical_parameters[tf_ind]
-            sol.t = sol.t*tf
+            if autoscale:
+                tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
+                tf = sol.dynamical_parameters[tf_ind]
+                sol.t = sol.t*tf
 
     if pool is not None:
         pool.close()
@@ -186,7 +189,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     return out['solution'][-1][-1]
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale):
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, ineq_constraints, pool, autoscale):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
@@ -197,6 +200,10 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
     bvp_algo.set_derivative_function(bvp.deriv_func)
     bvp_algo.set_quadrature_function(bvp.quad_func)
     bvp_algo.set_boundarycondition_function(bvp.bc_func)
+    bvp_algo.set_initial_cost_function(initial_cost)
+    bvp_algo.set_path_cost_function(path_cost)
+    bvp_algo.set_terminal_cost_function(terminal_cost)
+    bvp_algo.set_inequality_constraint_function(ineq_constraints)
     try:
         sol_guess = solinit
         sol = None
@@ -220,8 +227,11 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
                 sol = bvp_algo.solve(sol_guess, pool=pool)
                 step.last_sol.converged = sol.converged
 
+
                 if autoscale:
                     sol = s.unscale(sol)
+
+                sol_guess = copy.deepcopy(sol)
 
                 if sol.converged:
                     # Post-processing phase
@@ -230,22 +240,15 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['controls']
 
-                    # TODO: Make control computation more efficient
-                    # for i in range(len(sol.x)):
-                    #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
-                    #     sol.u[:,i] = _u
-
-                    ## DAE mode
-                    # sol.u = sol.y[problem_data['num_states']:,:]
-                    # Non-DAE:
-                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
-                    sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+                    if ocp_ws['method'] is not 'direct':
+                        f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
+                        sol.u = np.array(list(map(f, sol.t, list(sol.y))))
                     # keyboard()
 
                     # Copy solution object for storage and reuse `sol` in next
                     # iteration
                     solution_set[step_idx].append(copy.deepcopy(sol))
-                    sol_guess = copy.deepcopy(sol)
+                    # sol_guess = copy.deepcopy(sol)
                     elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 else:

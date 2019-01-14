@@ -3,7 +3,7 @@ from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, We
 import copy
 import logging
 from beluga.bvpsol import Solution
-from beluga.codegen import make_jit_fn
+from beluga.codegen import make_jit_fn, make_control_and_ham_fn
 import numpy as np
 import itertools as it
 from .optimlib import *
@@ -23,6 +23,7 @@ def ocp_to_bvp(ocp):
     constants_values = ws['constants_values']
     constants_of_motion = ws['constants_of_motion']
     constants_of_motion_values = ws['constants_of_motion_values']
+    constants_of_motion_values_original = copy.deepcopy(constants_of_motion_values)
     constants_of_motion_units = ws['constants_of_motion_units']
     symmetries = ws['symmetries']
     constraints = ws['constraints']
@@ -73,6 +74,7 @@ def ocp_to_bvp(ocp):
     states_rates = [x.subs(setx, simultaneous=True) for x in states_rates]
     costates = J1tau_Q.vertical.base_coords[num_states:]
     constants_of_motion_values = [x.subs(setx, simultaneous=True) for x in constants_of_motion_values]
+    constants_of_motion_values_original = [x.subs(setx, simultaneous=True) for x in constants_of_motion_values_original]
     symmetries = [x.subs(setx, simultaneous=True) for x in symmetries]
     symmetries = [x.subs(settangent, simultaneous=True) for x in symmetries]
     constraints['initial'] = [x.subs(setx, simultaneous=True) for x in constraints['initial']]
@@ -81,6 +83,11 @@ def ocp_to_bvp(ocp):
     terminal_cost = terminal_cost.subs(setx, simultaneous=True)
 
     hamiltonian = hamiltonian.subs(setx, simultaneous=True)
+    dhdt = derivative_fn(hamiltonian, independent_variable)
+    # if dhdt == 0:
+    #     constants_of_motion = constants_of_motion + [Symbol('hamiltonian')]
+    #     constants_of_motion_values = constants_of_motion_values + [hamiltonian]
+    #     constants_of_motion_units = constants_of_motion_units + [hamiltonian_units]
 
     coparameters = make_costate_names(parameters)
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
@@ -96,14 +103,14 @@ def ocp_to_bvp(ocp):
     pi = 0
     omega = 0
     for ii in range(num_states):
-        pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
+        # pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
+        pi += TensorProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states]) - TensorProduct(J1tau_Q.base_vectors[ii + num_states], J1tau_Q.base_vectors[ii])
         omega += WedgeProduct(J1tau_Q.base_oneforms[ii], J1tau_Q.base_oneforms[ii + num_states])
 
     state_costate_pairing = 0
     for ii in range(num_states):
         state_costate_pairing += TensorProduct(J1tau_Q.base_coords[ii + num_states]*J1tau_Q.base_vectors[ii]) + TensorProduct(J1tau_Q.base_coords[ii]*J1tau_Q.base_vectors[ii + num_states])
 
-    constant_2_value = {c: v for c, v in zip(constants_of_motion, constants_of_motion_values)}
     constant_2_units = {c: u for c, u in zip(constants_of_motion, constants_of_motion_units)}
 
     reduced_states = states + costates
@@ -151,20 +158,43 @@ def ocp_to_bvp(ocp):
         reducible_subalgebras = [len(gs)==1 for gs in subalgebras]
         logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras)) + ' subalgebras are double reducible.')
 
+    M = J1tau_Q.vertical
     for subalgebra in subalgebras:
-        free_vars = set()
+        constant_2_value = {c: v for c, v in zip(constants_of_motion, constants_of_motion_values)}
         dim = len(subalgebra)
         if dim > 1:
             raise NotImplementedError
-
-        for c in subalgebra:
-            free_vars |= constant_2_value[c].atoms(reduced_states[0])
+        # G_name = 'G_' + str(subalgebra).replace('{','').replace('}','')
+        # G = LieGroup(list(subalgebra), G_name)
+        # h = constant_2_value[constants_of_motion[0]]
 
         logging.info('Attempting reduction of ' + str(subalgebra) + '...')
+        # M_r, phi = restrictor(M, dict([(x, constant_2_value[x]) for x in list(subalgebra)]))
+        free_vars = set()
+        const = dict([(x, constant_2_value[x]) for x in list(subalgebra)])
+        for c in const.keys():
+            free_vars |= const[c].atoms(reduced_states[0])
 
-        eq_set = [c - constant_2_value[c] for ii,c in enumerate(subalgebra)]
+        eq_set = [c - const[c] for c in const.keys()]
+        constants_sol = sympy.solve(eq_set, list(free_vars), dict=True, minimal=True, simplify=False)[0]
 
-        constants_sol = sympy.solve(eq_set, list(free_vars), dict=False, minimal=True, simplify=False)
+        # hamiltonian = phi.pullback(hamiltonian)
+
+        # g_ii = 0
+        # for ii in range(len(M_r.base_coords)):
+        #     for jj in range(len(M_r.base_coords)):
+        #         g_ii += TensorProduct(M_r.base_oneforms[ii], M_r.base_oneforms[jj])
+        # omega = phi.pullback(omega)
+        # # pi = M_r.sharp(omega)
+        # constants_of_motion = [phi.pullback(c) for c in constants_of_motion]
+        # dH = M_r.exteriorderivative(hamiltonian)
+        # eoms = omega.rcall(None, M_r.sharp(dH))
+        # breakpoint()
+        # eps_c = omega.rcall(None, M_r.sharp(M_r.exteriorderivative(constants_of_motion[0])))
+        # quad_field = eoms.rcall(M_r.sharp(omega.rcall(None, constants_of_motion[0])))
+        # breakpoint()
+        #
+        # breakpoint()
         for x in constants_sol:
             reduced_states.remove(x)
             quads.append(state_costate_pairing.rcall(x))
@@ -190,6 +220,9 @@ def ocp_to_bvp(ocp):
             for control in control_law[ii]:
                 control_law[ii][control] = control_law[ii][control].subs(constants_sol, simultaneous=True)
 
+        for ii in range(len(constants_of_motion_values)):
+            constants_of_motion_values[ii] = constants_of_motion_values[ii].subs(constants_sol, simultaneous=True)
+
         for ii in range(len(bc_initial)):
             bc_initial[ii] = bc_initial[ii].subs(constants_sol, simultaneous=True)
 
@@ -203,12 +236,20 @@ def ocp_to_bvp(ocp):
     out = {'method': 'diffyg',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+           'initial_cost': None,
+           'initial_cost_units': None,
+           'path_cost': None,
+           'path_cost_units': None,
+           'terminal_cost': None,
+           'terminal_cost_units': None,
            'states': [str(x) for x in reduced_states],
            'states_units': [str(state_2_units[x]) for x in reduced_states],
            'deriv_list': [str(tf_var * rate) for rate in equations_of_motion],
            'quads': [str(x) for x in quads],
            'quads_rates': [str(tf_var * x) for x in quads_rates],
            'quads_units': [str(x) for x in quads_units],
+           'path_constraints': [],
+           'path_constraints_units': [],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
@@ -230,7 +271,7 @@ def ocp_to_bvp(ocp):
            'control_options': control_law,
            'num_controls': len(controls)}
 
-    states_2_constants_fn = [make_jit_fn([str(x) for x in original_states], str(c)) for c in constants_of_motion_values]
+    states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c)) for c in constants_of_motion_values_original]
     states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
 
     def guess_mapper(sol):
@@ -244,7 +285,8 @@ def ocp_to_bvp(ocp):
         if len(quads) > 0:
             sol_out.q = -0.0*np.array([np.ones((len(quads)))])
         sol_out.dynamical_parameters = sol.dynamical_parameters
-        sol_out.dynamical_parameters[-n_c:] = np.array([fn(*sol.y[0]) for fn in states_2_constants_fn])
+        sol_out.dynamical_parameters[-n_c:] = np.array([fn(*sol.y[0], *sol.u) for fn in states_2_constants_fn])
+        # sol_out.dynamical_parameters[-n_c:] = np.zeros(n_c)
         sol_out.nondynamical_parameters = sol.nondynamical_parameters
         sol_out.aux = sol.aux
         return sol_out
@@ -299,6 +341,10 @@ class Manifold(object):
         # If's f's grade is 1 or higher, we still need to implement this
         if order > 0:
             raise NotImplementedError('Exterior derivative of forms higher order than 1 is not implemented.')
+
+
+class LieGroup(Manifold):
+    pass
 
 
 class FiberBundle(Manifold):
@@ -387,21 +433,6 @@ class JetBundle(FiberBundle):
         return obj
 
 
-# TODO: Delete this?
-# class SymplecticManifold(Manifold):
-#     def __new__(cls, *args, verbose=False):
-#         obj = super(SymplecticManifold, cls).__new__(cls, *args, verbose=verbose)
-#         if obj.dimension % 2 == 1:
-#             raise ValueError
-#         obj.symplecticform = 0
-#         return obj
-#
-#     def __init__(self, *args, verbose=False):
-#         super(SymplecticManifold, self).__init__(*args, verbose=verbose)
-#         d = int(self.dimension/2)
-#         self.symplecticform = sum([WedgeProduct(dx,dy) for (dx, dy) in zip(self.base_oneforms[:d], self.base_oneforms[d:])])
-
-
 def make_control_law(dhdu, controls):
     r"""
     Solves control equation to get control law.
@@ -420,3 +451,48 @@ def make_control_law(dhdu, controls):
     logging.info('Control found')
     control_options = ctrl_sol
     return control_options
+
+def restrictor(M, const):
+    free_vars = set()
+    for c in const.keys():
+        free_vars |= const[c].atoms(M.base_coords[0])
+
+    eq_set = [c - const[c] for c in const.keys()]
+    constants_sol = sympy.solve(eq_set, list(free_vars), dict=True, minimal=True, simplify=False)
+    constants_sol1 = constants_sol[0]
+
+    coords = copy.deepcopy(M.base_coords)
+    indices = [ii for ii in range(len(coords))]
+    for x in constants_sol1.keys():
+        ind = M.base_coords.index(x)
+        coords.remove(x)
+        indices.remove(ind)
+
+    M_restricted = Manifold(coords, 'M_restricted')
+    extras = dict((M.base_coords[indices[ii]], M_restricted.base_coords[ii]) for ii in range(len(M_restricted.base_coords)))
+    constants_sol1.update(extras)
+    mapper = Map(M, M_restricted, constants_sol1)
+    return M_restricted, mapper
+
+class Map(object):
+    def __new__(cls, source, target, function):
+        obj = super(Map, cls).__new__(cls)
+        obj.source = source
+        obj.target = target
+        obj.coord = function
+        obj.form = dict()
+        for x in function.keys():
+            dx0 = obj.source.exteriorderivative(x)
+            dxf = obj.target.exteriorderivative(function[x])
+            obj.form.update({dx0: dxf})
+
+        return obj
+
+    def pullback(self, func):
+        # TODO: Fully implement the pullback operation. I think there's a bug in SymPy 1.3 that is preventing this.
+        func = func.subs(self.coord, simultaneous=True)
+        func = func.subs(self.form, simultaneous=True)
+        return func
+
+    def pushforward(self, func):
+        raise NotImplementedError

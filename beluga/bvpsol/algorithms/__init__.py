@@ -1,6 +1,7 @@
 from .BaseAlgorithm import BaseAlgorithm
 from .Shooting import Shooting
 from .Collocation import Collocation
+from .Pseudospectral import Pseudospectral
 
 import os
 import glob

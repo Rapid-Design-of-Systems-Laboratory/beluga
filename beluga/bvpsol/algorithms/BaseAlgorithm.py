@@ -17,6 +17,10 @@ class BaseAlgorithm(object):
         obj.derivative_function = None
         obj.quadrature_function = None
         obj.boundarycondition_function = None
+        obj.initial_cost_function = None
+        obj.path_cost_function = None
+        obj.terminal_cost_function = None
+        obj.inequality_constraint_function = None
 
         if len(args) > 0:
             obj.derivative_function = args[0]
@@ -39,6 +43,18 @@ class BaseAlgorithm(object):
 
     def set_quadrature_function(self, quadrature_function):
         self.quadrature_function = quadrature_function
+
+    def set_initial_cost_function(self, initial_cost):
+        self.initial_cost_function = initial_cost
+
+    def set_path_cost_function(self, path_cost):
+        self.path_cost_function = path_cost
+
+    def set_terminal_cost_function(self, terminal_cost):
+        self.terminal_cost_function = terminal_cost
+
+    def set_inequality_constraint_function(self, inequality_constraint):
+        self.inequality_constraint_function = inequality_constraint
 
     @abc.abstractmethod
     def solve(self, solinit, **kwargs):
