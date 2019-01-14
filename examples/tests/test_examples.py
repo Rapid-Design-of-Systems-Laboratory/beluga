@@ -41,7 +41,7 @@ def test_brachistochrone_shooting():
 
     shooting_solver = beluga.bvp_algorithm('Shooting')
 
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
 
     continuation_steps = beluga.init_continuation()
 
@@ -54,7 +54,6 @@ def test_brachistochrone_shooting():
                        guess_generator=guess_maker)
 
     assert isinstance(sol, Trajectory)
-    assert isinstance(sol, Solution)
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
     assert sol.y.shape[1] == 7

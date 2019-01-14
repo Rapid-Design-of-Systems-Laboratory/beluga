@@ -175,10 +175,9 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     for continuation_set in out['solution']:
         for sol in continuation_set:
             if autoscale:
-                pass
-                # tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
-                # tf = sol.dynamical_parameters[tf_ind]
-                # sol.t = sol.t*tf
+                tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
+                tf = sol.dynamical_parameters[tf_ind]
+                sol.t = sol.t*tf
 
     if pool is not None:
         pool.close()
