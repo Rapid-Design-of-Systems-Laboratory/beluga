@@ -228,8 +228,11 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                 sol = bvp_algo.solve(sol_guess, pool=pool)
                 step.last_sol.converged = sol.converged
 
+
                 if autoscale:
                     sol = s.unscale(sol)
+
+                sol_guess = copy.deepcopy(sol)
 
                 if sol.converged:
                     # Post-processing phase
@@ -238,14 +241,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['controls']
 
-                    # TODO: Make control computation more efficient
-                    # for i in range(len(sol.x)):
-                    #     _u = bvp.control_func(sol.x[i],sol.y[:,i],sol.parameters,sol.aux)
-                    #     sol.u[:,i] = _u
-
-                    ## DAE mode
-                    # sol.u = sol.y[problem_data['num_states']:,:]
-                    # Non-DAE:
                     if ocp_ws['method'] is not 'direct':
                         f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
                         sol.u = np.array(list(map(f, sol.t, list(sol.y))))
@@ -254,7 +249,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                     # Copy solution object for storage and reuse `sol` in next
                     # iteration
                     solution_set[step_idx].append(copy.deepcopy(sol))
-                    sol_guess = copy.deepcopy(sol)
+                    # sol_guess = copy.deepcopy(sol)
                     elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 else:
