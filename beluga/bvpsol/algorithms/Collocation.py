@@ -29,7 +29,7 @@ class Collocation(BaseAlgorithm):
         +------------------------+-----------------+-----------------+
         | max_iterations         | 100             | > 0             |
         +------------------------+-----------------+-----------------+
-        | number_of_nodes        | 40              | > 1             |
+        | number_of_nodes        | 30              | >= 4            |
         +------------------------+-----------------+-----------------+
         | use_numba              | False           | Bool            |
         +------------------------+-----------------+-----------------+
@@ -66,6 +66,7 @@ class Collocation(BaseAlgorithm):
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         """
+        raise NotImplementedError('Update this strategy to use nlnlp\'s SQP solver')
         sol = copy.deepcopy(solinit)
         sol.set_interpolate_function('cubic')
         number_of_datapoints = len(sol.t)
