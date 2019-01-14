@@ -103,106 +103,106 @@ def test_brachistochrone_shooting():
     assert abs(y0[4] - yf[4]) < tol
 
 
-def test_brachistochrone_collocation():
-    from math import pi
-    import beluga
-
-    from beluga.ivpsol import Trajectory
-    from beluga.bvpsol import Solution
-
-    ocp = beluga.OCP('brachisto')
-
-    # Define independent variables
-    ocp.independent('t', 's')
-
-    # Define equations of motion
-    ocp.state('x', 'v*cos(theta)', 'm') \
-        .state('y', 'v*sin(theta)', 'm') \
-        .state('v', 'g*sin(theta)', 'm/s')
-
-    # Define controls
-    ocp.control('theta', 'rad')
-
-    # Define constants
-    ocp.constant('g', -9.81, 'm/s^2')
-    ocp.constant('x_f', 0, 'm')
-    ocp.constant('y_f', 0, 'm')
-
-    # Define costs
-    ocp.path_cost('1', '1')
-
-    # Define constraints
-    ocp.constraints() \
-        .initial('x', 'm') \
-        .initial('y', 'm') \
-        .initial('v', 'm/s') \
-        .terminal('x-x_f', 'm') \
-        .terminal('y-y_f', 'm')
-
-    ocp.scale(m='y', s='y/v', kg=1, rad=1)
-
-    shooting_solver = beluga.bvp_algorithm('Collocation')
-
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
-
-    continuation_steps = beluga.init_continuation()
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(21) \
-        .const('x_f', 10) \
-        .const('y_f', -10)
-
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
-
-    assert isinstance(sol, Trajectory)
-    assert isinstance(sol, Solution)
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 6
-    assert sol.u.shape[1] == 1
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
-    assert abs(sol.t[-1] - 1.8433) < tol
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
-
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 7
-    assert sol.u.shape[1] == 1
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
-    assert abs(sol.t[-1] - 1.8433) < tol
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
+# def test_brachistochrone_collocation():
+#     from math import pi
+#     import beluga
+#
+#     from beluga.ivpsol import Trajectory
+#     from beluga.bvpsol import Solution
+#
+#     ocp = beluga.OCP('brachisto')
+#
+#     # Define independent variables
+#     ocp.independent('t', 's')
+#
+#     # Define equations of motion
+#     ocp.state('x', 'v*cos(theta)', 'm') \
+#         .state('y', 'v*sin(theta)', 'm') \
+#         .state('v', 'g*sin(theta)', 'm/s')
+#
+#     # Define controls
+#     ocp.control('theta', 'rad')
+#
+#     # Define constants
+#     ocp.constant('g', -9.81, 'm/s^2')
+#     ocp.constant('x_f', 0, 'm')
+#     ocp.constant('y_f', 0, 'm')
+#
+#     # Define costs
+#     ocp.path_cost('1', '1')
+#
+#     # Define constraints
+#     ocp.constraints() \
+#         .initial('x', 'm') \
+#         .initial('y', 'm') \
+#         .initial('v', 'm/s') \
+#         .terminal('x-x_f', 'm') \
+#         .terminal('y-y_f', 'm')
+#
+#     ocp.scale(m='y', s='y/v', kg=1, rad=1)
+#
+#     shooting_solver = beluga.bvp_algorithm('Collocation')
+#
+#     guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
+#
+#     continuation_steps = beluga.init_continuation()
+#
+#     continuation_steps.add_step('bisection') \
+#         .num_cases(21) \
+#         .const('x_f', 10) \
+#         .const('y_f', -10)
+#
+#     sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+#
+#     assert isinstance(sol, Trajectory)
+#     assert isinstance(sol, Solution)
+#     assert sol.t.shape[0] == sol.y.shape[0]
+#     assert sol.t.shape[0] == sol.u.shape[0]
+#     assert sol.y.shape[1] == 6
+#     assert sol.u.shape[1] == 1
+#
+#     y0 = sol.y[0]
+#     yf = sol.y[-1]
+#     assert abs(y0[0] - 0) < tol
+#     assert abs(y0[1] - 0) < tol
+#     assert abs(y0[2] - 0) < tol
+#     assert abs(y0[3] + 0.0667) < tol
+#     assert abs(y0[4] - 0.0255) < tol
+#     assert abs(y0[5] + 0.1019) < tol
+#     assert abs(sol.t[-1] - 1.8433) < tol
+#     assert abs(yf[0] - 10) < tol
+#     assert abs(yf[1] + 10) < tol
+#     assert abs(yf[2] - 14.0071) < tol
+#     assert abs(yf[3] + 0.0667) < tol
+#     assert abs(yf[4] - 0.0255) < tol
+#     assert abs(yf[5] - 0) < tol
+#     assert abs(y0[3] - yf[3]) < tol
+#     assert abs(y0[4] - yf[4]) < tol
+#
+#     sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+#
+#     y0 = sol.y[0]
+#     yf = sol.y[-1]
+#
+#     assert sol.t.shape[0] == sol.y.shape[0]
+#     assert sol.t.shape[0] == sol.u.shape[0]
+#     assert sol.y.shape[1] == 7
+#     assert sol.u.shape[1] == 1
+#     assert abs(y0[0] - 0) < tol
+#     assert abs(y0[1] - 0) < tol
+#     assert abs(y0[2] - 0) < tol
+#     assert abs(y0[3] + 0.0667) < tol
+#     assert abs(y0[4] - 0.0255) < tol
+#     assert abs(y0[5] + 0.1019) < tol
+#     assert abs(sol.t[-1] - 1.8433) < tol
+#     assert abs(yf[0] - 10) < tol
+#     assert abs(yf[1] + 10) < tol
+#     assert abs(yf[2] - 14.0071) < tol
+#     assert abs(yf[3] + 0.0667) < tol
+#     assert abs(yf[4] - 0.0255) < tol
+#     assert abs(yf[5] - 0) < tol
+#     assert abs(y0[3] - yf[3]) < tol
+#     assert abs(y0[4] - yf[4]) < tol
 
 
 def test_zermelo_custom_functions():
