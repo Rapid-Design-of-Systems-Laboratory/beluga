@@ -27,7 +27,7 @@ class Pseudospectral(BaseAlgorithm):
         +------------------------+-----------------+-----------------+
         | max_iterations         | 100             | > 0             |
         +------------------------+-----------------+-----------------+
-        | number_of_nodes        | 15              | >= 4            |
+        | number_of_nodes        | 10              | >= 4            |
         +------------------------+-----------------+-----------------+
         | tolerance              | 1e-4            | > 0             |
         +------------------------+-----------------+-----------------+
@@ -38,7 +38,7 @@ class Pseudospectral(BaseAlgorithm):
         closure = kwargs.get('closure', False)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
-        number_of_nodes = kwargs.get('number_of_nodes', 15)
+        number_of_nodes = kwargs.get('number_of_nodes', 10)
         tolerance = kwargs.get('tolerance', 1e-4)
 
         obj.closure = closure
@@ -52,23 +52,36 @@ class Pseudospectral(BaseAlgorithm):
         """
         Solve a two-point boundary value problem using the pseudospectral method.
 
-        :param deriv_func: The ODE function.
-        :param quad_func: The quad func.
-        :param bc_func: The boundary conditions function.
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         """
         sol = copy.deepcopy(solinit)
+
+        # Find the number of states
         num_eoms = sol.y.shape[1]
+
+        # Find the number of quads
+        if sol.q.size > 0:
+            num_quads = sol.q.shape[1]
+        else:
+            num_quads = 0
+
+        # Find the number of controls
         if sol.u.size > 0:
             num_controls = sol.u.shape[1]
         else:
             num_controls = 0
-        # num_controls=0
 
-        # Default costs to return nothing if not defined
+        # Find the number of parameters
+        num_params = sol.dynamical_parameters.size
+        num_nondynamical_params = sol.nondynamical_parameters.size
+
+        # Default costs and quads to return nothing if not defined
         def return_nil(*args, **kwargs):
             return np.array([])
+
+        if self.quadrature_function is None:
+            self.quadrature_function = return_nil
 
         if self.initial_cost_function is None:
             self.initial_cost_function = return_nil
@@ -82,14 +95,25 @@ class Pseudospectral(BaseAlgorithm):
         if self.inequality_constraint_function is None:
             self.inequality_constraint_function = return_nil
 
-        if num_controls > 0:
-            num_bcs = len(self.boundarycondition_function(sol.t[0], sol.y[0], [], sol.u[0], sol.t[-1], sol.y[-1], [], sol.u[-1], sol.dynamical_parameters, sol.nondynamical_parameters, sol.aux))
+        if num_quads > 0:
+            q0 = sol.q[0]
+            qf = sol.q[-1]
         else:
-            num_bcs = len(self.boundarycondition_function(sol.t[0], sol.y[0], [], sol.t[-1], sol.y[-1], [], sol.dynamical_parameters, sol.nondynamical_parameters, sol.aux))
+            q0 = []
+            qf = []
 
-        num_params = len(sol.dynamical_parameters)
-        num_nondynamical_params = len(sol.nondynamical_parameters)
-        num_quads = 0
+        if num_controls > 0:
+            u0 = sol.u[0]
+            uf = sol.u[-1]
+        else:
+            u0 = []
+            uf = []
+
+        if num_controls > 0:
+            num_bcs = len(self.boundarycondition_function(sol.t[0], sol.y[0], q0, u0, sol.t[-1], sol.y[-1], qf, uf, sol.dynamical_parameters, sol.nondynamical_parameters, sol.aux))
+        else:
+            num_bcs = len(self.boundarycondition_function(sol.t[0], sol.y[0], q0, sol.t[-1], sol.y[-1], qf, sol.dynamical_parameters, sol.nondynamical_parameters, sol.aux))
+
         t0 = sol.t[0]
         tf = sol.t[-1]
 
@@ -122,13 +146,15 @@ class Pseudospectral(BaseAlgorithm):
         tau = lglnodes(self.number_of_nodes - 1)
         weights = lglweights(tau)
         D = lglD(tau)
-        Xinit = _wrap_params(sol, num_eoms, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
+        Xinit = _wrap_params(sol, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
         extra_data = {'derivative_function': self.derivative_function,
+                      'quadrature_function': self.quadrature_function,
                       'boundarycondition_function': self.boundarycondition_function,
                       'pathcost_function': self.path_cost_function,
                       'terminalcost_function': self.terminal_cost_function,
                       'inequalityconstraint_function': self.inequality_constraint_function,
                       'num_eoms': num_eoms,
+                      'num_quads': num_quads,
                       'num_controls': num_controls,
                       'num_parameters': num_params,
                       'num_nondynamical_parameters': num_nondynamical_params,
@@ -154,8 +180,13 @@ class Pseudospectral(BaseAlgorithm):
                         nonlconineq=lambda x, kkt: _ineq_constraints(x, kkt, extra_data),
                         method='sqp')
         X = xopt['x']
-        y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
+        y, q0, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
         sol.y = y
+        if num_quads > 0:
+            Q = np.vstack([self.quadrature_function([], y[ii], params, sol.aux) for ii in range(self.number_of_nodes)])
+            sol.q = np.vstack([np.hstack([(tf - t0) / 4 * np.inner(weights[:jj], Q[:jj, ii]) for ii in range(num_quads)]) for jj in range(self.number_of_nodes)]) + q0
+        else:
+            sol.q = np.array([])
         sol.u = u
         sol.dynamical_parameters = params
         sol.nondynamical_parameters = nondynamical_params
@@ -218,6 +249,7 @@ def lglD(T):
 
 def _cost(X, data):
     num_eoms = data['num_eoms']
+    num_quads = data['num_quads']
     num_controls = data['num_controls']
     num_parameters = data['num_parameters']
     num_nondynamical_parameters = data['num_nondynamical_parameters']
@@ -227,7 +259,7 @@ def _cost(X, data):
     n = data['nodes']
     t0 = data['t0']
     tf = data['tf']
-    y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_parameters, num_nondynamical_parameters, n)
+    y, q0, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_quads, num_controls, num_parameters, num_nondynamical_parameters, n)
     if num_controls > 0:
         L = np.hstack([path([], y[ii], u[ii], params, aux) for ii in range(n)])
     else:
@@ -238,12 +270,14 @@ def _cost(X, data):
 
 def _eq_constraints(X, KKT, data):
     num_eoms = data['num_eoms']
+    num_quads = data['num_quads']
     num_controls = data['num_controls']
     num_parameters = data['num_parameters']
     num_nondynamical_parameters = data['num_nondynamical_parameters']
     eom = data['derivative_function']
-    path = data['pathcost_function']
+    quad = data['quadrature_function']
     bc = data['boundarycondition_function']
+    path = data['pathcost_function']
     aux = data['aux']
     weights = data['weights']
     D = data['D']
@@ -251,18 +285,24 @@ def _eq_constraints(X, KKT, data):
     n = data['nodes']
     t0 = data['t0']
     tf = data['tf']
-    y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_parameters, num_nondynamical_parameters, n)
+    y, q0, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_quads, num_controls, num_parameters, num_nondynamical_parameters, n)
     if num_controls > 0:
         yd = np.vstack([eom([], y[ii], u[ii], params, aux) for ii in range(n)])
     else:
         yd = np.vstack([eom([], y[ii], params, aux) for ii in range(n)])
 
+    if num_quads > 0:
+        Q = np.vstack([quad([], y[ii], params, aux) for ii in range(n)])
+        qf = np.hstack([(tf - t0) / 4 * np.inner(weights, Q[:,ii]) for ii in range(num_quads)]) + q0
+    else:
+        qf = []
+
     F = (tf - t0) / 2 * yd
 
     if num_controls > 0:
-        c0 = bc(t0, y[0], [], u[0], tf, y[-1], [], u[-1], params, nondynamical_params, aux)
+        c0 = bc(t0, y[0], q0, u[0], tf, y[-1], qf, u[-1], params, nondynamical_params, aux)
     else:
-        c0 = bc(t0, y[0], [], tf, y[-1], [], params, nondynamical_params, aux)
+        c0 = bc(t0, y[0], q0, tf, y[-1], qf, params, nondynamical_params, aux)
     c1 = np.dot(D, y) - F
     c1 = np.hstack([c1[:, ii][:] for ii in range(num_eoms)])
 
@@ -279,13 +319,15 @@ def _eq_constraints(X, KKT, data):
 
     return out
 
-def _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_params, nodes):
+def _unwrap_params(X, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, nodes):
     states = [X[(ii) * nodes:(ii + 1) * nodes] for ii in range(num_eoms)]
     ni = (num_eoms) * nodes
+    q0 = X[ni:ni+num_quads]
+    ni += num_quads
     controls = [X[ni + ii * nodes:ni + (ii + 1) * nodes] for ii in range(num_controls)]
-    ni = (num_eoms + num_controls) * nodes
+    ni += num_controls * nodes
     params = X[ni:ni + num_params]
-    ni = ni + num_params
+    ni += num_params
     nondynamical_params = X[ni:]
     y = np.column_stack(states)
     if num_controls > 0:
@@ -293,15 +335,16 @@ def _unwrap_params(X, num_eoms, num_controls, num_params, num_nondynamical_param
     else:
         u = np.array([])
 
-    return y, u, params, nondynamical_params
+    return y, q0, u, params, nondynamical_params
 
-def _wrap_params(sol, num_eoms, num_controls, num_params, num_nondynamical_params, nodes):
-    X = np.hstack([sol.y[:, ii][:] for ii in range(num_eoms)] + [sol.u[:, ii] for ii in range(num_controls)] +
-                  [sol.dynamical_parameters] + [sol.nondynamical_parameters])
+def _wrap_params(sol, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, nodes):
+    X = np.hstack([sol.y[:, ii][:] for ii in range(num_eoms)] + [sol.q[0,ii] for ii in range(num_quads)] +
+                  [sol.u[:, ii] for ii in range(num_controls)] + [sol.dynamical_parameters] + [sol.nondynamical_parameters])
     return X
 
 def _ineq_constraints(X, KKT, data):
     num_eoms = data['num_eoms']
+    num_quads = data['num_quads']
     num_controls = data['num_controls']
     num_parameters = data['num_parameters']
     num_nondynamical_parameters = data['num_nondynamical_parameters']
@@ -309,12 +352,24 @@ def _ineq_constraints(X, KKT, data):
     aux = data['aux']
     weights = data['weights']
     n = data['nodes']
-    y, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_controls, num_parameters, num_nondynamical_parameters, n)
+    y, q0, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_eoms, num_controls, num_parameters, num_nondynamical_parameters, n)
     if num_controls > 0:
         cp = np.hstack([ineq([], y[ii], u[ii], params, aux) for ii in range(n)])
     else:
         cp = np.hstack([ineq([], y[ii], [], params, aux) for ii in range(n)])
     return cp
+
+def _gauss_quads(X, KKT, data):
+    num_eoms = data['num_eoms']
+    num_controls = data['num_controls']
+    num_parameters = data['num_parameters']
+    num_nondynamical_parameters = data['num_nondynamical_parameters']
+    path = data['pathcost_function']
+    aux = data['aux']
+    weights = data['weights']
+    n = data['nodes']
+    t0 = data['t0']
+    tf = data['tf']
 
 
 @numba.jit()
