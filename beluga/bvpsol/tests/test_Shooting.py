@@ -11,13 +11,14 @@ def test_Shooting_1():
     def odefun(t, X, p, const):
         return (X[1], -abs(X[0]))
 
-    def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, const):
         return (X0[0], Xf[0]+2)
 
     algo = Shooting(odefun, None, bcfun)
     solinit = Solution()
     solinit.t = np.linspace(0,4,2)
     solinit.y = np.array([[0,1],[0,1]])
+    solinit.const = np.array([])
     out = algo.solve(solinit)
     assert out.y[0][0] < tol
     assert out.y[0][1] - 2.06641646 < tol
@@ -35,7 +36,7 @@ def test_Shooting_2():
     def odefun(t, X, p, const):
         return (X[1], -(p[0] - 2 * 5 * np.cos(2 * t)) * X[0])
 
-    def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, const):
         return (X0[1], Xf[1], X0[0] - 1)
 
     algo = Shooting(odefun, None, bcfun)
@@ -43,6 +44,7 @@ def test_Shooting_2():
     solinit.t = np.linspace(0, np.pi, 30)
     solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t))).T
     solinit.dynamical_parameters = np.array([15])
+    solinit.const = np.array([])
 
     out = algo.solve(solinit)
     assert abs(out.t[-1] - np.pi) < tol
@@ -59,7 +61,7 @@ def test_Shooting_3():
     def odefun(t, X, p, const):
         return 1 * p[0]
 
-    def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, p, ndp, const):
         return (X0[0] - 0, Xf[0] - 2)
 
     algo = Shooting(odefun, None, bcfun)
@@ -67,6 +69,7 @@ def test_Shooting_3():
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0], [0]])
     solinit.dynamical_parameters = np.array([1])
+    solinit.const = np.array([])
     out = algo.solve(solinit)
     assert abs(out.dynamical_parameters - 2) < tol
 
@@ -80,7 +83,7 @@ def test_Shooting_4():
     def quadfun(t, x, p, const):
         return x[0]
 
-    def bcfun(t0, X0, q0, tf, Xf, qf, params, ndp, aux):
+    def bcfun(t0, X0, q0, tf, Xf, qf, params, ndp, const):
         return X0[0], X0[1] - 1, qf[0] - 1.0
 
     algo = Shooting(odefun, quadfun, bcfun, num_arcs=4)
@@ -88,6 +91,7 @@ def test_Shooting_4():
     solinit.t = np.linspace(0, np.pi / 2, 2)
     solinit.y = np.array([[1, 0], [1, 0]])
     solinit.q = np.array([[0], [0]])
+    solinit.const = np.array([])
     out = algo.solve(solinit)
     assert (out.y[0,0] - 0) < tol
     assert (out.y[0,1] - 1) < tol

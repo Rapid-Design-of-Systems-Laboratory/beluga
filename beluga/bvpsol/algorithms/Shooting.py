@@ -135,7 +135,7 @@ class Shooting(BaseAlgorithm):
             q0g[ii] = _q0g
 
         def preload(args):
-            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], paramGuess, sol.aux)
+            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], paramGuess, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -162,7 +162,7 @@ class Shooting(BaseAlgorithm):
             q0g[ii] = _q0g
 
         def preload(args):
-            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], paramGuess, sol.aux)
+            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], paramGuess, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -402,7 +402,7 @@ class Shooting(BaseAlgorithm):
             return self.bc_func_ms(g, _params, _nonparams, aux)
 
         def _constraint_function_wrapper(X):
-            return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs, sol.aux)
+            return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs, sol.const)
 
         # Set up the jacobian of the constraint function
         def _jacobian_function(X, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs):
@@ -445,7 +445,7 @@ class Shooting(BaseAlgorithm):
                 phi_temp = np.reshape(temp[:, n_odes:], (len(gamma_set_new[ii].t), n_odes, n_odes + n_dynparams))
                 phi_full_list.append(np.copy(phi_temp))
 
-            J = self._bc_jac_multi(gamma_set_new, phi_full_list, _params, _nonparams, sol.aux, self.quadrature_function,
+            J = self._bc_jac_multi(gamma_set_new, phi_full_list, _params, _nonparams, sol.const, self.quadrature_function,
                                    self.bc_func_ms, StepSize=1e-6)
             return J
 
