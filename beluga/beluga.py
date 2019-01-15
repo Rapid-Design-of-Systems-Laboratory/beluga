@@ -224,6 +224,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                     s.compute_scaling(sol_guess)
                     sol_guess = s.scale(sol_guess)
 
+                sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
                 sol = bvp_algo.solve(sol_guess, pool=pool)
                 step.last_sol.converged = sol.converged
 
@@ -241,7 +242,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                     sol.ctrl_vars = problem_data['controls']
 
                     if ocp_ws['method'] is not 'direct':
-                        f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, sol.aux)
+                        f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
                         sol.u = np.array(list(map(f, sol.t, list(sol.y))))
                     # keyboard()
 
