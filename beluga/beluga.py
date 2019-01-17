@@ -278,7 +278,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                         sol.ctrl_vars = problem_data['controls']
 
                         if ocp_ws['method'] is not 'direct':
-                            f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+                            f = lambda _t, _X: bvp.compute_control(_X, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
                             sol.u = np.array(list(map(f, sol.t, list(sol.y))))
 
                         # Copy solution object for storage and reuse `sol` in next

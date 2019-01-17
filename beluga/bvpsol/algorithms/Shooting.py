@@ -266,7 +266,7 @@ class Shooting(BaseAlgorithm):
             y0, q0, u0 = gamma_set[0](t0)
             tf = gamma_set[-1].t[-1]
             yf, qf, uf = gamma_set[-1](tf)
-            bc1 = np.array(bc_func(t0, y0, q0, tf, yf, qf, paramGuess, nondynamical_parameters, *args)).flatten()
+            bc1 = np.array(bc_func(y0, q0, yf, qf, paramGuess, nondynamical_parameters, *args)).flatten()
             bc2 = np.array([gamma_set[ii].y[-1] - gamma_set[ii+1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
@@ -524,6 +524,12 @@ class Shooting(BaseAlgorithm):
                     converged = True
 
                 logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(J)))
+        elif self.algorithm.lower() == 'npnlp':
+            from npnlp import minimize as min
+            opt = min(cost, Xinit, method='sqp', tol=self.tolerance, nonlconeq=lambda x,l: _constraint_function_wrapper(x))
+            Xinit = opt['x']
+            n_iter = opt['nit']
+            converged = opt['success'] and isclose(opt['fval'], 0, abs_tol=self.tolerance)
 
         else:
             raise NotImplementedError('Method \'' + self.algorithm + '\' is not implemented.')
