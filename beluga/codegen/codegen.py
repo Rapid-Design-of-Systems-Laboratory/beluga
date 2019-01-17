@@ -2,6 +2,7 @@ import collections as cl
 import logging
 import numba
 import numpy as np
+import re
 import sympy as sym
 
 from sympy.utilities.lambdify import lambdastr
@@ -19,7 +20,7 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     u_args = [*states, *parameters, *constants]
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
 
-    u_str = '['
+    u_str = 'np.array(['
     for ii in range(len(control_opts)):
         if ii > 0:
             u_str += ','
@@ -27,7 +28,7 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
         u_str += ','.join(control_opt_mat[ii])
         u_str += ']'
 
-    u_str += ']'
+    u_str += '])'
     control_opt_fn = make_jit_fn(u_args, u_str)
 
     ham_fn = make_sympy_fn(ham_args, ham)
@@ -48,6 +49,9 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
                 ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
 
             return u_list[np.argmin(ham_val)]
+
+        # from ._codegen import traditional_compute_control_fn
+        # compute_control_fn = lambda t, X, p, C: traditional_compute_control_fn(t, X, p, C, control_opt_fn, ham_fn, num_params, num_options)
 
     return compute_control_fn, ham_fn
 
@@ -254,8 +258,12 @@ def make_functions(problem_data):
 
 def make_jit_fn(args, fn_expr):
     fn_str = 'lambda ' + ','.join([a for a in args]) + ':' + fn_expr
-    f = eval(fn_str)
+    # mod_str = fn_expr
+    # for ii in range(len(args)):
+    #     mod_str = re.sub(r'\b' + args[ii] + r'\b', '_X[' + str(ii) + ']', mod_str)
+    # full_fn = 'lambda _X:'+mod_str
 
+    f = eval(fn_str)
     try:
         jit_fn = numba.jit(nopython=True)(f)
         jit_fn(*np.ones(len(args), dtype=float))
