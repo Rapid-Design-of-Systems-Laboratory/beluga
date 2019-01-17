@@ -353,7 +353,7 @@ def _ineq_constraints(X, KKT, data):
     const = data['const']
     weights = data['weights']
     n = data['nodes']
-    y, q0, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_eoms, num_controls, num_parameters, num_nondynamical_parameters, n)
+    y, q0, u, params, nondynamical_params = _unwrap_params(X, num_eoms, num_quads, num_controls, num_parameters, num_nondynamical_parameters, n)
     if num_controls > 0:
         cp = np.hstack([ineq([], y[ii], u[ii], params, const) for ii in range(n)])
     else:

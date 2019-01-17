@@ -22,7 +22,7 @@ def postprocess_ham(r,f,p):
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     save_pic(r,f,p,'qcpi_ham')
 
-mpbvp_ds = Dill('../../1-brachistochrone/data.dill')
+mpbvp_ds = Dill('../../2-brachistochrone/data.dill')
 plots = BelugaPlot('./data.dill',default_sol=-1,default_step=-1, renderer='matplotlib')
 
 plots.add_plot(mesh_size=None).line('x','y',label='QCPI', sol=-1, step=-1, style={'lw': 0.0, 'marker':'o'}) \

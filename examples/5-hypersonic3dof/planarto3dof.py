@@ -2,7 +2,7 @@
 Entry flight-path angle is constrained so the vehicle enters
 the atmosphere fairly steep. It performs a skip maneuver to
 reach it's target. The first solution is the planar problem,
-which then is used as an initial guess into the 4-hypersonic3dof problem."""
+which then is used as an initial guess into the 5-hypersonic3dof problem."""
 from math import *
 
 import beluga

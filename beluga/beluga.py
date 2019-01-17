@@ -134,13 +134,14 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     initial_bc = dict(zip(state_names,initial_states))
     terminal_bc = dict(zip(state_names,terminal_states))
 
-    for ii in initial_bc:
-        if ii + '_0' in solinit.aux['const'].keys():
-            solinit.aux['const'][ii + '_0'] = initial_bc[ii]
+    if steps is not None:
+        for ii in initial_bc:
+            if ii + '_0' in solinit.aux['const'].keys():
+                solinit.aux['const'][ii + '_0'] = initial_bc[ii]
 
-    for ii in terminal_bc:
-        if ii + '_f' in solinit.aux['const'].keys():
-            solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
+        for ii in terminal_bc:
+            if ii + '_f' in solinit.aux['const'].keys():
+                solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
 
     quad_names = bvp_ws['quads']
     n_quads = len(quad_names)
@@ -207,54 +208,88 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
     try:
         sol_guess = solinit
         sol = None
-        for step_idx, step in enumerate(steps):
-            logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
-            solution_set.append([])
-            # Assign solution from last continuation set
-            step.reset()
-            step.init(sol_guess, problem_data)
+        if steps is None:
+            logging.info('Solving OCP...')
+            time0 = time.time()
+            if autoscale:
+                s.compute_scaling(sol_guess)
+                sol_guess = s.scale(sol_guess)
 
-            for aux in step:  # Continuation step returns 'aux' dictionary
-                sol_guess.aux = aux
+            sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
+            sol = bvp_algo.solve(sol_guess, pool=pool)
 
-                logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
-                time0 = time.time()
+            if autoscale:
+                sol = s.unscale(sol)
 
-                if autoscale:
-                    s.compute_scaling(sol_guess)
-                    sol_guess = s.scale(sol_guess)
+            if sol.converged:
+                # Post-processing phase
 
-                sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
-                sol = bvp_algo.solve(sol_guess, pool=pool)
-                step.last_sol.converged = sol.converged
+                # Compute control history, since its required for plotting to work with control variables
+                sol.ctrl_expr = problem_data['control_options']
+                sol.ctrl_vars = problem_data['controls']
+
+                if ocp_ws['method'] is not 'direct':
+                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters,
+                                                           np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+                    sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+
+                # Copy solution object for storage and reuse `sol` in next
+                # iteration
+                solution_set = [[copy.deepcopy(sol)]]
+                # sol_guess = copy.deepcopy(sol)
+                elapsed_time = time.time() - time0
+                logging.info('Problem converged in %0.4f seconds\n' % (elapsed_time))
+            else:
+                elapsed_time = time.time() - time0
+                logging.info('Problem failed to converge!\n')
+        else:
+            for step_idx, step in enumerate(steps):
+                logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+                solution_set.append([])
+                # Assign solution from last continuation set
+                step.reset()
+                step.init(sol_guess, problem_data)
+
+                for aux in step:  # Continuation step returns 'aux' dictionary
+                    sol_guess.aux = aux
+
+                    logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                    time0 = time.time()
+
+                    if autoscale:
+                        s.compute_scaling(sol_guess)
+                        sol_guess = s.scale(sol_guess)
+
+                    sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
+                    sol = bvp_algo.solve(sol_guess, pool=pool)
+                    step.last_sol.converged = sol.converged
 
 
-                if autoscale:
-                    sol = s.unscale(sol)
+                    if autoscale:
+                        sol = s.unscale(sol)
 
-                sol_guess = copy.deepcopy(sol)
+                    sol_guess = copy.deepcopy(sol)
 
-                if sol.converged:
-                    # Post-processing phase
+                    if sol.converged:
+                        # Post-processing phase
 
-                    # Compute control history, since its required for plotting to work with control variables
-                    sol.ctrl_expr = problem_data['control_options']
-                    sol.ctrl_vars = problem_data['controls']
+                        # Compute control history, since its required for plotting to work with control variables
+                        sol.ctrl_expr = problem_data['control_options']
+                        sol.ctrl_vars = problem_data['controls']
 
-                    if ocp_ws['method'] is not 'direct':
-                        f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-                        sol.u = np.array(list(map(f, sol.t, list(sol.y))))
-                    # keyboard()
+                        if ocp_ws['method'] is not 'direct':
+                            f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+                            sol.u = np.array(list(map(f, sol.t, list(sol.y))))
 
-                    # Copy solution object for storage and reuse `sol` in next
-                    # iteration
-                    solution_set[step_idx].append(copy.deepcopy(sol))
-                    # sol_guess = copy.deepcopy(sol)
-                    elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
-                else:
-                    elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+                        # Copy solution object for storage and reuse `sol` in next
+                        # iteration
+                        solution_set[step_idx].append(copy.deepcopy(sol))
+                        # sol_guess = copy.deepcopy(sol)
+                        elapsed_time = time.time() - time0
+                        logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
+                    else:
+                        elapsed_time = time.time() - time0
+                        logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
     except Exception as e:
         import traceback
         traceback.print_exc()
