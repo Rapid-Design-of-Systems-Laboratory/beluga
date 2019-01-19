@@ -115,8 +115,6 @@ def ocp_to_bvp(ocp):
            'dynamical_parameters_units': [str(c) for c in dynamical_parameters_units],
            'nondynamical_parameters': [str(c) for c in nondynamical_parameters],
            'nondynamical_parameters_units': [str(c) for c in nondynamical_parameters_units],
-           'independent_variable': str(independent_variable),
-           'independent_variable_units': str(independent_variable_units),
            'control_list': [str(x) for x in it.chain(controls)],
            'controls': [str(u) for u in controls],
            'hamiltonian': str(hamiltonian),

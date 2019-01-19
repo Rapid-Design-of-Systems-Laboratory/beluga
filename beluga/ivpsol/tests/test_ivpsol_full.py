@@ -2,7 +2,7 @@ from beluga.ivpsol import Propagator
 import numpy as np
 from math import *
 
-def compute_hamiltonian(t,X,p,aux,u):
+def compute_hamiltonian(X,p,aux,u):
     [x,y,v,lamX,lamY,lamV,tf] = X[:7]
     g = aux['const']['g']
 
@@ -10,7 +10,7 @@ def compute_hamiltonian(t,X,p,aux,u):
     return lamX*v*cos(thetta) + g*lamV*sin(thetta) + lamY*v*sin(thetta) + 1
 
 
-def compute_control(t,X,p,aux):
+def compute_control(X,p,aux):
     [x,y,v,lamX,lamY,lamV,tf] = X[:7]
     g = aux['const']['g']
 
@@ -21,7 +21,7 @@ def compute_control(t,X,p,aux):
         thetta = -acos(-((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2)))
     except:
         thetta = 0
-    ham = compute_hamiltonian(t,X,p,aux,[thetta])
+    ham = compute_hamiltonian(X,p,aux,[thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
@@ -29,7 +29,7 @@ def compute_control(t,X,p,aux):
         thetta = acos(-((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2)))
     except:
         thetta = 0
-    ham = compute_hamiltonian(t,X,p,aux,[thetta])
+    ham = compute_hamiltonian(X,p,aux,[thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
@@ -38,7 +38,7 @@ def compute_control(t,X,p,aux):
         thetta = -acos((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2))
     except:
         thetta = 0
-    ham = compute_hamiltonian(t,X,p,aux,[thetta])
+    ham = compute_hamiltonian(X,p,aux,[thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
@@ -47,7 +47,7 @@ def compute_control(t,X,p,aux):
         thetta = acos((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2))
     except:
         thetta = 0
-    ham = compute_hamiltonian(t,X,p,aux,[thetta])
+    ham = compute_hamiltonian(X,p,aux,[thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
@@ -57,11 +57,11 @@ def compute_control(t,X,p,aux):
     return thetta_saved
 
 
-def brachisto_ode(t,_X,_p,aux):
+def brachisto_ode(_X,_p,aux):
     [x, y, v, lamX, lamY, lamV, tf] = _X[:7]
     g = aux['const']['g']
 
-    thetta = compute_control(t, _X, _p, aux)
+    thetta = compute_control(_X, _p, aux)
     xdot = tf*np.array([v*cos(thetta),
                         v*sin(thetta),
                         g*sin(thetta),
