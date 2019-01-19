@@ -62,13 +62,13 @@ def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, c
     initial_fn = make_jit_fn(boundary_args, initial_cost)
     path_fn = make_jit_fn(path_args, path_cost)
     terminal_fn = make_jit_fn(boundary_args, terminal_cost)
-    def initial_cost(t0, X0, q0, u0, p, C):
+    def initial_cost(X0, q0, u0, p, C):
         return initial_fn(*X0, *p, *C, *u0)
 
-    def path_cost(t, X, u, p, C):
+    def path_cost(X, u, p, C):
         return path_fn(*X, *p, *C, *u)
 
-    def terminal_cost(tf, Xf, qf, uf, p, C):
+    def terminal_cost(Xf, qf, uf, p, C):
         return terminal_fn(*Xf, *p, *C, *uf)
 
     return initial_cost, path_cost, terminal_cost
@@ -78,7 +78,7 @@ def make_constraint_func(path_constraints, states, parameters, constants, contro
     path_args = [*states, *parameters, *constants, *controls]
     path_fn = [make_jit_fn(path_args, f) for f in path_constraints]
     num_constraints = len(path_constraints)
-    def path_constraints(t, X, u, p, C):
+    def path_constraints(X, u, p, C):
         constraint_vals = np.zeros(num_constraints)
         for ii in range(num_constraints):
             constraint_vals[ii] = path_fn[ii](*X, *p, *C, *u)
