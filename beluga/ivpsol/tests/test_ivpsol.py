@@ -7,7 +7,7 @@ tol = 1e-3
 def test_propagator_1():
     k = [-0.5, -0.2]
 
-    def odefn(t, x, p, aux):
+    def odefn(x, p, const):
         return np.array([k[0]*x[0],k[1]*x[1]])
 
     y0 = np.array([10, -50])
@@ -21,10 +21,10 @@ def test_propagator_1():
     assert (x1 - x1_expected < 1e-5).all()
 
 def test_propagator_2():
-    def odefun(t, x, p, aux):
+    def odefun(x, p, const):
         return (-x[1], x[0])
 
-    def quadfun(t, x, p, aux):
+    def quadfun(x, p, const):
         return x[0]
 
     y0 = np.array([1, 0])
