@@ -22,14 +22,14 @@ class Shooting(BaseAlgorithm):
     Given a system of ordinary differential equations, define the sensitivities as
 
     .. math::
-        A(t) = \left[\frac{\partial \mathbf{f}}{\partial \mathbf{x}}, \frac{\partial \mathbf{f}}{\partial \mathbf{p}}\right]
+        A(\tau) = \left[\frac{\partial \mathbf{f}}{\partial \mathbf{x}}, \frac{\partial \mathbf{f}}{\partial \mathbf{p}}\right]
 
     Then, the state-transition matrix is defined as the following set of first-order differential equations
 
     .. math::
         \begin{aligned}
             \Delta_0 &= \left[Id_M, \mathbf{0}\right] \\
-            \dot{\Delta} &= A(t)\Delta
+            \dot{\Delta} &= A(\tau)\Delta
         \end{aligned}
 
     Sensitivities of the boundary conditions are
