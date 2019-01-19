@@ -2,7 +2,8 @@ from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Trajectory
 import numpy as np
 import copy
-from scipy.optimize import minimize
+from npnlp import minimize
+from scipy.optimize import minimize as mini
 from scipy.integrate import simps
 import logging
 
@@ -66,7 +67,6 @@ class Collocation(BaseAlgorithm):
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         """
-        raise NotImplementedError('Update this strategy to use nlnlp\'s SQP solver')
         sol = copy.deepcopy(solinit)
         sol.set_interpolate_function('cubic')
         number_of_datapoints = len(sol.t)
@@ -97,7 +97,10 @@ class Collocation(BaseAlgorithm):
         # Set up initial guess and other info
         self.tspan = sol.t
         self.number_of_odes = sol.y.shape[1]
-        self.number_of_controls = sol.u.shape[1]
+        if sol.u.size > 0:
+            self.number_of_controls = sol.u.shape[1]
+        else:
+            self.number_of_controls = 0
 
         # TODO: The following if-then structure is silly, but I can't resolve this until some optimlib corrections are made
         if sol.q.size == 0:
@@ -122,16 +125,19 @@ class Collocation(BaseAlgorithm):
         vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
 
         self.aux = sol.aux
+        self.const = sol.const
         sol.converged = False
 
         if self.verbose:
             logging.info('Running collocation... ')
-
-        xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary], tol=self.tolerance, callback=None, options=None)
+        # This is SciPy syntax
+        xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary], tol=self.tolerance, callback=None, options=None)
+        # xopt = minimize(self._collocation_cost, vectorized, nonlconeq=lambda X, L: np.hstack((self._collocation_constraint_boundary(X), self._collocation_constraint_midpoint(X))), method='sqp')
         logging.debug(xopt['message'])
-
+        # breakpoint()
         if xopt['status'] == 0:
             sol.converged = True
+        # sol.converged = xopt['status']
 
         # Organize the output with the sol() structure
         sol.t = self.tspan
@@ -143,7 +149,7 @@ class Collocation(BaseAlgorithm):
         gamma = Trajectory(self.tspan, y, np.array([]), u)
         tf = gamma.t[-1]
         # dX = np.squeeze(self.derivative_function(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
-        dX = np.squeeze([self.derivative_function(ti, yi, ui, params, self.aux) for ti,yi,ui in zip(self.tspan, y, u)])
+        dX = np.squeeze([self.derivative_function(ti, yi, params, self.const) for ti,yi,ui in zip(self.tspan, y, u)])
         if len(dX.shape) == 1:
             dX = np.array([dX]).T
         dp0 = dX[:-1]
@@ -155,7 +161,7 @@ class Collocation(BaseAlgorithm):
         t12 = (t0+t1)/2
         midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (self.number_of_nodes - 1) / 8 * (dp0 - dp1)
         midpoint_derivative_predicted = -3 / 2 * (self.number_of_nodes - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
-        midpoint_derivative_actual = np.squeeze([self.derivative_function(ti, yi, ui, params, self.aux) for ti, yi, ui in zip(t12, midpoint_predicted, u[:-1])]) # TODO: Vectorize, so this one works as well
+        midpoint_derivative_actual = np.squeeze([self.derivative_function(ti, yi, params, self.const) for ti, yi, ui in zip(t12, midpoint_predicted, u[:-1])]) # TODO: Vectorize, so this one works as well
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
@@ -165,19 +171,28 @@ class Collocation(BaseAlgorithm):
 
     def _collocation_constraint_boundary(self, vectorized):
         X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        return self.boundarycondition_function(self.tspan[0], X[0], [], u[0], self.tspan[-1], X[-1], [], u[-1], params, nondyn_params, self.aux)
+        return self.boundarycondition_function(self.tspan[0], X[0], [], self.tspan[-1], X[-1], [], params, nondyn_params, self.const)
         # else:
         #     quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
         #     return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, nondyn_params, self.aux))
 
     def _collocation_cost(self, vectorized):
         X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        c0 = self.initial_cost_function(self.tspan[0], X[0], [], u[0], params, self.aux)
-        cf = self.terminal_cost_function(self.tspan[-1], X[-1], [], u[-1], params, self.aux)
+        if self.initial_cost_function is not None:
+            c0 = self.initial_cost_function(self.tspan[0], X[0], [], u[0], params, self.const)
+        else:
+            c0 = 0
 
-        cpath = np.array([self.path_cost_function(ti, yi, [], ui, params, self.aux) for ti, yi, ui in zip(self.tspan, X, u)])
-        cpath = simps(cpath, x=self.tspan)
-        # breakpoint()
+        if self.terminal_cost_function is not None:
+            cf = self.terminal_cost_function(self.tspan[-1], X[-1], [], u[-1], params, self.const)
+        else:
+            cf = 0
+
+        if self.path_cost_function is not None:
+            cpath = np.array([self.path_cost_function(ti, yi, [], ui, params, self.const) for ti, yi, ui in zip(self.tspan, X, u)])
+            cpath = simps(cpath, x=self.tspan)
+        else:
+            cpath = 0
         return c0 + cpath + cf
 
     def _unwrap_params(self, vectorized):
