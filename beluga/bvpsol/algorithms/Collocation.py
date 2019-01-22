@@ -71,7 +71,22 @@ class Collocation(BaseAlgorithm):
         sol.set_interpolate_function('cubic')
         number_of_datapoints = len(sol.t)
         if number_of_datapoints < 4:
-            raise ValueError('Initial guess must have at least 4 data points in collocation.')
+            # Special cae where polynomial interpolation fails. Use linear interpolation to get 4 nodes.
+            t_new = np.linspace(sol.t[0], sol.t[-1], num=4)
+            y_new = np.column_stack([np.interp(t_new, sol.t, sol.y[:,ii]) for ii in range(sol.y.shape[1])])
+            if sol.q.size > 0:
+                q_new = np.column_stack([np.interp(t_new, sol.t, sol.q[:, ii]) for ii in range(sol.q.shape[1])])
+            else:
+                q_new = np.array([])
+
+            if sol.u.size > 0:
+                u_new = np.column_stack([np.interp(t_new, sol.t, sol.q[:, ii]) for ii in range(sol.q.shape[1])])
+            else:
+                u_new = np.array([])
+            sol.t = t_new
+            sol.y = y_new
+            sol.q = q_new
+            sol.u = u_new
 
         reconstruct = False
         if self.number_of_nodes != number_of_datapoints:

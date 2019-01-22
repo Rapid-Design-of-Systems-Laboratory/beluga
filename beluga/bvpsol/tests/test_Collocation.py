@@ -1,8 +1,40 @@
+"""
+"T#" test cases from https://archimede.dm.uniba.it/~bvpsolvers/testsetbvpsolvers/?page_id=27, [1]_.
+
+References
+----------
+.. [1] Francesca Mazzia and Jeff R. Cash. A fortran test set for boundary value problem solvers.
+    AIP Conference Proceedings. 1648(1):020009, 2015.
+"""
+
 from beluga.bvpsol.algorithms import Collocation
 from beluga.bvpsol import Solution
 import numpy as np
+from scipy.special import erf
 
 tol = 1e-3
+
+def test_T6():
+    # Note: For constants smaller than 1e-1, shooting has a really hard time resolving the sharp turns in states.
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
+            np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 2, Xf[0], X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
+    solinit.const = np.array([1])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
+    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
+        np.sqrt(2) / (2 * np.sqrt(sol.const[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
 
 def test_Collocation_1():
     # Full 2PBVP test problem

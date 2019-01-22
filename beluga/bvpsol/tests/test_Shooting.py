@@ -7,20 +7,26 @@ References
     AIP Conference Proceedings. 1648(1):020009, 2015.
 """
 
+# Test the shooting solver for each algorithm listed below
+ALGORITHMS = ['Armijo', 'SLSQP']
+tol = 1e-3
+
+import pytest
 from beluga.bvpsol.algorithms import Shooting
 from beluga.bvpsol import Solution
 import numpy as np
+from scipy.special import erf
 
-tol = 1e-3
 
-def test_T1():
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_T1(algorithm):
     def odefun(X, p, const):
         return (X[1], X[0] / const[0])
 
     def bcfun(X0, q0, Xf, qf, p, ndp, const):
         return (X0[0] - 1, Xf[0])
 
-    algo = Shooting(odefun, None, bcfun)
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
@@ -34,7 +40,8 @@ def test_T1():
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-def test_T2():
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_T2(algorithm):
     def odefun(X, p, const):
         return (X[1], X[1] / const[0])
 
@@ -53,7 +60,8 @@ def test_T2():
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-def test_T3():
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_T3(algorithm):
     def odefun(X, p, const):
         return (2 * X[1], 2 * (-(2 + np.cos(np.pi * X[2])) * X[1] + X[0] - (1 + const[0] * np.pi * np.pi) * np.cos(
             np.pi * X[2]) - (2 + np.cos(np.pi * X[2])) * np.pi * np.sin(np.pi * X[2])) / const[0], 2)
@@ -73,7 +81,8 @@ def test_T3():
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-def test_T4():
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_T4(algorithm):
     def odefun(X, p, const):
         return (2 * X[1], 2 * (((1 + const[0]) * X[0] - X[1]) / const[0]), 2)
 
@@ -90,6 +99,49 @@ def test_T4():
     e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.const[0]) * (1 + sol.y[:, 2]) / sol.const[0]))
     e2 = np.exp(sol.y[:, 2] - 1) - (sol.const[0] + 1) / (
                 sol.const[0] * np.exp((sol.y[:, 2] + 1) * (sol.const[0] + 1) / sol.const[0]))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_T5(algorithm):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * ((X[0] + X[2] * X[1] - (1 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) + X[2] * np.pi * np.sin(np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
+    solinit.const = np.array([1])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2])
+    e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_T6(algorithm):
+    # Note: For constants smaller than 1e-1, shooting has a really hard time resolving the sharp turns in states.
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
+            np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 2, Xf[0], X0[2] + 1)
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
+    solinit.const = np.array([1])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
+    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
+        np.sqrt(2) / (2 * np.sqrt(sol.const[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
