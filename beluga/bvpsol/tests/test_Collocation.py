@@ -192,6 +192,26 @@ def test_T8(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+@pytest.mark.parametrize("const", HARD)
+def test_T9(const):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * (-(4 * X[2] * X[1] + 2 * X[0]) / (const[0] + X[2] ** 2)), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = 1 / (sol.const[0] + sol.y[:, 2] ** 2)
+    e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
 def test_Collocation_1():
     # Full 2PBVP test problem
     # This is the simplest BVP
