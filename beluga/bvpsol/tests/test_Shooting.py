@@ -1,8 +1,97 @@
+"""
+"T#" test cases from https://archimede.dm.uniba.it/~bvpsolvers/testsetbvpsolvers/?page_id=27, [1]_.
+
+References
+----------
+.. [1] Francesca Mazzia and Jeff R. Cash. A fortran test set for boundary value problem solvers.
+    AIP Conference Proceedings. 1648(1):020009, 2015.
+"""
+
 from beluga.bvpsol.algorithms import Shooting
 from beluga.bvpsol import Solution
 import numpy as np
 
 tol = 1e-3
+
+def test_T1():
+    def odefun(X, p, const):
+        return (X[1], X[0] / const[0])
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] - 1, Xf[0])
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 1], [0, 1]])
+    solinit.const = np.array([1e-1])
+    sol = algo.solve(solinit)
+
+    e1 = (np.exp(-sol.t / np.sqrt(sol.const)) - np.exp((sol.t - 2) / np.sqrt(sol.const))) / (
+                1 - np.exp(-2.e0 / np.sqrt(sol.const)))
+    e2 = (1. / (sol.const ** (1 / 2) * np.exp(sol.t / sol.const ** (1 / 2))) + np.exp(
+        (sol.t - 2) / sol.const ** (1 / 2)) / sol.const ** (1 / 2)) / (1 / np.exp(2 / sol.const ** (1 / 2)) - 1)
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+def test_T2():
+    def odefun(X, p, const):
+        return (X[1], X[1] / const[0])
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] - 1, Xf[0])
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 1], [0, 1]])
+    solinit.const = np.array([1e-1])
+    sol = algo.solve(solinit)
+
+    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
+    e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+def test_T3():
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * (-(2 + np.cos(np.pi * X[2])) * X[1] + X[0] - (1 + const[0] * np.pi * np.pi) * np.cos(
+            np.pi * X[2]) - (2 + np.cos(np.pi * X[2])) * np.pi * np.sin(np.pi * X[2])) / const[0], 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
+    solinit.const = np.array([1])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2])
+    e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+def test_T4():
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * (((1 + const[0]) * X[0] - X[1]) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1)
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
+    solinit.const = np.array([1])
+    sol = algo.solve(solinit)
+
+    e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.const[0]) * (1 + sol.y[:, 2]) / sol.const[0]))
+    e2 = np.exp(sol.y[:, 2] - 1) - (sol.const[0] + 1) / (
+                sol.const[0] * np.exp((sol.y[:, 2] + 1) * (sol.const[0] + 1) / sol.const[0]))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
 
 def test_Shooting_1():
     # Full 2PBVP test problem
