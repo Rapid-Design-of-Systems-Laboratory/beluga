@@ -9,17 +9,22 @@ References
 
 # Test the shooting solver for each algorithm listed below
 ALGORITHMS = ['Armijo', 'SLSQP']
+EASY = [1]
+MEDIUM = [1, 1e-1]
+HARD = [1, 1e-1, 1e-2]
+VHARD = [1, 1e-1, 1e-2, 1e-3]
 tol = 1e-3
 
 import pytest
+import itertools
 from beluga.bvpsol.algorithms import Shooting
 from beluga.bvpsol import Solution
 import numpy as np
 from scipy.special import erf
 
 
-@pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_T1(algorithm):
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T1(algorithm, const):
     def odefun(X, p, const):
         return (X[1], X[0] / const[0])
 
@@ -30,7 +35,7 @@ def test_T1(algorithm):
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
-    solinit.const = np.array([1e-1])
+    solinit.const = np.array([const])
     sol = algo.solve(solinit)
 
     e1 = (np.exp(-sol.t / np.sqrt(sol.const)) - np.exp((sol.t - 2) / np.sqrt(sol.const))) / (
@@ -40,8 +45,8 @@ def test_T1(algorithm):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-@pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_T2(algorithm):
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
+def test_T2(algorithm, const):
     def odefun(X, p, const):
         return (X[1], X[1] / const[0])
 
@@ -52,7 +57,7 @@ def test_T2(algorithm):
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
-    solinit.const = np.array([1e-1])
+    solinit.const = np.array([const])
     sol = algo.solve(solinit)
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
@@ -60,8 +65,8 @@ def test_T2(algorithm):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-@pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_T3(algorithm):
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
+def test_T3(algorithm, const):
     def odefun(X, p, const):
         return (2 * X[1], 2 * (-(2 + np.cos(np.pi * X[2])) * X[1] + X[0] - (1 + const[0] * np.pi * np.pi) * np.cos(
             np.pi * X[2]) - (2 + np.cos(np.pi * X[2])) * np.pi * np.sin(np.pi * X[2])) / const[0], 2)
@@ -73,7 +78,7 @@ def test_T3(algorithm):
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([1])
+    solinit.const = np.array([const])
     sol = algo.solve(solinit)
 
     e1 = np.cos(np.pi * sol.y[:, 2])
@@ -81,8 +86,8 @@ def test_T3(algorithm):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-@pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_T4(algorithm):
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T4(algorithm, const):
     def odefun(X, p, const):
         return (2 * X[1], 2 * (((1 + const[0]) * X[0] - X[1]) / const[0]), 2)
 
@@ -93,7 +98,7 @@ def test_T4(algorithm):
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([1])
+    solinit.const = np.array([const])
     sol = algo.solve(solinit)
 
     e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.const[0]) * (1 + sol.y[:, 2]) / sol.const[0]))
@@ -102,8 +107,8 @@ def test_T4(algorithm):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-@pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_T5(algorithm):
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
+def test_T5(algorithm, const):
     def odefun(X, p, const):
         return (2 * X[1], 2 * ((X[0] + X[2] * X[1] - (1 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) + X[2] * np.pi * np.sin(np.pi * X[2])) / const[0]), 2)
 
@@ -114,7 +119,7 @@ def test_T5(algorithm):
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([1])
+    solinit.const = np.array([const])
     sol = algo.solve(solinit)
 
     e1 = np.cos(np.pi * sol.y[:, 2])
@@ -122,8 +127,8 @@ def test_T5(algorithm):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
-@pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_T6(algorithm):
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
+def test_T6(algorithm, const):
     # Note: For constants smaller than 1e-1, shooting has a really hard time resolving the sharp turns in states.
     def odefun(X, p, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
@@ -136,7 +141,7 @@ def test_T6(algorithm):
     solinit = Solution()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([1])
+    solinit.const = np.array([const])
     sol = algo.solve(solinit)
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
