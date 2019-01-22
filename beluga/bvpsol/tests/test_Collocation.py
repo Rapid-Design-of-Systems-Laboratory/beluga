@@ -15,7 +15,6 @@ from scipy.special import erf
 tol = 1e-3
 
 def test_T6():
-    # Note: For constants smaller than 1e-1, shooting has a really hard time resolving the sharp turns in states.
     def odefun(X, p, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
             np.pi * X[2])) / const[0]), 2)
