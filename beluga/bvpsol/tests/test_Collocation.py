@@ -8,9 +8,9 @@ References
 """
 
 EASY = [1]
-MEDIUM = [1, 1e-1]
-HARD = [1, 1e-1, 1e-2]
-VHARD = [1, 1e-1, 1e-2, 1e-3]
+MEDIUM = [1e-1]
+HARD = [1e-2]
+VHARD = [1e-3]
 tol = 1e-3
 
 import pytest
@@ -209,6 +209,163 @@ def test_T9(const):
 
     e1 = 1 / (sol.const[0] + sol.y[:, 2] ** 2)
     e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T10(const):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * (-X[2] * X[1] / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0], Xf[0] - 2, X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = 1 + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
+    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
+        np.sqrt(2) / (2 * np.sqrt(sol.const[0]))))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T11(const):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2])
+    e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T12(const):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 1, Xf[0], X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
+    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T13(const):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 1, Xf[0], X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
+    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T15(const):
+    def odefun(X, p, const):
+        return (2 * X[1], 2 * (X[2] * X[0] / const[0]), 2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - 1, X0[2] + 1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=90)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+    assert sol.converged is True
+
+@pytest.mark.parametrize("const", MEDIUM)
+def test_T16(const):
+    def odefun(X, p, const):
+        return (1 * X[1], 1 * (-X[0] * np.pi ** 2 / (4 * const[0])), 1)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2])
+
+    algo = Collocation(odefun, None, bcfun)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.sin(np.pi * sol.y[:, 2] / (2 * np.sqrt(sol.const[0])))
+    e2 = (np.pi * np.cos((np.pi * sol.y[:, 2]) / (2 * np.sqrt(sol.const[0])))) / (2 * np.sqrt(sol.const[0]))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T17(const):
+    def odefun(X, p, const):
+        return (0.2 * X[1], 0.2 * (-3 * const[0] * X[0] / (const[0] + X[2] ** 2) ** 2), 0.2)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=60)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = sol.y[:,2]/np.sqrt(sol.const[0]+sol.y[:,2]**2)
+    e2 = 1/np.sqrt(sol.y[:,2]**2 + sol.const[0]) - sol.y[:,2]**2/(sol.y[:,2]**2 + sol.const[0])**(3/2)
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+@pytest.mark.parametrize("const", HARD)
+def test_T18(const):
+    def odefun(X, p, const):
+        return (X[1], (-X[1] / const[0]), 1)
+
+    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
+    solinit = Solution()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.exp(-sol.y[:, 2] / sol.const[0])
+    e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 

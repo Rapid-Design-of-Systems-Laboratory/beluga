@@ -149,7 +149,6 @@ class Collocation(BaseAlgorithm):
         xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary], tol=self.tolerance, callback=None, options=None)
         # xopt = minimize(self._collocation_cost, vectorized, nonlconeq=lambda X, L: np.hstack((self._collocation_constraint_boundary(X), self._collocation_constraint_midpoint(X))), method='sqp')
         logging.debug(xopt['message'])
-        # breakpoint()
         if xopt['status'] == 0:
             sol.converged = True
         # sol.converged = xopt['status']
