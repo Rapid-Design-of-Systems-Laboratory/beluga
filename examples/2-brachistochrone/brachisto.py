@@ -56,7 +56,7 @@ continuation_steps.add_step('bisection') \
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-sol = beluga.solve(ocp,
+sol_set = beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,

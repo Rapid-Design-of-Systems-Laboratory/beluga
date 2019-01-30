@@ -47,11 +47,13 @@ guess_maker = beluga.guess_generator('static', solinit=solinit)
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-sol = beluga.solve(ocp,
+sol_set = beluga.solve(ocp,
              method='direct',
              bvp_algorithm=bvp_solver,
              steps=None,
              guess_generator=guess_maker, autoscale=False)
+
+sol = sol_set[-1][-1]
 
 import matplotlib.pyplot as plt
 ts = np.linspace(sol.t[0], sol.t[-1], num=200)

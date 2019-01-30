@@ -50,9 +50,9 @@ def test_brachistochrone_shooting():
         .const('x_f', 10) \
         .const('y_f', -10)
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps,
+    cont = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps,
                        guess_generator=guess_maker)
-
+    sol = cont[-1][-1]
     assert isinstance(sol, Trajectory)
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
@@ -77,7 +77,8 @@ def test_brachistochrone_shooting():
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     y0 = sol.y[0]
     yf = sol.y[-1]
@@ -151,7 +152,8 @@ def test_brachistochrone_collocation():
         .const('x_f', 10) \
         .const('y_f', -10)
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     assert isinstance(sol, Trajectory)
     assert sol.t.shape[0] == sol.y.shape[0]
@@ -177,7 +179,8 @@ def test_brachistochrone_collocation():
     assert abs(y0[3] - yf[3]) < tol
     assert abs(y0[4] - yf[4]) < tol
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     y0 = sol.y[0]
     yf = sol.y[-1]
@@ -270,11 +273,12 @@ def test_zermelo_custom_functions():
         .num_cases(10) \
         .const('epsilon', 1)
 
-    sol = beluga.solve(ocp,
+    cont = beluga.solve(ocp,
                        method='icrm',
                        bvp_algorithm=bvp_solver,
                        steps=continuation_steps,
                        guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     from beluga.ivpsol import Trajectory
     assert isinstance(sol, Trajectory)
@@ -374,7 +378,8 @@ def test_planarhypersonic():
                 .num_cases(11) \
                 .const('rho0', 1.2)
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     y0 = sol.y[0]
     yf = sol.y[-1]

@@ -187,7 +187,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     with open(output_file, 'wb') as outfile:
         pickle.dump(out, outfile)
 
-    return out['solution'][-1][-1]
+    return out['solution']
 
 
 def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, path_cost, terminal_cost, ineq_constraints, pool, autoscale):
