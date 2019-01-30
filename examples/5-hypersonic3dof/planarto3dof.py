@@ -108,12 +108,13 @@ continuation_steps.add_step('bisection') \
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-sol = beluga.solve(ocp,
+cont_planar = beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
 
+sol = cont_planar[-1][-1]
 
 '''
 Begin the 3 dof portion of the solution process.
@@ -205,8 +206,20 @@ continuation_steps_2.add_step('bisection').num_cases(3) \
 continuation_steps_2.add_step('bisection').num_cases(41) \
     .const('phi_f', 2*pi/180)
 
-sol = beluga.solve(ocp_2,
+cont_3dof = beluga.solve(ocp_2,
              method='traditional',
              bvp_algorithm=bvp_solver_2,
              steps=continuation_steps_2,
              guess_generator=guess_maker_2)
+
+final_continuation = cont_3dof[-1]
+
+import matplotlib.pyplot as plt
+
+for trajectory in final_continuation:
+    # Plot altitude vs velocity for the swept crossrange cases
+    plt.plot(trajectory.y[:,3], trajectory.y[:,0])
+
+plt.xlabel('Velocity [m/s]')
+plt.ylabel('Altitude [m]')
+plt.show()
