@@ -6,7 +6,7 @@ beluga
 
 .. _GitHub: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga/releases
 
-.. _PyPI: https://pypi.org/project/beluga/#history
+.. _PyPI: https://pypi.org/project/beluga/
 
 .. _Documentation: http://beluga.readthedocs.io/en/latest/?badge=latest
 
@@ -38,28 +38,19 @@ If you already have Python 3+ installed along with pip, then do::
 
     $ pip install beluga
 
+This installs the latest version-controlled distribution of beluga. Examples in this GitHub repo are updated to reflect changes in beluga and as such may not be compatible with the versions on PyPI_. Source code is included with each release, so check under releases on GitHub_ for examples compatible with older versions of beluga. Old examples are also included in the tarballs on PyPI_ and GitHub_ under releases, but are not included in the wheels.
+
 Installation using binaries
 ---------------------------
 
-Binary files are located on PyPI_ and GitHub_.
-
-Installation using git
-----------------------
-
-To get the latest version on git, do::
-
-    $ git clone https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
-    $ cd beluga
-    $ pip install -e .
-
-Note that the latest version on github is not version controlled and is to be considered bleeding edge.
+Binary files are located on PyPI_ and GitHub_ under releases.
 
 Running a test problem
 ======================
 
 Open a terminal window and navigate to the folder where you installed beluga. Type the following commands to run the Brachistochrone problem::
 
-    $ cd examples/1-brachistochrone
+    $ cd examples/2-brachistochrone
     $ python brachisto.py
 
 The solver will proceed to solve the Brachistochrone problem.
