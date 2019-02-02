@@ -60,7 +60,7 @@ ocp.constraints() \
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP',
+bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='Armijo',
                         derivative_method='fd',
                         tolerance=1e-6,
                         max_iterations=100,
@@ -108,3 +108,9 @@ sol_set = beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
+
+sol = sol_set[-1][-1]
+
+import matplotlib.pyplot as plt
+plt.plot(sol.y[:,0], sol.y[:,1])
+plt.show()

@@ -6,6 +6,7 @@ from .optimlib import init_workspace, process_quantities
 from sympy import Symbol
 from beluga.utils import sympify
 import itertools as it
+import numpy as np
 import logging
 
 
@@ -38,6 +39,11 @@ def ocp_to_bvp(ocp):
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
 
+    # Adjoin time as a state
+    states += [independent_variable]
+    states_rates += [0]
+    states_units += [independent_variable_units]
+
     if initial_cost != 0:
         cost_units = initial_cost_units
     elif terminal_cost != 0:
@@ -69,8 +75,8 @@ def ocp_to_bvp(ocp):
            'terminal_cost': str(terminal_cost),
            'terminal_cost_units': str(terminal_cost_units),
            'states': [str(x) for x in it.chain(states)],
+           'states_rates': [str(states[-1] * rate) for rate in states_rates],
            'states_units': [str(x) for x in states_units],
-           'deriv_list': [str(rate) for rate in states_rates],
            'quads': [],
            'quads_rates': [],
            'quads_units': [],
@@ -95,7 +101,15 @@ def ocp_to_bvp(ocp):
            'control_options': None,
            'num_controls': len(controls)}
 
-    def guess_mapper(sol):
+    def guess_map(sol):
+        # Append time as a state
+        sol.y = np.column_stack((sol.y, sol.t[-1]*np.ones((sol.y.shape[0],1))))
+        sol.t = sol.t / sol.t[-1]
         return sol
 
-    return out, guess_mapper
+    def guess_map_inverse(sol):
+        sol.t = sol.t*sol.y[:, -1]
+        return sol
+
+
+    return out, guess_map, guess_map_inverse

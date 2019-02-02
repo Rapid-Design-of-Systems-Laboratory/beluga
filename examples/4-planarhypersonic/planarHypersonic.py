@@ -53,7 +53,7 @@ ocp.constraints() \
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
+bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='Armijo')
 
 guess_maker = beluga.guess_generator('auto',
                 start=[80000,0,4000,-90*pi/180],
@@ -76,7 +76,7 @@ continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .const('rho0',1.2) \
 
-beluga.add_logger(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
 
 sol_set = beluga.solve(ocp,
              method='traditional',
