@@ -9,15 +9,15 @@ def drift_x(x, y):
 def drift_y(x, y):
     return ((x-5)**4 - 625)/625
 
-# ocp.custom_function('drift_x', drift_x)
-# ocp.custom_function('drift_y', drift_y)
+ocp.custom_function('drift_x', drift_x)
+ocp.custom_function('drift_y', drift_y)
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'V*cos(theta)', 'm')   \
-   .state('y', 'V*sin(theta)', 'm')
+ocp.state('x', 'V*cos(theta) + drift_x(x,y)', 'm')   \
+   .state('y', 'V*sin(theta) + drift_y(x,y)', 'm')
 
 # Define controls
 ocp.control('theta', 'rad')
@@ -65,10 +65,16 @@ continuation_steps.add_step('bisection') \
                 .num_cases(10) \
                 .const('epsilon', 1)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set = beluga.solve(ocp,
              method='icrm',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
+
+sol = sol_set[-1][-1]
+
+import matplotlib.pyplot as plt
+plt.plot(sol.y[:,0], sol.y[:,1])
+plt.show()

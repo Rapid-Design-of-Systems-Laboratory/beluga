@@ -108,9 +108,3 @@ sol_set = beluga.solve(ocp,
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)
-
-sol = sol_set[-1][-1]
-
-import matplotlib.pyplot as plt
-plt.plot(sol.y[:,0], sol.y[:,1])
-plt.show()
