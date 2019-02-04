@@ -96,13 +96,13 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     logging.info("Computing the necessary conditions of optimality")
 
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
-        bvp_ws, guess_mapper = BH_ocp_to_bvp(ocp)
+        bvp_ws, guess_map, guess_map_inverse = BH_ocp_to_bvp(ocp)
     elif method.lower() == 'icrm':
-        bvp_ws, guess_mapper = ICRM_ocp_to_bvp(ocp)
+        bvp_ws, guess_map, guess_map_inverse = ICRM_ocp_to_bvp(ocp)
     elif method.lower() == 'diffyg':
-        bvp_ws, guess_mapper = DIFFYG_ocp_to_bvp(ocp)
+        bvp_ws, guess_map, guess_map_inverse = DIFFYG_ocp_to_bvp(ocp)
     elif method.lower() == 'direct':
-        bvp_ws, guess_mapper = DIRECT_ocp_to_bvp(ocp)
+        bvp_ws, guess_map, guess_map_inverse = DIRECT_ocp_to_bvp(ocp)
     else:
         raise NotImplementedError
 
@@ -124,7 +124,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     solinit.aux['nondynamical_parameters'] = bvp_ws['nondynamical_parameters']
 
     bvp, initial_cost, path_cost, terminal_cost, ineq_constraints = preprocess(bvp_ws)
-    solinit = bvp_ws['guess'].generate(bvp, solinit, guess_mapper)
+    solinit = bvp_ws['guess'].generate(bvp, solinit, guess_map, guess_map_inverse)
 
     state_names = bvp_ws['states']
 
@@ -175,10 +175,11 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     # Final time is appended as a parameter, so scale the output x variables to show the correct time
     for continuation_set in out['solution']:
         for sol in continuation_set:
-            if autoscale:
-                tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
-                tf = sol.dynamical_parameters[tf_ind]
-                sol.t = sol.t*tf
+            sol = guess_map_inverse(sol)
+            # if autoscale:
+            #     tf_ind = [i for i, s in enumerate(out['problem_data']['dynamical_parameters']) if str(s) is 'tf'][0]
+            #     tf = sol.dynamical_parameters[tf_ind]
+            #     sol.t = sol.t*tf
 
     if pool is not None:
         pool.close()
@@ -229,7 +230,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, initial_cost, pa
                 sol.ctrl_vars = problem_data['controls']
 
                 if ocp_ws['method'] is not 'direct':
-                    f = lambda _t, _X: bvp.compute_control(_t, _X, sol.dynamical_parameters,
+                    f = lambda _t, _X: bvp.compute_control(_X, sol.dynamical_parameters,
                                                            np.fromiter(sol.aux['const'].values(), dtype=np.float64))
                     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
 

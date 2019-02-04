@@ -245,7 +245,7 @@ def make_functions(problem_data):
         ineq_constraints = make_constraint_func(path_constraints, states, dynamical_parameters, constants, controls)
 
     logging.info('Making derivative function and bc function')
-    deriv_list = problem_data['deriv_list']
+    deriv_list = problem_data['states_rates']
 
     deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
     quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)

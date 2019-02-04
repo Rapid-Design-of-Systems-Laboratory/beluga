@@ -253,22 +253,16 @@ BVP.__new__.__defaults__ = (None,) # path constraints optional
 
 class GuessGenerator(object):
     """Generates the initial guess from a variety of sources."""
-
     def __init__(self, **kwargs):
         self.setup_funcs = {'auto': self.setup_auto,
-                            'file': self.setup_file,
-                            'static': self.setup_static,
-                            }
+                            'static': self.setup_static}
         self.generate_funcs = {'auto': self.auto,
-                               'file': self.file,
-                               'static': self.static
-                               }
+                               'static': self.static}
         self.setup(**kwargs)
         self.dae_num_states = 0
 
     def setup(self, mode='auto', **kwargs):
         """Sets up the initial guess generation process"""
-
         self.mode = mode
         if mode in self.setup_funcs:
             self.setup_funcs[mode](**kwargs)
@@ -287,47 +281,9 @@ class GuessGenerator(object):
     def setup_static(self, solinit=None):
         self.solinit = solinit
 
-    def static(self, bvp_fn, solinit, guess_mapper):
+    def static(self, bvp_fn, solinit, guess_map, guess_map_inverse):
         """Directly specify initial guess structure"""
-        return guess_mapper(self.solinit)
-
-    def setup_file(self, filename='', step=0, iteration=0):
-        self.filename = filename
-        self.step = step
-        self.iteration = iteration
-        if not os.path.exists(self.filename) or not os.path.isfile(self.filename):
-            logging.error('Data file ' + self.filename + ' not found.')
-            raise ValueError('Data file not found!')
-
-    def file(self, bvp_fn, solinit):
-        """Generates initial guess by loading an existing data file.
-        bvp_fn : BVP
-            BVP object containing functions
-        solinit : Solution
-            Solution object with some starting information (such as aux vars)
-        """
-        logging.info('Loading initial guess from ' + self.filename)
-        fp = open(self.filename, 'rb')
-        out = dill.load(fp)
-        if self.step >= len(out['solution']):
-            logging.error('Continuation step index exceeds bounds. Only ' +
-                          str(len(out['solution']))
-                          + ' continuation steps found.')
-            raise ValueError('Initial guess step index out of bounds')
-
-        if self.iteration >= len(out['solution'][self.step]):
-            logging.error('Continuation iteration index exceeds bounds. Only '
-                          + str(len(out['solution'][self.step]))
-                          + ' iterations found.')
-            raise ValueError('Initial guess iteration index out of bounds')
-
-        sol = out['solution'][self.step][self.iteration]
-        # sol.extra = None
-
-        fp.close()
-
-        logging.info('Initial guess loaded')
-        return sol
+        return guess_map(self.solinit)
 
     def setup_auto(self, start=None,
                    direction='forward',
@@ -356,11 +312,10 @@ class GuessGenerator(object):
         self.control_guess = control_guess
         self.use_control_guess = use_control_guess
 
-    def auto(self, bvp_fn, solinit, guess_mapper, param_guess=None):
+    def auto(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
-        # Assume normalized time from 0 to 1
-        tspan = np.array([0, 1])
+        tspan = np.array([0, self.time_integrate])
 
         x0 = np.array(self.start)
         q0 = np.array(self.quad_guess)
@@ -385,8 +340,6 @@ class GuessGenerator(object):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.aux['nondynamical_parameters']))
 
-        param_guess[0] = self.time_integrate
-
         if self.dae_num_states > 0:
             dae_guess = u0
             if not self.use_control_guess:
@@ -402,17 +355,17 @@ class GuessGenerator(object):
         logging.debug(str(x0))
 
         if self.direction == 'reverse':
-            tspan = [0, -1]
+            tspan = [0, -self.time_integrate]
 
         time0 = time.time()
         prop = Propagator()
         solinit.t = tspan
-        solinit.y = np.array([x0])
-        solinit.q = np.array([q0])
-        solinit.u = np.array(u0)
+        solinit.y = np.array([x0, x0])
+        solinit.q = np.array([q0, q0])
+        solinit.u = np.array([u0, u0])
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
-        sol = guess_mapper(solinit)
+        sol = guess_map(solinit)
         solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
         solout = copy.deepcopy(solivp)
         solout.dynamical_parameters = sol.dynamical_parameters

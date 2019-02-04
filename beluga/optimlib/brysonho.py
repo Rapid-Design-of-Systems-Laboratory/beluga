@@ -6,9 +6,16 @@ from .optimlib import *
 from beluga.utils import sympify
 import itertools as it
 import logging
+import numpy as np
 
 
 def ocp_to_bvp(ocp):
+    """
+
+    :param ocp:
+    :return: bvp, map, map_inverse
+    """
+
     ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
@@ -36,6 +43,11 @@ def ocp_to_bvp(ocp):
     terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
+
+    # Adjoin time as a state
+    # states += [independent_variable]
+    # states_rates += [sympify('0')]
+    # states_units += [independent_variable_units]
 
     if initial_cost != 0:
         cost_units = initial_cost_units
@@ -74,16 +86,26 @@ def ocp_to_bvp(ocp):
         constraints, states, costates, parameters, coparameters,
         augmented_terminal_cost, derivative_fn, location='terminal')
 
-    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    # if bc_initial[-1] == bc_terminal[-1]:
+    #     breakpoint()
+    #     del initial_lm_params[-1]
+    #     del bc_initial[-1]
+    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
+
+    if time_bc is not None:
+        bc_terminal += [time_bc]
 
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
 
     control_law = make_control_law(dHdu, controls)
 
     # Generate the problem data
-    tf_var = sympify('tf')
-    dynamical_parameters = [tf_var] + parameters
-    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    # TODO: We're not handling time well. This is hardcoded.
+
+    tf = sympify('_tf')
+    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
@@ -98,12 +120,12 @@ def ocp_to_bvp(ocp):
            'terminal_cost': None,
            'terminal_cost_units': None,
            'states': [str(x) for x in it.chain(states, costates)],
+           'states_rates':
+               [str(tf * rate) for rate in states_rates] +
+               [str(tf * rate) for rate in costates_rates],
            'states_units': [str(x) for x in states_units + costates_units],
-           'deriv_list':
-               [str(tf_var * rate) for rate in states_rates] +
-               [str(tf_var * rate) for rate in costates_rates],
            'quads': [str(x) for x in coparameters],
-           'quads_rates': [str(tf_var * x) for x in coparameters_rates],
+           'quads_rates': [str(tf * x) for x in coparameters_rates],
            'quads_units': [str(x) for x in coparameters_units],
            'path_constraints': [],
            'path_constraints_units': [],
@@ -126,10 +148,16 @@ def ocp_to_bvp(ocp):
            'control_options': control_law,
            'num_controls': len(controls)}
 
-    def guess_mapper(sol):
+    def guess_map(sol):
+        sol.dynamical_parameters[-1] = sol.t[-1]
+        sol.t = sol.t / sol.t[-1]
         return sol
 
-    return out, guess_mapper
+    def guess_map_inverse(sol):
+        sol.t = sol.t*sol.dynamical_parameters[-1]
+        return sol
+
+    return out, guess_map, guess_map_inverse
 
 
 def make_control_law(dhdu, controls):

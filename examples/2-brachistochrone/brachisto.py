@@ -37,7 +37,7 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting')
+bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
@@ -54,10 +54,16 @@ continuation_steps.add_step('bisection') \
                 .const('x_f', 10) \
                 .const('y_f',-10)
 
-beluga.add_logger(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
 
 sol_set = beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker, autoscale=True)
+
+sol = sol_set[-1][-1]
+
+import matplotlib.pyplot as plt
+plt.plot(sol.y[:,0], sol.y[:,1])
+plt.show()

@@ -56,7 +56,7 @@ def test_brachistochrone_shooting():
     assert isinstance(sol, Trajectory)
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 7
+    assert sol.y.shape[1] == 6
     assert sol.u.shape[1] == 1
 
     y0 = sol.y[0]
@@ -187,7 +187,7 @@ def test_brachistochrone_collocation():
 
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 7
+    assert sol.y.shape[1] == 6
     assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
