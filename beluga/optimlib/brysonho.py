@@ -10,6 +10,12 @@ import numpy as np
 
 
 def ocp_to_bvp(ocp):
+    """
+
+    :param ocp:
+    :return: bvp, map, map_inverse
+    """
+
     ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
@@ -39,9 +45,9 @@ def ocp_to_bvp(ocp):
     path_cost_units = ws['path_cost_units']
 
     # Adjoin time as a state
-    states += [independent_variable]
-    states_rates += [sympify('0')]
-    states_units += [independent_variable_units]
+    # states += [independent_variable]
+    # states_rates += [sympify('0')]
+    # states_units += [independent_variable_units]
 
     if initial_cost != 0:
         cost_units = initial_cost_units
@@ -84,16 +90,22 @@ def ocp_to_bvp(ocp):
     #     breakpoint()
     #     del initial_lm_params[-1]
     #     del bc_initial[-1]
+    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
 
-    # bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    if time_bc is not None:
+        bc_terminal += [time_bc]
 
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
 
     control_law = make_control_law(dHdu, controls)
 
     # Generate the problem data
-    dynamical_parameters = parameters
-    dynamical_parameters_units = parameters_units
+    # TODO: We're not handling time well. This is hardcoded.
+
+    tf = sympify('_tf')
+    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
@@ -109,11 +121,11 @@ def ocp_to_bvp(ocp):
            'terminal_cost_units': None,
            'states': [str(x) for x in it.chain(states, costates)],
            'states_rates':
-               [str(states[-1] * rate) for rate in states_rates] +
-               [str(states[-1] * rate) for rate in costates_rates],
+               [str(tf * rate) for rate in states_rates] +
+               [str(tf * rate) for rate in costates_rates],
            'states_units': [str(x) for x in states_units + costates_units],
            'quads': [str(x) for x in coparameters],
-           'quads_rates': [str(states[-1] * x) for x in coparameters_rates],
+           'quads_rates': [str(tf * x) for x in coparameters_rates],
            'quads_units': [str(x) for x in coparameters_units],
            'path_constraints': [],
            'path_constraints_units': [],
@@ -137,16 +149,12 @@ def ocp_to_bvp(ocp):
            'num_controls': len(controls)}
 
     def guess_map(sol):
-        # Append time as a state
-        nodes = sol.t.shape[0]
-        n_states = sol.y.shape[1]
-        sol.y = np.column_stack((sol.y[:,:int(n_states/2)], sol.t[-1]*np.ones((nodes, 1)), sol.y[:,int(n_states/2):], np.zeros((nodes, 1))))
+        sol.dynamical_parameters[-1] = sol.t[-1]
         sol.t = sol.t / sol.t[-1]
         return sol
 
     def guess_map_inverse(sol):
-        n_states = sol.y.shape[1]/2-1
-        sol.t = sol.t*sol.y[:, int(n_states)]
+        sol.t = sol.t*sol.dynamical_parameters[-1]
         return sol
 
     return out, guess_map, guess_map_inverse

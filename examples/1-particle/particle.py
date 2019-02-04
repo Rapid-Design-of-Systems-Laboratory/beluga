@@ -1,4 +1,6 @@
-"""Brachistochrone example."""
+"""Bryson-Denham problem"""
+# TODO: Costate estimates seem to be off by a factor of -2. See Issue #143
+
 import beluga
 from beluga.bvpsol.Solution import Solution
 from beluga.bvpsol.algorithms.Pseudospectral import linter
@@ -37,15 +39,14 @@ ocp.constraints() \
 
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
-# bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=30)
-bvp_solver_indirect = beluga.bvp_algorithm('Shooting')
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=15)
+bvp_solver_indirect = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 
 solinit = Solution(t=np.linspace(0,1,num=10), y=np.zeros((10,2)), q=np.array([]), u=np.zeros((10,1)))
 solinit.dynamical_parameters = np.array([])
 solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_limit':0.1}
 
-guess_maker = beluga.guess_generator('static', solinit=solinit)
+guess_maker_direct = beluga.guess_generator('static', solinit=solinit)
 guess_maker_indirect = beluga.guess_generator('auto',
                 start=[0, 0],          # Starting values for states in order
                 direction='forward',
@@ -55,13 +56,13 @@ guess_maker_indirect = beluga.guess_generator('auto',
 )
 
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set_direct = beluga.solve(ocp,
              method='direct',
-             bvp_algorithm=bvp_solver,
+             bvp_algorithm=bvp_solver_direct,
              steps=None,
-             guess_generator=guess_maker, autoscale=False)
+             guess_generator=guess_maker_direct, autoscale=False)
 
 sol_set_indirect = beluga.solve(ocp,
              method='traditional',
@@ -76,30 +77,42 @@ import matplotlib.pyplot as plt
 ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
 
 plt.plot(sol_direct.t, sol_direct.y[:,0], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.y[:,0], ts), linestyle='-', color='r')
-plt.plot(sol_indirect.t, sol_indirect.y[:,0], linestyle='-', color='b')
+plt.plot(ts, linter(sol_direct.t, sol_direct.y[:,0], ts), linestyle='-', color='r', label='direct')
+plt.plot(sol_indirect.t, sol_indirect.y[:,0], linestyle='-', color='b', label='indirect')
 plt.plot([sol_direct.t[0], sol_direct.t[-1]], [sol_direct.aux['const']['x_limit']]*2, linestyle='--', color='k')
 plt.title('Position')
 plt.xlabel('Time [s]')
+plt.legend()
 plt.show()
 
 plt.plot(sol_direct.t, sol_direct.y[:,1], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.y[:,1], ts), linestyle='-', color='r')
-plt.plot(sol_indirect.t, sol_indirect.y[:,1], linestyle='-', color='b')
+plt.plot(ts, linter(sol_direct.t, sol_direct.y[:,1], ts), linestyle='-', color='r', label='direct')
+plt.plot(sol_indirect.t, sol_indirect.y[:,1], linestyle='-', color='b', label='indirect')
 plt.title('Velocity')
 plt.xlabel('Time [s]')
+plt.legend()
+plt.show()
+
+plt.plot(sol_direct.t, sol_direct.u, linestyle='--', color='r', marker='o')
+plt.plot(ts, linter(sol_direct.t, sol_direct.u[:,0], ts), linestyle='-', color='r', label='direct')
+plt.plot(sol_indirect.t, sol_indirect.u, linestyle='-', color='b', label='indirect')
+plt.title('Control')
+plt.xlabel('Time [s]')
+plt.legend()
 plt.show()
 
 plt.plot(sol_direct.t, sol_direct.dual[:,0], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:,0], ts), linestyle='-', color='r')
-plt.plot(sol_indirect.t, sol_indirect.y[:,2], linestyle='-', color='b')
+plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:,0], ts), linestyle='-', color='r', label='direct')
+plt.plot(sol_indirect.t, sol_indirect.y[:,2], linestyle='-', color='b', label='indirect')
 plt.title('Position Costate')
 plt.xlabel('Time [s]')
+plt.legend()
 plt.show()
 
 plt.plot(sol_direct.t, sol_direct.dual[:,1], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:,1], ts), linestyle='-', color='r')
-plt.plot(sol_indirect.t, sol_indirect.y[:,3], linestyle='-', color='b')
+plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:,1], ts), linestyle='-', color='r', label='direct')
+plt.plot(sol_indirect.t, sol_indirect.y[:,3], linestyle='-', color='b', label='indirect')
 plt.title('Velocity Costate')
 plt.xlabel('Time [s]')
+plt.legend()
 plt.show()

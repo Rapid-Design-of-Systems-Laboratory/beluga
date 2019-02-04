@@ -315,8 +315,7 @@ class GuessGenerator(object):
     def auto(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
-        # Assume normalized time from 0 to 1
-        tspan = np.array([0, 1])
+        tspan = np.array([0, self.time_integrate])
 
         x0 = np.array(self.start)
         q0 = np.array(self.quad_guess)
@@ -356,7 +355,7 @@ class GuessGenerator(object):
         logging.debug(str(x0))
 
         if self.direction == 'reverse':
-            tspan = [0, -1]
+            tspan = [0, -self.time_integrate]
 
         time0 = time.time()
         prop = Propagator()
