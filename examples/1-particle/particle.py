@@ -26,13 +26,17 @@ ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
 ocp.constant('x_limit', 0.1, 'm')
 
+ocp.constant('path_width', 1, '1')
+ocp.constant('epsilon1', 1, '1')
+
 # Define costs
 ocp.path_cost('u**2', '1')
 
 # Define constraints
 ocp.constraints() \
     .initial('x - x_0', 'm')    \
-    .initial('v - v_0', 'm/s')  \
+    .initial('v - v_0', 'm/s') \
+    .path('x / path_width', 'm', lower=-1, upper=0.1, activator='epsilon1') \
     .terminal('x - x_f', 'm')   \
     .terminal('v - v_f', 'm')   \
     .terminal('t - 1', 's')
@@ -40,18 +44,18 @@ ocp.constraints() \
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
 bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=15)
-bvp_solver_indirect = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
+bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=200)
 
 solinit = Solution(t=np.linspace(0,1,num=10), y=np.zeros((10,2)), q=np.array([]), u=np.zeros((10,1)))
 solinit.dynamical_parameters = np.array([])
-solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_limit':0.1}
+solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_limit':0.1, 'path_width':1, 'epsilon1':1}
 
 guess_maker_direct = beluga.guess_generator('static', solinit=solinit)
 guess_maker_indirect = beluga.guess_generator('auto',
                 start=[0, 0],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1,
-                control_guess=[-2],
+                control_guess = [-2],
                 use_control_guess=True,
 )
 
@@ -64,10 +68,17 @@ sol_set_direct = beluga.solve(ocp,
              steps=None,
              guess_generator=guess_maker_direct, autoscale=False)
 
+
+continuation_steps = beluga.init_continuation()
+
+continuation_steps.add_step('bisection') \
+                .num_cases(21) \
+                .const('epsilon1', 0.9)
+
 sol_set_indirect = beluga.solve(ocp,
              method='traditional',
              bvp_algorithm=bvp_solver_indirect,
-             steps=None,
+             steps=continuation_steps,
              guess_generator=guess_maker_indirect, autoscale=False)
 
 sol_direct = sol_set_direct[-1][-1]

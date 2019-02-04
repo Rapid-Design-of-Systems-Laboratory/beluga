@@ -11,6 +11,8 @@ from sympy.utilities.lambdify import lambdastr
 # various basic math functions like `cos` and `atan`. Do not delete.
 import math
 from math import *
+from sympy import sec
+
 from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
 
