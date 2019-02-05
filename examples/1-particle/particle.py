@@ -24,9 +24,8 @@ ocp.constant('x_0', 0, 'm')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
-ocp.constant('x_limit', 0.1, 'm')
+ocp.constant('x_max', 0.3, 'm')
 
-ocp.constant('path_width', 2, '1')
 ocp.constant('epsilon1', 1, '1')
 
 # Define costs
@@ -36,7 +35,7 @@ ocp.path_cost('u**2', '1')
 ocp.constraints() \
     .initial('x - x_0', 'm')    \
     .initial('v - v_0', 'm/s') \
-    .path('x / path_width', 'm', lower=-0.1, upper=0.1, activator='epsilon1') \
+    .path('x', 'm', lower=-0.1, upper='x_max', activator='epsilon1') \
     .terminal('x - x_f', 'm')   \
     .terminal('v - v_f', 'm')   \
     .terminal('t - 1', 's')
@@ -48,7 +47,7 @@ bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=30)
 
 solinit = Solution(t=np.linspace(0,1,num=10), y=np.zeros((10,2)), q=np.array([]), u=np.zeros((10,1)))
 solinit.dynamical_parameters = np.array([])
-solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_limit':0.1, 'path_width':1, 'epsilon1':1}
+solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_max':0.1, 'epsilon1':1}
 
 guess_maker_direct = beluga.guess_generator('static', solinit=solinit)
 guess_maker_indirect = beluga.guess_generator('auto',
@@ -79,8 +78,8 @@ continuation_steps.add_step('bisection') \
     .const('v_f', -1)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('path_width', 1)
+                .num_cases(15) \
+                .const('x_max', 0.1)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
@@ -118,7 +117,7 @@ ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
 plt.plot(sol_direct.t, sol_direct.y[:,0], linestyle='--', color='r', marker='o')
 plt.plot(ts, linter(sol_direct.t, sol_direct.y[:,0], ts), linestyle='-', color='r', label='direct')
 plt.plot(sol_indirect.t, sol_indirect.y[:,0], linestyle='-', color='b', label='indirect')
-plt.plot([sol_direct.t[0], sol_direct.t[-1]], [sol_direct.aux['const']['x_limit']]*2, linestyle='--', color='k')
+plt.plot([sol_direct.t[0], sol_direct.t[-1]], [sol_direct.aux['const']['x_max']]*2, linestyle='--', color='k')
 plt.title('Position')
 plt.xlabel('Time [s]')
 plt.legend()
@@ -142,7 +141,7 @@ plt.show()
 
 plt.plot(sol_direct.t, sol_direct.dual[:,0], linestyle='--', color='r', marker='o')
 plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:,0], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.y[:,2], linestyle='-', color='b', label='indirect')
+plt.plot(sol_indirect.t, sol_indirect.dual[:,0], linestyle='-', color='b', label='indirect')
 plt.title('Position Costate')
 plt.xlabel('Time [s]')
 plt.legend()
@@ -150,7 +149,7 @@ plt.show()
 
 plt.plot(sol_direct.t, sol_direct.dual[:,1], linestyle='--', color='r', marker='o')
 plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:,1], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.y[:,3], linestyle='-', color='b', label='indirect')
+plt.plot(sol_indirect.t, sol_indirect.dual[:,1], linestyle='-', color='b', label='indirect')
 plt.title('Velocity Costate')
 plt.xlabel('Time [s]')
 plt.legend()
