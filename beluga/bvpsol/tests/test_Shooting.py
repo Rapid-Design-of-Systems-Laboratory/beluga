@@ -17,8 +17,7 @@ tol = 1e-3
 
 import pytest
 import itertools
-from beluga.bvpsol.algorithms import Shooting
-from beluga.bvpsol import Solution
+from beluga.bvpsol import Solution, Shooting
 import numpy as np
 from scipy.special import erf
 

@@ -1,5 +1,8 @@
 from .Solution import Solution
-
+from .BaseAlgorithm import BaseAlgorithm
+from .Shooting import Shooting
+from .Collocation import Collocation
+from .Pseudospectral import Pseudospectral
 
 # __all__ = ['Algorithm','Solution','BVP','FunctionTemplate','bvpinit']
 import os

@@ -14,8 +14,7 @@ VHARD = [1e-3]
 tol = 1e-3
 
 import pytest
-from beluga.bvpsol.algorithms import Collocation
-from beluga.bvpsol import Solution
+from beluga.bvpsol import Solution, Collocation
 import numpy as np
 from scipy.special import erf
 

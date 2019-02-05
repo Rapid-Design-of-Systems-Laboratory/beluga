@@ -1,10 +1,8 @@
-from beluga.bvpsol.algorithms import BaseAlgorithm
+from beluga.bvpsol import BaseAlgorithm
 from npnlp import minimize, kkt_multipliers
-from beluga.ivpsol import Trajectory
 
 import numba
 
-import logging
 import numpy as np
 import sys
 import copy

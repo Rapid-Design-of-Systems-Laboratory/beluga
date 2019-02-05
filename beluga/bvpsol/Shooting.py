@@ -4,8 +4,8 @@ import logging
 import numpy as np
 from math import isclose
 
-from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
-from beluga.ivpsol import Propagator, Trajectory, reconstruct, integrate_quads
+from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
+from beluga.ivpsol import Propagator, Trajectory, reconstruct
 
 from scipy.optimize import minimize, root, fsolve
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
