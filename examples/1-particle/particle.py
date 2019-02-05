@@ -60,7 +60,7 @@ guess_maker_indirect = beluga.guess_generator('auto',
 )
 
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set_direct = beluga.solve(ocp,
              method='direct',

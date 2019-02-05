@@ -1,8 +1,8 @@
-.. |plot0| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga/examples/1-brachistochrone/plot0.png
+.. |plot0| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga@master/examples/2-brachistochrone/plot0.png
 
-.. |plot1| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga/examples/1-brachistochrone/plot1.png
+.. |plot1| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga@master/examples/2-brachistochrone/plot1.png
 
-.. |plot2| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga/examples/1-brachistochrone/plot2.png
+.. |plot2| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga@master/examples/2-brachistochrone/plot2.png
 
 Brachistochrone Problem
 =======================
