@@ -159,12 +159,16 @@ def ocp_to_bvp(ocp):
            'num_controls': len(controls)}
 
     def guess_map(sol):
+        sol.y = np.column_stack((sol.y, sol.dual))
+        sol.dual = np.array([])
         sol.dynamical_parameters[-1] = sol.t[-1]
         sol.t = sol.t / sol.t[-1]
         return sol
 
-    def guess_map_inverse(sol):
+    def guess_map_inverse(sol, num_costates=len(costates)):
         sol.t = sol.t*sol.dynamical_parameters[-1]
+        sol.dual = sol.y[:, -num_costates:]
+        sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
         return sol
 
     return out, guess_map, guess_map_inverse

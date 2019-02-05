@@ -322,9 +322,9 @@ class GuessGenerator(object):
 
         # Add costates
         if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
-            x0 = np.r_[x0, self.costate_guess * np.ones(len(self.start))]
+            d0 = np.r_[self.costate_guess * np.ones(len(self.start))]
         else:
-            x0 = np.r_[x0, self.costate_guess]
+            d0 = np.r_[self.costate_guess]
 
         if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
             u0 = self.control_guess*np.ones(self.dae_num_states)
@@ -340,17 +340,6 @@ class GuessGenerator(object):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.aux['nondynamical_parameters']))
 
-        if self.dae_num_states > 0:
-            dae_guess = u0
-            if not self.use_control_guess:
-                dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
-
-                dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
-            else:
-                dae_x0 = dae_guess
-
-            x0 = np.append(x0, dae_x0)  # Add dae states
-
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
 
@@ -361,6 +350,7 @@ class GuessGenerator(object):
         prop = Propagator()
         solinit.t = tspan
         solinit.y = np.array([x0, x0])
+        solinit.dual = np.array([d0, d0])
         solinit.q = np.array([q0, q0])
         solinit.u = np.array([u0, u0])
         solinit.dynamical_parameters = param_guess
