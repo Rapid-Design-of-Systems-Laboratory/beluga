@@ -3,7 +3,7 @@
 
 import beluga
 from beluga.bvpsol.Solution import Solution
-from beluga.bvpsol.algorithms.Pseudospectral import linter
+from beluga.bvpsol.Pseudospectral import linter
 import numpy as np
 import logging
 

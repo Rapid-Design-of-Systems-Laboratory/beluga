@@ -1,8 +1,7 @@
-from beluga.bvpsol.algorithms.BaseAlgorithm import BaseAlgorithm
+from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Trajectory
 import numpy as np
 import copy
-from npnlp import minimize
 from scipy.optimize import minimize as mini
 from scipy.integrate import simps
 import logging

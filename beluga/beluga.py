@@ -10,7 +10,8 @@ import numpy as np
 import collections as cl
 
 from beluga import problem, helpers
-from beluga.bvpsol import algorithms, Solution
+import beluga.bvpsol as bvpsol
+from beluga.bvpsol import Solution
 from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
@@ -31,7 +32,7 @@ def bvp_algorithm(algo, **kwargs):
     Helper method to load algorithm by name
     """
     # Load algorithm from the package
-    for name, obj in inspect.getmembers(algorithms):
+    for name, obj in inspect.getmembers(bvpsol):
         if inspect.isclass(obj):
             if name.lower() == algo.lower():
                 return obj(**kwargs)
