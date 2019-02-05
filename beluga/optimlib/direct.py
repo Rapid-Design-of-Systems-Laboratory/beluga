@@ -28,6 +28,8 @@ def ocp_to_bvp(ocp):
     constants_of_motion_units = ws['constants_of_motion_units']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']
+    constraints_lower = ws['constraints_lower']
+    constraints_upper = ws['constraints_upper']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -65,6 +67,18 @@ def ocp_to_bvp(ocp):
     bc_initial = [c for c in constraints['initial']]
     bc_terminal = [c for c in constraints['terminal']]
 
+    path_constraints = []
+    path_constraints_units = []
+    for ii, c in enumerate(constraints['path']):
+        if constraints_lower['path'][ii] is not None:
+            path_constraints += [constraints_lower['path'][ii] - c]
+            path_constraints_units += [constraints_units['path'][ii]]
+
+        if constraints_upper['path'][ii] is not None:
+            path_constraints += [c - constraints_upper['path'][ii]]
+            path_constraints_units += [constraints_units['path'][ii]]
+
+
     out = {'method': 'direct',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
@@ -80,8 +94,8 @@ def ocp_to_bvp(ocp):
            'quads': [],
            'quads_rates': [],
            'quads_units': [],
-           'path_constraints': [str(c) for c in constraints['path']],
-           'path_constraints_units': [str(u) for u in constraints_units['path']],
+           'path_constraints': [str(c) for c in path_constraints],
+           'path_constraints_units': [str(u) for u in path_constraints_units],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
