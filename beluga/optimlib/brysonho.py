@@ -7,7 +7,7 @@ from beluga.utils import sympify
 import itertools as it
 import logging
 import numpy as np
-from sympy import cos
+from sympy import cos, pi
 # from math import cos
 
 def ocp_to_bvp(ocp):
@@ -80,7 +80,7 @@ def ocp_to_bvp(ocp):
         if constraints_lower['path'][ii] is None or constraints_upper['path'][ii] is None:
             raise NotImplementedError('Lower and upper bounds on path constraints MUST be defined.')
 
-        hamiltonian += constraints_activators['path'][ii]/(cos((2*c - constraints_upper['path'][ii] - constraints_lower['path'][ii]) / (constraints_upper['path'][ii] - constraints_lower['path'][ii])))
+        hamiltonian += constraints_activators['path'][ii]/(cos(pi/2*(2*c - constraints_upper['path'][ii] - constraints_lower['path'][ii]) / (constraints_upper['path'][ii] - constraints_lower['path'][ii])))
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
 

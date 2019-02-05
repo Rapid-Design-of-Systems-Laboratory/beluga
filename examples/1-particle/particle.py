@@ -26,7 +26,7 @@ ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
 ocp.constant('x_limit', 0.1, 'm')
 
-ocp.constant('path_width', 1, '1')
+ocp.constant('path_width', 2, '1')
 ocp.constant('epsilon1', 1, '1')
 
 # Define costs
@@ -36,15 +36,15 @@ ocp.path_cost('u**2', '1')
 ocp.constraints() \
     .initial('x - x_0', 'm')    \
     .initial('v - v_0', 'm/s') \
-    .path('x / path_width', 'm', lower=-1, upper=0.1, activator='epsilon1') \
+    .path('x / path_width', 'm', lower=-0.1, upper=0.1, activator='epsilon1') \
     .terminal('x - x_f', 'm')   \
     .terminal('v - v_f', 'm')   \
     .terminal('t - 1', 's')
 
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=15)
-bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=200)
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
+bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=30)
 
 solinit = Solution(t=np.linspace(0,1,num=10), y=np.zeros((10,2)), q=np.array([]), u=np.zeros((10,1)))
 solinit.dynamical_parameters = np.array([])
@@ -52,7 +52,7 @@ solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_limit':0.1, 'pat
 
 guess_maker_direct = beluga.guess_generator('static', solinit=solinit)
 guess_maker_indirect = beluga.guess_generator('auto',
-                start=[0, 0],          # Starting values for states in order
+                start=[0, 1],          # Starting values for states in order
                 direction='forward',
                 costate_guess = -0.1,
                 control_guess = [-2],
@@ -60,7 +60,7 @@ guess_maker_indirect = beluga.guess_generator('auto',
 )
 
 
-beluga.add_logger(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
 
 sol_set_direct = beluga.solve(ocp,
              method='direct',
@@ -72,8 +72,36 @@ sol_set_direct = beluga.solve(ocp,
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(21) \
-                .const('epsilon1', 0.9)
+    .num_cases(5) \
+    .const('x_0', 0) \
+    .const('v_0', 1) \
+    .const('x_f', 0) \
+    .const('v_f', -1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(10) \
+                .const('path_width', 1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(10) \
+                .const('epsilon1', 1e-1)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(10) \
+                .const('epsilon1', 1e-2)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(10) \
+                .const('epsilon1', 1e-3)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(10) \
+                .const('epsilon1', 1e-4)
+
+continuation_steps.add_step('bisection') \
+                .num_cases(10) \
+                .const('epsilon1', 1e-5)
+
 
 sol_set_indirect = beluga.solve(ocp,
              method='traditional',
