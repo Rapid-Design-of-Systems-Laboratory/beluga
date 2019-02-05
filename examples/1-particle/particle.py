@@ -71,36 +71,19 @@ sol_set_direct = beluga.solve(ocp,
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-    .num_cases(5) \
+    .num_cases(3) \
     .const('x_0', 0) \
     .const('v_0', 1) \
     .const('x_f', 0) \
     .const('v_f', -1)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(15) \
+                .num_cases(10, 'log') \
                 .const('x_max', 0.1)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('epsilon1', 1e-1)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('epsilon1', 1e-2)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('epsilon1', 1e-3)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('epsilon1', 1e-4)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('epsilon1', 1e-5)
-
+                .num_cases(10, 'log') \
+                .const('epsilon1', 1e-6)
 
 sol_set_indirect = beluga.solve(ocp,
              method='traditional',
