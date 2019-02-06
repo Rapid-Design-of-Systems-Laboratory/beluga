@@ -14,7 +14,8 @@ VHARD = [1e-3]
 tol = 1e-3
 
 import pytest
-from beluga.bvpsol import Solution, Collocation
+from beluga.ivpsol import Trajectory
+from beluga.bvpsol import Collocation
 import numpy as np
 from scipy.special import erf
 
@@ -27,7 +28,7 @@ def test_T1(const):
         return (X0[0] - 1, Xf[0])
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
@@ -49,7 +50,7 @@ def test_T2(const):
         return (X0[0] - 1, Xf[0])
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
@@ -70,7 +71,7 @@ def test_T3(const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -90,7 +91,7 @@ def test_T4(const):
         return (X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -111,7 +112,7 @@ def test_T5(const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -132,7 +133,7 @@ def test_T6():
         return (X0[0] + 2, Xf[0], X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([1])
@@ -154,7 +155,7 @@ def test_T7(const):
         return (X0[0] + 1, Xf[0] - 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=70)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
     solinit.const = np.array([const])
@@ -180,7 +181,7 @@ def test_T8(const):
         return (X0[0] - 1, Xf[0] - 2, X0[2])
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
@@ -200,7 +201,7 @@ def test_T9(const):
         return (X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
     solinit.const = np.array([const])
@@ -220,7 +221,7 @@ def test_T10(const):
         return (X0[0], Xf[0] - 2, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
@@ -241,7 +242,7 @@ def test_T11(const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -261,7 +262,7 @@ def test_T12(const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -281,7 +282,7 @@ def test_T13(const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -301,7 +302,7 @@ def test_T15(const):
         return (X0[0] - 1, Xf[0] - 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=90)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -317,7 +318,7 @@ def test_T16(const):
         return (X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2])
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -337,7 +338,7 @@ def test_T17(const):
         return (X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1)
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=60)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -357,7 +358,7 @@ def test_T18(const):
         return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
 
     algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -379,7 +380,7 @@ def test_Collocation_1():
         return (X0[0], Xf[0]+2)
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0,4,4)
     solinit.y = np.array([[0,1],[0,1],[0,1],[0,1]])
     solinit.const = np.array([])
@@ -404,7 +405,7 @@ def test_Collocation_1():
 #         return (X0[1], Xf[1], X0[0] - 1, X0[2], Xf[2]-np.pi)
 #
 #     algo = Collocation(odefun, None, bcfun)
-#     solinit = Solution()
+#     solinit = Trajectory()
 #     solinit.t = np.linspace(0, np.pi, 30)
 #     solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t), solinit.t)).T
 #     solinit.dynamical_parameters = np.array([np.pi, 15])
@@ -429,7 +430,7 @@ def test_Collocation_3():
         return (X0[0] - 0, Xf[0] - 2)
 
     algo = Collocation(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 4)
     solinit.y = np.array([[0], [0], [0], [0]])
     solinit.dynamical_parameters = np.array([1])

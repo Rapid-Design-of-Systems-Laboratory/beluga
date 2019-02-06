@@ -6,7 +6,6 @@ def test_brachistochrone_shooting():
     import beluga
 
     from beluga.ivpsol import Trajectory
-    from beluga.bvpsol import Solution
 
     ocp = beluga.OCP('brachisto')
 
@@ -114,7 +113,6 @@ def test_brachistochrone_collocation():
     import beluga
 
     from beluga.ivpsol import Trajectory
-    from beluga.bvpsol import Solution
 
     ocp = beluga.OCP('brachisto')
 

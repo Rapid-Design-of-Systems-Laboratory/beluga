@@ -17,7 +17,8 @@ tol = 1e-3
 
 import pytest
 import itertools
-from beluga.bvpsol import Solution, Shooting
+from beluga.ivpsol import Trajectory
+from beluga.bvpsol import Shooting
 import numpy as np
 from scipy.special import erf
 
@@ -31,7 +32,7 @@ def test_T1(algorithm, const):
         return (X0[0] - 1, Xf[0])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
@@ -53,7 +54,7 @@ def test_T2(algorithm, const):
         return (X0[0] - 1, Xf[0])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
@@ -74,7 +75,7 @@ def test_T3(algorithm, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -94,7 +95,7 @@ def test_T4(algorithm, const):
         return (X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -115,7 +116,7 @@ def test_T5(algorithm, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -136,7 +137,7 @@ def test_T6(algorithm, const):
         return (X0[0] + 2, Xf[0], X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -158,7 +159,7 @@ def test_T7(algorithm, const):
         return (X0[0] + 1, Xf[0] - 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
     solinit.const = np.array([const])
@@ -184,7 +185,7 @@ def test_T8(algorithm, const):
         return (X0[0] - 1, Xf[0] - 2, X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
@@ -204,7 +205,7 @@ def test_T9(algorithm, const):
         return (X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
     solinit.const = np.array([const])
@@ -224,7 +225,7 @@ def test_T10(algorithm, const):
         return (X0[0], Xf[0] - 2, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
@@ -245,7 +246,7 @@ def test_T11(algorithm, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
@@ -265,7 +266,7 @@ def test_T12(algorithm, const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -285,7 +286,7 @@ def test_T13(algorithm, const):
         return (X0[0], Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -306,7 +307,7 @@ def test_T15(algorithm, const):
         return (X0[0] - 1, Xf[0] - 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -322,7 +323,7 @@ def test_T16(algorithm, const):
         return (X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -342,7 +343,7 @@ def test_T17(algorithm, const):
         return (X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -362,7 +363,7 @@ def test_T18(algorithm, const):
         return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
@@ -384,7 +385,7 @@ def test_Shooting_1():
         return (X0[0], Xf[0]+2)
 
     algo = Shooting(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0,4,2)
     solinit.y = np.array([[0,1],[0,1]])
     solinit.const = np.array([])
@@ -409,7 +410,7 @@ def test_Shooting_1():
 #         return (X0[1], Xf[1], X0[0] - 1)
 #
 #     algo = Shooting(odefun, None, bcfun)
-#     solinit = Solution()
+#     solinit = Trajectory()
 #     solinit.t = np.linspace(0, np.pi, 30)
 #     solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t))).T
 #     solinit.dynamical_parameters = np.array([15])
@@ -434,7 +435,7 @@ def test_Shooting_3():
         return (X0[0] - 0, Xf[0] - 2)
 
     algo = Shooting(odefun, None, bcfun)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0], [0]])
     solinit.dynamical_parameters = np.array([1])
@@ -456,7 +457,7 @@ def test_Shooting_4():
         return X0[0], X0[1] - 1, qf[0] - 1.0
 
     algo = Shooting(odefun, quadfun, bcfun, num_arcs=4)
-    solinit = Solution()
+    solinit = Trajectory()
     solinit.t = np.linspace(0, np.pi / 2, 2)
     solinit.y = np.array([[1, 0], [1, 0]])
     solinit.q = np.array([[0], [0]])

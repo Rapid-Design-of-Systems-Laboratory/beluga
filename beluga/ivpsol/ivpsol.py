@@ -146,6 +146,9 @@ class Trajectory(object):
         obj.y = np.array([])
         obj.q = np.array([])
         obj.u = np.array([])
+        obj.dynamical_parameters = np.array([])
+        obj.nondynamical_parameters = np.array([])
+        obj.aux = dict()
 
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
         obj.interpolation_type = interpolation_type

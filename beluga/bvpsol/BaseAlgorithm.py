@@ -1,5 +1,4 @@
 import abc
-from beluga.bvpsol import Solution
 
 
 class BaseAlgorithm(object):
