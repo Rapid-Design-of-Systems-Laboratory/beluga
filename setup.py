@@ -18,9 +18,7 @@ modules = ['beluga.bvpsol',
            'beluga.liepack.domain.liegroups',
            'beluga.liepack.field',
            'beluga.optimlib',
-           'beluga.utils',
-           'beluga.visualization',
-           'beluga.visualization.renderers']
+           'beluga.utils']
 
 tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',
