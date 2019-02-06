@@ -1,4 +1,3 @@
-from .Solution import Solution
 from .BaseAlgorithm import BaseAlgorithm
 from .Shooting import Shooting
 from .Collocation import Collocation

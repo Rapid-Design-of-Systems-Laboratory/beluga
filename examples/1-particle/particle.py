@@ -2,7 +2,7 @@
 # TODO: Costate estimates seem to be off by a factor of -2. See Issue #143
 
 import beluga
-from beluga.bvpsol.Solution import Solution
+from beluga.ivpsol import Trajectory
 from beluga.bvpsol.Pseudospectral import linter
 import numpy as np
 import logging
@@ -45,7 +45,7 @@ ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
 bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=30)
 
-solinit = Solution(t=np.linspace(0,1,num=10), y=np.zeros((10,2)), q=np.array([]), u=np.zeros((10,1)))
+solinit = Trajectory(np.linspace(0,1,num=10), np.zeros((10,2)), np.array([]), np.zeros((10,1)))
 solinit.dynamical_parameters = np.array([])
 solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_max':0.1, 'epsilon1':1}
 

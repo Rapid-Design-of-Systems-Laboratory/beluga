@@ -2,7 +2,7 @@ from sympy.diffgeom import Manifold as sympyManifold
 from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, WedgeProduct, TensorProduct
 import copy
 import logging
-from beluga.bvpsol import Solution
+from beluga.ivpsol import Trajectory
 from beluga.codegen import make_jit_fn, make_control_and_ham_fn
 import numpy as np
 import itertools as it
@@ -272,11 +272,11 @@ def ocp_to_bvp(ocp):
     states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c)) for c in constants_of_motion_values_original]
     states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
 
-    def guess_mapper(sol):
+    def guess_map(sol):
         n_c = len(constants_of_motion)
         if n_c == 0:
             return sol
-        sol_out = Solution()
+        sol_out = Trajectory()
         sol_out.t = copy.copy(sol.t)
         sol_out.y = np.array([[fn(*sol.y[0]) for fn in states_2_states_fn]])
         sol_out.q = sol.q
@@ -289,7 +289,11 @@ def ocp_to_bvp(ocp):
         sol_out.aux = sol.aux
         return sol_out
 
-    return out, guess_mapper
+    def guess_map_inverse(sol):
+        raise NotImplementedError
+        return sol
+
+    return out, guess_map, gues_map_inverse
 
 class Manifold(object):
     def __new__(cls, *args):

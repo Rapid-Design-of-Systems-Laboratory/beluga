@@ -11,7 +11,7 @@ import collections as cl
 
 from beluga import problem, helpers
 import beluga.bvpsol as bvpsol
-from beluga.bvpsol import Solution
+from beluga.ivpsol import Trajectory
 from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
@@ -114,7 +114,7 @@ def solve(ocp, method, bvp_algorithm, steps, guess_generator, **kwargs):
     bvp_ws['problem'] = ocp
     bvp_ws['guess'] = guess_generator
     bvp_ws['custom_functions'] = ocp.custom_functions()
-    solinit = Solution()
+    solinit = Trajectory()
 
     solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp_ws['constants'], bvp_ws['constants_values']))
     for const in bvp_ws['constants']:
