@@ -44,7 +44,7 @@ guess_maker = beluga.guess_generator('auto',
                 direction='forward',
                 costate_guess = -0.1,
                 control_guess=[-pi/2],
-                use_control_guess=True,
+                use_control_guess=True
 )
 
 continuation_steps = beluga.init_continuation()
