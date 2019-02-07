@@ -11,7 +11,6 @@ from sympy.utilities.lambdify import lambdastr
 # various basic math functions like `cos` and `atan`. Do not delete.
 import math
 from math import *
-from sympy import sec
 
 from numpy import imag as im
 from sympy import I #TODO: This doesn't fix complex step derivatives.
@@ -309,9 +308,19 @@ def preprocess(problem_data):
         globals()[f['name']] = f['handle']
     deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints = make_functions(problem_data)
 
-    bvp = BVP(deriv_func, quad_func, bc_func, compute_control)
+    bvp = BVP(deriv_func, quad_func, bc_func, compute_control, initial_cost, path_cost, terminal_cost, ineq_constraints)
 
-    return bvp, initial_cost, path_cost, terminal_cost, ineq_constraints
+    return bvp
 
 
-BVP = cl.namedtuple('BVP', 'deriv_func quad_func bc_func compute_control')
+class BVP(object):
+    def __init__(self, *args, **kwargs):
+        self.deriv_func = args[0]
+        self.quad_func = args[1]
+        self.bc_func = args[2]
+        self.compute_control = args[3]
+        self.initial_cost = args[4]
+        self.path_cost = args[5]
+        self.terminal_cost = args[6]
+        self.ineq_constraints = args[7]
+        self.raw = dict()

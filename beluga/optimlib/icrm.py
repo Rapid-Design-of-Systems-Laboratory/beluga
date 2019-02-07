@@ -149,7 +149,8 @@ def ocp_to_bvp(ocp):
         sol.y = np.column_stack((sol.y, sol.dual, sol.u))
         sol.dual = np.array([])
         sol.u = np.array([])
-        sol.dynamical_parameters[-1] = sol.t[-1]
+        sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
+        sol.nondynamical_parameters = np.ones(len(nondynamical_parameters))
         sol.t = sol.t / sol.t[-1]
         return sol
 

@@ -2,6 +2,7 @@
 Computes the necessary conditions of optimality using Bryson & Ho's method
 """
 
+from beluga.ivpsol import Trajectory
 from .optimlib import *
 from beluga.utils import sympify
 import itertools as it
@@ -159,11 +160,13 @@ def ocp_to_bvp(ocp):
            'num_controls': len(controls)}
 
     def guess_map(sol):
-        sol.y = np.column_stack((sol.y, sol.dual))
-        sol.dual = np.array([])
-        sol.dynamical_parameters[-1] = sol.t[-1]
-        sol.t = sol.t / sol.t[-1]
-        return sol
+        solout = Trajectory(sol)
+        solout.y = np.column_stack((solout.y, solout.dual))
+        solout.dual = np.array([])
+        solout.dynamical_parameters = np.hstack((solout.dynamical_parameters, solout.t[-1]))
+        solout.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+        solout.t = solout.t / solout.t[-1]
+        return solout
 
     def guess_map_inverse(sol, num_costates=len(costates)):
         sol.t = sol.t*sol.dynamical_parameters[-1]

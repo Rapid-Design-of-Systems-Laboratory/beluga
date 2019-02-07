@@ -281,13 +281,13 @@ class GuessGenerator(object):
     def setup_static(self, solinit=None):
         self.solinit = solinit
 
-    def static(self, bvp_fn, solinit, guess_map, guess_map_inverse):
+    def static(self, bvp_fn, solinit, ocp_map, ocp_map_inverse):
         """Directly specify initial guess structure"""
-        return guess_map(self.solinit)
+        return ocp_map(self.solinit)
 
     def setup_auto(self, start=None,
                    direction='forward',
-                   time_integrate=0.1,
+                   time_integrate=1,
                    quad_guess=np.array([]),
                    costate_guess=0.1,
                    control_guess=0.1,
@@ -333,12 +333,12 @@ class GuessGenerator(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.ones(len(solinit.aux['dynamical_parameters']))
-        elif len(param_guess) < len(solinit.aux['dynamical_parameters']):
-            param_guess += np.ones(len(solinit.aux['dynamical_parameters']) - len(param_guess))
-        elif len(param_guess) > len(solinit.aux['dynamical_parameters']):
+            param_guess = np.ones(len(solinit.dynamical_parameters))
+        elif len(param_guess) < len(solinit.dynamical_parameters):
+            param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
+        elif len(param_guess) > len(solinit.dynamical_parameters):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
-        nondynamical_param_guess = np.ones(len(solinit.aux['nondynamical_parameters']))
+        nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))

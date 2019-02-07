@@ -142,8 +142,13 @@ class Trajectory(object):
         """
 
         obj = super(Trajectory, cls).__new__(cls)
+
+        if len(args) > 0 and isinstance(args[0], Trajectory):
+            return args[0]
+
         obj.t = np.array([])
         obj.y = np.array([])
+        obj.dual = np.array([])
         obj.q = np.array([])
         obj.u = np.array([])
         obj.dynamical_parameters = np.array([])
