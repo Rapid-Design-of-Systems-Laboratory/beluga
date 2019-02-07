@@ -5,9 +5,7 @@ import logging
 
 from beluga.codegen.codegen import *
 
-import cloudpickle as pickle
 import numpy as np
-import collections as cl
 
 from beluga import problem, helpers
 import beluga.bvpsol as bvpsol
@@ -20,8 +18,7 @@ import time
 from collections import OrderedDict
 import pathos
 
-config = dict(logfile='beluga.log',
-              default_bvp_solver='Shooting')
+config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
 def bvp_algorithm(algo, **kwargs):
     """
@@ -63,6 +60,7 @@ def set_output_file(output_file=None):
 
 
 def ocp2bvp(ocp, method='traditional'):
+    logging.info("Computing the necessary conditions of optimality")
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
         bvp_raw, ocp_map, ocp_map_inverse = BH_ocp_to_bvp(ocp)
     elif method.lower() == 'icrm':
@@ -76,11 +74,14 @@ def ocp2bvp(ocp, method='traditional'):
 
     bvp_raw['custom_functions'] = ocp.custom_functions()
     bvp = preprocess(bvp_raw)
+    bvp.raw = bvp_raw
+    ocp._scaling.initialize(bvp.raw)
+    bvp.raw['scaling'] = ocp._scaling
 
-    return bvp, ocp_map, ocp_map_inverse, bvp_raw
+    return bvp, ocp_map, ocp_map_inverse
 
 
-def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
+def solve(**kwargs):
     """
     Solves the OCP using specified method
 
@@ -90,6 +91,12 @@ def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
     | autoscale              | True            | bool                                  |
     +------------------------+-----------------+---------------------------------------+
     | bvp                    | None            | codegen'd BVPs                        |
+    +------------------------+-----------------+---------------------------------------+
+    | bvp_algorithm          | None            | bvp algorithm                         |
+    +------------------------+-----------------+---------------------------------------+
+    | guess_generator        | None            | guess generator                       |
+    +------------------------+-----------------+---------------------------------------+
+    | method                 | 'traditional'   | string                                |
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
     +------------------------+-----------------+---------------------------------------+
@@ -104,7 +111,11 @@ def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
 
     autoscale = kwargs.get('autoscale', True)
     bvp = kwargs.get('bvp', None)
-    ocp_map = kwargs.get('guess_map', None)
+    bvp_algorithm = kwargs.get('bvp_algorithm', None)
+    guess_generator = kwargs.get('guess_generator', None)
+    method = kwargs.get('method', 'traditional')
+    ocp = kwargs.get('ocp', None)
+    ocp_map = kwargs.get('ocp_map', None)
     ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
     n_cpus = int(kwargs.get('n_cpus', 1))
     steps = kwargs.get('steps', None)
@@ -119,13 +130,11 @@ def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
     else:
         pool = None
 
-    logging.info("Computing the necessary conditions of optimality")
-
     if bvp is None:
-        bvp, ocp_map, ocp_map_inverse, bvp_raw = ocp2bvp(ocp, method=method)
+        bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method)
         logging.debug('Resulting BVP problem:')
-        for key in bvp_raw.keys():
-            logging.debug(str(key) + ': ' + str(bvp_raw[key]))
+        for key in bvp.raw.keys():
+            logging.debug(str(key) + ': ' + str(bvp.raw[key]))
 
     else:
         if ocp_map is None or ocp_map_inverse is None:
@@ -133,18 +142,14 @@ def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
 
     solinit = Trajectory()
 
-    solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp_raw['constants'], bvp_raw['constants_values']))
-    for const in bvp_raw['constants']:
+    solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp.raw['constants'], bvp.raw['constants_values']))
+    for const in bvp.raw['constants']:
         if not str(const) in solinit.aux['const'].keys():
             solinit.aux['const'][str(const)] = 0
 
-    solinit.aux['dynamical_parameters'] = bvp_raw['dynamical_parameters']
-    solinit.aux['nondynamical_parameters'] = bvp_raw['nondynamical_parameters']
-
-
     solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
 
-    state_names = bvp_raw['states']
+    state_names = bvp.raw['states']
 
     initial_states = solinit.y[0, :]
     terminal_states = solinit.y[-1, :]
@@ -161,7 +166,7 @@ def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
             if ii + '_f' in solinit.aux['const'].keys():
                 solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
 
-    quad_names = bvp_raw['quads']
+    quad_names = bvp.raw['quads']
     n_quads = len(quad_names)
     if n_quads > 0:
         initial_quads = solinit.q[0, :]
@@ -179,10 +184,7 @@ def solve(ocp, method, bvp_algorithm, guess_generator, **kwargs):
 
     time0 = time.time()
 
-    ocp._scaling.initialize(bvp_raw)
-    bvp_raw['scaling'] = ocp._scaling
-
-    out = run_continuation_set(bvp_raw, bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    out = run_continuation_set(bvp.raw, bvp_algorithm, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
@@ -202,7 +204,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
-    s = ocp_ws['scaling']
+    s = bvp.raw['scaling']
     problem_data = ocp_ws
 
     # Load the derivative function into the bvp algorithm
@@ -241,10 +243,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
                                                            np.fromiter(sol.aux['const'].values(), dtype=np.float64))
                     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
 
-                # Copy solution object for storage and reuse `sol` in next
-                # iteration
                 solution_set = [[copy.deepcopy(sol)]]
-                # sol_guess = copy.deepcopy(sol)
                 elapsed_time = time.time() - time0
                 logging.info('Problem converged in %0.4f seconds\n' % (elapsed_time))
             else:

@@ -108,7 +108,7 @@ continuation_steps.add_step('bisection') \
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-cont_planar = beluga.solve(ocp,
+cont_planar = beluga.solve(ocp=ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
@@ -206,7 +206,7 @@ continuation_steps_2.add_step('bisection').num_cases(3) \
 continuation_steps_2.add_step('bisection').num_cases(41) \
     .const('phi_f', 2*pi/180)
 
-cont_3dof = beluga.solve(ocp_2,
+cont_3dof = beluga.solve(ocp=ocp_2,
              method='traditional',
              bvp_algorithm=bvp_solver_2,
              steps=continuation_steps_2,

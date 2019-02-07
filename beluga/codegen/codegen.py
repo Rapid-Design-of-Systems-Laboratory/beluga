@@ -313,4 +313,14 @@ def preprocess(problem_data):
     return bvp
 
 
-BVP = cl.namedtuple('BVP', 'deriv_func quad_func bc_func compute_control initial_cost path_cost terminal_cost ineq_constraints')
+class BVP(object):
+    def __init__(self, *args, **kwargs):
+        self.deriv_func = args[0]
+        self.quad_func = args[1]
+        self.bc_func = args[2]
+        self.compute_control = args[3]
+        self.initial_cost = args[4]
+        self.path_cost = args[5]
+        self.terminal_cost = args[6]
+        self.ineq_constraints = args[7]
+        self.raw = dict()

@@ -41,7 +41,6 @@ bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 
 guess_maker = beluga.guess_generator('auto',
                 start=[0,0,0],          # Starting values for states in order
-                direction='forward',
                 costate_guess = -0.1,
                 control_guess=[-pi/2],
                 use_control_guess=True
@@ -54,9 +53,9 @@ continuation_steps.add_step('bisection') \
                 .const('x_f', 10) \
                 .const('y_f',-10)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG)
 
-sol_set = beluga.solve(ocp,
+sol_set = beluga.solve(ocp=ocp,
              method='traditional',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
