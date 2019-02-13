@@ -25,10 +25,10 @@ from scipy.special import erf
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T1(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], X[0] / const[0])
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -47,10 +47,10 @@ def test_T1(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T2(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], X[1] / const[0])
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -67,11 +67,11 @@ def test_T2(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
 def test_T3(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (-(2 + np.cos(np.pi * X[2])) * X[1] + X[0] - (1 + const[0] * np.pi * np.pi) * np.cos(
             np.pi * X[2]) - (2 + np.cos(np.pi * X[2])) * np.pi * np.sin(np.pi * X[2])) / const[0], 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -88,10 +88,10 @@ def test_T3(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T4(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (((1 + const[0]) * X[0] - X[1]) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -109,10 +109,10 @@ def test_T4(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T5(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] + X[2] * X[1] - (1 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) + X[2] * np.pi * np.sin(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -129,11 +129,11 @@ def test_T5(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T6(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
             np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 2, Xf[0], X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -151,11 +151,11 @@ def test_T6(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T7(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] + X[0] - (1.0e0 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) - np.pi *
                                 X[2] * np.sin(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] - 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -178,10 +178,10 @@ def test_T7(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T8(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], (-X[1] / const[0]), 1)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 2, X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -198,10 +198,10 @@ def test_T8(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T9(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (-(4 * X[2] * X[1] + 2 * X[0]) / (const[0] + X[2] ** 2)), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -218,10 +218,10 @@ def test_T9(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T10(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (-X[2] * X[1] / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - 2, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -239,10 +239,10 @@ def test_T10(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T11(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -259,10 +259,10 @@ def test_T11(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T12(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -279,10 +279,10 @@ def test_T12(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T13(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] + 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -300,10 +300,10 @@ def test_T13(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T15(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (X[2] * X[0] / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 1, X0[2] + 1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -316,10 +316,10 @@ def test_T15(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T16(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (1 * X[1], 1 * (-X[0] * np.pi ** 2 / (4 * const[0])), 1)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -336,10 +336,10 @@ def test_T16(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
 def test_T17(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (0.2 * X[1], 0.2 * (-3 * const[0] * X[0] / (const[0] + X[2] ** 2) ** 2), 0.2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1)
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -356,10 +356,10 @@ def test_T17(algorithm, const):
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T18(algorithm, const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], (-X[1] / const[0]), 1)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
@@ -378,10 +378,10 @@ def test_Shooting_1():
     # Full 2PBVP test problem
     # This is the simplest BVP
 
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], -abs(X[0]))
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0]+2)
 
     algo = Shooting(odefun, None, bcfun)
@@ -428,10 +428,10 @@ def test_Shooting_3():
     # This problem contains a parameter, but it is not explicit in the BCs.
     # Since time is buried in the ODEs, this tests if the BVP solver calculates
     # sensitivities with respect to parameters.
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return 1 * p[0]
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 0, Xf[0] - 2)
 
     algo = Shooting(odefun, None, bcfun)
@@ -447,13 +447,13 @@ def test_Shooting_4():
     # This problem contains a quad and tests if the bvp solver correctly
     # integrates the quadfun. Also tests multiple shooting.
 
-    def odefun(x, p, const):
+    def odefun(x, u, p, const):
         return -x[1], x[0]
 
-    def quadfun(x, p, const):
+    def quadfun(x, u, p, const):
         return x[0]
 
-    def bcfun(X0, q0, Xf, qf, params, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, params, ndp, const):
         return X0[0], X0[1] - 1, qf[0] - 1.0
 
     algo = Shooting(odefun, quadfun, bcfun, num_arcs=4)

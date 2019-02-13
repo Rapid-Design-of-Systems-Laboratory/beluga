@@ -255,6 +255,7 @@ def _cost(X, data):
     num_parameters = data['num_parameters']
     num_nondynamical_parameters = data['num_nondynamical_parameters']
     path = data['pathcost_function']
+    term = data['terminalcost_function']
     const = data['const']
     weights = data['weights']
     n = data['nodes']
@@ -266,8 +267,9 @@ def _cost(X, data):
     else:
         return 0
 
-    c = (tf - t0) / 4 * np.inner(weights, L)
-    return c
+    c = (tf - t0) / 2 * np.inner(weights, L)
+    cf = term(y[-1], u[-1], params, const)
+    return c + cf
 
 def _eq_constraints(X, KKT, data):
     num_eoms = data['num_eoms']

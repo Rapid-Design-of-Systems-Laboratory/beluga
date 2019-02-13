@@ -38,10 +38,10 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     num_controls = len(controls)
     num_params = len(parameters)
     if is_icrm:
-        def compute_control_fn(X, p, C):
+        def compute_control_fn(X, u, p, C):
             return X[-num_controls:]
     else:
-        def compute_control_fn(X, p, C):
+        def compute_control_fn(X, u, p, C):
             p = p[:num_params]
             u_list = np.array(control_opt_fn(*X, *p, *C))
             ham_val = np.zeros(num_options)
@@ -63,13 +63,13 @@ def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, c
     initial_fn = make_jit_fn(boundary_args, initial_cost)
     path_fn = make_jit_fn(path_args, path_cost)
     terminal_fn = make_jit_fn(boundary_args, terminal_cost)
-    def initial_cost(X0, q0, u0, p, C):
+    def initial_cost(X0, u0, p, C):
         return initial_fn(*X0, *p, *C, *u0)
 
     def path_cost(X, u, p, C):
         return path_fn(*X, *p, *C, *u)
 
-    def terminal_cost(Xf, qf, uf, p, C):
+    def terminal_cost(Xf, uf, p, C):
         return terminal_fn(*Xf, *p, *C, *uf)
 
     return initial_cost, path_cost, terminal_cost
@@ -98,16 +98,16 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
 
     if compute_control is not None:
         if is_icrm:
-            def deriv_func(X, p, C):
+            def deriv_func(X, u, p, C):
                 p = p[:num_params]
-                u = compute_control(X, p, C)
+                u = compute_control(X, u, p, C)
                 _X = X[:-num_controls]
                 eom_vals = eom_fn(*_X, *p, *C, *u)
                 return eom_vals
         else:
-            def deriv_func(X, p, C):
+            def deriv_func(X, u, p, C):
                 p = p[:num_params]
-                u = compute_control(X, p, C)
+                u = compute_control(X, u, p, C)
                 eom_vals = eom_fn(*X, *p, *C, *u)
                 return eom_vals
     else:
@@ -132,9 +132,9 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
         return dummy_quad_func
 
     if is_icrm:
-        def quad_func(X, p, C):
+        def quad_func(X, u, p, C):
             p = p[:num_params]
-            u = compute_control(X, p, C)
+            u = compute_control(X, u, p, C)
             quads_vals = np.zeros(num_quads)
             _X = X[:-num_controls]
             for ii in range(num_quads):
@@ -142,9 +142,9 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
 
             return quads_vals
     else:
-        def quad_func(X, p, C):
+        def quad_func(X, u, p, C):
             p = p[:num_params]
-            u = compute_control(X, p, C)
+            u = compute_control(X, u, p, C)
             quad_vals = np.zeros(num_quads)
             for ii in range(num_quads):
                 quad_vals[ii] = quad_fn[ii](*X, *p, *C, *u)
@@ -182,14 +182,14 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
             return bc_vals
 
         if is_icrm:
-            def bc_func(y0, q0, yf, qf, p, ndp, C):
-                u0 = compute_control(y0, p, C)
-                uf = compute_control(yf, p, C)
+            def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
+                u0 = compute_control(y0, u0, p, C)
+                uf = compute_control(yf, uf, p, C)
                 return bc_func_all(y0[:-num_controls], q0, u0, yf[:-num_controls], qf, uf, p, ndp, C)
         else:
-            def bc_func(y0, q0, yf, qf, p, ndp, C):
-                u0 = compute_control(y0, p, C)
-                uf = compute_control(yf, p, C)
+            def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
+                u0 = compute_control(y0, u0, p, C)
+                uf = compute_control(yf, uf, p, C)
                 return bc_func_all(y0, q0, u0, yf, qf, uf, p, ndp, C)
 
     else:

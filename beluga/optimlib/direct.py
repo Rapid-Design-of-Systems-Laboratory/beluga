@@ -61,7 +61,7 @@ def ocp_to_bvp(ocp):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
 
     # Generate the problem data
-    tf_var = sympify('tf')
+    # tf_var = sympify('tf')
     dynamical_parameters = parameters
     dynamical_parameters_units = parameters_units
     bc_initial = [c for c in constraints['initial']]
@@ -84,8 +84,8 @@ def ocp_to_bvp(ocp):
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'initial_cost': str(initial_cost),
            'initial_cost_units': str(initial_cost_units),
-           'path_cost': str(path_cost),
-           'path_cost_units': str(path_cost_units),
+           'path_cost': str(path_cost * states[-1]),
+           'path_cost_units': str(path_cost_units * independent_variable_units),
            'terminal_cost': str(terminal_cost),
            'terminal_cost_units': str(terminal_cost_units),
            'states': [str(x) for x in it.chain(states)],
