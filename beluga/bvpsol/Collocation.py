@@ -192,52 +192,36 @@ class Collocation(BaseAlgorithm):
                 xd23 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((2 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((2 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
                 xd33 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((3 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((3 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
                 err = [(abs(dp0[ii,:]-xd03[ii,:]), abs(dx13[ii,:]-xd13[ii,:]), abs(dx23[ii,:]-xd23[ii,:]), abs(dp1[ii,:]-xd33[ii,:])) for ii in range(len(sol.t)-1)]
-                err = [1/6*e[0] + 4/6*e[1] + 1/6*e[2] for e in err]
+                err = np.array([max(1/6*e[0] + 4/6*e[1] + 1/6*e[2]) for e in err])
+                n_lim = int(max(2, np.floor(len(sol.t)*0.15)))
+                add_nodes = np.argsort(-err)[:n_lim]
+                for ii in add_nodes:
+                    if err[ii] > self.tolerance and self.number_of_nodes_max >= self.number_of_nodes + 2:
+                        meshing = True
+                        new_sol = copy.deepcopy(sol)
+                        t1add = (sol.t[ii] * 2 + sol.t[ii + 1] * 1) / 3
+                        t2add = (sol.t[ii] * 1 + sol.t[ii + 1] * 2) / 3
+                        y1add, q1add, u1add = sol(t1add)
+                        y2add, q2add, u2add = sol(t2add)
+                        new_sol.t = np.hstack((new_sol.t, t1add))
+                        new_sol.t = np.hstack((new_sol.t, t2add))
+                        new_sol.y = np.vstack((new_sol.y, y1add))
+                        new_sol.y = np.vstack((new_sol.y, y2add))
+                        new_sol.q = np.vstack((new_sol.q, q1add))
+                        new_sol.q = np.vstack((new_sol.q, q2add))
+                        new_sol.u = np.vstack((new_sol.u, u1add))
+                        new_sol.u = np.vstack((new_sol.u, u2add))
+                        self.number_of_nodes += 2
+                        mapping = np.argsort(new_sol.t)
+                        sol.t = new_sol.t[mapping]
+                        sol.y = new_sol.y[mapping]
+                        if sol.q.size > 0:
+                            sol.q = new_sol.q[mapping]
+                        if sol.u.size > 0:
+                            sol.u = new_sol.u[mapping]
+                    else:
+                        meshing = False
 
-                add_nodes = [False for _ in range(len(sol.t)-1)]
-                remove_nodes = [False for _ in range(len(sol.t)-1)]
-                for ii, e in enumerate(err):
-                    if any(e > self.tolerance):
-                        add_nodes[ii] = True
-
-                    if any(e < self.tolerance/10):
-                        remove_nodes[ii] = True
-                remove_nodes[0] = False
-                remove_nodes[-1] = False
-                breakpoint()
-
-                if any(add_nodes):
-                    meshing = True
-                else:
-                    meshing = False
-
-                if meshing:
-                    new_sol = copy.deepcopy(sol)
-                    for ii, v in enumerate(add_nodes):
-                        if add_nodes[ii] == True:
-                            if self.number_of_nodes_max >= self.number_of_nodes + 2:
-                                t1add = (sol.t[ii]*2 + sol.t[ii+1]*1)/3
-                                t2add = (sol.t[ii]*1 + sol.t[ii+1]*2)/3
-                                y1add, q1add, u1add = sol(t1add)
-                                y2add, q2add, u2add = sol(t2add)
-                                new_sol.t = np.hstack((new_sol.t, t1add))
-                                new_sol.t = np.hstack((new_sol.t, t2add))
-                                new_sol.y = np.vstack((new_sol.y, y1add))
-                                new_sol.y = np.vstack((new_sol.y, y2add))
-                                new_sol.q = np.vstack((new_sol.q, q1add))
-                                new_sol.q = np.vstack((new_sol.q, q2add))
-                                new_sol.u = np.vstack((new_sol.u, u1add))
-                                new_sol.u = np.vstack((new_sol.u, u2add))
-                                self.number_of_nodes += 2
-                            # else:
-                            #     raise ValueError("Collocation cannot satisfy equations to tolerance without exceeding maximum number of nodes ({0:2d} > {1:2d}).".format(self.number_of_nodes+2, self.number_of_nodes_max))
-                    mapping = np.argsort(new_sol.t)
-                    sol.t = new_sol.t[mapping]
-                    sol.y = new_sol.y[mapping]
-                    if sol.q.size > 0:
-                        sol.q = new_sol.q[mapping]
-                    if sol.u.size > 0:
-                        sol.u = new_sol.u[mapping]
 
         logging.debug(xopt['message'])
 
