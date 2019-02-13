@@ -73,7 +73,6 @@ class Solution(Trajectory):
         obj.converged = False
         return obj
 
-
     def prepare(self, problem_data, mesh_size=None, overwrite=False):
         """
         Creates the dictionary required to evaluate expressions over the solution
@@ -83,7 +82,7 @@ class Solution(Trajectory):
         """
 
         if self.arcs is None:
-            self.arcs = ((0,len(self.t)-1),)
+            self.arcs = ((0, len(self.t)-1),)
         if mesh_size is not None and mesh_size > len(self.t)*len(self.arcs):
             # Update solution to use new mesh if needed
             new_t_list = []
@@ -129,15 +128,20 @@ class Solution(Trajectory):
         variables += [('t', np.hstack(t_list))]
 
         if 'quantity_list' in problem_data:
-            self.qvars = {q['name']:q['expr'] for q in problem_data['quantity_list']}
+            self.qvars = {q['name']: q['expr'] for q in problem_data['quantity_list']}
         else:
             self.qvars = problem_data.get('quantity_vars', {})
 
         qvars = []
         for q_k, q_v in self.qvars.items():
             qvars.append((str(q_k), ne.evaluate(str(q_v), dict(variables+qvars))))
-
         variables += qvars
+
+        # for p in problem_data['dynamical_parameters']:
+        #     pa[str(p)] =
+
+        variables += [(str(name), p[idx]) for idx, name in enumerate(problem_data['dynamical_parameters'])]
+
         self.var_dict = dict(variables)
         self.var_dict['pi'] = math.pi
 
