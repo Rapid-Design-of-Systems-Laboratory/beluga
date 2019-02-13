@@ -47,7 +47,7 @@ Example Problems
 .. toctree::
     :maxdepth: 2
 
-    examples/1-brachistochrone
-    examples/2-zermelo
-    examples/3-planarhypersonic
-    examples/4-hypersonic3dof
+    examples/2-brachistochrone
+    examples/3-zermelo
+    examples/4-planarhypersonic
+    examples/5-hypersonic3dof

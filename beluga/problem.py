@@ -215,6 +215,9 @@ class ConstraintList(dict):
     initial = partialmethod(
         add_constraint, constraint_type='initial',
         constraint_args=constraint_args)
+    path = partialmethod(
+        add_constraint, constraint_type='path',
+        constraint_args=constraint_args)
     terminal = partialmethod(
         add_constraint, constraint_type='terminal',
         constraint_args=constraint_args)
@@ -250,22 +253,16 @@ BVP.__new__.__defaults__ = (None,) # path constraints optional
 
 class GuessGenerator(object):
     """Generates the initial guess from a variety of sources."""
-
     def __init__(self, **kwargs):
         self.setup_funcs = {'auto': self.setup_auto,
-                            'file': self.setup_file,
-                            'static': self.setup_static,
-                            }
+                            'static': self.setup_static}
         self.generate_funcs = {'auto': self.auto,
-                               'file': self.file,
-                               'static': self.static
-                               }
+                               'static': self.static}
         self.setup(**kwargs)
         self.dae_num_states = 0
 
     def setup(self, mode='auto', **kwargs):
         """Sets up the initial guess generation process"""
-
         self.mode = mode
         if mode in self.setup_funcs:
             self.setup_funcs[mode](**kwargs)
@@ -284,51 +281,13 @@ class GuessGenerator(object):
     def setup_static(self, solinit=None):
         self.solinit = solinit
 
-    def static(self, bvp_fn, solinit):
+    def static(self, bvp_fn, solinit, ocp_map, ocp_map_inverse):
         """Directly specify initial guess structure"""
-        return self.solinit
-
-    def setup_file(self, filename='', step=0, iteration=0):
-        self.filename = filename
-        self.step = step
-        self.iteration = iteration
-        if not os.path.exists(self.filename) or not os.path.isfile(self.filename):
-            logging.error('Data file ' + self.filename + ' not found.')
-            raise ValueError('Data file not found!')
-
-    def file(self, bvp_fn, solinit):
-        """Generates initial guess by loading an existing data file.
-        bvp_fn : BVP
-            BVP object containing functions
-        solinit : Solution
-            Solution object with some starting information (such as aux vars)
-        """
-        logging.info('Loading initial guess from ' + self.filename)
-        fp = open(self.filename, 'rb')
-        out = dill.load(fp)
-        if self.step >= len(out['solution']):
-            logging.error('Continuation step index exceeds bounds. Only ' +
-                          str(len(out['solution']))
-                          + ' continuation steps found.')
-            raise ValueError('Initial guess step index out of bounds')
-
-        if self.iteration >= len(out['solution'][self.step]):
-            logging.error('Continuation iteration index exceeds bounds. Only '
-                          + str(len(out['solution'][self.step]))
-                          + ' iterations found.')
-            raise ValueError('Initial guess iteration index out of bounds')
-
-        sol = out['solution'][self.step][self.iteration]
-        # sol.extra = None
-
-        fp.close()
-
-        logging.info('Initial guess loaded')
-        return sol
+        return ocp_map(self.solinit)
 
     def setup_auto(self, start=None,
                    direction='forward',
-                   time_integrate=0.1,
+                   time_integrate=1,
                    quad_guess=np.array([]),
                    costate_guess=0.1,
                    control_guess=0.1,
@@ -353,20 +312,19 @@ class GuessGenerator(object):
         self.control_guess = control_guess
         self.use_control_guess = use_control_guess
 
-    def auto(self, bvp_fn, solinit, guess_mapper, param_guess=None):
+    def auto(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
-        # Assume normalized time from 0 to 1
-        tspan = np.array([0, 1])
+        tspan = np.array([0, self.time_integrate])
 
         x0 = np.array(self.start)
         q0 = np.array(self.quad_guess)
 
         # Add costates
         if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
-            x0 = np.r_[x0, self.costate_guess * np.ones(len(self.start))]
+            d0 = np.r_[self.costate_guess * np.ones(len(self.start))]
         else:
-            x0 = np.r_[x0, self.costate_guess]
+            d0 = np.r_[self.costate_guess]
 
         if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
             u0 = self.control_guess*np.ones(self.dae_num_states)
@@ -375,52 +333,37 @@ class GuessGenerator(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.ones(len(solinit.aux['dynamical_parameters']))
-        elif len(param_guess) < len(solinit.aux['dynamical_parameters']):
-            param_guess += np.ones(len(solinit.aux['dynamical_parameters']) - len(param_guess))
-        elif len(param_guess) > len(solinit.aux['dynamical_parameters']):
+            param_guess = np.ones(len(solinit.dynamical_parameters))
+        elif len(param_guess) < len(solinit.dynamical_parameters):
+            param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
+        elif len(param_guess) > len(solinit.dynamical_parameters):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
-        nondynamical_param_guess = np.ones(len(solinit.aux['nondynamical_parameters']))
-
-        param_guess[0] = self.time_integrate
-
-        if self.dae_num_states > 0:
-            dae_guess = u0
-            if not self.use_control_guess:
-                dhdu_fn = bvp_fn.get_dhdu_func(0, x0, param_guess, solinit.aux)
-
-                dae_x0 = scipy.optimize.fsolve(dhdu_fn, dae_guess, xtol=1e-5)
-            else:
-                dae_x0 = dae_guess
-
-            x0 = np.append(x0, dae_x0)  # Add dae states
+        nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
 
         if self.direction == 'reverse':
-            tspan = [0, -1]
+            tspan = [0, -self.time_integrate]
 
         time0 = time.time()
         prop = Propagator()
         solinit.t = tspan
-        solinit.y = np.array([x0])
-        solinit.q = np.array([q0])
-        solinit.u = np.array(u0)
+        solinit.y = np.array([x0, x0])
+        solinit.dual = np.array([d0, d0])
+        solinit.q = np.array([q0, q0])
+        solinit.u = np.array([u0, u0])
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
-        sol = guess_mapper(solinit)
-        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.dynamical_parameters, sol.aux)
+        sol = guess_map(solinit)
+        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+        solout = copy.deepcopy(solivp)
+        solout.dynamical_parameters = sol.dynamical_parameters
+        solout.nondynamical_parameters = sol.nondynamical_parameters
+        solout.aux = sol.aux
         elapsed_time = time.time() - time0
-        logging.debug('Propagated initial guess in %.2f seconds' % elapsed_time)
-        solinit.t = solivp.t
-        solinit.y = solivp.y
-        solinit.q = solivp.q
-        solinit.u = np.array([])
-        solinit.dynamical_parameters = param_guess
-        solinit.nondynamical_parameters = nondynamical_param_guess
-
+        logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
         logging.debug('Terminal states of guess:')
-        logging.debug(str(solivp.y[-1, :]))
+        logging.debug(str(solout.y[-1, :]))
 
-        return solinit
+        return solout

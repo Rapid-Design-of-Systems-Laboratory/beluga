@@ -1,8 +1,7 @@
-bokeh>=0.12.5
 cloudpickle
 docopt>=0.6.2
 matplotlib>=2.2.2
-multiprocessing_on_dill>=3.5.0a4
+npnlp>=0.0.2
 numba>=0.35.0
 numexpr>=2.6.8
 numpy>=1.14.3

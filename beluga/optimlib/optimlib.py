@@ -43,12 +43,26 @@ def init_workspace(ocp):
 
     constraints = ocp.constraints()
     workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
-                                for c_type, c_list in constraints.items()
-                                if c_type != 'path'}
+                                for c_type, c_list in constraints.items()}
 
     workspace['constraints_units'] = {c_type: [sympify(c_obj['unit']) for c_obj in c_list]
-                                for c_type, c_list in constraints.items()
-                                if c_type != 'path'}
+                                for c_type, c_list in constraints.items()}
+
+    workspace['constraints_lower'] = {c_type: [sympify(c_obj['lower']) for c_obj in c_list]
+                                for c_type, c_list in constraints.items() if c_type == 'path'}
+
+    workspace['constraints_upper'] = {c_type: [sympify(c_obj['upper']) for c_obj in c_list]
+                                      for c_type, c_list in constraints.items() if c_type == 'path'}
+
+    workspace['constraints_activators'] = {c_type: [sympify(c_obj['activator']) for c_obj in c_list]
+                                      for c_type, c_list in constraints.items() if c_type == 'path'}
+
+
+    if 'path' not in workspace['constraints'].keys():
+        workspace['constraints']['path'] = []
+        workspace['constraints_units']['path'] = []
+        workspace['constraints_lower']['path'] = []
+        workspace['constraints_upper']['path'] = []
 
     workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
     workspace['quantities'] = [sympify(q['name']) for q in ocp.quantities()]
@@ -209,7 +223,7 @@ def make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_un
     return hamiltonian, hamiltonian_units, costates, costates_units
 
 
-def make_time_bc(constraints, hamiltonian, bc_terminal):
+def make_time_bc(constraints, derivative_fn, hamiltonian, independent_var):
     """
     Makes free or fixed final time boundary conditions.
 
@@ -218,12 +232,11 @@ def make_time_bc(constraints, hamiltonian, bc_terminal):
     :param bc_terminal: Terminal boundary condition.
     :return: New terminal boundary condition.
     """
-    time_constraints = constraints.get('independent', [])
-    if len(time_constraints) > 0:
-        raise NotImplementedError
-        return bc_terminal+['tf - 1']
+    hamiltonian_free_final_time = all([derivative_fn(c, independent_var) == 0 for c in constraints['terminal']])
+    if hamiltonian_free_final_time:
+        return hamiltonian
     else:
-        return bc_terminal+[hamiltonian - 0]
+        return None
 
 
 def process_quantities(quantities, quantities_values):

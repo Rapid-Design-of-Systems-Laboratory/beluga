@@ -11,9 +11,9 @@ This modules solves :eq:`boundarydifferentialequation` of the form
 
 .. math::
     \begin{aligned}
-        \dot{\mathbf{x}} &= \mathbf{f}(t,\mathbf{x},\mathbf{p}) \\
-        \dot{\mathbf{q}} &= \mathbf{g}(t,\mathbf{x},\mathbf{p}) \\
-        \mathbf{\Phi}(t_0, \mathbf{x}_0, \mathbf{q}_0, t_f, \mathbf{x}_f, \mathbf{q}_f, \mathbf{p}, \mathbf{\lambda}) &= 0 \\
+        \dot{\mathbf{x}} &= \mathbf{f}(\mathbf{x},\mathbf{p}) \\
+        \dot{\mathbf{q}} &= \mathbf{g}(\mathbf{x},\mathbf{p}) \\
+        \mathbf{\Phi}(\mathbf{x}_0, \mathbf{q}_0, \mathbf{x}_f, \mathbf{q}_f, \mathbf{p}, \mathbf{\lambda}) &= 0 \\
     \end{aligned}
     :label: boundarydifferentialequation
 

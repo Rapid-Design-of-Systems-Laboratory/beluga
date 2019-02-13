@@ -2,13 +2,22 @@
 Computes the necessary conditions of optimality using Bryson & Ho's method
 """
 
+from beluga.ivpsol import Trajectory
 from .optimlib import *
 from beluga.utils import sympify
 import itertools as it
 import logging
-
+import numpy as np
+from sympy import cos, pi
+# from math import cos
 
 def ocp_to_bvp(ocp):
+    """
+
+    :param ocp:
+    :return: bvp, map, map_inverse
+    """
+
     ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
@@ -26,6 +35,9 @@ def ocp_to_bvp(ocp):
     constants_of_motion_units = ws['constants_of_motion_units']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']
+    constraints_lower = ws['constraints_lower']
+    constraints_upper = ws['constraints_upper']
+    constraints_activators = ws['constraints_activators']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -36,6 +48,11 @@ def ocp_to_bvp(ocp):
     terminal_cost_units = ws['terminal_cost_units']
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
+
+    # Adjoin time as a state
+    # states += [independent_variable]
+    # states_rates += [sympify('0')]
+    # states_units += [independent_variable_units]
 
     if initial_cost != 0:
         cost_units = initial_cost_units
@@ -60,6 +77,12 @@ def ocp_to_bvp(ocp):
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
 
+    for ii, c in enumerate(constraints['path']):
+        if constraints_lower['path'][ii] is None or constraints_upper['path'][ii] is None:
+            raise NotImplementedError('Lower and upper bounds on path constraints MUST be defined.')
+
+        hamiltonian += constraints_activators['path'][ii]/(cos(pi/2*(2*c - constraints_upper['path'][ii] - constraints_lower['path'][ii]) / (constraints_upper['path'][ii] - constraints_lower['path'][ii])))
+
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
 
     coparameters = make_costate_names(parameters)
@@ -74,16 +97,26 @@ def ocp_to_bvp(ocp):
         constraints, states, costates, parameters, coparameters,
         augmented_terminal_cost, derivative_fn, location='terminal')
 
-    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    # if bc_initial[-1] == bc_terminal[-1]:
+    #     breakpoint()
+    #     del initial_lm_params[-1]
+    #     del bc_initial[-1]
+    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
+
+    if time_bc is not None:
+        bc_terminal += [time_bc]
 
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
 
     control_law = make_control_law(dHdu, controls)
 
     # Generate the problem data
-    tf_var = sympify('tf')
-    dynamical_parameters = [tf_var] + parameters
-    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    # TODO: We're not handling time well. This is hardcoded.
+
+    tf = sympify('_tf')
+    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
@@ -91,14 +124,22 @@ def ocp_to_bvp(ocp):
     out = {'method': 'brysonho',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+           'initial_cost': None,
+           'initial_cost_units': None,
+           'path_cost': None,
+           'path_cost_units': None,
+           'terminal_cost': None,
+           'terminal_cost_units': None,
            'states': [str(x) for x in it.chain(states, costates)],
+           'states_rates':
+               [str(tf * rate) for rate in states_rates] +
+               [str(tf * rate) for rate in costates_rates],
            'states_units': [str(x) for x in states_units + costates_units],
-           'deriv_list':
-               [str(tf_var * rate) for rate in states_rates] +
-               [str(tf_var * rate) for rate in costates_rates],
            'quads': [str(x) for x in coparameters],
-           'quads_rates': [str(tf_var * x) for x in coparameters_rates],
+           'quads_rates': [str(tf * x) for x in coparameters_rates],
            'quads_units': [str(x) for x in coparameters_units],
+           'path_constraints': [],
+           'path_constraints_units': [],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
@@ -107,8 +148,6 @@ def ocp_to_bvp(ocp):
            'dynamical_parameters_units': [str(c) for c in dynamical_parameters_units],
            'nondynamical_parameters': [str(c) for c in nondynamical_parameters],
            'nondynamical_parameters_units': [str(c) for c in nondynamical_parameters_units],
-           'independent_variable': str(independent_variable),
-           'independent_variable_units': str(independent_variable_units),
            'control_list': [str(x) for x in it.chain(controls)],
            'controls': [str(u) for u in controls],
            'hamiltonian': str(hamiltonian),
@@ -120,10 +159,22 @@ def ocp_to_bvp(ocp):
            'control_options': control_law,
            'num_controls': len(controls)}
 
-    def guess_mapper(sol):
+    def guess_map(sol):
+        solout = Trajectory(sol)
+        solout.y = np.column_stack((solout.y, solout.dual))
+        solout.dual = np.array([])
+        solout.dynamical_parameters = np.hstack((solout.dynamical_parameters, solout.t[-1]))
+        solout.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+        solout.t = solout.t / solout.t[-1]
+        return solout
+
+    def guess_map_inverse(sol, num_costates=len(costates)):
+        sol.t = sol.t*sol.dynamical_parameters[-1]
+        sol.dual = sol.y[:, -num_costates:]
+        sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
         return sol
 
-    return out, guess_mapper
+    return out, guess_map, guess_map_inverse
 
 
 def make_control_law(dhdu, controls):

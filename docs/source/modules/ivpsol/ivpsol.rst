@@ -10,9 +10,9 @@ This modules solves :eq:`ordinarydifferentialequation` of the form
 
 .. math::
     \begin{aligned}
-        \dot{x} &= f(t,\mathbf{x}, \mathbf{p}) \\
-        \dot{q} &= h(t,\mathbf{x}, \mathbf{p}) \\
-        \mathbf{x}(t_0) &= \mathbf{x}_0
+        \dot{x} &= f(\mathbf{x}, \mathbf{p}) \\
+        \dot{q} &= h(\mathbf{x}, \mathbf{p}) \\
+        \mathbf{x}(\tau_0) &= \mathbf{x}_0
     \end{aligned}
     :label: ordinarydifferentialequation
 

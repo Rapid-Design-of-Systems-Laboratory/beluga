@@ -71,22 +71,22 @@ def ocp_to_bvp(ocp):
         constraints, states, costates, parameters, coparameters,
         augmented_terminal_cost, derivative_fn, location='terminal')
 
-    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
+    if time_bc is not None:
+        bc_terminal += [time_bc]
 
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
 
     nondynamical_parameters = initial_lm_params + terminal_lm_params
-
     costate_eoms, bc_list = make_constrained_arc_fns(states, costates, costates_rates, controls, nondynamical_parameters, constants, quantity_vars, hamiltonian)
-
     dae_states, dae_equations, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, derivative_fn)
 
     # Generate the problem data
-    tf_var = sympify('tf')
-    dynamical_parameters = [tf_var] + parameters
-    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    tf = sympify('_tf')
+    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 
@@ -105,15 +105,23 @@ def ocp_to_bvp(ocp):
     out = {'method': 'icrm',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+           'initial_cost': None,
+           'initial_cost_units': None,
+           'path_cost': None,
+           'path_cost_units': None,
+           'terminal_cost': None,
+           'terminal_cost_units': None,
            'states': [str(x) for x in it.chain(states, costates)],
            'states_units': [str(x) for x in states_units + costates_units],
-           'deriv_list':
-               [str(tf_var * rate) for rate in states_rates] +
-               [str(tf_var * rate) for rate in costates_rates] +
-               [str(tf_var*dae_eom) for dae_eom in dae_equations],
+           'states_rates':
+               [str(tf * rate) for rate in states_rates] +
+               [str(tf * rate) for rate in costates_rates] +
+               [str(tf*dae_eom) for dae_eom in dae_equations],
            'quads': [str(x) for x in coparameters],
-           'quads_rates': [str(tf_var * x) for x in coparameters_rates],
+           'quads_rates': [str(tf * x) for x in coparameters_rates],
            'quads_units': [str(x) for x in coparameters_units],
+           'path_constraints': [],
+           'path_constraints_units': [],
            'constants': [str(c) for c in constants],
            'constants_units': [str(c) for c in constants_units],
            'constants_values': [float(c) for c in constants_values],
@@ -123,9 +131,6 @@ def ocp_to_bvp(ocp):
            'nondynamical_parameters': [str(c) for c in nondynamical_parameters],
            'nondynamical_parameters_units': [str(c) for c in nondynamical_parameters_units],
            'controls': [str(u) for u in controls],
-           'dae_var_list': [str(dae_state) for dae_state in dae_states],
-           'dae_eom_list': [str(tf_var*dae_eom) for dae_eom in dae_equations],
-           'dae_var_num': len(dae_states),
            'hamiltonian': str(hamiltonian),
            'num_states': len(states + costates + coparameters),
            'dHdu': [str(_) for _ in it.chain(dHdu)],
@@ -140,13 +145,25 @@ def ocp_to_bvp(ocp):
            'dgdU': dgdU,
            'nOdes': 2 * len(states) + len(dae_states)}
 
-    def guess_mapper(sol):
-        solout = copy.copy(sol)
-        solout.y = np.array([np.hstack((sol.y[0], sol.u))])
+    def guess_map(sol):
+        sol.y = np.column_stack((sol.y, sol.dual, sol.u))
+        sol.dual = np.array([])
         sol.u = np.array([])
-        return solout
+        sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
+        sol.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+        sol.t = sol.t / sol.t[-1]
+        return sol
 
-    return out, guess_mapper
+    def guess_map_inverse(sol, num_controls=len(controls), num_costates=len(costates)):
+        sol.t = sol.t * sol.dynamical_parameters[-1]
+        sol.u = sol.y[:, -num_controls:]
+        sol.y = np.delete(sol.y, np.s_[-num_controls:], axis=1)
+        sol.dual = sol.y[:, -num_costates:]
+        sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
+        return sol
+
+
+    return out, guess_map, guess_map_inverse
 
 
 def make_control_dae(states, costates, states_rates, costates_rates, controls, dhdu, derivative_fn):

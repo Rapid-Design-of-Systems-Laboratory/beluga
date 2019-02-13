@@ -4,11 +4,9 @@ import os, sys
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
-long_description = '''beluga is a Python library for trajectory optimization
-via indirect methods.'''
+long_description = '''beluga is a unified direct and indirect trajectory optimization library.'''
 
 modules = ['beluga.bvpsol',
-           'beluga.bvpsol.algorithms',
            'beluga.codegen',
            'beluga.continuation',
            'beluga.continuation.strategies',
@@ -20,9 +18,7 @@ modules = ['beluga.bvpsol',
            'beluga.liepack.domain.liegroups',
            'beluga.liepack.field',
            'beluga.optimlib',
-           'beluga.utils',
-           'beluga.visualization',
-           'beluga.visualization.renderers']
+           'beluga.utils']
 
 tests = ['beluga.bvpsol.tests',
          'beluga.ivpsol.tests',

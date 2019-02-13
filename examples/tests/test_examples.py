@@ -6,7 +6,6 @@ def test_brachistochrone_shooting():
     import beluga
 
     from beluga.ivpsol import Trajectory
-    from beluga.bvpsol import Solution
 
     ocp = beluga.OCP('brachisto')
 
@@ -41,7 +40,7 @@ def test_brachistochrone_shooting():
 
     shooting_solver = beluga.bvp_algorithm('Shooting')
 
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
 
     continuation_steps = beluga.init_continuation()
 
@@ -50,57 +49,63 @@ def test_brachistochrone_shooting():
         .const('x_f', 10) \
         .const('y_f', -10)
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps,
+    cont = beluga.solve(ocp=ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps,
                        guess_generator=guess_maker)
-
+    sol = cont[-1][-1]
     assert isinstance(sol, Trajectory)
-    assert isinstance(sol, Solution)
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 7
+    assert sol.y.shape[1] == 3
+    assert sol.dual.shape[1] == 3
     assert sol.u.shape[1] == 1
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+    d0 = sol.dual[0]
+    df = sol.dual[-1]
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
+    assert abs(d0[0] + 0.0667) < tol
+    assert abs(d0[1] - 0.0255) < tol
+    assert abs(d0[2] + 0.1019) < tol
     assert abs(sol.t[-1] - 1.8433) < tol
     assert abs(yf[0] - 10) < tol
     assert abs(yf[1] + 10) < tol
     assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
+    assert abs(df[0] + 0.0667) < tol
+    assert abs(df[1] - 0.0255) < tol
+    assert abs(df[2] - 0) < tol
+    assert abs(d0[0] - df[0]) < tol
+    assert abs(d0[1] - df[1]) < tol
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+    d0 = sol.dual[0]
+    df = sol.dual[-1]
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 6
+    assert sol.y.shape[1] == 3
+    assert sol.dual.shape[1] == 3
     assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
+    assert abs(d0[0] + 0.0667) < tol
+    assert abs(d0[1] - 0.0255) < tol
+    assert abs(d0[2] + 0.1019) < tol
     assert abs(sol.t[-1] - 1.8433) < tol
     assert abs(yf[0] - 10) < tol
     assert abs(yf[1] + 10) < tol
     assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
+    assert abs(df[0] + 0.0667) < tol
+    assert abs(df[1] - 0.0255) < tol
+    assert abs(df[2] - 0) < tol
+    assert abs(d0[0] - df[0]) < tol
+    assert abs(d0[1] - df[1]) < tol
 
 
 def test_brachistochrone_collocation():
@@ -108,7 +113,6 @@ def test_brachistochrone_collocation():
     import beluga
 
     from beluga.ivpsol import Trajectory
-    from beluga.bvpsol import Solution
 
     ocp = beluga.OCP('brachisto')
 
@@ -152,57 +156,65 @@ def test_brachistochrone_collocation():
         .const('x_f', 10) \
         .const('y_f', -10)
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     assert isinstance(sol, Trajectory)
-    assert isinstance(sol, Solution)
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 6
+    assert sol.y.shape[1] == 3
+    assert sol.dual.shape[1] == 3
     assert sol.u.shape[1] == 1
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+    d0 = sol.dual[0]
+    df = sol.dual[-1]
+
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
+    assert abs(d0[0] + 0.0667) < tol
+    assert abs(d0[1] - 0.0255) < tol
+    assert abs(d0[2] + 0.1019) < tol
     assert abs(sol.t[-1] - 1.8433) < tol
     assert abs(yf[0] - 10) < tol
     assert abs(yf[1] + 10) < tol
     assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
+    assert abs(df[0] + 0.0667) < tol
+    assert abs(df[1] - 0.0255) < tol
+    assert abs(df[2] - 0) < tol
+    assert abs(d0[0] - df[0]) < tol
+    assert abs(d0[1] - df[1]) < tol
 
-    sol = beluga.solve(ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+    d0 = sol.dual[0]
+    df = sol.dual[-1]
 
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 7
+    assert sol.y.shape[1] == 3
+    assert sol.dual.shape[1] == 3
     assert sol.u.shape[1] == 1
     assert abs(y0[0] - 0) < tol
     assert abs(y0[1] - 0) < tol
     assert abs(y0[2] - 0) < tol
-    assert abs(y0[3] + 0.0667) < tol
-    assert abs(y0[4] - 0.0255) < tol
-    assert abs(y0[5] + 0.1019) < tol
+    assert abs(d0[0] + 0.0667) < tol
+    assert abs(d0[1] - 0.0255) < tol
+    assert abs(d0[2] + 0.1019) < tol
     assert abs(sol.t[-1] - 1.8433) < tol
     assert abs(yf[0] - 10) < tol
     assert abs(yf[1] + 10) < tol
     assert abs(yf[2] - 14.0071) < tol
-    assert abs(yf[3] + 0.0667) < tol
-    assert abs(yf[4] - 0.0255) < tol
-    assert abs(yf[5] - 0) < tol
-    assert abs(y0[3] - yf[3]) < tol
-    assert abs(y0[4] - yf[4]) < tol
+    assert abs(df[0] + 0.0667) < tol
+    assert abs(df[1] - 0.0255) < tol
+    assert abs(df[2] - 0) < tol
+    assert abs(d0[0] - df[0]) < tol
+    assert abs(d0[1] - df[1]) < tol
 
 
 def test_zermelo_custom_functions():
@@ -272,11 +284,12 @@ def test_zermelo_custom_functions():
         .num_cases(10) \
         .const('epsilon', 1)
 
-    sol = beluga.solve(ocp,
+    cont = beluga.solve(ocp=ocp,
                        method='icrm',
                        bvp_algorithm=bvp_solver,
                        steps=continuation_steps,
                        guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     from beluga.ivpsol import Trajectory
     assert isinstance(sol, Trajectory)
@@ -376,34 +389,39 @@ def test_planarhypersonic():
                 .num_cases(11) \
                 .const('rho0', 1.2)
 
-    sol = beluga.solve(ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    sol = cont[-1][-1]
 
     y0 = sol.y[0]
     yf = sol.y[-1]
+    d0 = sol.dual[0]
+    df = sol.dual[-1]
 
-    y0e = [8.00000000e+04, 0.00000000e+00, 4.00000000e+03, 1.95069984e-02, -1.68249327e+01, 1.21634197e+06, -2.83598229e+03, -6.15819100e-17]
-    yfe = [5.23214346e-04, 8.72664626e-02, 2.69147623e+03, -9.38246813e-01, 5.46455659e+02, 1.21634197e+06, -5.38295257e+03, 1.67911185e-01]
+    y0e = [8.00000000e+04, 0.00000000e+00, 4.00000000e+03, 1.95069984e-02]
+    yfe = [5.23214346e-04, 8.72664626e-02, 2.69147623e+03, -9.38246813e-01]
+    d0e = [-1.68249327e+01, 1.21634197e+06, -2.83598229e+03, -6.15819100e-17]
+    dfe = [5.46455659e+02, 1.21634197e+06, -5.38295257e+03, 1.67911185e-01]
     tfe = 144.5678
 
     assert sol.t.shape[0] == sol.y.shape[0]
     assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 8
+    assert sol.y.shape[1] == 4
+    assert sol.dual.shape[1] == 4
     assert sol.u.shape[1] == 1
     assert abs((y0[0] - y0e[0]) / y0e[0]) < tol
     assert abs((y0[1] - y0e[1])) < tol
     assert abs((y0[2] - y0e[2]) / y0e[2]) < tol
     assert abs((y0[3] - y0e[3]) / y0e[3]) < tol
-    assert abs((y0[4] - y0e[4]) / y0e[4]) < tol
-    assert abs((y0[5] - y0e[5]) / y0e[5]) < tol
-    assert abs((y0[6] - y0e[6]) / y0e[6]) < tol
-    assert abs((y0[7] - y0e[7])) < tol
+    assert abs((d0[0] - d0e[0]) / d0e[0]) < tol
+    assert abs((d0[1] - d0e[1]) / d0e[1]) < tol
+    assert abs((d0[2] - d0e[2]) / d0e[2]) < tol
+    assert abs((d0[3] - d0e[3])) < tol
     assert abs((sol.t[-1] - tfe) / tfe) < tol
     assert abs((yf[0] - yfe[0])) < tol
     assert abs((yf[1] - yfe[1]) / yfe[1]) < tol
     assert abs((yf[2] - yfe[2]) / yfe[2]) < tol
     assert abs((yf[3] - yfe[3]) / yfe[3]) < tol
-    assert abs((yf[4] - yfe[4]) / yfe[4]) < tol
-    assert abs((yf[5] - yfe[5]) / yfe[5]) < tol
-    assert abs((yf[6] - yfe[6]) / yfe[6]) < tol
-    assert abs((yf[7] - yfe[7]) / yfe[7]) < tol
-
+    assert abs((df[0] - dfe[0]) / dfe[0]) < tol
+    assert abs((df[1] - dfe[1]) / dfe[1]) < tol
+    assert abs((df[2] - dfe[2]) / dfe[2]) < tol
+    # assert abs((yf[7] - yfe[7]) / yfe[7]) < tol

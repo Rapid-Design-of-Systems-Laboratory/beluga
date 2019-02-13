@@ -84,7 +84,7 @@ class Propagator(Algorithm):
         y0 = np.array(y0, dtype=np.float64)
 
         if self.program == 'scipy':
-            int_sol = solve_ivp(lambda t, y: eom_func(t, y, *args), [tspan[0], tspan[-1]], y0,
+            int_sol = solve_ivp(lambda t, y: eom_func(y, *args), [tspan[0], tspan[-1]], y0,
                                 rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
             gamma = Trajectory(int_sol.t, int_sol.y.T)
 
@@ -142,10 +142,18 @@ class Trajectory(object):
         """
 
         obj = super(Trajectory, cls).__new__(cls)
+
+        if len(args) > 0 and isinstance(args[0], Trajectory):
+            return args[0]
+
         obj.t = np.array([])
         obj.y = np.array([])
+        obj.dual = np.array([])
         obj.q = np.array([])
         obj.u = np.array([])
+        obj.dynamical_parameters = np.array([])
+        obj.nondynamical_parameters = np.array([])
+        obj.aux = dict()
 
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
         obj.interpolation_type = interpolation_type
@@ -324,7 +332,7 @@ def reconstruct(quadfun, gamma, q0, *args):
     l = len(gamma)
     temp_q = np.zeros_like(q0)
 
-    dq = np.array([quadfun(time, gamma(time)[0], *args) for time in gamma.t])
+    dq = np.array([quadfun(gamma(time)[0], *args) for time in gamma.t])
 
     # Integrate the quad func using numerical quadrature
     qf_m0 = np.vstack([temp_q] + [simps(dq[:ii+2].T, x=gamma.t[:ii+2]) for ii in range(len(gamma.t)-1)])
