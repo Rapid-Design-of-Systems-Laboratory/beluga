@@ -32,8 +32,6 @@ ocp.quantity('D','0.5*rho*v^2*Cd*Aref')
 ocp.quantity('L','0.5*rho*v^2*Cl*Aref')
 ocp.quantity('r','re+h')
 
-
-
 # Define controls
 ocp.control('alfa','rad')
 

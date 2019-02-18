@@ -6,14 +6,13 @@ from math import isclose
 
 from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, Trajectory, reconstruct
-
+from scipy.optimize.slsqp import approx_jacobian
 from scipy.optimize import minimize, root, fsolve
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
                              'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}
 scipy_root_algorithms = {'hybr', 'lm', 'broyden1', 'broyden2', 'anderson', 'linearmixing', 'diagbroyden',
                          'excitingmixing', 'krylov', 'df-sane'}
 
-from scipy.optimize.slsqp import approx_jacobian
 
 class Shooting(BaseAlgorithm):
     r"""
@@ -194,7 +193,7 @@ class Shooting(BaseAlgorithm):
         nBCs = len(fx)
 
         Mi = np.zeros((nBCs, n_odes))
-        M = np.zeros((nBCs, (n_odes) * num_arcs))
+        M = np.zeros((nBCs, n_odes * num_arcs))
         Q = np.zeros((nBCs, n_quads))
         P1 = np.zeros((nBCs, parameters.size))
         P2 = np.zeros((nBCs, nondynamical_params.size))
@@ -488,7 +487,7 @@ class Shooting(BaseAlgorithm):
             converged = isclose(np.linalg.norm(_constraint_function_wrapper(Xinit))**2, 0, abs_tol=self.tolerance)
 
         elif self.algorithm.lower() == 'armijo':
-            ll = 1
+
             while not converged and n_iter <= self.max_iterations and err < self.max_error:
                 residual = _constraint_function_wrapper(Xinit)
 
@@ -525,8 +524,9 @@ class Shooting(BaseAlgorithm):
 
                 logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(J)))
         elif self.algorithm.lower() == 'npnlp':
-            from npnlp import minimize as min
-            opt = min(cost, Xinit, method='sqp', tol=self.tolerance, nonlconeq=lambda x,l: _constraint_function_wrapper(x))
+            from npnlp import minimize as mini
+            opt = mini(cost, Xinit, method='sqp', tol=self.tolerance,
+                       nonlconeq=lambda x, l: _constraint_function_wrapper(x))
             Xinit = opt['x']
             n_iter = opt['nit']
             converged = opt['success'] and isclose(opt['fval'], 0, abs_tol=self.tolerance)
