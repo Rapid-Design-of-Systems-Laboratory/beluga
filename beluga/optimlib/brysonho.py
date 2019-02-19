@@ -161,11 +161,13 @@ def ocp_to_bvp(ocp):
 
     def guess_map(sol):
         solout = Trajectory(sol)
+        nodes = len(solout.t)
         solout.y = np.column_stack((solout.y, solout.dual))
         solout.dual = np.array([])
         solout.dynamical_parameters = np.hstack((solout.dynamical_parameters, solout.t[-1]))
         solout.nondynamical_parameters = np.ones(len(nondynamical_parameters))
         solout.t = solout.t / solout.t[-1]
+        solout.u = np.array([]).reshape((nodes, 0))
         return solout
 
     def guess_map_inverse(sol, num_costates=len(costates)):

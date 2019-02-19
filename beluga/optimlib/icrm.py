@@ -146,9 +146,10 @@ def ocp_to_bvp(ocp):
            'nOdes': 2 * len(states) + len(dae_states)}
 
     def guess_map(sol):
+        nodes = len(sol.t)
         sol.y = np.column_stack((sol.y, sol.dual, sol.u))
-        sol.dual = np.array([])
-        sol.u = np.array([])
+        sol.dual = np.array([]).reshape((nodes, 0))
+        sol.u = np.array([]).reshape((nodes, 0))
         sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
         sol.nondynamical_parameters = np.ones(len(nondynamical_parameters))
         sol.t = sol.t / sol.t[-1]

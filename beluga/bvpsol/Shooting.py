@@ -128,19 +128,21 @@ class Shooting(BaseAlgorithm):
         tspan = [None]*n_arcs
         y0g = [None]*n_arcs
         q0g = [None]*n_arcs
+        u0g = [None]*n_arcs
         for ii in range(len(gamma_set)):
             _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
             tspan[ii] = gamma_set[ii].t
             y0g[ii] = _y0g
             q0g[ii] = _q0g
+            u0g[ii] = _u0g
 
         def preload(args):
-            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], paramGuess, sol.const)
+            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], args[3], paramGuess, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
         else:
-            gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
+            gamma_set_new = [preload([T, Y, Q, U]) for T, Y, Q, U in zip(tspan, y0g, q0g, u0g)]
 
         if n_arcs > 1 and nquads > 0:
             for ii in range(n_arcs-1):
@@ -266,7 +268,7 @@ class Shooting(BaseAlgorithm):
             y0, q0, u0 = gamma_set[0](t0)
             tf = gamma_set[-1].t[-1]
             yf, qf, uf = gamma_set[-1](tf)
-            bc1 = np.array(bc_func(y0, q0, yf, qf, paramGuess, nondynamical_parameters, *args)).flatten()
+            bc1 = np.array(bc_func(y0, q0, u0, yf, qf, uf, paramGuess, nondynamical_parameters, *args)).flatten()
             bc2 = np.array([gamma_set[ii].y[-1] - gamma_set[ii+1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
@@ -321,6 +323,9 @@ class Shooting(BaseAlgorithm):
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
 
         pool = kwargs.get('pool', None)
+
+        if sol.u.size > 0:
+            raise NotImplementedError('Shooting cannot directly handle control variables.')
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
