@@ -22,6 +22,8 @@ class Collocation(BaseAlgorithm):
         +------------------------+-----------------+-----------------+
         | Valid kwargs           | Default Value   | Valid Values    |
         +========================+=================+=================+
+        | adaptive_mesh          | False           | Bool            |
+        +------------------------+-----------------+-----------------+
         | cached                 | True            | Bool            |
         +------------------------+-----------------+-----------------+
         | tolerance              | 1e-4            | > 0             |
@@ -42,6 +44,7 @@ class Collocation(BaseAlgorithm):
         
         obj = super(Collocation, cls).__new__(cls, *args, **kwargs)
 
+        adaptive_mesh = kwargs.get('adaptive_mesh', False)
         cached = kwargs.get('cached', True)
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
@@ -51,6 +54,7 @@ class Collocation(BaseAlgorithm):
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
+        obj.adaptive_mesh = adaptive_mesh
         obj.cached = cached
         obj.tolerance = tolerance
         obj.max_error = max_error
@@ -115,6 +119,7 @@ class Collocation(BaseAlgorithm):
         # self.constraint = {'type': 'eq', 'fun': self._collocation_constraint}
         self.constraint_midpoint = {'type': 'eq', 'fun': self._collocation_constraint_midpoint}
         self.constraint_boundary = {'type': 'eq', 'fun': self._collocation_constraint_boundary}
+        self.constraint_path = {'type': 'ineq', 'fun':self._collocation_constraint_path}
 
         # Set up initial guess and other info
         meshing = True
@@ -153,11 +158,11 @@ class Collocation(BaseAlgorithm):
             sol.converged = False
 
             # This is SciPy syntax
-            xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary], tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
+            xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path], tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
             # xopt = minimize(self._collocation_cost, vectorized, nonlconeq=lambda X, L: np.hstack((self._collocation_constraint_boundary(X), self._collocation_constraint_midpoint(X))), method='sqp')
             sol.t = self.tspan
             sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
-            if len(sol.t) >= self.number_of_nodes_max:
+            if len(sol.t) >= self.number_of_nodes_max or self.adaptive_mesh is False:
                 meshing = False
             else:
                 dX = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(sol.y, sol.u)])
@@ -222,8 +227,12 @@ class Collocation(BaseAlgorithm):
                     else:
                         meshing = False
 
-
         logging.debug(xopt['message'])
+
+        if 'kkt' in xopt:
+            sol.dual = self._kkt_to_dual(sol, xopt['kkt'][0])
+        else:
+            sol.dual = self._kkt_to_dual(sol, np.zeros((len(sol.t)-1, sol.y.shape[1])))
 
         # if xopt['status'] == 0:
         #     sol.converged = True
@@ -231,6 +240,24 @@ class Collocation(BaseAlgorithm):
 
         # Organize the output with the sol() structure
         return sol
+
+    def _kkt_to_dual(self, sol, kkt):
+        nodes = len(sol.t)
+        dual = (kkt.reshape((nodes-1, sol.y.shape[1]), order='F').T/(sol.t[:-1]-sol.t[1:])).T
+        dual = np.vstack((dual, np.zeros(sol.y.shape[1])))
+        return dual
+
+    def _collocation_constraint_path(self, vectorized):
+        if self.inequality_constraint_function is None:
+            return ()
+
+        y, q0, u, params, nondynamical_params = self._unwrap_params(vectorized)
+        if u.size > 0:
+            cp = np.hstack([-self.inequality_constraint_function(y[ii], u[ii], params, self.const) for ii in range(self.number_of_nodes)])
+        else:
+            cp = np.hstack([-self.inequality_constraint_function(y[ii], [], params, self.const) for ii in range(self.number_of_nodes)])
+
+        return cp
 
     def _collocation_constraint_midpoint(self, vectorized):
         y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)

@@ -10,7 +10,7 @@ import shutil
 import tempfile
 import subprocess
 import importlib
-import theano
+# import theano
 from functools import partial
 import warnings
 import numpy as np

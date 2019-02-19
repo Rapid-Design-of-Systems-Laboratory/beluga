@@ -43,7 +43,7 @@ ocp.constraints() \
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
 bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
-bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes=30)
+bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes_min=30)
 
 solinit = Trajectory(np.linspace(0,0.1,num=10), np.zeros((10,2)), np.array([]), np.zeros((10,1)))
 solinit.dynamical_parameters = np.array([])

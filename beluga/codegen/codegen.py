@@ -4,7 +4,7 @@ import numba
 import numpy as np
 import re
 import sympy as sm
-from beluga.utils import theano_function
+# from beluga.utils import theano_function
 
 from beluga.utils import ufuncify_matrix
 
@@ -25,15 +25,15 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
     u_vars = sm.var(','.join(u_args))
     m_var = sm.Matrix(control_opt_mat)
-    ucont = [[theano_function(u_vars, [sm.sympify(ut)], on_unused_input='ignore') for ut in row] for row in control_opt_mat]
-    L = len(ucont)
-    K = len(ucont[0])
-    def ucont_wrap(*args):
-        uout = np.zeros((L,K))
-        for ii in range(L):
-            for jj in range(K):
-                uout[ii,jj] = ucont[ii][jj](*args)
-        return uout
+    # ucont = [[theano_function(u_vars, [sm.sympify(ut)], on_unused_input='ignore') for ut in row] for row in control_opt_mat]
+    # L = len(ucont)
+    # K = len(ucont[0])
+    # def ucont_wrap(*args):
+    #     uout = np.zeros((L,K))
+    #     for ii in range(L):
+    #         for jj in range(K):
+    #             uout[ii,jj] = ucont[ii][jj](*args)
+    #     return uout
 
     # ucont = ufuncify_matrix(u_vars, m_var, tmp_dir='./compiled/', parallel=False)
 
