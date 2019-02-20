@@ -5,6 +5,7 @@ import copy
 from scipy.optimize import minimize as mini
 from npnlp import minimize
 from scipy.integrate import simps
+from .collocation import *
 import logging
 
 class Collocation(BaseAlgorithm):
@@ -79,6 +80,14 @@ class Collocation(BaseAlgorithm):
         sol.set_interpolate_function('cubic')
         self.number_of_nodes = self.number_of_nodes_min
         number_of_datapoints = len(sol.t)
+
+        # Default costs and quads to return nothing if not defined
+        def return_nil(*args, **kwargs):
+            return np.array([])
+
+        if self.quadrature_function is None:
+            self.quadrature_function = return_nil
+
         if number_of_datapoints < 4:
             # Special case where polynomial interpolation fails. Use linear interpolation to get 4 nodes.
             t_new = np.linspace(sol.t[0], sol.t[-1], num=4)
@@ -111,8 +120,6 @@ class Collocation(BaseAlgorithm):
             sol.y = new_y
             sol.q = new_q
             sol.u = new_u
-            if self.quadrature_function is not None and len(sol.q[0]) is not 0:
-                raise NotImplemented # TODO: Put reconstruction of q's in Trajectory()? Or leave in ivpsol?
         else:
             self.number_of_nodes = number_of_datapoints
 
@@ -131,16 +138,11 @@ class Collocation(BaseAlgorithm):
             else:
                 self.number_of_controls = 0
 
-            # TODO: The following if-then structure is silly, but I can't resolve this until some optimlib corrections are made
             if sol.q.size == 0:
                 self.number_of_quads = 0
-                sol.q = np.array([], dtype=np.float64)
-            elif len(sol.q) == 0:
-                self.number_of_quads = 0
-                sol.q = np.array([], dtype=np.float64)
+                sol.q = np.array([]).reshape((self.number_of_nodes, 0))
             else:
-                self.number_of_quads = len(sol.q)
-                raise NotImplementedError
+                self.number_of_quads = sol.q.shape[1]
 
             if sol.dynamical_parameters is None:
                 sol.dynamical_parameters = np.array([], dtype=np.float64)
@@ -161,7 +163,11 @@ class Collocation(BaseAlgorithm):
             xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path], tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
             # xopt = minimize(self._collocation_cost, vectorized, nonlconeq=lambda X, L: np.hstack((self._collocation_constraint_boundary(X), self._collocation_constraint_midpoint(X))), method='sqp')
             sol.t = self.tspan
-            sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+            sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+
+            if self.number_of_quads > 0:
+                sol.q = integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u, sol.dynamical_parameters, self.const, self.tspan, q0)
+
             if len(sol.t) >= self.number_of_nodes_max or self.adaptive_mesh is False:
                 meshing = False
             else:
@@ -177,8 +183,7 @@ class Collocation(BaseAlgorithm):
                 u0 = sol.u[:-1]
                 uf = sol.u[1:]
                 u_midpoint = (u0 + uf) / 2
-                midpoint_predicted = np.column_stack([1 / 2 * (p0[:, ii] + p1[:, ii]) + (t1 - t0) / 8 * (dp0[:, ii] - dp1[:, ii]) for ii in range(sol.y.shape[1])])
-                midpoint_derivative_predicted = np.column_stack([-3 / 2 * (p0[:, ii] - p1[:, ii]) / (t1 - t0) - 1 / 4 * (dp0[:, ii] + dp1[:, ii]) for ii in range(sol.y.shape[1])])
+                midpoint_predicted = midpoint(p0, p1, dp0, dp1, t0, t1)
                 dp12 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)])  # TODO: Vectorize, so this one works as well
                 u13 = (u0*2 + uf*1)/3
                 u23 = (u0*1 + uf*2)/3
@@ -234,11 +239,8 @@ class Collocation(BaseAlgorithm):
         else:
             sol.dual = self._kkt_to_dual(sol, np.zeros((len(sol.t)-1, sol.y.shape[1])))
 
-        # if xopt['status'] == 0:
-        #     sol.converged = True
         sol.converged = xopt['success']
 
-        # Organize the output with the sol() structure
         return sol
 
     def _kkt_to_dual(self, sol, kkt):
@@ -261,8 +263,7 @@ class Collocation(BaseAlgorithm):
 
     def _collocation_constraint_midpoint(self, vectorized):
         y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        gamma = Trajectory(self.tspan, y, np.array([]), u)
-        # dX = np.squeeze(self.derivative_function(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
+        # dX1 = np.squeeze(self.derivative_function(y.T, u.T, params, self.const)).T # TODO: Vectorized our code compiler so this line works
         dX = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(y, u)])
         if len(dX.shape) == 1:
             dX = np.array([dX]).T
@@ -275,8 +276,8 @@ class Collocation(BaseAlgorithm):
         u0 = u[:-1]
         uf = u[1:]
         u_midpoint = (u0 + uf)/2
-        midpoint_predicted = np.column_stack([1 / 2 * (p0[:, ii] + p1[:, ii]) + (t1 - t0) / 8 * (dp0[:, ii] - dp1[:, ii]) for ii in range(y.shape[1])])
-        midpoint_derivative_predicted = np.column_stack([-3 / 2 * (p0[:,ii] - p1[:,ii]) / (t1-t0) - 1 / 4 * (dp0[:,ii] + dp1[:,ii]) for ii in range(y.shape[1])])
+        midpoint_predicted = midpoint(p0, p1, dp0, dp1, t0, t1)
+        midpoint_derivative_predicted = midpoint_derivative(p0, p1, dp0, dp1, t0, t1)
         midpoint_derivative_actual = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)]) # TODO: Vectorize, so this one works as well
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
@@ -286,43 +287,25 @@ class Collocation(BaseAlgorithm):
         return outvec
 
     def _collocation_constraint_boundary(self, vectorized):
-        X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        return self.boundarycondition_function(X[0], [], u[0], X[-1], [], u[-1], params, nondyn_params, self.const)
+        y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        qf = integrate(self.quadrature_function, self.derivative_function, y, u, params, self.const, self.tspan, quads0)[-1]
+        return self.boundarycondition_function(y[0], quads0, u[0], y[-1], qf, u[-1], params, nondyn_params, self.const)
 
     def _collocation_cost(self, vectorized):
-        X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
         if self.initial_cost_function is not None:
-            c0 = self.initial_cost_function(X[0], u[0], params, self.const)
+            c0 = self.initial_cost_function(y[0], u[0], params, self.const)
         else:
             c0 = 0
 
         if self.terminal_cost_function is not None:
-            cf = self.terminal_cost_function(X[-1], u[-1], params, self.const)
+            cf = self.terminal_cost_function(y[-1], u[-1], params, self.const)
         else:
             cf = 0
 
-        y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        dX = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(y, u)])
-        if len(dX.shape) == 1:
-            dX = np.array([dX]).T
-        dp0 = dX[:-1]
-        dp1 = dX[1:]
-        p0 = y[:-1]
-        p1 = y[1:]
-        u0 = u[:-1]
-        uf = u[1:]
-        t0 = self.tspan[:-1]
-        t1 = self.tspan[1:]
-        u_midpoint = (u0 + uf) / 2
-        midpoint_predicted = np.column_stack([1/2*(p0[:,ii]+p1[:,ii]) + (t1-t0)/8*(dp0[:,ii]-dp1[:,ii]) for ii in range(y.shape[1])])
-
         cpath = 0
         if self.path_cost_function is not None:
-            for ii in range(len(midpoint_predicted)):
-                wk = self.path_cost_function(y[ii], u[ii], params, self.const)
-                wk12 = self.path_cost_function(midpoint_predicted[ii], u_midpoint[ii], params, self.const)
-                wk1 = self.path_cost_function(y[ii+1], u[ii+1], params, self.const)
-                cpath += (1/6*wk + 4/6*wk12 + 1/6*wk1)*(self.tspan[ii+1] - self.tspan[ii])
+            cpath = integrate(self.path_cost_function, self.derivative_function, y, u, params, self.const, self.tspan, 0)[-1]
 
         return c0 + cpath + cf
 
@@ -345,7 +328,7 @@ class Collocation(BaseAlgorithm):
         return X, quads, u, dynamical_params, nondynamical_params
 
     def _wrap_params(self, y, q, u, params, nondyn_params):
-        return np.concatenate((y.flatten(), q.flatten(), u.flatten(), params, nondyn_params))
+        return np.concatenate((y.flatten(), q[0], u.flatten(), params, nondyn_params))
 
     @staticmethod
     def _get_poly_coefficients_1_3(p0, dquads0, dquads12, dquads1):
@@ -362,14 +345,6 @@ class Collocation(BaseAlgorithm):
         C3 = -3*p0/h**2 - 2*dp0/h + 3*p1/h**2 - dp1/h
         C4 = 2*p0/h**3 + dp0/h**2 - 2*p1/h**3 + dp1/h**2
         return C1, C2, C3, C4
-
-    @staticmethod
-    def _collocation_midpoint_prediction(p0, dp0, p1, dp1, tf, N):
-        return 1 / 2 * (p0 + p1) + tf / (N - 1) / 8 * (dp0 - dp1)
-
-    @staticmethod
-    def _collocation_midpoint_derivative(p0, dp0, p1, dp1, tf, N):
-        return -3 / 2 * (N - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
 
     @classmethod
     def _get_default_options(cls, options='default'):
