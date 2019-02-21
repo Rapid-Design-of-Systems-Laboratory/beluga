@@ -19,8 +19,6 @@ class Pseudospectral(BaseAlgorithm):
         +------------------------+-----------------+-----------------+
         | Valid kwargs           | Default Value   | Valid Values    |
         +========================+=================+=================+
-        | closure                | False           | Bool            |
-        +------------------------+-----------------+-----------------+
         | max_error              | 100             | > 0             |
         +------------------------+-----------------+-----------------+
         | max_iterations         | 100             | > 0             |
@@ -110,7 +108,7 @@ class Pseudospectral(BaseAlgorithm):
         if num_controls > 0:
             num_bcs = len(self.boundarycondition_function(sol.y[0], q0, u0, sol.y[-1], qf, uf, sol.dynamical_parameters, sol.nondynamical_parameters, sol.const))
         else:
-            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, sol.y[-1], qf, sol.dynamical_parameters, sol.nondynamical_parameters, sol.const))
+            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, [], sol.y[-1], qf, [], sol.dynamical_parameters, sol.nondynamical_parameters, sol.const))
 
         t0 = sol.t[0]
         tf = sol.t[-1]
@@ -143,6 +141,7 @@ class Pseudospectral(BaseAlgorithm):
 
         tau = lglnodes(self.number_of_nodes - 1)
         weights = lglweights(tau)
+        sol._weights = weights
         D = lglD(tau)
         Xinit = _wrap_params(sol, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
         extra_data = {'derivative_function': self.derivative_function,
@@ -292,7 +291,7 @@ def _eq_constraints(X, KKT, data):
     if num_controls > 0:
         yd = np.vstack([eom(y[ii], u[ii], params, const) for ii in range(n)])
     else:
-        yd = np.vstack([eom(y[ii], params, const) for ii in range(n)])
+        yd = np.vstack([eom(y[ii], [], params, const) for ii in range(n)])
 
     if num_quads > 0:
         Q = np.vstack([quad([], y[ii], params, const) for ii in range(n)])
@@ -305,7 +304,7 @@ def _eq_constraints(X, KKT, data):
     if num_controls > 0:
         c0 = bc(y[0], q0, u[0], y[-1], qf, u[-1], params, nondynamical_params, const)
     else:
-        c0 = bc(y[0], q0, y[-1], qf, params, nondynamical_params, const)
+        c0 = bc(y[0], q0, [], y[-1], qf, [], params, nondynamical_params, const)
     c1 = np.dot(D, y) - F
     c1 = np.hstack([c1[:, ii][:] for ii in range(num_eoms)])
 

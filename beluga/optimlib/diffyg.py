@@ -128,7 +128,10 @@ def ocp_to_bvp(ocp):
     dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
     bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_initial_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
     bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_terminal_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
-    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
+
+    if time_bc is not None:
+        bc_terminal += [time_bc]
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     control_law = make_control_law(dHdu, controls)
 
@@ -244,7 +247,7 @@ def ocp_to_bvp(ocp):
            'terminal_cost_units': None,
            'states': [str(x) for x in reduced_states],
            'states_units': [str(state_2_units[x]) for x in reduced_states],
-           'deriv_list': [str(tf_var * rate) for rate in equations_of_motion],
+           'states_rates': [str(tf_var * rate) for rate in equations_of_motion],
            'quads': [str(x) for x in quads],
            'quads_rates': [str(tf_var * x) for x in quads_rates],
            'quads_units': [str(x) for x in quads_units],
@@ -271,29 +274,26 @@ def ocp_to_bvp(ocp):
 
     states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c)) for c in constants_of_motion_values_original]
     states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
-
     def guess_map(sol):
+        nodes = len(sol.t)
         n_c = len(constants_of_motion)
-        if n_c == 0:
-            return sol
         sol_out = Trajectory()
-        sol_out.t = copy.copy(sol.t)
-        sol_out.y = np.array([[fn(*sol.y[0]) for fn in states_2_states_fn]])
+        sol_out.t = copy.copy(sol.t / sol.t[-1])
+        sol_out.y = np.array([[fn(*sol.y[0], *sol.dual[0]) for fn in states_2_states_fn]])
         sol_out.q = sol.q
         if len(quads) > 0:
             sol_out.q = -0.0*np.array([np.ones((len(quads)))])
-        sol_out.dynamical_parameters = sol.dynamical_parameters
-        sol_out.dynamical_parameters[-n_c:] = np.array([fn(*sol.y[0], *sol.u) for fn in states_2_constants_fn])
-        # sol_out.dynamical_parameters[-n_c:] = np.zeros(n_c)
-        sol_out.nondynamical_parameters = sol.nondynamical_parameters
+        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1], np.array([fn(*sol.y[0], *sol.dual[0], *sol.u[0]) for fn in states_2_constants_fn])))
+        sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+        sol_out.u = np.array([]).reshape((nodes, 0))
         sol_out.aux = sol.aux
         return sol_out
 
     def guess_map_inverse(sol):
-        raise NotImplementedError
+        # raise NotImplementedError
         return sol
 
-    return out, guess_map, gues_map_inverse
+    return out, guess_map, guess_map_inverse
 
 class Manifold(object):
     def __new__(cls, *args):
