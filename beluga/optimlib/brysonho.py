@@ -174,6 +174,7 @@ def ocp_to_bvp(ocp):
         sol.t = sol.t*sol.dynamical_parameters[-1]
         sol.dual = sol.y[:, -num_costates:]
         sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
+        sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         return sol
 
     return out, guess_map, guess_map_inverse
