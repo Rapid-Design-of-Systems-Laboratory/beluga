@@ -78,10 +78,7 @@ def ocp_to_bvp(ocp):
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
 
     for ii, c in enumerate(constraints['path']):
-        if constraints_lower['path'][ii] is None or constraints_upper['path'][ii] is None:
-            raise NotImplementedError('Lower and upper bounds on path constraints MUST be defined.')
-
-        hamiltonian += constraints_activators['path'][ii]/(cos(pi/2*(2*c - constraints_upper['path'][ii] - constraints_lower['path'][ii]) / (constraints_upper['path'][ii] - constraints_lower['path'][ii])))
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
 

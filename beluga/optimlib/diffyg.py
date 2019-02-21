@@ -28,6 +28,9 @@ def ocp_to_bvp(ocp):
     symmetries = ws['symmetries']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']
+    constraints_lower = ws['constraints_lower']
+    constraints_upper = ws['constraints_upper']
+    constraints_activators = ws['constraints_activators']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -65,6 +68,9 @@ def ocp_to_bvp(ocp):
     num_states_total = len(J1tau_Q.vertical.base_coords)
 
     hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    for ii, c in enumerate(constraints['path']):
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
+
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
     vector_names = [Symbol('D_' + str(x)) for x in states]
     settangent = dict(zip(vector_names, J1tau_Q.vertical.base_vectors[:num_states]))
@@ -88,6 +94,8 @@ def ocp_to_bvp(ocp):
     #     constants_of_motion = constants_of_motion + [Symbol('hamiltonian')]
     #     constants_of_motion_values = constants_of_motion_values + [hamiltonian]
     #     constants_of_motion_units = constants_of_motion_units + [hamiltonian_units]
+
+
 
     coparameters = make_costate_names(parameters)
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
@@ -135,9 +143,10 @@ def ocp_to_bvp(ocp):
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     control_law = make_control_law(dHdu, controls)
 
-    tf_var = sympify('tf')
-    dynamical_parameters = [tf_var] + parameters
-    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    tf = sympify('_tf')
+    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 
@@ -247,9 +256,9 @@ def ocp_to_bvp(ocp):
            'terminal_cost_units': None,
            'states': [str(x) for x in reduced_states],
            'states_units': [str(state_2_units[x]) for x in reduced_states],
-           'states_rates': [str(tf_var * rate) for rate in equations_of_motion],
+           'states_rates': [str(tf * rate) for rate in equations_of_motion],
            'quads': [str(x) for x in quads],
-           'quads_rates': [str(tf_var * x) for x in quads_rates],
+           'quads_rates': [str(tf * x) for x in quads_rates],
            'quads_units': [str(x) for x in quads_units],
            'path_constraints': [],
            'path_constraints_units': [],
@@ -433,6 +442,13 @@ class JetBundle(FiberBundle):
         obj = super(JetBundle, cls).__new__(cls, vertical, horizontal, name)
 
         return obj
+
+
+def MomentumShift(bundle):
+    vertical = Manifold(bundle.vertical.base_coords + bundle.horizontal.base_coords, 'Momentum_Shifted_Vertical')
+    tau = Manifold(['_tau'], 'Nondimensionalized_Base')
+    bundle2 = FiberBundle(vertical, tau)
+    return bundle2
 
 
 def make_control_law(dhdu, controls):

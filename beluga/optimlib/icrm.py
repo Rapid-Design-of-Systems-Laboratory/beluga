@@ -23,6 +23,9 @@ def ocp_to_bvp(ocp):
     constants_of_motion_units = ws['constants_of_motion_units']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']
+    constraints_lower = ws['constraints_lower']
+    constraints_upper = ws['constraints_upper']
+    constraints_activators = ws['constraints_activators']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -56,6 +59,8 @@ def ocp_to_bvp(ocp):
 
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    for ii, c in enumerate(constraints['path']):
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
 
