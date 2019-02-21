@@ -5,7 +5,7 @@ Base functions required by all optimization methods.
 
 from beluga.utils import sympify
 import sympy
-from sympy import Symbol, im
+from sympy import Symbol, im, pi, cos
 from sympy.core.function import AppliedUndef
 import functools as ft
 import re
@@ -328,3 +328,8 @@ def total_derivative(expr, var, dependent_vars=None):
         out = out.subs(rep)
 
     return out
+
+def utm_path(constraint, lower, upper, activator, hamiltonian):
+    if lower is None or upper is None:
+        raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
+    return activator/(cos(pi/2*(2*constraint - upper - lower) / (upper - lower)))
