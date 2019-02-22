@@ -2,47 +2,41 @@ from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Trajectory
 import numpy as np
 import copy
-from scipy.optimize import minimize as mini
-from npnlp import minimize
-from scipy.integrate import simps
+from scipy.optimize import minimize
 from .collocation import *
 import logging
 
 class Collocation(BaseAlgorithm):
     """
-    Collocation algorithm for solving boundary value problems.
+    Collocation algorithm for solving boundary-value problems.
+
+    :param args: Unused
+    :param kwargs: Additional parameters accepted by the solver.
+    :return: Collocation object.
+
+    +------------------------+-----------------+-----------------+
+    | Valid kwargs           | Default Value   | Valid Values    |
+    +========================+=================+=================+
+    | adaptive_mesh          | False           | Bool            |
+    +------------------------+-----------------+-----------------+
+    | cached                 | True            | Bool            |
+    +------------------------+-----------------+-----------------+
+    | tolerance              | 1e-4            | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_error              | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_iterations         | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | number_of_nodes_max    | 100             | >= 4            |
+    +------------------------+-----------------+-----------------+
+    | number_of_nodes_min    | 30              | >= 4            |
+    +------------------------+-----------------+-----------------+
+    | use_numba              | False           | Bool            |
+    +------------------------+-----------------+-----------------+
+    | verbose                | False           | Bool            |
+    +------------------------+-----------------+-----------------+
     """
     def __new__(cls, *args, **kwargs):
-        """
-        Creates a new Collocation object.
-
-        :param args: Unused
-        :param kwargs: Additional parameters accepted by the solver.
-        :return: Collocation object.
-
-        +------------------------+-----------------+-----------------+
-        | Valid kwargs           | Default Value   | Valid Values    |
-        +========================+=================+=================+
-        | adaptive_mesh          | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        | cached                 | True            | Bool            |
-        +------------------------+-----------------+-----------------+
-        | tolerance              | 1e-4            | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_error              | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_iterations         | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | number_of_nodes_max    | 100             | >= 4            |
-        +------------------------+-----------------+-----------------+
-        | number_of_nodes_min    | 30              | >= 4            |
-        +------------------------+-----------------+-----------------+
-        | use_numba              | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        | verbose                | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        """
-        
         obj = super(Collocation, cls).__new__(cls, *args, **kwargs)
 
         adaptive_mesh = kwargs.get('adaptive_mesh', False)
@@ -70,9 +64,6 @@ class Collocation(BaseAlgorithm):
         """
         Solve a two-point boundary value problem using the collocation method.
 
-        :param deriv_func: The ODE function.
-        :param quad_func: The quad func.
-        :param bc_func: The boundary conditions function.
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         """
@@ -159,9 +150,11 @@ class Collocation(BaseAlgorithm):
             self.const = sol.const
             sol.converged = False
 
-            # This is SciPy syntax
-            xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path], tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
-            # xopt = minimize(self._collocation_cost, vectorized, nonlconeq=lambda X, L: np.hstack((self._collocation_constraint_boundary(X), self._collocation_constraint_midpoint(X))), method='sqp')
+            xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None,
+                            hessp=None, bounds=None,
+                            constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
+                            tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
+
             sol.t = self.tspan
             sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
 

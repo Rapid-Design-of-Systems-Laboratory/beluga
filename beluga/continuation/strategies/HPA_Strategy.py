@@ -1,9 +1,8 @@
-
 #==============================================================================#
 # Author: Justin Mansell (2016)
 # Description: Continuation using a heuristic path algorithm (HPA).
 #==============================================================================#
-from beluga.continuation.HPA_Variable import HPA_Variable
+# from beluga.continuation.HPA_Variable import HPA_Variable
 import numpy as np
 import itertools
 import logging

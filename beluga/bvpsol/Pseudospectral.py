@@ -1,34 +1,32 @@
 from beluga.bvpsol import BaseAlgorithm
+import copy
 from npnlp import minimize, kkt_multipliers
-
 import numba
-
 import numpy as np
 import sys
-import copy
+
 
 class Pseudospectral(BaseAlgorithm):
+    """
+    Pseudospectral algorithm for solving boundary-value problems.
+
+    :param args: Unused
+    :param kwargs: Additional parameters accepted by the solver.
+    :return: Pseudospectral object.
+
+    +------------------------+-----------------+-----------------+
+    | Valid kwargs           | Default Value   | Valid Values    |
+    +========================+=================+=================+
+    | max_error              | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_iterations         | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | number_of_nodes        | 10              | >= 4            |
+    +------------------------+-----------------+-----------------+
+    | tolerance              | 1e-4            | > 0             |
+    +------------------------+-----------------+-----------------+
+    """
     def __new__(cls, *args, **kwargs):
-        """
-        Creates a new Pseudospectral object.
-
-        :param args: Unused
-        :param kwargs: Additional parameters accepted by the solver.
-        :return: Collocation object.
-
-        +------------------------+-----------------+-----------------+
-        | Valid kwargs           | Default Value   | Valid Values    |
-        +========================+=================+=================+
-        | max_error              | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_iterations         | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | number_of_nodes        | 10              | >= 4            |
-        +------------------------+-----------------+-----------------+
-        | tolerance              | 1e-4            | > 0             |
-        +------------------------+-----------------+-----------------+
-        """
-
         obj = super(Pseudospectral, cls).__new__(cls, *args, **kwargs)
 
         closure = kwargs.get('closure', False)

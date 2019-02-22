@@ -8,8 +8,7 @@ from beluga.utils import sympify
 import itertools as it
 import logging
 import numpy as np
-from sympy import cos, pi
-# from math import cos
+
 
 def ocp_to_bvp(ocp):
     """
@@ -78,7 +77,7 @@ def ocp_to_bvp(ocp):
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
 
     for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
     coparameters = make_costate_names(parameters)

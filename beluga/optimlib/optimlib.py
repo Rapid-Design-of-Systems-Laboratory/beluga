@@ -1,12 +1,11 @@
 """
-Base functions required by all optimization methods.
+Base functions shared by all optimization methods.
 """
 
 
 from beluga.utils import sympify
 import sympy
-from sympy import Symbol, im, pi, cos
-from sympy.core.function import AppliedUndef
+from sympy import Symbol
 import functools as ft
 import re
 
@@ -147,11 +146,12 @@ def make_boundary_conditions(constraints, states, costates, parameters, coparame
 
 def make_constrained_arc_fns(states, costates, costates_rates, controls, parameters, constants, quantity_vars, hamiltonian):
     """
-    Creates constrained arc control functions.
+    Creates constrained arc control functions. Deprecated.
 
     :param workspace:
     :return:
     """
+    raise NotImplementedError
     tf_var = sympify('tf')
     costate_eoms = [{'eom':[str(rate*tf_var) for rate in costates_rates], 'arctype':0}]
     bc_list = []  # Unconstrained arc placeholder
@@ -301,8 +301,6 @@ def total_derivative(expr, var, dependent_vars=None):
     :param var: Variable to take the derivative with respect to.
     :param dependent_vars: Other dependent variables to consider with chain rule.
     """
-
-    complex_step = False
     if dependent_vars is None:
         dependent_vars = {}
 
@@ -312,24 +310,19 @@ def total_derivative(expr, var, dependent_vars=None):
     dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
     out = sum(d1 * d2 for d1, d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
-    # custom_diff = out.atoms(sympy.Derivative)
-    # # Substitute "Derivative" with complex step derivative
-    # if complex_step == True:
-    #     repl = {(d, im(f.subs(v, v + 1j * 1e-30)) / 1e-30) for d in custom_diff
-    #             for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
-    # else:
-    #     repl = {(d, (f.subs(v, v + 1 * 1e-4) - f) / (1e-4)) for d in custom_diff
-    #             for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
-    # out = out.subs(repl)
-    # p = out.atoms(sympy.Subs)
-    # q = [_ for _ in p]
-    # for term in q:
-    #     rep = zip([term], [term.doit()])
-    #     out = out.subs(rep)
-
     return out
 
-def utm_path(constraint, lower, upper, activator, hamiltonian):
+
+def utm_path(constraint, lower, upper, activator):
+    r"""
+    Creates an interior penalty-type term to enforce path constraints.
+
+    :param constraint: The path constraint.
+    :param lower: Lower bounds on the path constraint.
+    :param upper: Upper bounds on the path constraint.
+    :param activator: Activation term used in the path constraint.
+    :return: Term to augment a Hamiltonian with.
+    """
     if lower is None or upper is None:
         raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
-    return activator/(cos(pi/2*(2*constraint - upper - lower) / (upper - lower)))
+    return activator/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower)))

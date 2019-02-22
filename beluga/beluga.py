@@ -1,7 +1,6 @@
 import inspect
 import warnings
 import copy
-import logging
 
 from beluga.codegen.codegen import *
 
@@ -20,32 +19,14 @@ import pathos
 
 config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
-def bvp_algorithm(algo, **kwargs):
-    """
-    Helper method to load algorithm by name
-    """
-    # Load algorithm from the package
-    for name, obj in inspect.getmembers(bvpsol):
-        if inspect.isclass(obj):
-            if name.lower() == algo.lower():
-                return obj(**kwargs)
-    else:
-        # Raise exception if the loop completes without finding an algorithm by the given name
-        raise ValueError('Algorithm '+algo+' not found')
-
-
-def guess_generator(*args, **kwargs):
-    """
-    Helper for creating Initial guess generator.
-    """
-    guess_gen = problem.GuessGenerator()
-    guess_gen.setup(*args,**kwargs)
-    return guess_gen
-
 
 def add_logger(logging_level=logging.INFO, display_level=logging.INFO):
     """
-    Performs initial configuration on beluga.
+    Attaches a logger to beluga's main process.
+
+    :keyword logging_level: The level at which logging is written to the output file.
+    :keyword display_level: The level at which logging is displayed to stdout.
+    :return: None
     """
     # Suppress warnings
     warnings.filterwarnings("ignore")
@@ -54,12 +35,44 @@ def add_logger(logging_level=logging.INFO, display_level=logging.INFO):
     helpers.init_logging(logging_level, display_level, config['logfile'])
 
 
-def set_output_file(output_file=None):
-    if output_file is not None:
-        config['output_file'] = output_file
+def bvp_algorithm(name, **kwargs):
+    """
+    Helper method to load bvp algorithm by name.
+
+    :param name: The name of the bvp algorithm
+    :keywords: Additional keyword arguments passed into the bvp solver.
+    :return: An instance of the bvp solver.
+    """
+    # Load algorithm from the package
+    for N, obj in inspect.getmembers(bvpsol):
+        if inspect.isclass(obj):
+            if N.lower() == name.lower():
+                return obj(**kwargs)
+    else:
+        # Raise exception if the loop completes without finding an algorithm by the given name
+        raise ValueError('Algorithm ' + name + ' not found')
+
+
+def guess_generator(*args, **kwargs):
+    """
+    Helper for creating an initial guess generator.
+
+    :param method: The method used to generate the initial guess
+    :keywords: Additional keyword arguments passed into the guess generator.
+    :return: An instance of the guess generator.
+    """
+    guess_gen = problem.GuessGenerator()
+    guess_gen.setup(*args,**kwargs)
+    return guess_gen
 
 
 def ocp2bvp(ocp, method='traditional'):
+    """
+
+    :param ocp: The optimal control problem.
+    :param method: Analytical optimization method to use.
+    :return: (bvp, map, map_inverse) - A codegen compiled BVP with associated mappings to and from the OCP.
+    """
     logging.info("Computing the necessary conditions of optimality")
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
         bvp_raw, ocp_map, ocp_map_inverse = BH_ocp_to_bvp(ocp)
@@ -79,6 +92,117 @@ def ocp2bvp(ocp, method='traditional'):
     bvp.raw['scaling'] = ocp._scaling
 
     return bvp, ocp_map, ocp_map_inverse
+
+
+def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale):
+    """
+    Runs a continuation set for the BVP problem.
+
+    :param ocp_ws: OCP workspace.
+    :param bvp_algo: BVP algorithm to be used.
+    :param steps: The steps in a continuation set.
+    :param solinit: Initial guess for the first problem in steps.
+    :param bvp: The compiled boundary-value problem to solve.
+    :param pool: A processing pool, if available.
+    :param autoscale: Whether or not scaling is used.
+    :return: A set of solutions for the steps.
+    """
+    # Loop through all the continuation steps
+    solution_set = []
+    # Initialize scaling
+    s = bvp.raw['scaling']
+    problem_data = ocp_ws
+
+    # Load the derivative function into the bvp algorithm
+    bvp_algo.set_derivative_function(bvp.deriv_func)
+    bvp_algo.set_quadrature_function(bvp.quad_func)
+    bvp_algo.set_boundarycondition_function(bvp.bc_func)
+    bvp_algo.set_initial_cost_function(bvp.initial_cost)
+    bvp_algo.set_path_cost_function(bvp.path_cost)
+    bvp_algo.set_terminal_cost_function(bvp.terminal_cost)
+    bvp_algo.set_inequality_constraint_function(bvp.ineq_constraints)
+
+    sol_guess = solinit
+    sol = None
+    if steps is None:
+        logging.info('Solving OCP...')
+        time0 = time.time()
+        if autoscale:
+            s.compute_scaling(sol_guess)
+            sol_guess = s.scale(sol_guess)
+
+        sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
+        sol = bvp_algo.solve(sol_guess, pool=pool)
+
+        if autoscale:
+            sol = s.unscale(sol)
+
+        # Compute control history, since its required for plotting to work with control variables
+        sol.ctrl_expr = problem_data['control_options']
+        sol.ctrl_vars = problem_data['controls']
+
+        if ocp_ws['method'] is not 'direct':
+            f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters,
+                                                   np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+            sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+
+        solution_set = [[copy.deepcopy(sol)]]
+        if sol.converged:
+            elapsed_time = time.time() - time0
+            logging.info('Problem converged in %0.4f seconds\n' % (elapsed_time))
+        else:
+            elapsed_time = time.time() - time0
+            logging.info('Problem failed to converge!\n')
+    else:
+        for step_idx, step in enumerate(steps):
+            logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+            solution_set.append([])
+            # Assign solution from last continuation set
+            step.reset()
+            step.init(sol_guess, problem_data)
+
+            for aux in step:  # Continuation step returns 'aux' dictionary
+                sol_guess.aux = aux
+
+                logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                time0 = time.time()
+
+                if autoscale:
+                    s.compute_scaling(sol_guess)
+                    sol_guess = s.scale(sol_guess)
+
+                sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
+                sol = bvp_algo.solve(sol_guess, pool=pool)
+                step.last_sol.converged = sol.converged
+
+
+                if autoscale:
+                    sol = s.unscale(sol)
+
+                sol_guess = copy.deepcopy(sol)
+
+                if sol.converged:
+                    # Post-processing phase
+
+                    # Compute control history, since its required for plotting to work with control variables
+                    sol.ctrl_expr = problem_data['control_options']
+                    sol.ctrl_vars = problem_data['controls']
+
+                    if ocp_ws['method'] is not 'direct':
+                        f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+                        sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+
+                    # Copy solution object for storage and reuse `sol` in next
+                    # iteration
+                    solution_set[step_idx].append(copy.deepcopy(sol))
+                    # sol_guess = copy.deepcopy(sol)
+                    elapsed_time = time.time() - time0
+                    logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
+                else:
+                    elapsed_time = time.time() - time0
+                    logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+
+    return solution_set
 
 
 def solve(**kwargs):
@@ -198,102 +322,3 @@ def solve(**kwargs):
         pool.close()
 
     return out
-
-
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale):
-    # Loop through all the continuation steps
-    solution_set = []
-    # Initialize scaling
-    s = bvp.raw['scaling']
-    problem_data = ocp_ws
-
-    # Load the derivative function into the bvp algorithm
-    bvp_algo.set_derivative_function(bvp.deriv_func)
-    bvp_algo.set_quadrature_function(bvp.quad_func)
-    bvp_algo.set_boundarycondition_function(bvp.bc_func)
-    bvp_algo.set_initial_cost_function(bvp.initial_cost)
-    bvp_algo.set_path_cost_function(bvp.path_cost)
-    bvp_algo.set_terminal_cost_function(bvp.terminal_cost)
-    bvp_algo.set_inequality_constraint_function(bvp.ineq_constraints)
-
-    sol_guess = solinit
-    sol = None
-    if steps is None:
-        logging.info('Solving OCP...')
-        time0 = time.time()
-        if autoscale:
-            s.compute_scaling(sol_guess)
-            sol_guess = s.scale(sol_guess)
-
-        sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
-        sol = bvp_algo.solve(sol_guess, pool=pool)
-
-        if autoscale:
-            sol = s.unscale(sol)
-
-        # Compute control history, since its required for plotting to work with control variables
-        sol.ctrl_expr = problem_data['control_options']
-        sol.ctrl_vars = problem_data['controls']
-
-        if ocp_ws['method'] is not 'direct':
-            f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters,
-                                                   np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-            sol.u = np.array(list(map(f, sol.t, list(sol.y))))
-
-        solution_set = [[copy.deepcopy(sol)]]
-        if sol.converged:
-            elapsed_time = time.time() - time0
-            logging.info('Problem converged in %0.4f seconds\n' % (elapsed_time))
-        else:
-            elapsed_time = time.time() - time0
-            logging.info('Problem failed to converge!\n')
-    else:
-        for step_idx, step in enumerate(steps):
-            logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
-            solution_set.append([])
-            # Assign solution from last continuation set
-            step.reset()
-            step.init(sol_guess, problem_data)
-
-            for aux in step:  # Continuation step returns 'aux' dictionary
-                sol_guess.aux = aux
-
-                logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
-                time0 = time.time()
-
-                if autoscale:
-                    s.compute_scaling(sol_guess)
-                    sol_guess = s.scale(sol_guess)
-
-                sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
-                sol = bvp_algo.solve(sol_guess, pool=pool)
-                step.last_sol.converged = sol.converged
-
-
-                if autoscale:
-                    sol = s.unscale(sol)
-
-                sol_guess = copy.deepcopy(sol)
-
-                if sol.converged:
-                    # Post-processing phase
-
-                    # Compute control history, since its required for plotting to work with control variables
-                    sol.ctrl_expr = problem_data['control_options']
-                    sol.ctrl_vars = problem_data['controls']
-
-                    if ocp_ws['method'] is not 'direct':
-                        f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-                        sol.u = np.array(list(map(f, sol.t, list(sol.y))))
-
-                    # Copy solution object for storage and reuse `sol` in next
-                    # iteration
-                    solution_set[step_idx].append(copy.deepcopy(sol))
-                    # sol_guess = copy.deepcopy(sol)
-                    elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
-                else:
-                    elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
-
-    return solution_set

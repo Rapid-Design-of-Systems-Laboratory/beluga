@@ -2,7 +2,6 @@ from .optimlib import *
 import sympy as sym
 import itertools as it
 import numpy as np
-import copy
 
 
 def ocp_to_bvp(ocp):
@@ -60,7 +59,7 @@ def ocp_to_bvp(ocp):
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
     for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
 
@@ -84,7 +83,6 @@ def ocp_to_bvp(ocp):
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
 
     nondynamical_parameters = initial_lm_params + terminal_lm_params
-    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, costates_rates, controls, nondynamical_parameters, constants, quantity_vars, hamiltonian)
     dae_states, dae_equations, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, derivative_fn)
 
     # Generate the problem data

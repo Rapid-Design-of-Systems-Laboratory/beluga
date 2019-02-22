@@ -3,14 +3,10 @@ problem2 -- Rename to 'problem' after refactoring.
 Contains class/functions related to defining the optimal control problems.
 """
 
-import scipy.optimize
 import numpy as np
-import cloudpickle as dill
-
 import copy
 import json
 import logging
-import os.path
 import re
 from functools import partialmethod
 from collections import namedtuple, ChainMap
@@ -192,6 +188,22 @@ class OCP(object):
 
 
 class ConstraintList(dict):
+    """
+    Class containing information for the constraints on an optimal control problem.
+
+    Valid parameters and their arguments are in the following table.
+
+    +--------------------------------+----------------------------------------+---------------------------------------------+
+    | Valid parameters               | arguments                              | datatype                                    |
+    +================================+========================================+=============================================+
+    | initial                        | (function, unit)                       | (string, string)                            |
+    +--------------------------------+----------------------------------------+---------------------------------------------+
+    | terminal                       | (function, unit)                       | (string, string)                            |
+    +--------------------------------+----------------------------------------+---------------------------------------------+
+    | path                           | (function, unit, lb, ub, activator)    | (string, string, str/num, str/num, string)  |
+    +--------------------------------+----------------------------------------+---------------------------------------------+
+
+    """
     def __new__(cls, *args, **kwargs):
         obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
         return obj

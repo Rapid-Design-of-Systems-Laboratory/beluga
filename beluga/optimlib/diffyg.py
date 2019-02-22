@@ -3,7 +3,7 @@ from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, We
 import copy
 import logging
 from beluga.ivpsol import Trajectory
-from beluga.codegen import make_jit_fn, make_control_and_ham_fn
+from beluga.codegen import make_jit_fn
 import numpy as np
 import itertools as it
 from .optimlib import *
@@ -69,7 +69,7 @@ def ocp_to_bvp(ocp):
 
     hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
     for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
 
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
     vector_names = [Symbol('D_' + str(x)) for x in states]

@@ -307,9 +307,6 @@ class Shooting(BaseAlgorithm):
         """
         Solve a two-point boundary value problem using the shooting method.
 
-        :param deriv_func: The ODE function.
-        :param quad_func: The quad func.
-        :param bc_func: The boundary conditions function.
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         """

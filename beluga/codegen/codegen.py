@@ -1,42 +1,32 @@
-import collections as cl
 import logging
 import numba
 import re
 import sympy
 from autograd import grad
 from autograd import numpy as np
-# from beluga.utils import theano_function
-
-from beluga.utils import ufuncify_matrix
-
-from sympy.utilities.lambdify import lambdastr
 
 # The following import statements *look* unused, but is in fact used by the code compiler. This enables users to use
 # various basic math functions like `cos` and `atan`. Do not delete.
 import math
 from math import *
 
-from numpy import imag as im
-from sympy import I #TODO: This doesn't fix complex step derivatives.
-
 
 def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham, is_icrm=False):
+    r"""
+    Makes the control and Hamiltonian functions.
+
+    :param control_opts: Control options.
+    :param states: List of states.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :param ham: The Hamiltonian function.
+    :keyword is_icrm: Boolean value on whether or not ICRM is used.
+    :return: (compute_control_fn, hamiltonian_fn) - Functions that compute the optimal control and the Hamiltonian.
+    """
     ham_args = [*states, *parameters, *constants, *controls]
     u_args = [*states, *parameters, *constants]
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
-    u_vars = sympy.var(','.join(u_args))
-    m_var = sympy.Matrix(control_opt_mat)
-    # ucont = [[theano_function(u_vars, [sm.sympify(ut)], on_unused_input='ignore') for ut in row] for row in control_opt_mat]
-    # L = len(ucont)
-    # K = len(ucont[0])
-    # def ucont_wrap(*args):
-    #     uout = np.zeros((L,K))
-    #     for ii in range(L):
-    #         for jj in range(K):
-    #             uout[ii,jj] = ucont[ii][jj](*args)
-    #     return uout
-
-    # ucont = ufuncify_matrix(u_vars, m_var, tmp_dir='./compiled/', parallel=False)
 
     u_str = 'np.array(['
     for ii in range(len(control_opts)):
@@ -49,8 +39,7 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     u_str += '])'
     control_opt_fn = make_jit_fn(u_args, u_str)
 
-    ham_fn = make_sympy_fn(ham_args, ham)
-    # ham_fn = ufuncify(sm.var(','.join(ham_args)), ham)
+    hamiltonian_fn = make_sympy_fn(ham_args, ham)
     num_options = len(control_opts)
     num_states = len(states)
     num_controls = len(controls)
@@ -66,17 +55,26 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
             ham_val = np.zeros(num_options)
 
             for i in range(num_options):
-                ham_val[i] = ham_fn(*X, *p, *C, *u_list[i])
+                ham_val[i] = hamiltonian_fn(*X, *p, *C, *u_list[i])
 
             return u_list[np.argmin(ham_val)]
 
-        # from ._codegen import traditional_compute_control_fn
-        # compute_control_fn = lambda t, X, p, C: traditional_compute_control_fn(t, X, p, C, control_opt_fn, ham_fn, num_params, num_options)
-
-    return compute_control_fn, ham_fn
+    return compute_control_fn, hamiltonian_fn
 
 
 def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, constants, controls):
+    r"""
+    Makes the cost function.
+
+    :param initial_cost: Initial cost function.
+    :param path_cost: Path cost function.
+    :param terminal_cost: Terminal cost function.
+    :param states: List of states.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :return: (initial_cost, path_cost, terminal_cost) - Functions for the 3 cost functions.
+    """
     boundary_args = [*states, *parameters, *constants, *controls]
     path_args = [*states, *parameters, *constants, *controls]
     initial_fn = make_jit_fn(boundary_args, initial_cost)
@@ -95,6 +93,16 @@ def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, c
 
 
 def make_constraint_func(path_constraints, states, parameters, constants, controls):
+    r"""
+    Makes the path constraint functions.
+
+    :param path_constraints: List of path constraints.
+    :param states: List of states.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :return: path_constraints - Function for the path constraints.
+    """
     path_args = [*states, *parameters, *constants, *controls]
     path_fn = [make_jit_fn(path_args, f) for f in path_constraints]
     num_constraints = len(path_constraints)
@@ -108,6 +116,18 @@ def make_constraint_func(path_constraints, states, parameters, constants, contro
 
 
 def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control, is_icrm=False):
+    r"""
+    Makes the derivative functions for each state.
+
+    :param deriv_list: A list of derivative functions.
+    :param states: List of states.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :param compute_control: The compute_control function.
+    :keyword is_icrm: Boolean value on whether or not ICRM is used.
+    :return: deriv_func - The derivative function.
+    """
     ham_args = [*states, *parameters, *constants, *controls]
     eom_fn = make_jit_fn(ham_args, '(' + ','.join(deriv_list) + ')')
     num_controls = len(controls)
@@ -138,6 +158,19 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
 
 
 def make_quad_func(quads_rates, states, quads, parameters, constants, controls, compute_control, is_icrm=False):
+    r"""
+    Makes the derivative functions for each quad.
+
+    :param quads_rates: A list of derivative functions.
+    :param states: List of states.
+    :param quads: List of quads.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :param compute_control: The compute_control function.
+    :keyword is_icrm: Boolean value on whether or not ICRM is used.
+    :return: quad_func - The derivative function.
+    """
     quads_args = [*states, *parameters, *constants, *controls]
     quad_fn = [make_sympy_fn(quads_args, eom) for eom in quads_rates]
 
@@ -173,6 +206,21 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
 
 
 def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control, is_icrm=False):
+    r"""
+    Makes the boundary condition functions.
+
+    :param bc_initial: Initial boundary conditions.
+    :param bc_terminal: Terminal boundary conditions.
+    :param states: List of states.
+    :param quads: List of quads.
+    :param dynamical_parameters: List of dynamical parameters.
+    :param nondynamical_parameters: List of nondynamical parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :param compute_control: The compute_control function.
+    :keyword is_icrm: Boolean value on whether or not ICRM is used.
+    :return: bc_func - The boundary condition function.
+    """
     ham_args = [*states, *dynamical_parameters, *constants, *controls]
     u_args = [*states, *dynamical_parameters, *constants]
     bc_args = [*states, *quads, *dynamical_parameters, *nondynamical_parameters, *constants, *controls]
@@ -228,6 +276,12 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
 
 
 def make_functions(problem_data):
+    r"""
+    Main process that generates callable functions from the problem data.
+
+    :param problem_data: Problem data from optimlib.
+    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints) - Several functions to define a BVP.
+    """
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
     quads = problem_data['quads']
@@ -276,11 +330,14 @@ def make_functions(problem_data):
 
 
 def make_jit_fn(args, fn_expr):
+    r"""
+    JIT compiles a string function to a callable function.
+
+    :param args: Arguments taken by the string function.
+    :param fn_expr: The string function.
+    :return: A callable function.
+    """
     fn_str = 'lambda ' + ','.join([a for a in args]) + ':' + fn_expr
-    # mod_str = fn_expr
-    # for ii in range(len(args)):
-    #     mod_str = re.sub(r'\b' + args[ii] + r'\b', '_X[' + str(ii) + ']', mod_str)
-    # full_fn = 'lambda _X:'+mod_str
 
     f = eval(fn_str)
     try:
@@ -293,6 +350,13 @@ def make_jit_fn(args, fn_expr):
 
 
 def make_sympy_fn(args, fn_expr):
+    r"""
+    JIT compiles a sympy function to a callable function.
+
+    :param args: Arguments taken by the SymPy function.
+    :param fn_expr: The SymPy function.
+    :return: A callable function.
+    """
     if hasattr(fn_expr, 'shape'):
         output_shape = fn_expr.shape
     else:
@@ -316,9 +380,8 @@ def preprocess(problem_data):
     r"""
     Code generation and compilation before running solver.
 
-    :param problem_data:
-    :param use_numba:
-    :return: Code module.
+    :param problem_data: Problem data from optimlib.
+    :return: A BVP.
     """
     # Register custom functions as global functions
     custom_functions = problem_data['custom_functions']

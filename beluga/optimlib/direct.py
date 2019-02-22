@@ -4,10 +4,8 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 
 from .optimlib import init_workspace, process_quantities
 from sympy import Symbol
-from beluga.utils import sympify
 import itertools as it
 import numpy as np
-import logging
 
 
 def ocp_to_bvp(ocp):

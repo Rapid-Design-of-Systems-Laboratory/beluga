@@ -1,11 +1,8 @@
-import numbers as num
-
 from collections import OrderedDict
-
+import copy
+import numbers as num
 from sympy import *
 from beluga.utils import sympify
-
-import copy
 
 
 class Scaling(dict):
