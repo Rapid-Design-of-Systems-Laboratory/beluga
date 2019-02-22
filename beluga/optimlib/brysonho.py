@@ -81,7 +81,6 @@ def ocp_to_bvp(ocp):
         hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii], hamiltonian)
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
-
     coparameters = make_costate_names(parameters)
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
     coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)

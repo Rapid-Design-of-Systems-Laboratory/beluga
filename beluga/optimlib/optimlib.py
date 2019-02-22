@@ -312,20 +312,20 @@ def total_derivative(expr, var, dependent_vars=None):
     dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
     out = sum(d1 * d2 for d1, d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
-    custom_diff = out.atoms(sympy.Derivative)
-    # Substitute "Derivative" with complex step derivative
-    if complex_step == True:
-        repl = {(d, im(f.subs(v, v + 1j * 1e-30)) / 1e-30) for d in custom_diff
-                for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
-    else:
-        repl = {(d, (f.subs(v, v + 1 * 1e-4) - f) / (1e-4)) for d in custom_diff
-                for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
-    out = out.subs(repl)
-    p = out.atoms(sympy.Subs)
-    q = [_ for _ in p]
-    for term in q:
-        rep = zip([term], [term.doit()])
-        out = out.subs(rep)
+    # custom_diff = out.atoms(sympy.Derivative)
+    # # Substitute "Derivative" with complex step derivative
+    # if complex_step == True:
+    #     repl = {(d, im(f.subs(v, v + 1j * 1e-30)) / 1e-30) for d in custom_diff
+    #             for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
+    # else:
+    #     repl = {(d, (f.subs(v, v + 1 * 1e-4) - f) / (1e-4)) for d in custom_diff
+    #             for f, v in zip(d.atoms(AppliedUndef), d.atoms(Symbol))}
+    # out = out.subs(repl)
+    # p = out.atoms(sympy.Subs)
+    # q = [_ for _ in p]
+    # for term in q:
+    #     rep = zip([term], [term.doit()])
+    #     out = out.subs(rep)
 
     return out
 

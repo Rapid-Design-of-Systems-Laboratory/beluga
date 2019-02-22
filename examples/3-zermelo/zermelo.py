@@ -4,13 +4,13 @@ import logging
 ocp = beluga.OCP('zermelos_problem')
 
 def drift_x(x, y):
-    return 0
+    return 0.0
 
 def drift_y(x, y):
     return ((x-5)**4 - 625)/625
 
-ocp.custom_function('drift_x', drift_x)
-ocp.custom_function('drift_y', drift_y)
+ocp.custom_function('drift_x', ['x','y'], drift_x)
+ocp.custom_function('drift_y', ['x','y'], drift_y)
 
 # Define independent variables
 ocp.independent('t', 's')
