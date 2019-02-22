@@ -40,7 +40,7 @@ class OCP(object):
     +--------------------------------+--------------------------------+--------------------------------+
     | quantity                       | (name, value)                  | (string, string)               |
     +--------------------------------+--------------------------------+--------------------------------+
-    | custom_function                | (name, function)               | (string, function handle)      |
+    | custom_function                | (name, args, function)         | (string, list, function handle)|
     +--------------------------------+--------------------------------+--------------------------------+
     | symmetry                       | (function)                     | (string)                       |
     +--------------------------------+--------------------------------+--------------------------------+
@@ -123,7 +123,7 @@ class OCP(object):
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
     parameter = partialmethod(set_property, property_name='parameters', property_args=('name','unit'))
-    custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','handle'))
+    custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','args','handle'))
 
     states = partialmethod(get_property, property_name='states')
     controls = partialmethod(get_property, property_name='controls')

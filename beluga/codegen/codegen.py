@@ -1,9 +1,10 @@
 import collections as cl
 import logging
 import numba
-import numpy as np
 import re
-import sympy as sm
+import sympy
+from autograd import grad
+from autograd import numpy as np
 # from beluga.utils import theano_function
 
 from beluga.utils import ufuncify_matrix
@@ -23,8 +24,8 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     ham_args = [*states, *parameters, *constants, *controls]
     u_args = [*states, *parameters, *constants]
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
-    u_vars = sm.var(','.join(u_args))
-    m_var = sm.Matrix(control_opt_mat)
+    u_vars = sympy.var(','.join(u_args))
+    m_var = sympy.Matrix(control_opt_mat)
     # ucont = [[theano_function(u_vars, [sm.sympify(ut)], on_unused_input='ignore') for ut in row] for row in control_opt_mat]
     # L = len(ucont)
     # K = len(ucont[0])
@@ -109,7 +110,6 @@ def make_constraint_func(path_constraints, states, parameters, constants, contro
 def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control, is_icrm=False):
     ham_args = [*states, *parameters, *constants, *controls]
     eom_fn = make_jit_fn(ham_args, '(' + ','.join(deriv_list) + ')')
-
     num_controls = len(controls)
     num_params = len(parameters)
     num_eoms = len(deriv_list)
@@ -322,8 +322,32 @@ def preprocess(problem_data):
     """
     # Register custom functions as global functions
     custom_functions = problem_data['custom_functions']
-    for f in custom_functions:
+    for ii, f in enumerate(custom_functions):
+        derivs = []
+        for arg in f['args']:
+            derivs += [grad(f['handle'], ii)]
+        custom_functions[ii]['derivative'] = derivs
+
+    for ii, f in enumerate(custom_functions):
         globals()[f['name']] = f['handle']
+        for jj, g in enumerate(f['derivative']):
+            globals()[f['name'] + '_d' + f['args'][jj]] = g
+
+    if len(custom_functions) > 0:
+        new_states = []
+        for state_rate in problem_data['states_rates']:
+            s = sympy.sympify(state_rate)
+            derivs = s.atoms(sympy.Derivative)
+            for deriv in derivs:
+                name = re.sub('[\(\[].*?[\)\]]','',str(deriv.expr))
+                dx = deriv.args[1]
+                name += '_d' + str(dx[0])
+                df = sympy.Function(name)(*deriv.expr.args)
+                s = s.subs(deriv,df)
+            new_states += [str(s)]
+
+        problem_data['states_rates'] = new_states
+
     deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints = make_functions(problem_data)
 
     bvp = BVP(deriv_func, quad_func, bc_func, compute_control, initial_cost, path_cost, terminal_cost, ineq_constraints)
