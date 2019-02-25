@@ -387,8 +387,11 @@ def preprocess(problem_data):
     custom_functions = problem_data['custom_functions']
     for ii, f in enumerate(custom_functions):
         derivs = []
-        for arg in f['args']:
-            derivs += [grad(f['handle'], ii)]
+        for jj, arg in enumerate(f['args']):
+            if len(f['derivs']) == len(f['args']) and f['derivs'][jj] is not None:
+                derivs += [f['derivs'][jj]]
+            else:
+                derivs += [grad(f['handle'], jj)]
         custom_functions[ii]['derivative'] = derivs
 
     for ii, f in enumerate(custom_functions):

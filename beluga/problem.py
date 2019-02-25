@@ -23,31 +23,31 @@ class OCP(object):
 
     Valid parameters and their arguments are in the following table.
 
-    +--------------------------------+--------------------------------+--------------------------------+
-    | Valid parameters               | arguments                      | datatype                       |
-    +================================+================================+================================+
-    | state                          | (name, EOM, unit)              | (string, string, string)       |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | control                        | (name, unit)                   | (string, string)               |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | constant                       | (name, value, unit)            | (string, float, string)        |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | constant_of_motion             | (name, function, unit)         | (string, string, string)       |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | quantity                       | (name, value)                  | (string, string)               |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | custom_function                | (name, args, function)         | (string, list, function handle)|
-    +--------------------------------+--------------------------------+--------------------------------+
-    | symmetry                       | (function)                     | (string)                       |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | parameter                      | (function, unit)               | (string, string)               |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | path_cost                      | (function, unit)               | (string, string)               |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | initial_cost                   | (function, unit)               | (string, string)               |
-    +--------------------------------+--------------------------------+--------------------------------+
-    | terminal_cost                  | (function, unit)               | (string, string)               |
-    +--------------------------------+--------------------------------+--------------------------------+
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | Valid parameters               | arguments                      | datatype                                         |
+    +================================+================================+==================================================+
+    | state                          | (name, EOM, unit)              | (string, string, string)                         |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | control                        | (name, unit)                   | (string, string)                                 |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | constant                       | (name, value, unit)            | (string, float, string)                          |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | constant_of_motion             | (name, function, unit)         | (string, string, string)                         |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | quantity                       | (name, value)                  | (string, string)                                 |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | custom_function                | (name, args, function, derivs) | (string, list, function handle, list)            |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | symmetry                       | (function)                     | (string)                                         |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | parameter                      | (function, unit)               | (string, string)                                 |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | path_cost                      | (function, unit)               | (string, string)                                 |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | initial_cost                   | (function, unit)               | (string, string)                                 |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
+    | terminal_cost                  | (function, unit)               | (string, string)                                 |
+    +--------------------------------+--------------------------------+--------------------------------------------------+
 
     """
 
@@ -119,7 +119,7 @@ class OCP(object):
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
     parameter = partialmethod(set_property, property_name='parameters', property_args=('name','unit'))
-    custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','args','handle'))
+    custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','args','handle','derivs'))
 
     states = partialmethod(get_property, property_name='states')
     controls = partialmethod(get_property, property_name='controls')
