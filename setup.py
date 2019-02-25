@@ -7,6 +7,7 @@ with open('requirements.txt') as f:
 long_description = '''beluga is a unified direct and indirect trajectory optimization library.'''
 
 modules = ['beluga.bvpsol',
+           'beluga.bvpsol.collocation',
            'beluga.codegen',
            'beluga.continuation',
            'beluga.continuation.strategies',
