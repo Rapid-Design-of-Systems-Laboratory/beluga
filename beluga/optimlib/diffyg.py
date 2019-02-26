@@ -144,9 +144,9 @@ def ocp_to_bvp(ocp):
     control_law = make_control_law(dHdu, controls)
 
     tf = sympify('_tf')
-    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    # bc_terminal = [bc.subs(independent_variable, tf, simultaneous=True) for bc in bc_terminal]
     dynamical_parameters = parameters + [tf]
-    dynamical_parameters_units = parameters_units + [independent_variable]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 

@@ -325,4 +325,4 @@ def utm_path(constraint, lower, upper, activator):
     """
     if lower is None or upper is None:
         raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
-    return activator/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower)))
+    return activator*(1/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower))) - 1)
