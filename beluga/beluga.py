@@ -75,13 +75,13 @@ def ocp2bvp(ocp, method='traditional'):
     """
     logging.info("Computing the necessary conditions of optimality")
     if method.lower() == 'traditional' or method.lower() == 'brysonho':
-        bvp_raw, ocp_map, ocp_map_inverse = BH_ocp_to_bvp(ocp)
+        bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp)
     elif method.lower() == 'icrm':
-        bvp_raw, ocp_map, ocp_map_inverse = ICRM_ocp_to_bvp(ocp)
+        bvp_raw, _map, _map_inverse = ICRM_ocp_to_bvp(ocp)
     elif method.lower() == 'diffyg':
-        bvp_raw, ocp_map, ocp_map_inverse = DIFFYG_ocp_to_bvp(ocp)
+        bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp)
     elif method.lower() == 'direct':
-        bvp_raw, ocp_map, ocp_map_inverse = DIRECT_ocp_to_bvp(ocp)
+        bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp)
     else:
         raise NotImplementedError
 
@@ -90,7 +90,8 @@ def ocp2bvp(ocp, method='traditional'):
     bvp.raw = bvp_raw
     ocp._scaling.initialize(bvp.raw)
     bvp.raw['scaling'] = ocp._scaling
-
+    ocp_map = lambda sol: _map(sol, _compute_control=bvp.compute_control)
+    ocp_map_inverse = lambda sol: _map_inverse(sol, _compute_control=bvp.compute_control)
     return bvp, ocp_map, ocp_map_inverse
 
 
@@ -141,10 +142,10 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
         sol.ctrl_expr = problem_data['control_options']
         sol.ctrl_vars = problem_data['controls']
 
-        if ocp_ws['method'] is not 'direct':
-            f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters,
-                                                   np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-            sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+        # if ocp_ws['method'] is not 'direct':
+        #     f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters,
+        #                                            np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+        #     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
 
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
@@ -188,9 +189,9 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
                     sol.ctrl_expr = problem_data['control_options']
                     sol.ctrl_vars = problem_data['controls']
 
-                    if ocp_ws['method'] is not 'direct':
-                        f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-                        sol.u = np.array(list(map(f, sol.t, list(sol.y))))
+                    # if ocp_ws['method'] is not 'direct':
+                    #     f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+                    #     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
 
                     # Copy solution object for storage and reuse `sol` in next
                     # iteration

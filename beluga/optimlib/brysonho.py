@@ -3,11 +3,13 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 """
 
 from beluga.ivpsol import Trajectory
+import copy
 from .optimlib import *
 from beluga.utils import sympify
 import itertools as it
 import logging
 import numpy as np
+from scipy.optimize import minimize
 
 
 def ocp_to_bvp(ocp):
@@ -154,22 +156,39 @@ def ocp_to_bvp(ocp):
            'control_options': control_law,
            'num_controls': len(controls)}
 
-    def guess_map(sol):
-        solout = Trajectory(sol)
-        nodes = len(solout.t)
-        solout.y = np.column_stack((solout.y, solout.dual))
-        solout.dual = np.array([])
-        solout.dynamical_parameters = np.hstack((solout.dynamical_parameters, solout.t[-1]))
-        solout.nondynamical_parameters = np.ones(len(nondynamical_parameters))
-        solout.t = solout.t / solout.t[-1]
-        solout.u = np.array([]).reshape((nodes, 0))
-        return solout
+    def guess_map(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol_out = copy.deepcopy(sol)
+        nodes = len(sol.t)
 
-    def guess_map_inverse(sol, num_costates=len(costates)):
+        # def _fun(dual, y, u):
+        #     uc = _compute_control(np.hstack((y, dual)), None, np.hstack((sol.dynamical_parameters, sol.t[-1])), np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+        #     return sum((u-uc)**2)
+
+        # dual = np.zeros_like(sol.y)
+        # for ii in range(sol.t.size):
+        #     lam = minimize(_fun, sol.dual[ii], args=(sol.y[ii], sol.u[ii]))
+        #     dual[ii] = lam['x']
+
+        sol_out.y = np.column_stack((sol.y, sol.dual))
+        sol_out.dual = np.array([])
+        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
+        sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+        sol_out.t = sol.t / sol.t[-1]
+        sol_out.u = np.array([]).reshape((nodes, 0))
+        return sol_out
+
+    def guess_map_inverse(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol = copy.deepcopy(sol)
         sol.t = sol.t*sol.dynamical_parameters[-1]
-        sol.dual = sol.y[:, -num_costates:]
-        sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
+        sol.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
+        sol.dual = sol.y[:, -len(costates):]
+        sol.y = np.delete(sol.y, np.s_[-len(costates):], axis=1)
         sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
+        sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
         return sol
 
     return out, guess_map, guess_map_inverse

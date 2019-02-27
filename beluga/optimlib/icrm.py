@@ -2,6 +2,7 @@ from .optimlib import *
 import sympy as sym
 import itertools as it
 import numpy as np
+import copy
 
 
 def ocp_to_bvp(ocp):
@@ -148,7 +149,10 @@ def ocp_to_bvp(ocp):
            'dgdU': dgdU,
            'nOdes': 2 * len(states) + len(dae_states)}
 
-    def guess_map(sol):
+    def guess_map(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol = copy.deepcopy(sol)
         nodes = len(sol.t)
         sol.y = np.column_stack((sol.y, sol.dual, sol.u))
         sol.dual = np.array([]).reshape((nodes, 0))
@@ -158,12 +162,17 @@ def ocp_to_bvp(ocp):
         sol.t = sol.t / sol.t[-1]
         return sol
 
-    def guess_map_inverse(sol, num_controls=len(controls), num_costates=len(costates)):
+    def guess_map_inverse(sol, _compute_control=None, num_controls=len(controls), num_costates=len(costates)):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol = copy.deepcopy(sol)
         sol.t = sol.t * sol.dynamical_parameters[-1]
+        sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         sol.u = sol.y[:, -num_controls:]
         sol.y = np.delete(sol.y, np.s_[-num_controls:], axis=1)
         sol.dual = sol.y[:, -num_costates:]
         sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
+        sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
         return sol
 
 
