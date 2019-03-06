@@ -308,7 +308,8 @@ def make_functions(problem_data):
         def terminal_cost(*args, **kwargs):
             return 0
     else:
-        control_fn = None
+        def control_fn(X, u, p, C):
+            return u
         ham_fn = None
         initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states, dynamical_parameters, constants, controls)
 

@@ -170,7 +170,6 @@ def ocp_to_bvp(ocp):
         reducible_subalgebras = [len(gs)==1 for gs in subalgebras]
         logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras)) + ' subalgebras are double reducible.')
 
-    M = J1tau_Q.vertical
     for subalgebra in subalgebras:
         constant_2_value = {c: v for c, v in zip(constants_of_motion, constants_of_motion_values)}
         dim = len(subalgebra)
@@ -282,13 +281,18 @@ def ocp_to_bvp(ocp):
            'num_controls': len(controls)}
 
     states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c)) for c in constants_of_motion_values_original]
-    states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
-    def guess_map(sol):
+    states_2_reduced_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
+
+    constants_2_states_fn = [make_jit_fn([str(x) for x in reduced_states + constants_of_motion], str(y)) for y in constants_of_motion]
+
+    def guess_map(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol_out = copy.deepcopy(sol)
         nodes = len(sol.t)
         n_c = len(constants_of_motion)
-        sol_out = Trajectory()
         sol_out.t = copy.copy(sol.t / sol.t[-1])
-        sol_out.y = np.array([[fn(*sol.y[0], *sol.dual[0]) for fn in states_2_states_fn]])
+        sol_out.y = np.array([[fn(*sol.y[ii], *sol.dual[ii]) for fn in states_2_reduced_states_fn] for ii in range(sol.t.size)])
         sol_out.q = sol.q
         if len(quads) > 0:
             sol_out.q = -0.0*np.array([np.ones((len(quads)))])
@@ -298,9 +302,12 @@ def ocp_to_bvp(ocp):
         sol_out.aux = sol.aux
         return sol_out
 
-    def guess_map_inverse(sol):
-        # raise NotImplementedError
-        return sol
+    def guess_map_inverse(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol_out = copy.deepcopy(sol)
+        sol_out.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
+        return sol_out
 
     return out, guess_map, guess_map_inverse
 
