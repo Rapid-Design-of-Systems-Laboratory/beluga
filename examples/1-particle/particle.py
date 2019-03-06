@@ -24,9 +24,8 @@ ocp.constant('x_0', 0, 'm')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
-ocp.constant('x_max', 0.3, 'm')
-
 ocp.constant('epsilon1', 1, '1')
+ocp.constant('x_max', 0.1, 'm')
 
 # Define costs
 ocp.path_cost('u**2', '1')
@@ -45,18 +44,18 @@ ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
 bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes_min=30)
 
-solinit = Trajectory(np.linspace(0,0.1,num=10), np.zeros((10,2)), np.array([]), np.zeros((10,1)))
-solinit.dynamical_parameters = np.array([])
-solinit.aux['const'] = {'x_0':0, 'x_f':0, 'v_0':1, 'v_f':-1, 'x_max':0.1, 'epsilon1':1}
+guess_maker_direct = beluga.guess_generator('ones',
+                                            start=[0, 0],
+                                            costate_guess=0,
+                                            control_guess=[0],
+                                            use_control_guess=True, time_integrate=0.1)
 
-guess_maker_direct = beluga.guess_generator('static', solinit=solinit)
 guess_maker_indirect = beluga.guess_generator('auto',
-                start=[0, 1],          # Starting values for states in order
-                direction='forward',
-                costate_guess = -0.1,
-                control_guess = [-2],
-                use_control_guess=True, time_integrate=0.1
-)
+                                             start=[0, 1],
+                                             direction='forward',
+                                             costate_guess = -0.1,
+                                             control_guess = [-2],
+                                             use_control_guess=True, time_integrate=0.1)
 
 
 beluga.add_logger(logging_level=logging.DEBUG)
@@ -66,6 +65,9 @@ sol_set_direct = beluga.solve(ocp=ocp,
              bvp_algorithm=bvp_solver_direct,
              steps=None,
              guess_generator=guess_maker_direct, autoscale=False)
+
+del ocp.constants()[-1]
+ocp.constant('x_max', 0.3, 'm')
 
 continuation_steps = beluga.init_continuation()
 
