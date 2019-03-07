@@ -21,10 +21,10 @@ from scipy.special import erf
 
 @pytest.mark.parametrize("const", HARD)
 def test_T1(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], X[0] / const[0])
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0])
 
     algo = Collocation(odefun, None, bcfun)
@@ -43,10 +43,10 @@ def test_T1(const):
 
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T2(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], X[1] / const[0])
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0])
 
     algo = Collocation(odefun, None, bcfun)
@@ -63,11 +63,11 @@ def test_T2(const):
 
 @pytest.mark.parametrize("const", HARD)
 def test_T3(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (-(2 + np.cos(np.pi * X[2])) * X[1] + X[0] - (1 + const[0] * np.pi * np.pi) * np.cos(
             np.pi * X[2]) - (2 + np.cos(np.pi * X[2])) * np.pi * np.sin(np.pi * X[2])) / const[0], 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
@@ -84,10 +84,10 @@ def test_T3(const):
 
 @pytest.mark.parametrize("const", EASY)
 def test_T4(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (((1 + const[0]) * X[0] - X[1]) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
@@ -105,10 +105,10 @@ def test_T4(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T5(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] + X[2] * X[1] - (1 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) + X[2] * np.pi * np.sin(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
@@ -125,14 +125,14 @@ def test_T5(const):
 
 def test_T6():
     # This is a "special" case not using the difficulty settings above.
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
             np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 2, Xf[0], X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=200)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -147,14 +147,14 @@ def test_T6():
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T7(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] + X[0] - (1.0e0 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) - np.pi *
                                 X[2] * np.sin(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] - 1, X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=70)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=70)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
@@ -174,13 +174,13 @@ def test_T7(const):
 
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T8(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], (-X[1] / const[0]), 1)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 2, X0[2])
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=300)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
@@ -194,13 +194,13 @@ def test_T8(const):
 
 @pytest.mark.parametrize("const", HARD)
 def test_T9(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (-(4 * X[2] * X[1] + 2 * X[0]) / (const[0] + X[2] ** 2)), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=300)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
@@ -214,13 +214,13 @@ def test_T9(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T10(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (-X[2] * X[1] / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - 2, X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=200)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
@@ -235,10 +235,10 @@ def test_T10(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T11(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] + 1, X0[2] + 1)
 
     algo = Collocation(odefun, None, bcfun)
@@ -255,13 +255,13 @@ def test_T11(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T12(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=150)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
@@ -275,13 +275,13 @@ def test_T12(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T13(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=150)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
@@ -295,26 +295,26 @@ def test_T13(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T15(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (2 * X[1], 2 * (X[2] * X[0] / const[0]), 2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 1, X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=90)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=90)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
     sol = algo.solve(solinit)
-    assert sol.converged is True
+    assert sol.converged
 
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T16(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (1 * X[1], 1 * (-X[0] * np.pi ** 2 / (4 * const[0])), 1)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2])
 
     algo = Collocation(odefun, None, bcfun)
@@ -331,13 +331,13 @@ def test_T16(const):
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T17(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (0.2 * X[1], 0.2 * (-3 * const[0] * X[0] / (const[0] + X[2] ** 2) ** 2), 0.2)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=60)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=60)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -351,13 +351,13 @@ def test_T17(const):
 
 @pytest.mark.parametrize("const", HARD)
 def test_T18(const):
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], (-X[1] / const[0]), 1)
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=300)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -373,10 +373,10 @@ def test_Collocation_1():
     # Full 2PBVP test problem
     # This is the simplest BVP
 
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return (X[1], -abs(X[0]))
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, const):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0]+2)
 
     algo = Collocation(odefun, None, bcfun)
@@ -423,10 +423,10 @@ def test_Collocation_3():
     # This problem contains a parameter, but it is not explicit in the BCs.
     # Since time is buried in the ODEs, this tests if the BVP solver calculates
     # sensitivities with respect to parameters.
-    def odefun(X, p, const):
+    def odefun(X, u, p, const):
         return 1 * p[0]
 
-    def bcfun(X0, q0, Xf, qf, p, ndp, aux):
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, aux):
         return (X0[0] - 0, Xf[0] - 2)
 
     algo = Collocation(odefun, None, bcfun)

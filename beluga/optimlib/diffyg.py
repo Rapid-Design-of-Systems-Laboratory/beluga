@@ -3,7 +3,7 @@ from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, We
 import copy
 import logging
 from beluga.ivpsol import Trajectory
-from beluga.codegen import make_jit_fn, make_control_and_ham_fn
+from beluga.codegen import make_jit_fn
 import numpy as np
 import itertools as it
 from .optimlib import *
@@ -28,6 +28,9 @@ def ocp_to_bvp(ocp):
     symmetries = ws['symmetries']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']
+    constraints_lower = ws['constraints_lower']
+    constraints_upper = ws['constraints_upper']
+    constraints_activators = ws['constraints_activators']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -65,6 +68,9 @@ def ocp_to_bvp(ocp):
     num_states_total = len(J1tau_Q.vertical.base_coords)
 
     hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    for ii, c in enumerate(constraints['path']):
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
     vector_names = [Symbol('D_' + str(x)) for x in states]
     settangent = dict(zip(vector_names, J1tau_Q.vertical.base_vectors[:num_states]))
@@ -88,6 +94,8 @@ def ocp_to_bvp(ocp):
     #     constants_of_motion = constants_of_motion + [Symbol('hamiltonian')]
     #     constants_of_motion_values = constants_of_motion_values + [hamiltonian]
     #     constants_of_motion_units = constants_of_motion_units + [hamiltonian_units]
+
+
 
     coparameters = make_costate_names(parameters)
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
@@ -128,13 +136,17 @@ def ocp_to_bvp(ocp):
     dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
     bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_initial_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
     bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_terminal_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
-    bc_terminal = make_time_bc(constraints, hamiltonian, bc_terminal)
+    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
+
+    if time_bc is not None:
+        bc_terminal += [time_bc]
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     control_law = make_control_law(dHdu, controls)
 
-    tf_var = sympify('tf')
-    dynamical_parameters = [tf_var] + parameters
-    dynamical_parameters_units = [independent_variable_units] + parameters_units
+    tf = sympify('_tf')
+    # bc_terminal = [bc.subs(independent_variable, tf, simultaneous=True) for bc in bc_terminal]
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 
@@ -158,7 +170,6 @@ def ocp_to_bvp(ocp):
         reducible_subalgebras = [len(gs)==1 for gs in subalgebras]
         logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras)) + ' subalgebras are double reducible.')
 
-    M = J1tau_Q.vertical
     for subalgebra in subalgebras:
         constant_2_value = {c: v for c, v in zip(constants_of_motion, constants_of_motion_values)}
         dim = len(subalgebra)
@@ -244,9 +255,9 @@ def ocp_to_bvp(ocp):
            'terminal_cost_units': None,
            'states': [str(x) for x in reduced_states],
            'states_units': [str(state_2_units[x]) for x in reduced_states],
-           'deriv_list': [str(tf_var * rate) for rate in equations_of_motion],
+           'states_rates': [str(tf * rate) for rate in equations_of_motion],
            'quads': [str(x) for x in quads],
-           'quads_rates': [str(tf_var * x) for x in quads_rates],
+           'quads_rates': [str(tf * x) for x in quads_rates],
            'quads_units': [str(x) for x in quads_units],
            'path_constraints': [],
            'path_constraints_units': [],
@@ -270,30 +281,35 @@ def ocp_to_bvp(ocp):
            'num_controls': len(controls)}
 
     states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c)) for c in constants_of_motion_values_original]
-    states_2_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
+    states_2_reduced_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
 
-    def guess_map(sol):
+    constants_2_states_fn = [make_jit_fn([str(x) for x in reduced_states + constants_of_motion], str(y)) for y in constants_of_motion]
+
+    def guess_map(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol_out = copy.deepcopy(sol)
+        nodes = len(sol.t)
         n_c = len(constants_of_motion)
-        if n_c == 0:
-            return sol
-        sol_out = Trajectory()
-        sol_out.t = copy.copy(sol.t)
-        sol_out.y = np.array([[fn(*sol.y[0]) for fn in states_2_states_fn]])
+        sol_out.t = copy.copy(sol.t / sol.t[-1])
+        sol_out.y = np.array([[fn(*sol.y[ii], *sol.dual[ii]) for fn in states_2_reduced_states_fn] for ii in range(sol.t.size)])
         sol_out.q = sol.q
         if len(quads) > 0:
             sol_out.q = -0.0*np.array([np.ones((len(quads)))])
-        sol_out.dynamical_parameters = sol.dynamical_parameters
-        sol_out.dynamical_parameters[-n_c:] = np.array([fn(*sol.y[0], *sol.u) for fn in states_2_constants_fn])
-        # sol_out.dynamical_parameters[-n_c:] = np.zeros(n_c)
-        sol_out.nondynamical_parameters = sol.nondynamical_parameters
+        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1], np.array([fn(*sol.y[0], *sol.dual[0], *sol.u[0]) for fn in states_2_constants_fn])))
+        sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+        sol_out.u = np.array([]).reshape((nodes, 0))
         sol_out.aux = sol.aux
         return sol_out
 
-    def guess_map_inverse(sol):
-        raise NotImplementedError
-        return sol
+    def guess_map_inverse(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol_out = copy.deepcopy(sol)
+        sol_out.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
+        return sol_out
 
-    return out, guess_map, gues_map_inverse
+    return out, guess_map, guess_map_inverse
 
 class Manifold(object):
     def __new__(cls, *args):
@@ -433,6 +449,13 @@ class JetBundle(FiberBundle):
         obj = super(JetBundle, cls).__new__(cls, vertical, horizontal, name)
 
         return obj
+
+
+def MomentumShift(bundle):
+    vertical = Manifold(bundle.vertical.base_coords + bundle.horizontal.base_coords, 'Momentum_Shifted_Vertical')
+    tau = Manifold(['_tau'], 'Nondimensionalized_Base')
+    bundle2 = FiberBundle(vertical, tau)
+    return bundle2
 
 
 def make_control_law(dhdu, controls):

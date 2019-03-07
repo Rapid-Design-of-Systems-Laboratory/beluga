@@ -2,56 +2,60 @@ from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Trajectory
 import numpy as np
 import copy
-from scipy.optimize import minimize as mini
-from scipy.integrate import simps
+from scipy.optimize import minimize
+from .collocation import *
 import logging
 
 class Collocation(BaseAlgorithm):
     """
-    Collocation algorithm for solving boundary value problems.
+    Collocation algorithm for solving boundary-value problems.
+
+    :param args: Unused
+    :param kwargs: Additional parameters accepted by the solver.
+    :return: Collocation object.
+
+    +------------------------+-----------------+-----------------+
+    | Valid kwargs           | Default Value   | Valid Values    |
+    +========================+=================+=================+
+    | adaptive_mesh          | False           | Bool            |
+    +------------------------+-----------------+-----------------+
+    | cached                 | True            | Bool            |
+    +------------------------+-----------------+-----------------+
+    | tolerance              | 1e-4            | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_error              | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_iterations         | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | number_of_nodes_max    | 100             | >= 4            |
+    +------------------------+-----------------+-----------------+
+    | number_of_nodes_min    | 30              | >= 4            |
+    +------------------------+-----------------+-----------------+
+    | use_numba              | False           | Bool            |
+    +------------------------+-----------------+-----------------+
+    | verbose                | False           | Bool            |
+    +------------------------+-----------------+-----------------+
     """
     def __new__(cls, *args, **kwargs):
-        """
-        Creates a new Collocation object.
-
-        :param args: Unused
-        :param kwargs: Additional parameters accepted by the solver.
-        :return: Collocation object.
-
-        +------------------------+-----------------+-----------------+
-        | Valid kwargs           | Default Value   | Valid Values    |
-        +========================+=================+=================+
-        | cached                 | True            | Bool            |
-        +------------------------+-----------------+-----------------+
-        | tolerance              | 1e-4            | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_error              | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_iterations         | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | number_of_nodes        | 30              | >= 4            |
-        +------------------------+-----------------+-----------------+
-        | use_numba              | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        | verbose                | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        """
-        
         obj = super(Collocation, cls).__new__(cls, *args, **kwargs)
 
+        adaptive_mesh = kwargs.get('adaptive_mesh', False)
         cached = kwargs.get('cached', True)
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
-        number_of_nodes = kwargs.get('number_of_nodes', 30)
+        number_of_nodes_min = kwargs.get('number_of_nodes_min', 30)
+        number_of_nodes_max = kwargs.get('number_of_nodes_max', 100)
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
+        obj.adaptive_mesh = adaptive_mesh
         obj.cached = cached
         obj.tolerance = tolerance
         obj.max_error = max_error
         obj.max_iterations = max_iterations
-        obj.number_of_nodes = number_of_nodes
+        obj.number_of_nodes_min = number_of_nodes_min
+        obj.number_of_nodes_max = number_of_nodes_max
         obj.use_numba = use_numba
         obj.verbose = verbose
         return obj
@@ -60,17 +64,23 @@ class Collocation(BaseAlgorithm):
         """
         Solve a two-point boundary value problem using the collocation method.
 
-        :param deriv_func: The ODE function.
-        :param quad_func: The quad func.
-        :param bc_func: The boundary conditions function.
         :param solinit: An initial guess for a solution to the BVP.
         :return: A solution to the BVP.
         """
         sol = copy.deepcopy(solinit)
         sol.set_interpolate_function('cubic')
+        self.number_of_nodes = self.number_of_nodes_min
         number_of_datapoints = len(sol.t)
+
+        # Default costs and quads to return nothing if not defined
+        def return_nil(*args, **kwargs):
+            return np.array([])
+
+        if self.quadrature_function is None:
+            self.quadrature_function = return_nil
+
         if number_of_datapoints < 4:
-            # Special cae where polynomial interpolation fails. Use linear interpolation to get 4 nodes.
+            # Special case where polynomial interpolation fails. Use linear interpolation to get 4 nodes.
             t_new = np.linspace(sol.t[0], sol.t[-1], num=4)
             y_new = np.column_stack([np.interp(t_new, sol.t, sol.y[:,ii]) for ii in range(sol.y.shape[1])])
             if sol.q.size > 0:
@@ -88,7 +98,7 @@ class Collocation(BaseAlgorithm):
             sol.u = u_new
 
         reconstruct = False
-        if self.number_of_nodes != number_of_datapoints:
+        if self.number_of_nodes > number_of_datapoints:
             new_t = np.linspace(sol.t[0], sol.t[-1], self.number_of_nodes)
             new_y, new_q, new_u = sol(new_t[0])
             for ti in new_t[1:]:
@@ -101,68 +111,153 @@ class Collocation(BaseAlgorithm):
             sol.y = new_y
             sol.q = new_q
             sol.u = new_u
-            if self.quadrature_function is not None and len(sol.q[0]) is not 0:
-                raise NotImplemented # TODO: Put reconstruction of q's in Trajectory()? Or leave in ivpsol?
+        else:
+            self.number_of_nodes = number_of_datapoints
 
         # self.constraint = {'type': 'eq', 'fun': self._collocation_constraint}
         self.constraint_midpoint = {'type': 'eq', 'fun': self._collocation_constraint_midpoint}
         self.constraint_boundary = {'type': 'eq', 'fun': self._collocation_constraint_boundary}
+        self.constraint_path = {'type': 'ineq', 'fun':self._collocation_constraint_path}
 
         # Set up initial guess and other info
-        self.tspan = sol.t
-        self.number_of_odes = sol.y.shape[1]
-        if sol.u.size > 0:
-            self.number_of_controls = sol.u.shape[1]
-        else:
-            self.number_of_controls = 0
+        meshing = True
+        while meshing:
+            self.tspan = sol.t
+            self.number_of_odes = sol.y.shape[1]
+            if sol.u.size > 0:
+                self.number_of_controls = sol.u.shape[1]
+            else:
+                self.number_of_controls = 0
 
-        # TODO: The following if-then structure is silly, but I can't resolve this until some optimlib corrections are made
-        if sol.q.size == 0:
-            self.number_of_quads = 0
-            sol.q = np.array([], dtype=np.float64)
-        elif len(sol.q) == 0:
-            self.number_of_quads = 0
-            sol.q = np.array([], dtype=np.float64)
-        else:
-            self.number_of_quads = len(sol.q)
-            raise NotImplementedError
+            if sol.q.size == 0:
+                self.number_of_quads = 0
+                sol.q = np.array([]).reshape((self.number_of_nodes, 0))
+            else:
+                self.number_of_quads = sol.q.shape[1]
 
-        if sol.dynamical_parameters is None:
-            sol.dynamical_parameters = np.array([], dtype=np.float64)
+            if sol.dynamical_parameters is None:
+                sol.dynamical_parameters = np.array([], dtype=np.float64)
 
-        if sol.nondynamical_parameters is None:
-            sol.nondynamical_parameters = np.array([], dtype=np.float64)
+            if sol.nondynamical_parameters is None:
+                sol.nondynamical_parameters = np.array([], dtype=np.float64)
 
-        self.number_of_dynamical_params = len(sol.dynamical_parameters)
-        self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
+            self.number_of_dynamical_params = len(sol.dynamical_parameters)
+            self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
 
-        vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
+            vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
 
-        self.aux = sol.aux
-        self.const = sol.const
-        sol.converged = False
+            self.aux = sol.aux
+            self.const = sol.const
+            sol.converged = False
 
-        if self.verbose:
-            logging.info('Running collocation... ')
-        # This is SciPy syntax
-        xopt = mini(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None, hessp=None, bounds=None, constraints=[self.constraint_midpoint, self.constraint_boundary], tol=self.tolerance, callback=None, options=None)
-        # xopt = minimize(self._collocation_cost, vectorized, nonlconeq=lambda X, L: np.hstack((self._collocation_constraint_boundary(X), self._collocation_constraint_midpoint(X))), method='sqp')
+            xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None,
+                            hessp=None, bounds=None,
+                            constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
+                            tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
+
+            sol.t = self.tspan
+            sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+
+            if self.number_of_quads > 0:
+                sol.q = integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u, sol.dynamical_parameters, self.const, self.tspan, q0)
+
+            if len(sol.t) >= self.number_of_nodes_max or self.adaptive_mesh is False:
+                meshing = False
+            else:
+                dX = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(sol.y, sol.u)])
+                if len(dX.shape) == 1:
+                    dX = np.array([dX]).T
+                dp0 = dX[:-1]
+                dp1 = dX[1:]
+                p0 = sol.y[:-1]
+                p1 = sol.y[1:]
+                t0 = self.tspan[:-1]
+                t1 = self.tspan[1:]
+                u0 = sol.u[:-1]
+                uf = sol.u[1:]
+                u_midpoint = (u0 + uf) / 2
+                midpoint_predicted = midpoint(p0, p1, dp0, dp1, t0, t1)
+                dp12 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)])  # TODO: Vectorize, so this one works as well
+                u13 = (u0*2 + uf*1)/3
+                u23 = (u0*1 + uf*2)/3
+                c1 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
+                c2 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
+                c3 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
+                c4 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
+                for ii in range(len(sol.t) - 1):
+                    c1[ii], c2[ii], c3[ii], c4[ii] = self._get_poly_coefficients_2_2(p0[ii], dp0[ii], p1[ii], dp1[ii], (t1 - t0)[ii])
+                x13 = np.column_stack([c1[:, ii] + c2[:, ii] * ((1 / 3) * (t1 - t0)) + c3[:, ii] * ((1 / 3) * (t1 - t0)) ** 2 + c4[:, ii] * ((1 / 3) * (t1 - t0)) ** 3 for ii in range(sol.y.shape[1])])
+                x23 = np.column_stack([c1[:, ii] + c2[:, ii] * ((2 / 3) * (t1 - t0)) + c3[:, ii] * ((2 / 3) * (t1 - t0)) ** 2 + c4[:, ii] * ((2 / 3) * (t1 - t0)) ** 3 for ii in range(sol.y.shape[1])])
+                dx13 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(x13, u13)])
+                dx23 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(x23, u23)])
+                xd03 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((0 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((0 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
+                xd13 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((1 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((1 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
+                xd23 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((2 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((2 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
+                xd33 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((3 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((3 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
+                err = [(abs(dp0[ii,:]-xd03[ii,:]), abs(dx13[ii,:]-xd13[ii,:]), abs(dx23[ii,:]-xd23[ii,:]), abs(dp1[ii,:]-xd33[ii,:])) for ii in range(len(sol.t)-1)]
+                err = np.array([max(1/6*e[0] + 4/6*e[1] + 1/6*e[2]) for e in err])
+                n_lim = int(max(2, np.floor(len(sol.t)*0.15)))
+                add_nodes = np.argsort(-err)[:n_lim]
+                for ii in add_nodes:
+                    if err[ii] > self.tolerance and self.number_of_nodes_max >= self.number_of_nodes + 2:
+                        meshing = True
+                        new_sol = copy.deepcopy(sol)
+                        t1add = (sol.t[ii] * 2 + sol.t[ii + 1] * 1) / 3
+                        t2add = (sol.t[ii] * 1 + sol.t[ii + 1] * 2) / 3
+                        y1add, q1add, u1add = sol(t1add)
+                        y2add, q2add, u2add = sol(t2add)
+                        new_sol.t = np.hstack((new_sol.t, t1add))
+                        new_sol.t = np.hstack((new_sol.t, t2add))
+                        new_sol.y = np.vstack((new_sol.y, y1add))
+                        new_sol.y = np.vstack((new_sol.y, y2add))
+                        new_sol.q = np.vstack((new_sol.q, q1add))
+                        new_sol.q = np.vstack((new_sol.q, q2add))
+                        new_sol.u = np.vstack((new_sol.u, u1add))
+                        new_sol.u = np.vstack((new_sol.u, u2add))
+                        self.number_of_nodes += 2
+                        mapping = np.argsort(new_sol.t)
+                        sol.t = new_sol.t[mapping]
+                        sol.y = new_sol.y[mapping]
+                        if sol.q.size > 0:
+                            sol.q = new_sol.q[mapping]
+                        if sol.u.size > 0:
+                            sol.u = new_sol.u[mapping]
+                    else:
+                        meshing = False
+
         logging.debug(xopt['message'])
-        if xopt['status'] == 0:
-            sol.converged = True
-        # sol.converged = xopt['status']
 
-        # Organize the output with the sol() structure
-        sol.t = self.tspan
-        sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+        if 'kkt' in xopt:
+            sol.dual = self._kkt_to_dual(sol, xopt['kkt'][0])
+        else:
+            sol.dual = self._kkt_to_dual(sol, np.zeros((len(sol.t)-1, sol.y.shape[1])))
+
+        sol.converged = xopt['success']
+
         return sol
+
+    def _kkt_to_dual(self, sol, kkt):
+        nodes = len(sol.t)
+        dual = (kkt.reshape((nodes-1, sol.y.shape[1]), order='F').T/(sol.t[:-1]-sol.t[1:])).T
+        dual = np.vstack((dual, np.zeros(sol.y.shape[1])))
+        return dual
+
+    def _collocation_constraint_path(self, vectorized):
+        if self.inequality_constraint_function is None:
+            return ()
+
+        y, q0, u, params, nondynamical_params = self._unwrap_params(vectorized)
+        if u.size > 0:
+            cp = np.hstack([-self.inequality_constraint_function(y[ii], u[ii], params, self.const) for ii in range(self.number_of_nodes)])
+        else:
+            cp = np.hstack([-self.inequality_constraint_function(y[ii], [], params, self.const) for ii in range(self.number_of_nodes)])
+
+        return cp
 
     def _collocation_constraint_midpoint(self, vectorized):
         y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        gamma = Trajectory(self.tspan, y, np.array([]), u)
-        tf = gamma.t[-1]
-        # dX = np.squeeze(self.derivative_function(self.tspan, X.T, params, self.aux)).T # TODO: Vectorized our code compiler so this line works
-        dX = np.squeeze([self.derivative_function(yi, params, self.const) for yi,ui in zip(y, u)])
+        # dX1 = np.squeeze(self.derivative_function(y.T, u.T, params, self.const)).T # TODO: Vectorized our code compiler so this line works
+        dX = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(y, u)])
         if len(dX.shape) == 1:
             dX = np.array([dX]).T
         dp0 = dX[:-1]
@@ -171,10 +266,12 @@ class Collocation(BaseAlgorithm):
         p1 = y[1:]
         t0 = self.tspan[:-1]
         t1 = self.tspan[1:]
-        t12 = (t0+t1)/2
-        midpoint_predicted = 1 / 2 * (p0 + p1) + tf / (self.number_of_nodes - 1) / 8 * (dp0 - dp1)
-        midpoint_derivative_predicted = -3 / 2 * (self.number_of_nodes - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
-        midpoint_derivative_actual = np.squeeze([self.derivative_function(yi, params, self.const) for yi, ui in zip(midpoint_predicted, u[:-1])]) # TODO: Vectorize, so this one works as well
+        u0 = u[:-1]
+        uf = u[1:]
+        u_midpoint = (u0 + uf)/2
+        midpoint_predicted = midpoint(p0, p1, dp0, dp1, t0, t1)
+        midpoint_derivative_predicted = midpoint_derivative(p0, p1, dp0, dp1, t0, t1)
+        midpoint_derivative_actual = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)]) # TODO: Vectorize, so this one works as well
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
@@ -183,29 +280,26 @@ class Collocation(BaseAlgorithm):
         return outvec
 
     def _collocation_constraint_boundary(self, vectorized):
-        X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        return self.boundarycondition_function(X[0], [], X[-1], [], params, nondyn_params, self.const)
-        # else:
-        #     quadsf = self._integrate_quads(self.tspan, X, quads0, params, self.aux, quads=self.quadrature_function)
-        #     return np.squeeze(self.boundarycondition_function(self.tspan[0], X[0], self.tspan[-1], X[-1], quads0, quadsf, params, nondyn_params, self.aux))
+        y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        qf = integrate(self.quadrature_function, self.derivative_function, y, u, params, self.const, self.tspan, quads0)[-1]
+        return self.boundarycondition_function(y[0], quads0, u[0], y[-1], qf, u[-1], params, nondyn_params, self.const)
 
     def _collocation_cost(self, vectorized):
-        X, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
+        y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
         if self.initial_cost_function is not None:
-            c0 = self.initial_cost_function(X[0], [], u[0], params, self.const)
+            c0 = self.initial_cost_function(y[0], u[0], params, self.const)
         else:
             c0 = 0
 
         if self.terminal_cost_function is not None:
-            cf = self.terminal_cost_function(X[-1], [], u[-1], params, self.const)
+            cf = self.terminal_cost_function(y[-1], u[-1], params, self.const)
         else:
             cf = 0
 
+        cpath = 0
         if self.path_cost_function is not None:
-            cpath = np.array([self.path_cost_function(yi, [], ui, params, self.const) for yi, ui in zip(X, u)])
-            cpath = simps(cpath, x=self.tspan)
-        else:
-            cpath = 0
+            cpath = integrate(self.path_cost_function, self.derivative_function, y, u, params, self.const, self.tspan, 0)[-1]
+
         return c0 + cpath + cf
 
     def _unwrap_params(self, vectorized):
@@ -227,7 +321,7 @@ class Collocation(BaseAlgorithm):
         return X, quads, u, dynamical_params, nondynamical_params
 
     def _wrap_params(self, y, q, u, params, nondyn_params):
-        return np.concatenate((y.flatten(), q.flatten(), u.flatten(), params, nondyn_params))
+        return np.concatenate((y.flatten(), q[0], u.flatten(), params, nondyn_params))
 
     @staticmethod
     def _get_poly_coefficients_1_3(p0, dquads0, dquads12, dquads1):
@@ -238,20 +332,12 @@ class Collocation(BaseAlgorithm):
         return C1, C2, C3, C4
 
     @staticmethod
-    def _get_poly_coefficients_2_2(p0, dp0, p1, dp1):
+    def _get_poly_coefficients_2_2(p0, dp0, p1, dp1, h):
         C1 = p0
         C2 = dp0
-        C3 = -3*p0 - 2*dp0 + 3*p1 - dp1
-        C4 = 2*p0 + dp0 - 2*p1 + dp1
+        C3 = -3*p0/h**2 - 2*dp0/h + 3*p1/h**2 - dp1/h
+        C4 = 2*p0/h**3 + dp0/h**2 - 2*p1/h**3 + dp1/h**2
         return C1, C2, C3, C4
-
-    @staticmethod
-    def _collocation_midpoint_prediction(p0, dp0, p1, dp1, tf, N):
-        return 1 / 2 * (p0 + p1) + tf / (N - 1) / 8 * (dp0 - dp1)
-
-    @staticmethod
-    def _collocation_midpoint_derivative(p0, dp0, p1, dp1, tf, N):
-        return -3 / 2 * (N - 1) / tf * (p0 - p1) - 1 / 4 * (dp0 + dp1)
 
     @classmethod
     def _get_default_options(cls, options='default'):

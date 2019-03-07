@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'beluga'
-copyright = '2018, Rapid Design of Systems Laboratory'
+copyright = '2015-2019, Rapid Design of Systems Laboratory'
 author = 'Rapid Design of Systems Laboratory'
 
 # The version info for the project you're documenting, acts as replacement for

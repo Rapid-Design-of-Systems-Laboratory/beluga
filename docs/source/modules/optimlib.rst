@@ -11,16 +11,26 @@ This module automates the indirect optimization process.
 +------------------------+
 | Valid methods          |
 +========================+
+| direct                 |
++------------------------+
 | traditional (brysonho) |
 +------------------------+
 | icrm                   |
 +------------------------+
+| diffyg                 |
++------------------------+
+
+Direct
+------
 
 Bryson Ho
 ---------
 
 ICRM
 ----
+
+Diffy G
+-------
 
 Base Class Reference
 --------------------
@@ -53,4 +63,4 @@ Base Class Reference
 
 .. autofunction:: total_derivative
 
-
+.. autofunction:: utm_path

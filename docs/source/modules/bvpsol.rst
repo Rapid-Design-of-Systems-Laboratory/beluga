@@ -2,7 +2,6 @@ bvp Solver Module
 =================
 
 .. module:: beluga.bvpsol
-.. module:: beluga.bvpsol.algorithms
 
 Introduction
 ------------
@@ -33,4 +32,7 @@ Base Class Reference
     :members: solve
 
 .. autoclass:: Collocation
-    :members: __new__, solve
+    :members: solve
+
+.. autoclass:: Pseudospectral
+    :members: solve

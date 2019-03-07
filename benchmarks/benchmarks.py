@@ -66,7 +66,7 @@ class Brachistochrone:
                                              use_control_guess=True,
                                              )
 
-        self.beluga.solve(self.ocp,
+        self.beluga.solve(ocp=self.ocp,
                            method='traditional',
                            bvp_algorithm=bvp_solver,
                            steps=self.continuation_steps,
@@ -85,7 +85,7 @@ class Brachistochrone:
                                              use_control_guess=True,
                                              )
 
-        self.beluga.solve(self.ocp,
+        self.beluga.solve(ocp=self.ocp,
                            method='traditional',
                            bvp_algorithm=bvp_solver,
                            steps=self.continuation_steps,

@@ -23,6 +23,9 @@ def ocp_to_bvp(ocp):
     constants_of_motion_units = ws['constants_of_motion_units']
     constraints = ws['constraints']
     constraints_units = ws['constraints_units']
+    constraints_lower = ws['constraints_lower']
+    constraints_upper = ws['constraints_upper']
+    constraints_activators = ws['constraints_activators']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -56,6 +59,8 @@ def ocp_to_bvp(ocp):
 
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    for ii, c in enumerate(constraints['path']):
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
 
@@ -79,7 +84,6 @@ def ocp_to_bvp(ocp):
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
 
     nondynamical_parameters = initial_lm_params + terminal_lm_params
-    costate_eoms, bc_list = make_constrained_arc_fns(states, costates, costates_rates, controls, nondynamical_parameters, constants, quantity_vars, hamiltonian)
     dae_states, dae_equations, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates, costates_rates, controls, dHdu, derivative_fn)
 
     # Generate the problem data
@@ -145,21 +149,30 @@ def ocp_to_bvp(ocp):
            'dgdU': dgdU,
            'nOdes': 2 * len(states) + len(dae_states)}
 
-    def guess_map(sol):
+    def guess_map(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol = copy.deepcopy(sol)
+        nodes = len(sol.t)
         sol.y = np.column_stack((sol.y, sol.dual, sol.u))
-        sol.dual = np.array([])
-        sol.u = np.array([])
+        sol.dual = np.array([]).reshape((nodes, 0))
+        sol.u = np.array([]).reshape((nodes, 0))
         sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
         sol.nondynamical_parameters = np.ones(len(nondynamical_parameters))
         sol.t = sol.t / sol.t[-1]
         return sol
 
-    def guess_map_inverse(sol, num_controls=len(controls), num_costates=len(costates)):
+    def guess_map_inverse(sol, _compute_control=None, num_controls=len(controls), num_costates=len(costates)):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol = copy.deepcopy(sol)
         sol.t = sol.t * sol.dynamical_parameters[-1]
+        sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         sol.u = sol.y[:, -num_controls:]
         sol.y = np.delete(sol.y, np.s_[-num_controls:], axis=1)
         sol.dual = sol.y[:, -num_costates:]
         sol.y = np.delete(sol.y, np.s_[-num_costates:], axis=1)
+        sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
         return sol
 
 

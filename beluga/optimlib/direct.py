@@ -4,10 +4,9 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 
 from .optimlib import init_workspace, process_quantities
 from sympy import Symbol
-from beluga.utils import sympify
 import itertools as it
 import numpy as np
-import logging
+import copy
 
 
 def ocp_to_bvp(ocp):
@@ -61,7 +60,7 @@ def ocp_to_bvp(ocp):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
 
     # Generate the problem data
-    tf_var = sympify('tf')
+    # tf_var = sympify('tf')
     dynamical_parameters = parameters
     dynamical_parameters_units = parameters_units
     bc_initial = [c for c in constraints['initial']]
@@ -84,8 +83,8 @@ def ocp_to_bvp(ocp):
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'initial_cost': str(initial_cost),
            'initial_cost_units': str(initial_cost_units),
-           'path_cost': str(path_cost),
-           'path_cost_units': str(path_cost_units),
+           'path_cost': str(path_cost * states[-1]),
+           'path_cost_units': str(path_cost_units * independent_variable_units),
            'terminal_cost': str(terminal_cost),
            'terminal_cost_units': str(terminal_cost_units),
            'states': [str(x) for x in it.chain(states)],
@@ -115,14 +114,21 @@ def ocp_to_bvp(ocp):
            'control_options': None,
            'num_controls': len(controls)}
 
-    def guess_map(sol):
+    def guess_map(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
         # Append time as a state
+        sol = copy.deepcopy(sol)
         sol.y = np.column_stack((sol.y, sol.t[-1]*np.ones((sol.y.shape[0],1))))
         sol.t = sol.t / sol.t[-1]
         return sol
 
-    def guess_map_inverse(sol):
+    def guess_map_inverse(sol, _compute_control=None):
+        if _compute_control is None:
+            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+        sol = copy.deepcopy(sol)
         sol.t = sol.t*sol.y[:, -1]
+        sol.y = np.delete(sol.y, np.s_[-1:], axis=1)
         return sol
 
 

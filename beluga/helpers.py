@@ -1,7 +1,7 @@
 import os
 import sys
-import inspect
 import logging
+
 
 def root():
     """Returns beluga installation path."""

@@ -1,36 +1,32 @@
 from beluga.bvpsol import BaseAlgorithm
+import copy
 from npnlp import minimize, kkt_multipliers
-
 import numba
-
 import numpy as np
 import sys
-import copy
+
 
 class Pseudospectral(BaseAlgorithm):
+    """
+    Pseudospectral algorithm for solving boundary-value problems.
+
+    :param args: Unused
+    :param kwargs: Additional parameters accepted by the solver.
+    :return: Pseudospectral object.
+
+    +------------------------+-----------------+-----------------+
+    | Valid kwargs           | Default Value   | Valid Values    |
+    +========================+=================+=================+
+    | max_error              | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | max_iterations         | 100             | > 0             |
+    +------------------------+-----------------+-----------------+
+    | number_of_nodes        | 10              | >= 4            |
+    +------------------------+-----------------+-----------------+
+    | tolerance              | 1e-4            | > 0             |
+    +------------------------+-----------------+-----------------+
+    """
     def __new__(cls, *args, **kwargs):
-        """
-        Creates a new Pseudospectral object.
-
-        :param args: Unused
-        :param kwargs: Additional parameters accepted by the solver.
-        :return: Collocation object.
-
-        +------------------------+-----------------+-----------------+
-        | Valid kwargs           | Default Value   | Valid Values    |
-        +========================+=================+=================+
-        | closure                | False           | Bool            |
-        +------------------------+-----------------+-----------------+
-        | max_error              | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | max_iterations         | 100             | > 0             |
-        +------------------------+-----------------+-----------------+
-        | number_of_nodes        | 10              | >= 4            |
-        +------------------------+-----------------+-----------------+
-        | tolerance              | 1e-4            | > 0             |
-        +------------------------+-----------------+-----------------+
-        """
-
         obj = super(Pseudospectral, cls).__new__(cls, *args, **kwargs)
 
         closure = kwargs.get('closure', False)
@@ -110,7 +106,7 @@ class Pseudospectral(BaseAlgorithm):
         if num_controls > 0:
             num_bcs = len(self.boundarycondition_function(sol.y[0], q0, u0, sol.y[-1], qf, uf, sol.dynamical_parameters, sol.nondynamical_parameters, sol.const))
         else:
-            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, sol.y[-1], qf, sol.dynamical_parameters, sol.nondynamical_parameters, sol.const))
+            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, [], sol.y[-1], qf, [], sol.dynamical_parameters, sol.nondynamical_parameters, sol.const))
 
         t0 = sol.t[0]
         tf = sol.t[-1]
@@ -143,6 +139,7 @@ class Pseudospectral(BaseAlgorithm):
 
         tau = lglnodes(self.number_of_nodes - 1)
         weights = lglweights(tau)
+        sol._weights = weights
         D = lglD(tau)
         Xinit = _wrap_params(sol, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, self.number_of_nodes)
         extra_data = {'derivative_function': self.derivative_function,
@@ -255,6 +252,7 @@ def _cost(X, data):
     num_parameters = data['num_parameters']
     num_nondynamical_parameters = data['num_nondynamical_parameters']
     path = data['pathcost_function']
+    term = data['terminalcost_function']
     const = data['const']
     weights = data['weights']
     n = data['nodes']
@@ -266,8 +264,9 @@ def _cost(X, data):
     else:
         return 0
 
-    c = (tf - t0) / 4 * np.inner(weights, L)
-    return c
+    c = (tf - t0) / 2 * np.inner(weights, L)
+    cf = term(y[-1], u[-1], params, const)
+    return c + cf
 
 def _eq_constraints(X, KKT, data):
     num_eoms = data['num_eoms']
@@ -290,7 +289,7 @@ def _eq_constraints(X, KKT, data):
     if num_controls > 0:
         yd = np.vstack([eom(y[ii], u[ii], params, const) for ii in range(n)])
     else:
-        yd = np.vstack([eom(y[ii], params, const) for ii in range(n)])
+        yd = np.vstack([eom(y[ii], [], params, const) for ii in range(n)])
 
     if num_quads > 0:
         Q = np.vstack([quad([], y[ii], params, const) for ii in range(n)])
@@ -303,7 +302,7 @@ def _eq_constraints(X, KKT, data):
     if num_controls > 0:
         c0 = bc(y[0], q0, u[0], y[-1], qf, u[-1], params, nondynamical_params, const)
     else:
-        c0 = bc(y[0], q0, y[-1], qf, params, nondynamical_params, const)
+        c0 = bc(y[0], q0, [], y[-1], qf, [], params, nondynamical_params, const)
     c1 = np.dot(D, y) - F
     c1 = np.hstack([c1[:, ii][:] for ii in range(num_eoms)])
 
