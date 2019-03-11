@@ -2,7 +2,6 @@
 # TODO: Costate estimates seem to be off by a factor of -2. See Issue #143
 
 import beluga
-from beluga.ivpsol import Trajectory
 from beluga.bvpsol.Pseudospectral import linter
 import numpy as np
 import logging
@@ -24,11 +23,11 @@ ocp.constant('x_0', 0, 'm')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
-ocp.constant('epsilon1', 1, '1')
+ocp.constant('epsilon1', 10, 'rad**2')
 ocp.constant('x_max', 0.1, 'm')
 
 # Define costs
-ocp.path_cost('u**2', '1')
+ocp.path_cost('u**2', 'rad**2')
 
 # Define constraints
 ocp.constraints() \
@@ -42,7 +41,7 @@ ocp.constraints() \
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
 bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
-bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes_min=30)
+bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator('ones',
                                             start=[0, 0],
