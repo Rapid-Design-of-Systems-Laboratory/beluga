@@ -64,10 +64,21 @@ def ocp_to_bvp(ocp):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
+    for ii, c in enumerate(constraints['path']):
+        path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     for var in quantity_vars.keys():
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+
+    terminal_bcs_to_aug = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
+                           derivative_fn(bc, independent_variable) == 0]
+    terminal_bcs_time = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
+                           derivative_fn(bc, independent_variable) != 0]
+
+    constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
+    constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
         make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
@@ -77,9 +88,6 @@ def ocp_to_bvp(ocp):
 
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
-
-    for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
     coparameters = make_costate_names(parameters)
@@ -93,6 +101,10 @@ def ocp_to_bvp(ocp):
     bc_terminal = make_boundary_conditions(
         constraints, states, costates, parameters, coparameters,
         augmented_terminal_cost, derivative_fn, location='terminal')
+
+    constraints['terminal'] += [bc[0] for bc in terminal_bcs_time]
+    bc_terminal += [bc[0] for bc in terminal_bcs_time]
+    constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
 
     # if bc_initial[-1] == bc_terminal[-1]:
     #     breakpoint()
