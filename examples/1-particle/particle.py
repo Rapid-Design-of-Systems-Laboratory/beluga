@@ -60,10 +60,11 @@ guess_maker_indirect = beluga.guess_generator('auto',
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set_direct = beluga.solve(ocp=ocp,
-             method='direct',
-             bvp_algorithm=bvp_solver_direct,
-             steps=None,
-             guess_generator=guess_maker_direct, autoscale=False)
+                              method='direct',
+                              bvp_algorithm=bvp_solver_direct,
+                              steps=None,
+                              guess_generator=guess_maker_direct,
+                              autoscale=False)
 
 del ocp.constants()[-1]
 ocp.constant('x_max', 0.3, 'm')
@@ -86,10 +87,11 @@ continuation_steps.add_step('bisection') \
                 .const('epsilon1', 1e-6)
 
 sol_set_indirect = beluga.solve(ocp=ocp,
-             method='traditional',
-             bvp_algorithm=bvp_solver_indirect,
-             steps=continuation_steps,
-             guess_generator=guess_maker_indirect, autoscale=False)
+                                method='indirect',
+                                optim_options={'control_method': 'icrm'},
+                                bvp_algorithm=bvp_solver_indirect,
+                                steps=continuation_steps,
+                                guess_generator=guess_maker_indirect, autoscale=False)
 
 sol_direct = sol_set_direct[-1][-1]
 sol_indirect = sol_set_indirect[-1][-1]

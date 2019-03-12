@@ -9,8 +9,7 @@ import numpy as np
 from beluga import problem, helpers
 import beluga.bvpsol as bvpsol
 from beluga.ivpsol import Trajectory
-from beluga.optimlib.brysonho import ocp_to_bvp as BH_ocp_to_bvp
-from beluga.optimlib.icrm import ocp_to_bvp as ICRM_ocp_to_bvp
+from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 import time
@@ -66,22 +65,23 @@ def guess_generator(*args, **kwargs):
     return guess_gen
 
 
-def ocp2bvp(ocp, method='traditional'):
+def ocp2bvp(ocp, **kwargs):
     """
 
     :param ocp: The optimal control problem.
-    :param method: Analytical optimization method to use.
     :return: (bvp, map, map_inverse) - A codegen compiled BVP with associated mappings to and from the OCP.
     """
+
+    method = kwargs.get('method', 'indirect').lower()
+    optim_options = kwargs.get('optim_options', dict())
+
     logging.info("Computing the necessary conditions of optimality")
-    if method.lower() == 'traditional' or method.lower() == 'brysonho':
-        bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp)
-    elif method.lower() == 'icrm':
-        bvp_raw, _map, _map_inverse = ICRM_ocp_to_bvp(ocp)
-    elif method.lower() == 'diffyg':
-        bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp)
-    elif method.lower() == 'direct':
-        bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp)
+    if method == 'indirect' or method == 'traditional' or method == 'brysonho':
+        bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
+    elif method == 'diffyg':
+        bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp, **optim_options)
+    elif method == 'direct':
+        bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp, **optim_options)
     else:
         raise NotImplementedError
 
@@ -229,6 +229,8 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | ocp_map_inverse        | None            | :math:`\gamma \rightarrow \gamma`     |
     +------------------------+-----------------+---------------------------------------+
+    | optim_options          | None            | dict()                                |
+    +------------------------+-----------------+---------------------------------------+
     | steps                  | None            | continuation_strategy                 |
     +------------------------+-----------------+---------------------------------------+
 
@@ -239,10 +241,11 @@ def solve(**kwargs):
     bvp_algorithm = kwargs.get('bvp_algorithm', None)
     guess_generator = kwargs.get('guess_generator', None)
     method = kwargs.get('method', 'traditional')
+    n_cpus = int(kwargs.get('n_cpus', 1))
     ocp = kwargs.get('ocp', None)
     ocp_map = kwargs.get('ocp_map', None)
     ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
-    n_cpus = int(kwargs.get('n_cpus', 1))
+    optim_options = kwargs.get('optim_options', dict())
     steps = kwargs.get('steps', None)
 
     if n_cpus < 1:
@@ -256,7 +259,7 @@ def solve(**kwargs):
         pool = None
 
     if bvp is None:
-        bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method)
+        bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)
         logging.debug('Resulting BVP problem:')
         for key in bvp.raw.keys():
             logging.debug(str(key) + ': ' + str(bvp.raw[key]))

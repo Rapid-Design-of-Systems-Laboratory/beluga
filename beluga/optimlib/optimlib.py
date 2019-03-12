@@ -159,6 +159,42 @@ def make_constrained_arc_fns(states, costates, costates_rates, controls, paramet
     return costate_eoms, bc_list
 
 
+def make_control_dae(states, costates, states_rates, costates_rates, controls, dhdu, derivative_fn):
+    """
+    Make's control law for dae (ICRM) formulation.
+
+    :param states:
+    :param costates:
+    :param controls:
+    :param constraints:
+    :param dhdu:
+    :param xi_init_vals:
+    :param guess:
+    :param derivative_fn:
+    :return:
+    """
+
+    g = dhdu
+    X = [state for state in states] + [costate for costate in costates]
+    U = [c for c in controls]
+    xdot = sympy.Matrix([sympify(state) for state in states_rates] + [sympify(lam) for lam in costates_rates])
+    # Compute Jacobian
+    dgdX = sympy.Matrix([[derivative_fn(g_i, x_i) for x_i in X] for g_i in g])
+    dgdU = sympy.Matrix([[derivative_fn(g_i, u_i) for u_i in U] for g_i in g])
+
+    udot = dgdU.LUsolve(-dgdX*xdot) # dgdU * udot + dgdX * xdot = 0
+
+    dae_states = U
+    dae_equations = list(udot)
+    dae_bc = g
+
+    yield dae_states
+    yield dae_equations
+    yield dae_bc
+    yield dgdX
+    yield dgdU
+
+
 def make_costate_names(states):
     r"""
     Makes a list of variables representing each costate.

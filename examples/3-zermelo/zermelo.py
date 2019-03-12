@@ -68,10 +68,11 @@ continuation_steps.add_step('bisection') \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set = beluga.solve(ocp=ocp,
-             method='icrm',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker)
+                       method='indirect',
+                       optim_options={'control_method': 'icrm'},
+                       bvp_algorithm=bvp_solver,
+                       steps=continuation_steps,
+                       guess_generator=guess_maker)
 
 sol = sol_set[-1][-1]
 

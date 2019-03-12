@@ -49,8 +49,13 @@ def test_brachistochrone_shooting():
         .const('x_f', 10) \
         .const('y_f', -10)
 
-    cont = beluga.solve(ocp=ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps,
-                       guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp,
+                        method='indirect',
+                        optim_options={'control_method': 'icrm'},
+                        bvp_algorithm=shooting_solver,
+                        steps=continuation_steps,
+                        guess_generator=guess_maker)
+
     sol = cont[-1][-1]
     assert isinstance(sol, Trajectory)
     assert sol.t.shape[0] == sol.y.shape[0]
@@ -79,7 +84,11 @@ def test_brachistochrone_shooting():
     assert abs(d0[0] - df[0]) < tol
     assert abs(d0[1] - df[1]) < tol
 
-    cont = beluga.solve(ocp=ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp,
+                        method='indirect',
+                        bvp_algorithm=shooting_solver,
+                        steps=continuation_steps,
+                        guess_generator=guess_maker)
     sol = cont[-1][-1]
 
     y0 = sol.y[0]
@@ -156,7 +165,12 @@ def test_brachistochrone_collocation():
         .const('x_f', 10) \
         .const('y_f', -10)
 
-    cont = beluga.solve(ocp=ocp, method='traditional', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp,
+                        method='indirect',
+                        bvp_algorithm=shooting_solver,
+                        steps=continuation_steps,
+                        guess_generator=guess_maker)
+
     sol = cont[-1][-1]
 
     assert isinstance(sol, Trajectory)
@@ -187,7 +201,13 @@ def test_brachistochrone_collocation():
     assert abs(d0[0] - df[0]) < tol
     assert abs(d0[1] - df[1]) < tol
 
-    cont = beluga.solve(ocp=ocp, method='icrm', bvp_algorithm=shooting_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp,
+                        method='indirect',
+                        optim_options={'control_method': 'icrm'},
+                        bvp_algorithm=shooting_solver,
+                        steps=continuation_steps,
+                        guess_generator=guess_maker)
+
     sol = cont[-1][-1]
 
     y0 = sol.y[0]
@@ -267,8 +287,7 @@ def test_zermelo_custom_functions():
                                          start=[0, 0],
                                          control_guess=[0],
                                          use_control_guess=True,
-                                         direction='forward'
-                                         )
+                                         direction='forward')
 
     continuation_steps = beluga.init_continuation()
 
@@ -285,10 +304,12 @@ def test_zermelo_custom_functions():
         .const('epsilon', 1)
 
     cont = beluga.solve(ocp=ocp,
-                       method='icrm',
-                       bvp_algorithm=bvp_solver,
-                       steps=continuation_steps,
-                       guess_generator=guess_maker)
+                        method='indirect',
+                        optim_options={'control_method': 'icrm'},
+                        bvp_algorithm=bvp_solver,
+                        steps=continuation_steps,
+                        guess_generator=guess_maker)
+
     sol = cont[-1][-1]
 
     from beluga.ivpsol import Trajectory
@@ -389,7 +410,12 @@ def test_planarhypersonic():
                 .num_cases(11) \
                 .const('rho0', 1.2)
 
-    cont = beluga.solve(ocp=ocp, method='traditional', bvp_algorithm=bvp_solver, steps=continuation_steps, guess_generator=guess_maker)
+    cont = beluga.solve(ocp=ocp,
+                        method='indirect',
+                        bvp_algorithm=bvp_solver,
+                        steps=continuation_steps,
+                        guess_generator=guess_maker)
+
     sol = cont[-1][-1]
 
     y0 = sol.y[0]

@@ -64,19 +64,14 @@ ocp.constraints() \
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
-                                  derivative_method='fd',
-                                  tolerance=1e-6,
-                                  max_iterations=100,
-                                  max_error=100,
-                                  algorithm='SLSQP'
-)
+bvp_solver = beluga.bvp_algorithm('spbvp')
 
 guess_maker = beluga.guess_generator('auto',
-                start=[40000,0,2000,(-90)*pi/180],
-                direction='forward',
-                costate_guess = -0.1
-)
+                                    start=[40000,0,2000,(-90)*pi/180],
+                                    direction='forward',
+                                    costate_guess = -0.1,
+                                    control_guess=[0],
+                                    use_control_guess=True)
 
 continuation_steps = beluga.init_continuation()
 
@@ -109,10 +104,11 @@ continuation_steps.add_step('bisection') \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 cont_planar = beluga.solve(ocp=ocp,
-             method='traditional',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker)
+                           method='indirect',
+                           optim_options={'control_method': 'icrm'},
+                           bvp_algorithm=bvp_solver,
+                           steps=continuation_steps,
+                           guess_generator=guess_maker)
 
 sol = cont_planar[-1][-1]
 
@@ -179,13 +175,7 @@ ocp_2.constant('phi_f', 0, 'rad')
 
 ocp_2.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver_2 = beluga.bvp_algorithm('Shooting',
-                                    derivative_method='fd',
-                                    tolerance=1e-4,
-                                    max_iterations=100,
-                                    max_error=400,
-                                    algorithm='SLSQP'
-                                    )
+bvp_solver_2 = beluga.bvp_algorithm('spbvp')
 
 guess_maker_2 = beluga.guess_generator('auto',
                                      start=[sol.y[0,0], sol.y[0,1], 0, sol.y[0,2], sol.y[0,3], 0],
@@ -207,10 +197,11 @@ continuation_steps_2.add_step('bisection').num_cases(41) \
     .const('phi_f', 2*pi/180)
 
 cont_3dof = beluga.solve(ocp=ocp_2,
-             method='traditional',
-             bvp_algorithm=bvp_solver_2,
-             steps=continuation_steps_2,
-             guess_generator=guess_maker_2)
+                         method='indirect',
+                         optim_options={'control_method': 'pmp'},
+                         bvp_algorithm=bvp_solver_2,
+                         steps=continuation_steps_2,
+                         guess_generator=guess_maker_2)
 
 final_continuation = cont_3dof[-1]
 
