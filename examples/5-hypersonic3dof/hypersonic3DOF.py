@@ -104,7 +104,7 @@ continuation_steps.add_step('bisection').num_cases(41) \
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set = beluga.solve(ocp=ocp,
-             method='traditional',
+             method='indirect',
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker)

@@ -48,16 +48,20 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
         def compute_control_fn(X, u, p, C):
             return X[-num_controls:]
     else:
-        def compute_control_fn(X, u, p, C):
-            p = p[:num_params]
-            u_list = np.array(control_opt_fn(*X, *p, *C))
-            # u_list = ucont_wrap(*X, *p, *C)
-            ham_val = np.zeros(num_options)
+        if num_controls > 0:
+            def compute_control_fn(X, u, p, C):
+                p = p[:num_params]
+                u_list = np.array(control_opt_fn(*X, *p, *C))
+                # u_list = ucont_wrap(*X, *p, *C)
+                ham_val = np.zeros(num_options)
 
-            for i in range(num_options):
-                ham_val[i] = hamiltonian_fn(*X, *p, *C, *u_list[i])
+                for i in range(num_options):
+                    ham_val[i] = hamiltonian_fn(*X, *p, *C, *u_list[i])
 
-            return u_list[np.argmin(ham_val)]
+                return u_list[np.argmin(ham_val)]
+        else:
+            def compute_control_fn(X, u, p, C):
+                return np.array([])
 
     return compute_control_fn, hamiltonian_fn
 

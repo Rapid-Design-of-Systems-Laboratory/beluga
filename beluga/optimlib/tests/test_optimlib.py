@@ -1,7 +1,7 @@
 import pytest
 from beluga.optimlib import *
 
-METHODS = ['traditional', 'icrm', 'direct']
+METHODS = ['indirect', 'direct']
 tol = 1e-8
 
 
@@ -31,7 +31,7 @@ def test_composable_functors(method):
     problem.constraints().terminal('x - x_f', 'm')
     problem.constraints().terminal('y - y_f', 'm')
 
-    bvp, mapper, mapper_inv = ocp2bvp(problem, method)
+    bvp, mapper, mapper_inv = ocp2bvp(problem, method=method)
 
     gamma = Trajectory()
     gamma.t = np.linspace(0, 1, num=10)
