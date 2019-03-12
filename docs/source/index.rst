@@ -14,14 +14,13 @@ Contents
    problemsetup.rst
    features.rst
    unittests.rst
-   nomenclature.rst
    modules/beluga.rst
    modules/bvpsol.rst
    modules/codegen.rst
    modules/continuation.rst
    modules/ivpsol/ivpsol.rst
    modules/liepack/liepack.rst
-   modules/optimlib.rst
+   modules/optimlib/optimlib.rst
 
 
 Indices and tables

@@ -10,8 +10,9 @@ from scipy.optimize import minimize
 
 def ocp_to_bvp(ocp, **kwargs):
     """
+    Converts an OCP to a BVP using indirect methods.
 
-    :param ocp:
+    :param ocp: An OCP.
     :return: bvp, map, map_inverse
     """
 

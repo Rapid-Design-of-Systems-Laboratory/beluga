@@ -1,3 +1,4 @@
+====================================
 Indirect Optimization Library Module
 ====================================
 
@@ -11,26 +12,36 @@ This module automates the indirect optimization process.
 +------------------------+
 | Valid methods          |
 +========================+
-| direct                 |
-+------------------------+
-| traditional (brysonho) |
-+------------------------+
-| icrm                   |
+| indirect               |
 +------------------------+
 | diffyg                 |
 +------------------------+
+| direct                 |
++------------------------+
+
+Indirect and Diffy G
+--------------------
+
+Given an OCP :math:`\Sigma`, indirect-style methods create a dual BVP :math:`\Lambda` as follows:
+
+.. math::
+    \Lambda = (E \circ \lambda)(\Sigma)
+
+After compiling the resulting BVP :math:`\Lambda`, it can be solved by most algorithms in the :ref:`bvpsol`.
+
+There are two indirect-style methods available. To read more, see:
+
+.. toctree::
+    :maxdepth: 2
+
+    indirect.rst
+    diffyg.rst
 
 Direct
 ------
 
-Bryson Ho
----------
-
-ICRM
-----
-
-Diffy G
--------
+Given an OCP :math:`\Sigma`, direct-style methods pass through the majority of OCP info unmodified. The result is
+compiled and discretization occurs in the :ref:`bvpsol`. Not all BVP solvers are compatible with direct-style methods.
 
 Base Class Reference
 --------------------

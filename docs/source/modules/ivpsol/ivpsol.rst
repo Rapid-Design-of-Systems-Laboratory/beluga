@@ -1,4 +1,4 @@
-ivp Solver Module
+IVP Solver Module
 =================
 
 .. module:: beluga.ivpsol

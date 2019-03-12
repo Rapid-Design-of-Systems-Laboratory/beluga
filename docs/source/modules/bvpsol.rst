@@ -1,4 +1,7 @@
-bvp Solver Module
+.. _bvpsol:
+
+=================
+BVP Solver Module
 =================
 
 .. module:: beluga.bvpsol
