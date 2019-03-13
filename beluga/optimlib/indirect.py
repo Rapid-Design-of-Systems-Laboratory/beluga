@@ -1,4 +1,3 @@
-
 import copy
 from .optimlib import *
 from beluga.utils import sympify
@@ -12,7 +11,16 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Converts an OCP to a BVP using indirect methods.
 
+    +--------------------------+-----------------+-----------------+
+    | Valid kwargs             | Default Value   | Valid Values    |
+    +==========================+=================+=================+
+    | control_method           | 'pmp'           | 'pmp', 'icrm'   |
+    +--------------------------+-----------------+-----------------+
+    | path_constraint_method   | 'utm'           | 'utm', 'icrm'   |
+    +--------------------------+-----------------+-----------------+
+
     :param ocp: An OCP.
+    :param kwargs: Additional parameters accepted by the solver.
     :return: bvp, map, map_inverse
     """
 
@@ -48,6 +56,7 @@ def ocp_to_bvp(ocp, **kwargs):
     path_cost_units = ws['path_cost_units']
 
     control_method = kwargs.get('control_method', 'pmp').lower()
+    path_constraint_method = kwargs.get('path_constraint_method', 'utm').lower()
 
     # Adjoin time as a state
     # states += [independent_variable]
@@ -63,10 +72,54 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
-    for ii, c in enumerate(constraints['path']):
-        path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
-
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
+
+    if path_constraint_method == 'utm':
+        for ii, c in enumerate(constraints['path']):
+            path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+    elif path_constraint_method == 'icrm':
+        if control_method != 'icrm':
+            raise NotImplementedError('ICRM path constraints must be used with ICRM control method.')
+        connum = 0
+        for path_constraint, lower, upper, activator in zip(constraints['path'], constraints_lower['path'], constraints_upper['path'], constraints_activators['path']):
+            connum += 1
+            cq = [path_constraint]
+            xi_vars = []
+            h = []
+            xi_num = 0
+            order = 0
+
+            control_found = False
+            for u in controls:
+                if u in cq[-1].atoms():
+                    control_found = True
+            while not control_found:
+                dcdx = [derivative_fn(cq[-1], state) for state in states]
+                cq.append(sum(d1*d2 for d1,d2 in zip(dcdx, states_rates)))
+                xi_num += 1
+                order += 1
+                xi_vars.append(Symbol('xi' + '_' + str(connum) + '_' + str(xi_num)))
+                for u in controls:
+                    if u in cq[-1].atoms():
+                        control_found = True
+
+            xi_vars.append(Symbol('uE' + '_' + str(connum)))
+            psi = icrm_path(xi_vars[0], lower, upper)
+            psi_vars = [Symbol('psi' + '_' + str(connum))]
+
+            psi_i = copy.deepcopy(psi)
+            for ii in range(order):
+                psi_i = derivative_fn(psi_i, xi_vars[0])
+            breakpoint()
+
+            while not control_found:
+                for u in controls:
+                    if u in cq[-1].atoms():
+                        control_found = True
+
+        # for ii, c in enumerate(constraints['path']):
+        #     path_cost += icrm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+
     for var in quantity_vars.keys():
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])

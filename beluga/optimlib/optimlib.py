@@ -349,6 +349,29 @@ def total_derivative(expr, var, dependent_vars=None):
     return out
 
 
+def icrm_path(var, lower, upper, dcd0=1):
+    r"""
+    Creates a saturation function to enforce path constraints.
+
+    :param var: New xi var.
+    :param lower: Lower bounds on the path constraint.
+    :param upper: Upper bounds on the path constraint.
+    :param dcd0: Slope at zero.
+    :return: Saturation function.
+    """
+    if lower is None and upper is None:
+        raise NotImplementedError('Either lower or upper bounds on ICRM-style path constraints must be defined.')
+
+    if lower is None:
+        return upper - sympy.exp(var)
+
+    if upper is None:
+        return lower + sympy.exp(-var)
+
+    s = 4*dcd0/(upper-lower)
+    return upper - (upper-lower)/(1 + sympy.exp(s*var))
+
+
 def utm_path(constraint, lower, upper, activator):
     r"""
     Creates an interior penalty-type term to enforce path constraints.
@@ -360,5 +383,5 @@ def utm_path(constraint, lower, upper, activator):
     :return: Term to augment a Hamiltonian with.
     """
     if lower is None or upper is None:
-        raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
+        raise NotImplementedError('Lower and upper bounds on UTM-style path constraints must be defined.')
     return activator*(1/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower))) - 1)
