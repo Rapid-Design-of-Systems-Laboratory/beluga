@@ -19,6 +19,7 @@ from beluga.bvpsol import spbvp
 import numpy as np
 from scipy.special import erf
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T1(const):
     def odefun(X, u, p, const):
@@ -41,6 +42,7 @@ def test_T1(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", HARD)
 def test_T2(const):
     def odefun(X, u, p, const):
@@ -60,6 +62,7 @@ def test_T2(const):
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T3(const):
@@ -82,6 +85,7 @@ def test_T3(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T4(const):
     def odefun(X, u, p, const):
@@ -103,6 +107,7 @@ def test_T4(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T5(const):
     def odefun(X, u, p, const):
@@ -122,6 +127,7 @@ def test_T5(const):
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 def test_T6():
     # This is a "special" case not using the difficulty settings above.
@@ -144,6 +150,7 @@ def test_T6():
         np.sqrt(2) / (2 * np.sqrt(sol.const[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T7(const):
@@ -172,6 +179,7 @@ def test_T7(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T8(const):
     def odefun(X, u, p, const):
@@ -192,6 +200,7 @@ def test_T8(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T9(const):
     def odefun(X, u, p, const):
@@ -211,6 +220,7 @@ def test_T9(const):
     e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T10(const):
@@ -233,6 +243,7 @@ def test_T10(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T11(const):
     def odefun(X, u, p, const):
@@ -252,6 +263,7 @@ def test_T11(const):
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("const", VHARD)
 def test_T12(const):
@@ -273,6 +285,7 @@ def test_T12(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T13(const):
     def odefun(X, u, p, const):
@@ -293,6 +306,7 @@ def test_T13(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T15(const):
     def odefun(X, u, p, const):
@@ -308,6 +322,7 @@ def test_T15(const):
     solinit.const = np.array([const])
     sol = algo.solve(solinit)
     assert sol.converged
+
 
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T16(const):
@@ -329,6 +344,7 @@ def test_T16(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", VHARD)
 def test_T17(const):
     def odefun(X, u, p, const):
@@ -349,6 +365,7 @@ def test_T17(const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("const", HARD)
 def test_T18(const):
     def odefun(X, u, p, const):
@@ -368,6 +385,64 @@ def test_T18(const):
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
+
+@pytest.mark.parametrize("const", HARD)
+def test_T19(const):
+    def odefun(X, u, p, const):
+        return (X[1], (-X[1] / const[0]), 1)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
+
+    algo = spbvp(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("const", HARD)
+def test_T21(const):
+    def odefun(X, u, p, const):
+        return (X[1], (X[0] * (1 + X[0]) - np.exp(-2 * X[2] / np.sqrt(const))) / const, 1)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - np.exp(-1 / np.sqrt(const)), X0[2])
+
+    algo = spbvp(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.exp(-sol.y[:, 2] / np.sqrt(const))
+    e2 = -np.exp(-sol.y[:, 2] / np.sqrt(const)) / np.sqrt(const)
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+
+@pytest.mark.parametrize("const", MEDIUM)
+def test_T22(const):
+    def odefun(X, u, p, const):
+        return (X[1], -(X[1] + X[0] * X[0]) / const)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0] - 1 / 2)
+
+    algo = spbvp(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0], [0, 0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
 
 def test_spbvp_1():
     # Full 2PBVP test problem
@@ -392,6 +467,7 @@ def test_spbvp_1():
     assert out.t[-1] - 4 < tol
     assert abs(out.y[0][1] - solinit.y[0][1]) > tol
     assert abs(out.y[-1][0] - solinit.y[-1][0]) - 2 < tol
+
 
 # def test_spbvp_2():
 #     # Full 2PBVP test problem
@@ -418,6 +494,7 @@ def test_spbvp_1():
 #     assert abs(out.y[-1][0] - 1) < tol
 #     assert abs(out.y[-1][1]) < tol
 #     assert abs(out.dynamical_parameters[0] - 17.098740587333868) < tol
+
 
 def test_spbvp_3():
     # This problem contains a parameter, but it is not explicit in the BCs.

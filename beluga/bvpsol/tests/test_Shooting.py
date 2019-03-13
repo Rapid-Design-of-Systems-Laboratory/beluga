@@ -45,6 +45,7 @@ def test_T1(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T2(algorithm, const):
     def odefun(X, u, p, const):
@@ -64,6 +65,7 @@ def test_T2(algorithm, const):
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
 def test_T3(algorithm, const):
@@ -86,6 +88,7 @@ def test_T3(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T4(algorithm, const):
     def odefun(X, u, p, const):
@@ -107,6 +110,7 @@ def test_T4(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T5(algorithm, const):
     def odefun(X, u, p, const):
@@ -126,6 +130,7 @@ def test_T5(algorithm, const):
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T6(algorithm, const):
@@ -148,6 +153,7 @@ def test_T6(algorithm, const):
         np.sqrt(2) / (2 * np.sqrt(sol.const[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T7(algorithm, const):
@@ -176,6 +182,7 @@ def test_T7(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T8(algorithm, const):
     def odefun(X, u, p, const):
@@ -196,6 +203,7 @@ def test_T8(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T9(algorithm, const):
     def odefun(X, u, p, const):
@@ -215,6 +223,7 @@ def test_T9(algorithm, const):
     e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T10(algorithm, const):
@@ -237,6 +246,7 @@ def test_T10(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T11(algorithm, const):
     def odefun(X, u, p, const):
@@ -257,6 +267,7 @@ def test_T11(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T12(algorithm, const):
     def odefun(X, u, p, const):
@@ -276,6 +287,7 @@ def test_T12(algorithm, const):
     e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T13(algorithm, const):
@@ -298,6 +310,7 @@ def test_T13(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T15(algorithm, const):
     def odefun(X, u, p, const):
@@ -312,7 +325,9 @@ def test_T15(algorithm, const):
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
     sol = algo.solve(solinit)
+
     assert sol.converged is True
+
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T16(algorithm, const):
@@ -334,6 +349,7 @@ def test_T16(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
 def test_T17(algorithm, const):
     def odefun(X, u, p, const):
@@ -354,6 +370,7 @@ def test_T17(algorithm, const):
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
+
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T18(algorithm, const):
     def odefun(X, u, p, const):
@@ -373,6 +390,7 @@ def test_T18(algorithm, const):
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
 
 def test_Shooting_1():
     # Full 2PBVP test problem
@@ -397,6 +415,7 @@ def test_Shooting_1():
     assert out.t[-1] - 4 < tol
     assert abs(out.y[0][1] - solinit.y[0][1]) > tol
     assert abs(out.y[-1][0] - solinit.y[-1][0]) - 2 < tol
+
 
 # def test_Shooting_2():
 #     # Full 2PBVP test problem
@@ -424,6 +443,7 @@ def test_Shooting_1():
 #     assert abs(out.y[-1][1]) < tol
 #     assert abs(out.dynamical_parameters[0] - 17.09646175) < tol
 
+
 def test_Shooting_3():
     # This problem contains a parameter, but it is not explicit in the BCs.
     # Since time is buried in the ODEs, this tests if the BVP solver calculates
@@ -442,6 +462,7 @@ def test_Shooting_3():
     solinit.const = np.array([])
     out = algo.solve(solinit)
     assert abs(out.dynamical_parameters - 2) < tol
+
 
 def test_Shooting_4():
     # This problem contains a quad and tests if the bvp solver correctly
