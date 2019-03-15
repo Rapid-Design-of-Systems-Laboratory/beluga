@@ -81,7 +81,7 @@ def ocp_to_bvp(ocp, **kwargs):
         if control_method != 'icrm':
             raise NotImplementedError('ICRM path constraints must be used with ICRM control method.')
         connum = 0
-        for path_constraint, lower, upper, activator in zip(constraints['path'], constraints_lower['path'], constraints_upper['path'], constraints_activators['path']):
+        for path_constraint, lower, upper, units, activator in zip(constraints['path'], constraints_lower['path'], constraints_upper['path'], constraints_units['path'], constraints_activators['path']):
             connum += 1
             cq = [path_constraint]
             xi_vars = []
@@ -106,19 +106,27 @@ def ocp_to_bvp(ocp, **kwargs):
             xi_vars.append(Symbol('uE' + '_' + str(connum)))
             psi = icrm_path(xi_vars[0], lower, upper)
             psi_vars = [Symbol('psi' + '_' + str(connum))]
+            psi_vars_rates = [copy.deepcopy(psi)]
 
             psi_i = copy.deepcopy(psi)
             for ii in range(order):
                 psi_i = derivative_fn(psi_i, xi_vars[0])
+                psi_vars.append(Symbol('psi' + '_' + str(connum) + '_' + str(ii)))
+                psi_vars_rates.append(psi_i)
+
             breakpoint()
-
-            while not control_found:
-                for u in controls:
-                    if u in cq[-1].atoms():
-                        control_found = True
-
-        # for ii, c in enumerate(constraints['path']):
-        #     path_cost += icrm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+            h = [psi_vars[0][1]]
+            for ii in range(order):
+                states.append(xi_vars[ii])
+                states_rates.append(xi_vars[ii+1])
+                states_units.append(units/(independent_variable_units**ii))
+                constraints['initial'].append(cq[ii]-h[ii])
+                constraints_units['initial'].append(units/(independent_variable_units**ii))
+                dhdxi = [derivative_fn(h[ii], xi_v) for xi_v in xi_vars[:-1]]
+                dhdt = sum(d1*d2 for d1,d2 in zip(dhdxi, xi_vars[1:]))
+                # TODO: Needs substitution?
+                h.append(dhdt)
+                breakpoint()
 
     for var in quantity_vars.keys():
         for ii in range(len(states_rates)):
