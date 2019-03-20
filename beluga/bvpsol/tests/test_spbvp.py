@@ -18,6 +18,7 @@ from beluga.ivpsol import Trajectory
 from beluga.bvpsol import spbvp
 import numpy as np
 from scipy.special import erf
+import copy
 
 
 @pytest.mark.parametrize("const", VHARD)
@@ -440,6 +441,32 @@ def test_T22(const):
     solinit.y = np.array([[0, 0], [0, 0]])
     solinit.const = np.array([const])
     sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("const", HARD)
+def test_T24(const):
+    def odefun(X, u, p, const=None):
+        Ax = 1 + X[2] ** 2
+        Apx = 2 * X[2]
+        y = 1.4
+        return (X[1], (((1 + y) / 2 - const * Apx) * X[0] * X[1] - X[1] / X[0] - (Apx / Ax) * (
+                    1 - (y - 1) / 2 * X[0] ** 2)) / (const * Ax * X[0]), 1)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
+        return (X0[0] - 0.9129, Xf[0] - 0.375, X0[2])
+
+    algo = spbvp(odefun, None, bcfun)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[1, 1, 0], [0.1, 0.1, 1]])
+    sol.const = np.array([const])
+    cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
 
     assert sol.converged
 
