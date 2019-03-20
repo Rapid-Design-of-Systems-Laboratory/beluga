@@ -20,6 +20,7 @@ import itertools
 from beluga.ivpsol import Trajectory
 from beluga.bvpsol import Shooting
 import numpy as np
+import copy
 from scipy.special import erf
 
 
@@ -390,6 +391,89 @@ def test_T18(algorithm, const):
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
+def test_T19(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], (-X[1] / const[0]), 1)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
+def test_T21(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], (X[0] * (1 + X[0]) - np.exp(-2 * X[2] / np.sqrt(const))) / const, 1)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - np.exp(-1 / np.sqrt(const)), X0[2])
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.exp(-sol.y[:, 2] / np.sqrt(const))
+    e2 = -np.exp(-sol.y[:, 2] / np.sqrt(const)) / np.sqrt(const)
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T22(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], -(X[1] + X[0] * X[0]) / const)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0] - 1 / 2)
+
+    algo = Shooting(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0], [0, 0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T24(algorithm, const):
+    def odefun(X, u, p, const=None):
+        Ax = 1 + X[2] ** 2
+        Apx = 2 * X[2]
+        y = 1.4
+        return (X[1], (((1 + y) / 2 - const * Apx) * X[0] * X[1] - X[1] / X[0] - (Apx / Ax) * (
+                    1 - (y - 1) / 2 * X[0] ** 2)) / (const * Ax * X[0]), 1)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
+        return (X0[0] - 0.9129, Xf[0] - 0.375, X0[2])
+
+    algo = Shooting(odefun, None, bcfun, num_arcs=4)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[1, 1, 0], [0.1, 0.1, 1]])
+    sol.const = np.array([const])
+    cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
 
 
 def test_Shooting_1():
