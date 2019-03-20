@@ -138,7 +138,7 @@ def test_T6():
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 2, Xf[0], X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=200)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -161,7 +161,7 @@ def test_T7(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0] - 1, X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=70)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=70)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
@@ -188,7 +188,7 @@ def test_T8(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 2, X0[2])
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=300)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
@@ -209,7 +209,7 @@ def test_T9(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=300)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
@@ -230,7 +230,7 @@ def test_T10(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - 2, X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=200)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=200)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
@@ -273,7 +273,7 @@ def test_T12(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=150)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
@@ -294,7 +294,7 @@ def test_T13(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 1, Xf[0], X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=150)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
@@ -315,7 +315,7 @@ def test_T15(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 1, X0[2] + 1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=90)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=90)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
@@ -353,7 +353,7 @@ def test_T17(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1)
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=60)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=60)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -374,7 +374,7 @@ def test_T18(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
 
-    algo = Collocation(odefun, None, bcfun, number_of_nodes_min=300)
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=300)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])

@@ -27,9 +27,7 @@ class Collocation(BaseAlgorithm):
     +------------------------+-----------------+-----------------+
     | max_iterations         | 100             | > 0             |
     +------------------------+-----------------+-----------------+
-    | number_of_nodes_max    | 100             | >= 4            |
-    +------------------------+-----------------+-----------------+
-    | number_of_nodes_min    | 30              | >= 4            |
+    | number_of_nodes        | 30              | >= 4            |
     +------------------------+-----------------+-----------------+
     | use_numba              | False           | Bool            |
     +------------------------+-----------------+-----------------+
@@ -44,8 +42,7 @@ class Collocation(BaseAlgorithm):
         tolerance = kwargs.get('tolerance', 1e-4)
         max_error = kwargs.get('max_error', 100)
         max_iterations = kwargs.get('max_iterations', 100)
-        number_of_nodes_min = kwargs.get('number_of_nodes_min', 30)
-        number_of_nodes_max = kwargs.get('number_of_nodes_max', 100)
+        number_of_nodes = kwargs.get('number_of_nodes', 30)
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
@@ -54,8 +51,7 @@ class Collocation(BaseAlgorithm):
         obj.tolerance = tolerance
         obj.max_error = max_error
         obj.max_iterations = max_iterations
-        obj.number_of_nodes_min = number_of_nodes_min
-        obj.number_of_nodes_max = number_of_nodes_max
+        obj.number_of_nodes = number_of_nodes
         obj.use_numba = use_numba
         obj.verbose = verbose
         return obj
@@ -69,7 +65,6 @@ class Collocation(BaseAlgorithm):
         """
         sol = copy.deepcopy(solinit)
         sol.set_interpolate_function('cubic')
-        self.number_of_nodes = self.number_of_nodes_min
         number_of_datapoints = len(sol.t)
 
         # Default costs and quads to return nothing if not defined
@@ -119,118 +114,51 @@ class Collocation(BaseAlgorithm):
         self.constraint_boundary = {'type': 'eq', 'fun': self._collocation_constraint_boundary}
         self.constraint_path = {'type': 'ineq', 'fun':self._collocation_constraint_path}
 
-        # Set up initial guess and other info
-        meshing = True
-        while meshing:
-            self.tspan = sol.t
-            self.number_of_odes = sol.y.shape[1]
-            if sol.u.size > 0:
-                self.number_of_controls = sol.u.shape[1]
-            else:
-                self.number_of_controls = 0
+        self.tspan = sol.t
+        self.number_of_odes = sol.y.shape[1]
+        if sol.u.size > 0:
+            self.number_of_controls = sol.u.shape[1]
+        else:
+            self.number_of_controls = 0
 
-            if sol.q.size == 0:
-                self.number_of_quads = 0
-                sol.q = np.array([]).reshape((self.number_of_nodes, 0))
-            else:
-                self.number_of_quads = sol.q.shape[1]
+        if sol.q.size == 0:
+            self.number_of_quads = 0
+            sol.q = np.array([]).reshape((self.number_of_nodes, 0))
+        else:
+            self.number_of_quads = sol.q.shape[1]
 
-            if sol.dynamical_parameters is None:
-                sol.dynamical_parameters = np.array([], dtype=np.float64)
+        if sol.dynamical_parameters is None:
+            sol.dynamical_parameters = np.array([], dtype=np.float64)
 
-            if sol.nondynamical_parameters is None:
-                sol.nondynamical_parameters = np.array([], dtype=np.float64)
+        if sol.nondynamical_parameters is None:
+            sol.nondynamical_parameters = np.array([], dtype=np.float64)
 
-            self.number_of_dynamical_params = len(sol.dynamical_parameters)
-            self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
+        self.number_of_dynamical_params = len(sol.dynamical_parameters)
+        self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
 
-            vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
+        vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
 
-            self.aux = sol.aux
-            self.const = sol.const
-            sol.converged = False
+        self.aux = sol.aux
+        self.const = sol.const
+        sol.converged = False
 
-            xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None,
-                            hessp=None, bounds=None,
-                            constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
-                            tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
+        xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None,
+                        hessp=None, bounds=None,
+                        constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
+                        tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
 
-            sol.t = self.tspan
-            sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+        sol.t = self.tspan
+        sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
 
-            if self.number_of_quads > 0:
-                sol.q = integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u, sol.dynamical_parameters, self.const, self.tspan, q0)
-
-            if len(sol.t) >= self.number_of_nodes_max or self.adaptive_mesh is False:
-                meshing = False
-            else:
-                dX = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(sol.y, sol.u)])
-                if len(dX.shape) == 1:
-                    dX = np.array([dX]).T
-                dp0 = dX[:-1]
-                dp1 = dX[1:]
-                p0 = sol.y[:-1]
-                p1 = sol.y[1:]
-                t0 = self.tspan[:-1]
-                t1 = self.tspan[1:]
-                u0 = sol.u[:-1]
-                uf = sol.u[1:]
-                u_midpoint = (u0 + uf) / 2
-                midpoint_predicted = midpoint(p0, p1, dp0, dp1, t0, t1)
-                dp12 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)])  # TODO: Vectorize, so this one works as well
-                u13 = (u0*2 + uf*1)/3
-                u23 = (u0*1 + uf*2)/3
-                c1 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
-                c2 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
-                c3 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
-                c4 = np.zeros((len(sol.t) - 1, sol.y.shape[1]))
-                for ii in range(len(sol.t) - 1):
-                    c1[ii], c2[ii], c3[ii], c4[ii] = self._get_poly_coefficients_2_2(p0[ii], dp0[ii], p1[ii], dp1[ii], (t1 - t0)[ii])
-                x13 = np.column_stack([c1[:, ii] + c2[:, ii] * ((1 / 3) * (t1 - t0)) + c3[:, ii] * ((1 / 3) * (t1 - t0)) ** 2 + c4[:, ii] * ((1 / 3) * (t1 - t0)) ** 3 for ii in range(sol.y.shape[1])])
-                x23 = np.column_stack([c1[:, ii] + c2[:, ii] * ((2 / 3) * (t1 - t0)) + c3[:, ii] * ((2 / 3) * (t1 - t0)) ** 2 + c4[:, ii] * ((2 / 3) * (t1 - t0)) ** 3 for ii in range(sol.y.shape[1])])
-                dx13 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(x13, u13)])
-                dx23 = np.squeeze([self.derivative_function(yi, ui, sol.dynamical_parameters, self.const) for yi, ui in zip(x23, u23)])
-                xd03 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((0 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((0 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
-                xd13 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((1 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((1 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
-                xd23 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((2 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((2 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
-                xd33 = np.column_stack([c2[:, ii] + 2*c3[:, ii] * ((3 / 3) * (t1 - t0)) + 3*c4[:, ii] * ((3 / 3) * (t1 - t0)) ** 2 for ii in range(sol.y.shape[1])])
-                err = [(abs(dp0[ii,:]-xd03[ii,:]), abs(dx13[ii,:]-xd13[ii,:]), abs(dx23[ii,:]-xd23[ii,:]), abs(dp1[ii,:]-xd33[ii,:])) for ii in range(len(sol.t)-1)]
-                err = np.array([max(1/6*e[0] + 4/6*e[1] + 1/6*e[2]) for e in err])
-                n_lim = int(max(2, np.floor(len(sol.t)*0.15)))
-                add_nodes = np.argsort(-err)[:n_lim]
-                for ii in add_nodes:
-                    if err[ii] > self.tolerance and self.number_of_nodes_max >= self.number_of_nodes + 2:
-                        meshing = True
-                        new_sol = copy.deepcopy(sol)
-                        t1add = (sol.t[ii] * 2 + sol.t[ii + 1] * 1) / 3
-                        t2add = (sol.t[ii] * 1 + sol.t[ii + 1] * 2) / 3
-                        y1add, q1add, u1add = sol(t1add)
-                        y2add, q2add, u2add = sol(t2add)
-                        new_sol.t = np.hstack((new_sol.t, t1add))
-                        new_sol.t = np.hstack((new_sol.t, t2add))
-                        new_sol.y = np.vstack((new_sol.y, y1add))
-                        new_sol.y = np.vstack((new_sol.y, y2add))
-                        new_sol.q = np.vstack((new_sol.q, q1add))
-                        new_sol.q = np.vstack((new_sol.q, q2add))
-                        new_sol.u = np.vstack((new_sol.u, u1add))
-                        new_sol.u = np.vstack((new_sol.u, u2add))
-                        self.number_of_nodes += 2
-                        mapping = np.argsort(new_sol.t)
-                        sol.t = new_sol.t[mapping]
-                        sol.y = new_sol.y[mapping]
-                        if sol.q.size > 0:
-                            sol.q = new_sol.q[mapping]
-                        if sol.u.size > 0:
-                            sol.u = new_sol.u[mapping]
-                    else:
-                        meshing = False
+        if self.number_of_quads > 0:
+            sol.q = integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u, sol.dynamical_parameters, self.const, self.tspan, q0)
 
         logging.debug(xopt['message'])
 
         if 'kkt' in xopt:
             sol.dual = self._kkt_to_dual(sol, xopt['kkt'][0])
         else:
-            sol.dual = self._kkt_to_dual(sol, np.zeros((len(sol.t)-1, sol.y.shape[1])))
+            sol.dual = np.ones_like(sol.y)*np.nan
 
         sol.converged = xopt['success']
 
