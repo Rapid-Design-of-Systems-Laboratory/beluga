@@ -11,7 +11,7 @@ import math
 from math import *
 
 
-def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham, is_icrm=False):
+def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham):
     r"""
     Makes the control and Hamiltonian functions.
 
@@ -21,7 +21,6 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     :param constants: List of constants.
     :param controls: List of controls.
     :param ham: The Hamiltonian function.
-    :keyword is_icrm: Boolean value on whether or not ICRM is used.
     :return: (compute_control_fn, hamiltonian_fn) - Functions that compute the optimal control and the Hamiltonian.
     """
     ham_args = [*states, *parameters, *constants, *controls]
@@ -44,10 +43,8 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     num_states = len(states)
     num_controls = len(controls)
     num_params = len(parameters)
-    if is_icrm:
-        def compute_control_fn(X, u, p, C):
-            return X[-num_controls:]
-    else:
+
+    if num_controls > 0:
         def compute_control_fn(X, u, p, C):
             p = p[:num_params]
             u_list = np.array(control_opt_fn(*X, *p, *C))
@@ -58,6 +55,9 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
                 ham_val[i] = hamiltonian_fn(*X, *p, *C, *u_list[i])
 
             return u_list[np.argmin(ham_val)]
+    else:
+        def compute_control_fn(X, u, p, C):
+            return np.array([])
 
     return compute_control_fn, hamiltonian_fn
 
@@ -115,7 +115,7 @@ def make_constraint_func(path_constraints, states, parameters, constants, contro
     return path_constraints
 
 
-def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control, is_icrm=False):
+def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control):
     r"""
     Makes the derivative functions for each state.
 
@@ -125,7 +125,6 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
     :param constants: List of constants.
     :param controls: List of controls.
     :param compute_control: The compute_control function.
-    :keyword is_icrm: Boolean value on whether or not ICRM is used.
     :return: deriv_func - The derivative function.
     """
     ham_args = [*states, *parameters, *constants, *controls]
@@ -135,19 +134,11 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
     num_eoms = len(deriv_list)
 
     if compute_control is not None:
-        if is_icrm:
-            def deriv_func(X, u, p, C):
-                p = p[:num_params]
-                u = compute_control(X, u, p, C)
-                _X = X[:-num_controls]
-                eom_vals = eom_fn(*_X, *p, *C, *u)
-                return eom_vals
-        else:
-            def deriv_func(X, u, p, C):
-                p = p[:num_params]
-                u = compute_control(X, u, p, C)
-                eom_vals = eom_fn(*X, *p, *C, *u)
-                return eom_vals
+        def deriv_func(X, u, p, C):
+            p = p[:num_params]
+            u = compute_control(X, u, p, C)
+            eom_vals = eom_fn(*X, *p, *C, *u)
+            return eom_vals
     else:
         def deriv_func(X, u, p, C):
             p = p[:num_params]
@@ -157,7 +148,7 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
     return deriv_func
 
 
-def make_quad_func(quads_rates, states, quads, parameters, constants, controls, compute_control, is_icrm=False):
+def make_quad_func(quads_rates, states, quads, parameters, constants, controls, compute_control):
     r"""
     Makes the derivative functions for each quad.
 
@@ -168,7 +159,6 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
     :param constants: List of constants.
     :param controls: List of controls.
     :param compute_control: The compute_control function.
-    :keyword is_icrm: Boolean value on whether or not ICRM is used.
     :return: quad_func - The derivative function.
     """
     quads_args = [*states, *parameters, *constants, *controls]
@@ -182,30 +172,19 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
             return np.array([])
         return dummy_quad_func
 
-    if is_icrm:
-        def quad_func(X, u, p, C):
-            p = p[:num_params]
-            u = compute_control(X, u, p, C)
-            quads_vals = np.zeros(num_quads)
-            _X = X[:-num_controls]
-            for ii in range(num_quads):
-                quads_vals[ii] = quad_fn[ii](*_X, *p, *C, *u)
+    def quad_func(X, u, p, C):
+        p = p[:num_params]
+        u = compute_control(X, u, p, C)
+        quad_vals = np.zeros(num_quads)
+        for ii in range(num_quads):
+            quad_vals[ii] = quad_fn[ii](*X, *p, *C, *u)
 
-            return quads_vals
-    else:
-        def quad_func(X, u, p, C):
-            p = p[:num_params]
-            u = compute_control(X, u, p, C)
-            quad_vals = np.zeros(num_quads)
-            for ii in range(num_quads):
-                quad_vals[ii] = quad_fn[ii](*X, *p, *C, *u)
-
-            return quad_vals
+        return quad_vals
 
     return quad_func
 
 
-def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control, is_icrm=False):
+def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control):
     r"""
     Makes the boundary condition functions.
 
@@ -218,7 +197,6 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
     :param constants: List of constants.
     :param controls: List of controls.
     :param compute_control: The compute_control function.
-    :keyword is_icrm: Boolean value on whether or not ICRM is used.
     :return: bc_func - The boundary condition function.
     """
     ham_args = [*states, *dynamical_parameters, *constants, *controls]
@@ -247,16 +225,11 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
 
             return bc_vals
 
-        if is_icrm:
-            def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
-                u0 = compute_control(y0, u0, p, C)
-                uf = compute_control(yf, uf, p, C)
-                return bc_func_all(y0[:-num_controls], q0, u0, yf[:-num_controls], qf, uf, p, ndp, C)
-        else:
-            def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
-                u0 = compute_control(y0, u0, p, C)
-                uf = compute_control(yf, uf, p, C)
-                return bc_func_all(y0, q0, u0, yf, qf, uf, p, ndp, C)
+
+        def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
+            u0 = compute_control(y0, u0, p, C)
+            uf = compute_control(yf, uf, p, C)
+            return bc_func_all(y0, q0, u0, yf, qf, uf, p, ndp, C)
 
     else:
         def bc_func(X0, q0, u0, Xf, qf, uf, params, ndp, C):
@@ -296,11 +269,10 @@ def make_functions(problem_data):
 
     path_constraints = problem_data['path_constraints']
 
-    is_icrm = problem_data['method'].lower() == 'icrm'
     ham = problem_data['hamiltonian']
     logging.info('Making unconstrained control')
     if problem_data['method'] is not 'direct':
-        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters, constants, controls, ham, is_icrm=is_icrm)
+        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters, constants, controls, ham)
         def initial_cost(*args, **kwargs):
             return 0
         def path_cost(*args, **kwargs):
@@ -321,11 +293,11 @@ def make_functions(problem_data):
     logging.info('Making derivative function and bc function')
     deriv_list = problem_data['states_rates']
 
-    deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
-    quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
+    deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, control_fn)
+    quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn)
     bc_initial = problem_data['bc_initial']
     bc_terminal = problem_data['bc_terminal']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn, is_icrm=is_icrm)
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn)
 
     return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints
 

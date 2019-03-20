@@ -1,6 +1,7 @@
 autograd>=1.2
 cloudpickle
 docopt>=0.6.2
+llvmlite>=0.28.0
 matplotlib>=2.2.2
 npnlp>=0.0.2
 numba>=0.35.0

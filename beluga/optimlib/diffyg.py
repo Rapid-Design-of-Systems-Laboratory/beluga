@@ -8,7 +8,14 @@ import numpy as np
 import itertools as it
 from .optimlib import *
 
-def ocp_to_bvp(ocp):
+def ocp_to_bvp(ocp, **kwargs):
+    """
+    Converts an OCP to a BVP using diffy G methods.
+
+    :param ocp: An OCP.
+    :return: bvp, map, map_inverse
+    """
+
     ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']

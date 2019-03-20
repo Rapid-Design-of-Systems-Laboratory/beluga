@@ -2,7 +2,6 @@
 # TODO: Costate estimates seem to be off by a factor of -2. See Issue #143
 
 import beluga
-from beluga.ivpsol import Trajectory
 from beluga.bvpsol.Pseudospectral import linter
 import numpy as np
 import logging
@@ -24,11 +23,11 @@ ocp.constant('x_0', 0, 'm')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
-ocp.constant('epsilon1', 1, '1')
+ocp.constant('epsilon1', 10, 'rad**2')
 ocp.constant('x_max', 0.1, 'm')
 
 # Define costs
-ocp.path_cost('u**2', '1')
+ocp.path_cost('u**2', 'rad**2')
 
 # Define constraints
 ocp.constraints() \
@@ -42,7 +41,7 @@ ocp.constraints() \
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
 bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
-bvp_solver_indirect = beluga.bvp_algorithm('Collocation', number_of_nodes_min=30)
+bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator('ones',
                                             start=[0, 0],
@@ -61,10 +60,11 @@ guess_maker_indirect = beluga.guess_generator('auto',
 beluga.add_logger(logging_level=logging.DEBUG)
 
 sol_set_direct = beluga.solve(ocp=ocp,
-             method='direct',
-             bvp_algorithm=bvp_solver_direct,
-             steps=None,
-             guess_generator=guess_maker_direct, autoscale=False)
+                              method='direct',
+                              bvp_algorithm=bvp_solver_direct,
+                              steps=None,
+                              guess_generator=guess_maker_direct,
+                              autoscale=False)
 
 del ocp.constants()[-1]
 ocp.constant('x_max', 0.3, 'm')
@@ -87,10 +87,11 @@ continuation_steps.add_step('bisection') \
                 .const('epsilon1', 1e-6)
 
 sol_set_indirect = beluga.solve(ocp=ocp,
-             method='traditional',
-             bvp_algorithm=bvp_solver_indirect,
-             steps=continuation_steps,
-             guess_generator=guess_maker_indirect, autoscale=False)
+                                method='indirect',
+                                optim_options={'control_method': 'icrm'},
+                                bvp_algorithm=bvp_solver_indirect,
+                                steps=continuation_steps,
+                                guess_generator=guess_maker_indirect, autoscale=False)
 
 sol_direct = sol_set_direct[-1][-1]
 sol_indirect = sol_set_indirect[-1][-1]

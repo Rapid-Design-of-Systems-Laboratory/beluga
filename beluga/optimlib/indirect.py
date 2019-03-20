@@ -1,8 +1,4 @@
-"""
-Computes the necessary conditions of optimality using Bryson & Ho's method
-"""
 
-from beluga.ivpsol import Trajectory
 import copy
 from .optimlib import *
 from beluga.utils import sympify
@@ -12,10 +8,11 @@ import numpy as np
 from scipy.optimize import minimize
 
 
-def ocp_to_bvp(ocp):
+def ocp_to_bvp(ocp, **kwargs):
     """
+    Converts an OCP to a BVP using indirect methods.
 
-    :param ocp:
+    :param ocp: An OCP.
     :return: bvp, map, map_inverse
     """
 
@@ -50,6 +47,8 @@ def ocp_to_bvp(ocp):
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
 
+    control_method = kwargs.get('control_method', 'pmp').lower()
+
     # Adjoin time as a state
     # states += [independent_variable]
     # states_rates += [sympify('0')]
@@ -64,10 +63,21 @@ def ocp_to_bvp(ocp):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
+    for ii, c in enumerate(constraints['path']):
+        path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     for var in quantity_vars.keys():
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+
+    terminal_bcs_to_aug = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
+                           derivative_fn(bc, independent_variable) == 0]
+    terminal_bcs_time = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
+                           derivative_fn(bc, independent_variable) != 0]
+
+    constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
+    constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
         make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
@@ -77,9 +87,6 @@ def ocp_to_bvp(ocp):
 
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
-
-    for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
 
     costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
     coparameters = make_costate_names(parameters)
@@ -94,6 +101,10 @@ def ocp_to_bvp(ocp):
         constraints, states, costates, parameters, coparameters,
         augmented_terminal_cost, derivative_fn, location='terminal')
 
+    constraints['terminal'] += [bc[0] for bc in terminal_bcs_time]
+    bc_terminal += [bc[0] for bc in terminal_bcs_time]
+    constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
+
     # if bc_initial[-1] == bc_terminal[-1]:
     #     breakpoint()
     #     del initial_lm_params[-1]
@@ -104,8 +115,24 @@ def ocp_to_bvp(ocp):
         bc_terminal += [time_bc]
 
     dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
-
-    control_law = make_control_law(dHdu, controls)
+    if control_method == 'pmp':
+        control_law = make_control_law(dHdu, controls)
+        control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
+        dae_states = []
+        dae_rates = []
+        dae_units = []
+        dae_bc = []
+        num_dae = 0
+    elif control_method == 'icrm':
+        dae_states, dae_rates, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates,
+                                                                                   costates_rates, controls, dHdu,
+                                                                                   derivative_fn)
+        dae_units = controls_units
+        controls = []
+        control_law = []
+        num_dae = len(dae_states)
+    else:
+        raise NotImplementedError('Unknown control method \"' + control_method + '\"')
 
     # Generate the problem data
     # TODO: We're not handling time well. This is hardcoded.
@@ -116,7 +143,8 @@ def ocp_to_bvp(ocp):
     dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
-    control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
+    # breakpoint()
+
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
@@ -127,11 +155,12 @@ def ocp_to_bvp(ocp):
            'path_cost_units': None,
            'terminal_cost': None,
            'terminal_cost_units': None,
-           'states': [str(x) for x in it.chain(states, costates)],
+           'states': [str(x) for x in it.chain(states, costates, dae_states)],
            'states_rates':
                [str(tf * rate) for rate in states_rates] +
-               [str(tf * rate) for rate in costates_rates],
-           'states_units': [str(x) for x in states_units + costates_units],
+               [str(tf * rate) for rate in costates_rates] +
+               [str(tf * rate) for rate in dae_rates],
+           'states_units': [str(x) for x in states_units + costates_units + dae_units],
            'quads': [str(x) for x in coparameters],
            'quads_rates': [str(tf * x) for x in coparameters_rates],
            'quads_units': [str(x) for x in coparameters_units],
@@ -152,7 +181,7 @@ def ocp_to_bvp(ocp):
            'num_states': len(states + costates),
            'dHdu': str(dHdu),
            'bc_initial': [str(_) for _ in bc_initial],
-           'bc_terminal': [str(_) for _ in bc_terminal],
+           'bc_terminal': [str(_) for _ in bc_terminal + dae_bc],
            'control_options': control_law,
            'num_controls': len(controls)}
 
@@ -162,16 +191,11 @@ def ocp_to_bvp(ocp):
         sol_out = copy.deepcopy(sol)
         nodes = len(sol.t)
 
-        # def _fun(dual, y, u):
-        #     uc = _compute_control(np.hstack((y, dual)), None, np.hstack((sol.dynamical_parameters, sol.t[-1])), np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-        #     return sum((u-uc)**2)
+        if num_dae == 0:
+            sol_out.y = np.column_stack((sol.y, sol.dual))
+        else:
+            sol_out.y = np.column_stack((sol.y, sol.dual, sol.u))
 
-        # dual = np.zeros_like(sol.y)
-        # for ii in range(sol.t.size):
-        #     lam = minimize(_fun, sol.dual[ii], args=(sol.y[ii], sol.u[ii]))
-        #     dual[ii] = lam['x']
-
-        sol_out.y = np.column_stack((sol.y, sol.dual))
         sol_out.dual = np.array([])
         sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
         sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
@@ -185,8 +209,12 @@ def ocp_to_bvp(ocp):
         sol = copy.deepcopy(sol)
         sol.t = sol.t*sol.dynamical_parameters[-1]
         sol.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
-        sol.dual = sol.y[:, -len(costates):]
-        sol.y = np.delete(sol.y, np.s_[-len(costates):], axis=1)
+        if num_dae == 0:
+            sol.dual = sol.y[:, -len(costates):]
+        else:
+            sol.u = sol.y[:, -num_dae:]
+            sol.dual = sol.y[:, -len(costates)-num_dae:-num_dae]
+        sol.y = np.delete(sol.y, np.s_[-len(costates)-num_dae:], axis=1)
         sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
         return sol

@@ -1,4 +1,3 @@
-from .brysonho import *
 from .optimlib import *
-from .icrm import *
+from .indirect import *
 from .diffyg import *
