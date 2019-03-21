@@ -3,7 +3,7 @@
 
 References
 ----------
-.. [1] Francesca Mazzia and Jeff R. Cash. A fortran test set for boundary value problem solvers.
+.. [1] Francesca Mazzia and Jeff R. Cash. "A fortran test set for boundary value problem solvers."
     AIP Conference Proceedings. 1648(1):020009, 2015.
 """
 
@@ -445,6 +445,24 @@ def test_T22(const):
     assert sol.converged
 
 
+@pytest.mark.parametrize("const", MEDIUM)
+def test_T23(const):
+    def odefun(X, u, p, const):
+        return (X[1], 1 / const[0] * np.sinh(X[0] / const[0]))
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0] - 1)
+
+    algo = Collocation(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0], [0, 0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
 @pytest.mark.parametrize("const", HARD)
 def test_T24(const):
     def odefun(X, u, p, const=None):
@@ -467,6 +485,60 @@ def test_T24(const):
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
         sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T25(const):
+    def odefun(X, u, p, const):
+        return (X[1], X[0] * (1 - X[1]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] + 1 / 3, Xf[0] - 1 / 3)
+
+    algo = Collocation(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0], [1, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("const", HARD)
+def test_T26(const):
+    def odefun(X, u, p, const):
+        return (X[1], X[0] * (1 - X[1]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] + 1/3)
+
+    algo = Collocation(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1, 0], [-1/3, 0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("const", HARD)
+def test_T27(const):
+    def odefun(X, u, p, const):
+        return (X[1], X[0] * (1 - X[1]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] + 1/3)
+
+    algo = Collocation(odefun, None, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1, 0], [1/3, 0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
 
     assert sol.converged
 

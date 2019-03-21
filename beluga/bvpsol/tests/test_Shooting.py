@@ -3,7 +3,7 @@
 
 References
 ----------
-.. [1] Francesca Mazzia and Jeff R. Cash. A fortran test set for boundary value problem solvers.
+.. [1] Francesca Mazzia and Jeff R. Cash. "A fortran test set for boundary value problem solvers."
     AIP Conference Proceedings. 1648(1):020009, 2015.
 """
 
@@ -440,7 +440,25 @@ def test_T22(algorithm, const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - 1 / 2)
 
-    algo = Shooting(odefun, None, bcfun)
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0], [0, 0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
+def test_T23(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], -(X[1] + X[0] * X[0]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0] - 1 / 2)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0], [0, 0]])
@@ -462,10 +480,76 @@ def test_T24(algorithm, const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
         return (X0[0] - 0.9129, Xf[0] - 0.375, X0[2])
 
-    algo = Shooting(odefun, None, bcfun, num_arcs=4)
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 1, 0], [0.1, 0.1, 1]])
+    sol.const = np.array([const])
+    cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T25(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], X[0] * (1 - X[1]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] + 1 / 3, Xf[0] - 1 / 3)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=16)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[-1/3, 1], [1/3, 1]])
+    sol.const = np.array([const])
+    cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
+def test_T26(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], X[0] * (1 - X[1]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] + 1/3)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=64)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[1, 0], [-1/3, 0]])
+    sol.const = np.array([const])
+    cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
+def test_T27(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], X[0] * (1 - X[1]) / const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - 1 / 3)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[1, 0], [1 / 3, 0]])
     sol.const = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
