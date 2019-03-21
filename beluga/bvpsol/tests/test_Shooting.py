@@ -560,6 +560,81 @@ def test_T27(algorithm, const):
     assert sol.converged
 
 
+@pytest.mark.parametrize("const", MEDIUM)
+def test_R2(const):
+    def odefun(X, u, p, const):
+        return X[0] / const[0]
+
+    def quadfun(X, u, p, const):
+        return X[0]
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (q0[0] - 1, qf[0])
+
+    algo = Shooting(odefun, quadfun, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1], [1]])
+    solinit.q = np.array([[0], [0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
+    e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
+    assert all(e1 - sol.q[:, 0] < tol)
+    assert all(e2 - sol.y[:, 0] < tol)
+
+
+@pytest.mark.parametrize("const", MEDIUM)
+def test_R8(const):
+    def odefun(X, u, p, const):
+        return -X[0] / const[0]
+
+    def quadfun(X, u, p, const):
+        return X[0]
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (q0[0] - 1, qf[0] - 2)
+
+    algo = Shooting(odefun, quadfun, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1], [1]])
+    solinit.q = np.array([[0], [0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
+    e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
+    assert all(e1 - sol.q[:, 0] < tol)
+    assert all(e2 - sol.y[:, 0] < tol)
+
+
+@pytest.mark.parametrize("const", MEDIUM)
+def test_R18(const):
+    def odefun(X, u, p, const):
+        return -X[0] / const[0]
+
+    def quadfun(X, u, p, const):
+        return X[0]
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (q0[0] - 1, qf[0] - np.exp(-1 / const[0]))
+
+    algo = Shooting(odefun, quadfun, bcfun)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[1], [1]])
+    solinit.q = np.array([[0], [0]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.exp(-sol.t / sol.const[0])
+    e2 = -1 / (sol.const[0] * np.exp(sol.t / sol.const[0]))
+    assert all(e1 - sol.q[:, 0] < tol)
+    assert all(e2 - sol.y[:, 0] < tol)
+
+
 def test_Shooting_1():
     # Full 2PBVP test problem
     # This is the simplest BVP
