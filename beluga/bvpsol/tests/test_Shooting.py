@@ -494,7 +494,7 @@ def test_T24(algorithm, const):
     assert sol.converged
 
 
-@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
 def test_T25(algorithm, const):
     def odefun(X, u, p, const):
         return (X[1], X[0] * (1 - X[1]) / const[0])
