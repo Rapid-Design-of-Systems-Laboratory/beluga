@@ -1,0 +1,28 @@
+beluga uses test cases T1 through T33 which are from another source and have been rewritten in Python. The disclaimer for the original test set is here:
+
+Disclaimer
+THE TEXT ON THIS PAGE IS ADDRESSED TO ALL USERS OF THE TEST SET FOR IOUNDARY VALUE PROBLEM SOLVERS. BY USING THIS SOFTWARE, YOU ARE CONSENTING TO BE BOUND BY THIS AGREEMENT.
+
+LICENSE
+
+DM, INdAM,  grant you a non-exclusive license to use the Test Set for  Boundary Value Problem Solvers Software free of charge for research purposes.
+
+DISCLAIMER OF WARRANTY
+
+The Test Set for Boundary Value Problem Solvers Software is provided on an "AS IS" basis, without warranty of any kind, including without limitation the warranties of merchantability, fitness for a particular purpose and non-infringement. The entire risk as to the quality and performance of the Software is borne by you. You must determine that the Software sufficiently meets your requirements.
+
+LIMITATION OF LIABILITY
+
+UNDER NO CIRCUMSTANCES AND UNDER NO LEGAL THEORY, TORT, CONTRACT, OR OTHERWISE, SHALL DM, INDAM, SMC OR STW BE LIABLE TO YOU OR ANY OTHER PERSON FOR ANY INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES OF ANY CHARACTER INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF GOODWILL, WORK STOPPAGE, COMPUTER FAILURE OR MALFUNCTION, OR ANY AND ALL OTHER COMMERCIAL DAMAGES OR LOSSES. IN NO EVENT WILL DM, INDAM, SMC OR STW BE LIABLE FOR ANY DAMAGES, EVEN IF THE DM, INDAM, SMC OR STW SHALL HAVE BEEN INFORMED OF THE POSSIBILITY OF SUCH DAMAGES, OR FOR ANY CLAIM BY ANY OTHER PARTY. YOU AGREE TO INDEMNIFY AND HOLD DM, INDAM,  HARMLESS WITH RESPECT TO ALL CLAIMS BY THIRD PARTIES ARISING OUT OF YOUR USE OF THE RESULTS OR OPERATION OF THE SOFTWARE.
+
+TITLE
+
+Title, ownership rights, and intellectual property rights in the Software shall remain with DM, INdAM,. The Software is protected by the copyright laws and treaties.
+
+MISCELLANEOUS
+
+You may not remove any proprietary notices or labels on the Software, nor remove this disclaimer. If any provision of this Agreement is held to be unenforceable, such provision shall be reformed only to the extent necessary to make it enforceable. This Agreement shall be governed by the Law of Italy.
+
+DM stands for Dipartimento di Matematica, University of Bari.
+
+INdAM stands for Istituto Nationale di Alta Matematica "F. Severi".
