@@ -409,10 +409,10 @@ def test_T19(const):
 @pytest.mark.parametrize("const", HARD)
 def test_T21(const):
     def odefun(X, u, p, const):
-        return (X[1], (X[0] * (1 + X[0]) - np.exp(-2 * X[2] / np.sqrt(const))) / const, 1)
+        return (X[1], (X[0] * (1 + X[0]) - np.exp(-2 * X[2] / np.sqrt(const[0]))) / const[0], 1)
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
-        return (X0[0] - 1, Xf[0] - np.exp(-1 / np.sqrt(const)), X0[2])
+        return (X0[0] - 1, Xf[0] - np.exp(-1 / np.sqrt(const[0])), X0[2])
 
     algo = Collocation(odefun, None, bcfun)
     solinit = Trajectory()
@@ -430,7 +430,7 @@ def test_T21(const):
 @pytest.mark.parametrize("const", MEDIUM)
 def test_T22(const):
     def odefun(X, u, p, const):
-        return (X[1], -(X[1] + X[0] * X[0]) / const)
+        return (X[1], -(X[1] + X[0] * X[0]) / const[0])
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0], Xf[0] - 1 / 2)
@@ -451,8 +451,8 @@ def test_T24(const):
         Ax = 1 + X[2] ** 2
         Apx = 2 * X[2]
         y = 1.4
-        return (X[1], (((1 + y) / 2 - const * Apx) * X[0] * X[1] - X[1] / X[0] - (Apx / Ax) * (
-                    1 - (y - 1) / 2 * X[0] ** 2)) / (const * Ax * X[0]), 1)
+        return (X[1], (((1 + y) / 2 - const[0] * Apx) * X[0] * X[1] - X[1] / X[0] - (Apx / Ax) * (
+                    1 - (y - 1) / 2 * X[0] ** 2)) / (const[0] * Ax * X[0]), 1)
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
         return (X0[0] - 0.9129, Xf[0] - 0.375, X0[2])
