@@ -399,7 +399,7 @@ def test_T19(algorithm, const):
         return (X[1], (-X[1] / const[0]), 1)
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
-        return (X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2])
+        return (X0[0], Xf[0], X0[2])
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
     solinit = Trajectory()
@@ -552,6 +552,86 @@ def test_T27(algorithm, const):
     sol.y = np.array([[1, 0], [1 / 3, 0]])
     sol.const = np.array([const])
     cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
+def test_T28(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], (X[0] - X[0]*X[1])/const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] - 1, Xf[0] - 3/2)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=1)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[1, 0], [3/2, 0]])
+    sol.const = np.array([const])
+    sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, VHARD))
+def test_T29(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], (X[0] - X[0]*X[1])/const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0] - 3/2)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=1)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[0, 0], [3/2, 0]])
+    sol.const = np.array([const])
+    sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T30(algorithm, const):
+    def odefun(X, u, p, const):
+        return (X[1], (X[0] - X[0]*X[1])/const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] + 7/6, Xf[0] - 3/2)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=8)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[-7/6, 0], [3/2, 0]])
+    sol.const = np.array([const])
+    cc = np.linspace(const * 10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T31(algorithm, const):
+    def odefun(X, u, p, const):
+        return (np.sin(X[1]), X[2], -X[3]/const[0], ((X[0]-1)*np.cos(X[1]) - X[2]/np.cos(X[1]) - const[0]*X[3]*np.tan(X[1]))/const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], X0[2], Xf[0], Xf[2])
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=12)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+    sol.const = np.array([const])
+    cc = np.linspace(const * 10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
