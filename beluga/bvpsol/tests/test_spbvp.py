@@ -607,28 +607,6 @@ def test_T29(const):
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
-def test_T29(const):
-    def odefun(X, u, p, const):
-        return (X[1], (X[0] - X[0]*X[1])/const[0])
-
-    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
-        return (X0[0], Xf[0] - 3/2)
-
-    algo = spbvp(odefun, None, bcfun)
-    sol = Trajectory()
-    sol.t = np.linspace(0, 1, 2)
-    sol.y = np.array([[0, 0], [3/2, 0]])
-    sol.const = np.array([const])
-    cc = np.linspace(const * 10, const, 10)
-    for c in cc:
-        sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
-        sol = algo.solve(sol)
-
-    assert sol.converged
-
-
 @pytest.mark.parametrize("const", HARD)
 def test_T30(const):
     def odefun(X, u, p, const):
