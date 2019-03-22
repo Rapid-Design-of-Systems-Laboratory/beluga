@@ -559,6 +559,46 @@ def test_T27(const):
     assert sol.converged
 
 
+@pytest.mark.parametrize("const", VHARD)
+def test_T32(const):
+    def odefun(X, u, p, const):
+        return (X[1], X[2], X[3], (X[1]*X[2] - X[0]*X[3])/const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], X0[1], Xf[0] - 1, Xf[1])
+
+    algo = spbvp(odefun, None, bcfun)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[0,0,0,0], [1,0,0,0]])
+    sol.const = np.array([const])
+    cc = np.linspace(const*10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    assert sol.converged
+
+
+@pytest.mark.parametrize("const", VHARD)
+def test_T33(const):
+    def odefun(X, u, p, const):
+        return (X[1], (X[0]*X[3] - X[2]*X[1])/const[0], X[3], X[4], X[5], (-X[2]*X[5] - X[0]*X[1])/const[0])
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0] + 1, X0[2], X0[3], Xf[0] - 1, Xf[2], Xf[3])
+
+    algo = spbvp(odefun, None, bcfun)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[-1,0,0,0,0,0], [1,0,0,0,0,0]])
+    sol.const = np.array([const])
+    sol = algo.solve(sol)
+
+    assert sol.converged
+
+
 @pytest.mark.parametrize("const", MEDIUM)
 def test_R2(const):
     def odefun(X, u, p, const):
