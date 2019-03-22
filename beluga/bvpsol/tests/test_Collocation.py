@@ -309,6 +309,29 @@ def test_T13(const):
 
 
 @pytest.mark.parametrize("const", VHARD)
+def test_T14(const):
+    def odefun(X, u, p, const):
+        return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0], X0[2]+1)
+
+    algo = Collocation(odefun, None, bcfun, number_of_nodes=150)
+    solinit = Trajectory()
+    solinit.t = np.linspace(0, 1, 2)
+    solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
+    solinit.const = np.array([const])
+    sol = algo.solve(solinit)
+
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0])) + np.exp(
+        -(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
+    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(
+        np.pi * sol.y[:, 2]) - 1 / (np.sqrt(sol.const[0]) * np.exp((sol.y[:, 2] + 1) / np.sqrt(sol.const[0])))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+
+@pytest.mark.parametrize("const", VHARD)
 def test_T15(const):
     def odefun(X, u, p, const):
         return (2 * X[1], 2 * (X[2] * X[0] / const[0]), 2)

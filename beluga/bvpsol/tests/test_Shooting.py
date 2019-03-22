@@ -313,6 +313,33 @@ def test_T13(algorithm, const):
 
 
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
+def test_T14(algorithm, const):
+    def odefun(X, u, p, const):
+        return (2 * X[1], 2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]), 2)
+
+    def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
+        return (X0[0], Xf[0], X0[2]+1)
+
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
+    sol = Trajectory()
+    sol.t = np.linspace(0, 1, 2)
+    sol.y = np.array([[0, 0, -1], [0, 0, 1]])
+    sol.const = np.array([const])
+    cc = np.linspace(const * 10, const, 10)
+    for c in cc:
+        sol = copy.deepcopy(sol)
+        sol.const = np.array([c])
+        sol = algo.solve(sol)
+
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0])) + np.exp(
+        -(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
+    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(
+        np.pi * sol.y[:, 2]) - 1 / (np.sqrt(sol.const[0]) * np.exp((sol.y[:, 2] + 1) / np.sqrt(sol.const[0])))
+    assert all(e1 - sol.y[:, 0] < tol)
+    assert all(e2 - sol.y[:, 1] < tol)
+
+
+@pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, HARD))
 def test_T15(algorithm, const):
     def odefun(X, u, p, const):
         return (2 * X[1], 2 * (X[2] * X[0] / const[0]), 2)
