@@ -139,15 +139,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
         if autoscale:
             sol = s.unscale(sol)
 
-        # Compute control history, since its required for plotting to work with control variables
-        sol.ctrl_expr = problem_data['control_options']
-        sol.ctrl_vars = problem_data['controls']
-
-        # if ocp_ws['method'] is not 'direct':
-        #     f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters,
-        #                                            np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-        #     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
-
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
             elapsed_time = time.time() - time0
@@ -164,6 +155,7 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
             step.init(sol_guess, problem_data)
 
             for aux in step:  # Continuation step returns 'aux' dictionary
+                # gamma_guess = step.get_closest_gamma(aux)
                 sol_guess.aux = aux
 
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
@@ -175,29 +167,17 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
 
                 sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
                 sol = bvp_algo.solve(sol_guess, pool=pool)
-                step.last_sol.converged = sol.converged
-
 
                 if autoscale:
                     sol = s.unscale(sol)
 
+                step.add_gamma(sol)
                 sol_guess = copy.deepcopy(sol)
 
                 if sol.converged:
                     # Post-processing phase
-
-                    # Compute control history, since its required for plotting to work with control variables
-                    sol.ctrl_expr = problem_data['control_options']
-                    sol.ctrl_vars = problem_data['controls']
-
-                    # if ocp_ws['method'] is not 'direct':
-                    #     f = lambda _t, _X: bvp.compute_control(_X, None, sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
-                    #     sol.u = np.array(list(map(f, sol.t, list(sol.y))))
-
-                    # Copy solution object for storage and reuse `sol` in next
-                    # iteration
                     solution_set[step_idx].append(copy.deepcopy(sol))
-                    # sol_guess = copy.deepcopy(sol)
+
                     elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
                 else:
