@@ -1,8 +1,15 @@
+import abc
+import copy
 import numpy as np
 import logging
 import inspect
 import functools
 import sys
+
+
+def gamma_norm(sol1, sol2):
+    breakpoint()
+    return 0
 
 
 class ContinuationList(list):
@@ -46,16 +53,28 @@ class ContinuationVariable(object):
         self.steps = []
 
 
-# Can be subclassed to allow automated stepping
-class ManualStrategy(object):
+class ContinuationStrategy(abc.ABC):
+    def __init__(self, *args, **kwargs):
+        self.solution_reference = None
+        self.gammas = []
+
+    def add_gamma(self, gamma, is_last_sol=True):
+        self.gammas.append(copy.deepcopy(gamma))
+
+    def get_closest_gamma(self, aux):
+        breakpoint()
+        for traj in self.gammas:
+            breakpoint()
+
+
+class ManualStrategy(ContinuationStrategy):
     """
     Class defining the manual continuation strategy.
     """
     # A unique short name to select this class
     strategy_name = 'manual'
 
-    def __init__(self, num_cases = 1,vars=[], sol=None):
-        self.sol = sol
+    def __init__(self, num_cases = 1, vars=[]):
         self._num_cases = num_cases
         self._spacing = 'linear'
         self.vars = {}  # dictionary of values
@@ -67,6 +86,7 @@ class ManualStrategy(object):
         self.const = functools.partial(self.set, param_type='const')
         self.orig_num_cases = num_cases
         self.constant = self.const
+        super(ManualStrategy, self).__init__()
 
     def reset(self):
         """Resets the internal step counter to zero"""
@@ -77,13 +97,6 @@ class ManualStrategy(object):
         """Clears all the previously set continuation variables"""
         self.vars = {}
         self.reset()
-
-    def constraint(self, name, target, index):
-        """Continuation on constraint limit.
-
-        index : Specify which constraint arc to use."""
-        # sol.aux['constraints'][self.name]['limit'][1]
-        self.set((name,index), target, param_type='constraint')
 
     def var_iterator(self):
         for var_type in self.vars.keys():
@@ -158,7 +171,7 @@ class ManualStrategy(object):
         if self.sol is None:
             raise ValueError('No boundary value problem associated with this object')
 
-        if not ignore_last_step and self.last_sol is not None and not self.last_sol.converged:
+        if not ignore_last_step and len(self.gammas) is not 0 and not self.gammas[-1].converged:
             logging.error('The last step did not converge!')
             raise RuntimeError('Solution diverged! Stopping.')
 
@@ -183,7 +196,7 @@ class BisectionStrategy(ManualStrategy):
     """
     strategy_name = 'bisection'
 
-    def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2, vars=[], aux=None):
+    def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2):
         super(BisectionStrategy, self).__init__(num_cases=initial_num_cases)
         self.last_sol = None
         self.num_divisions = num_divisions
@@ -197,11 +210,11 @@ class BisectionStrategy(ManualStrategy):
     def next(self):
         """Generator class to create BVPs for the continuation step iterations
 
-            last_converged: Specfies if the previous continuation step converged
+        last_converged: Specfies if the previous continuation step converged
         """
         # If it is the first step or if previous step converged
         # continue with usual behavior
-        if self.ctr == 0 or self.last_sol.converged:
+        if self.ctr == 0 or self.gammas[-1].converged:
             # Reset division counter
             self.division_ctr = 0
             return super(BisectionStrategy, self).next()
@@ -210,7 +223,7 @@ class BisectionStrategy(ManualStrategy):
         if self.ctr == 1:
             logging.error('Initial guess should converge for automated continuation to work!!')
             raise RuntimeError('Initial guess does not converge.')
-            return self.last_sol
+            return self.gammas[-1]
 
         if self.division_ctr > self.max_divisions:
             logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
@@ -245,13 +258,111 @@ class BisectionStrategy(ManualStrategy):
         return super(BisectionStrategy, self).next(True)
 
 
-class HPA_Variable(object):
-    def __init__(self,name,target,Nnodes,spacing='linear',confined=False):
-        self.name = name
-        self.target = target
-        self.spacing = spacing #spacing of the continuation parameter
-        self.confined = confined #whether or not the search can venture beyond the limits of the grid
-        self.nodes = Nnodes #number of nodes along this axis of the graph
-        self.value = np.nan
-        self.index = np.nan # Index of state in BVP, obsolete
-        self.steps = []
+class ProductStrategy(object):
+    """
+    Defines the bisection continuation strategy.
+    """
+    strategy_name = 'product'
+
+    def __init__(self, num_subdivisions=1, sol=None):
+        self.sol = sol
+        self.sols = []
+        self._num_cases = None
+        self._num_subdivisions = num_subdivisions
+        self.vars = {}  # dictionary of values
+        self.ctr = 0  # iteration counter
+
+        self.const = functools.partial(self.set, param_type='const')
+        self.constant = self.const
+
+    def __str__(self):
+        return str(self.vars)
+
+    def reset(self):
+        """Resets the internal step counter to zero"""
+        self.ctr = 0
+        self.last_sol = None
+
+    def set(self,name,target,param_type):
+        """
+        Sets the target value for the specified parameter
+        """
+        if param_type not in self.vars.keys():
+            self.vars[param_type] = {}
+
+        # Create continuation variable object
+        self.vars[param_type][name] = ContinuationVariable(name, target)
+        return self
+
+    def init(self, sol, problem_data):
+        self.sol = sol
+        self.base_sol = sol
+
+        for var_type in self.vars.keys():
+            num_vars = len(self.vars[var_type])
+            self.num_cases(self.num_subdivisions() ** num_vars)
+            for var_name in self.vars[var_type].keys():
+                if var_name not in sol.aux[var_type].keys():
+                    raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
+                self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
+
+        for var_type, set_var_type in self.vars.items():
+            ls_set = [np.linspace(self.vars[var_type][var_name].value, self.vars[var_type][var_name].target, self._num_subdivisions) for var_name in set_var_type.keys()]
+            for val in itertools.product(*ls_set):
+                for var_type in self.vars.keys():
+                    ii = 0
+                    for var_name in self.vars[var_type].keys():
+                        self.vars[var_type][var_name].steps.append(val[ii])
+                        ii += 1
+
+    def next(self, sol, ignore_last_step=False):
+        if self.sol is None:
+            raise ValueError('No boundary value problem associated with this object')
+
+        if not ignore_last_step and self.last_sol is not None and not self.last_sol.converged:
+            logging.error('The last step did not converge!')
+            raise RuntimeError('Solution diverged! Stopping.')
+
+        if self.ctr >= self._num_cases:
+            raise StopIteration
+
+        # Update auxiliary variables using previously calculated step sizes
+        total_change = 0.0
+        for var_type in self.vars:
+            for var_name in self.vars[var_type]:
+                self.sol.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
+                total_change += abs(self.vars[var_type][var_name].steps[self.ctr])
+
+        self.ctr += 1
+        # if self.ctr % self.num_subdivisions() == 1 and self.ctr != 1:
+        #     aux = copy.deepcopy(self.sol.aux)
+        #     self.sol = self.sols[-self.num_subdivisions()]
+        #     self.sol.aux = aux
+
+        self.sols.append(copy.deepcopy(self.sol))
+        self.last_sol = self.sol
+        return copy.deepcopy(self.sol)
+
+
+    def num_cases(self, num_cases=None):
+        if num_cases is None:
+            return self._num_cases
+        else:
+            if self.ctr > 0:
+                raise RuntimeError('Cannot set num_cases during iteration')
+
+            self._num_cases = num_cases
+            self.orig_num_cases = num_cases
+            return self
+
+    def num_subdivisions(self, num_subdivisions=None):
+        if num_subdivisions is None:
+            return self._num_subdivisions
+        else:
+            if self.ctr > 0:
+                raise RuntimeError('Cannot set num_cases during iteration')
+            self._num_subdivisions = num_subdivisions
+            return self
+
+
+
