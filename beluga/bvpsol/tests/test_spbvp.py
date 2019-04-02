@@ -572,7 +572,7 @@ def test_T27(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return (X0[0] - 1, Xf[0] - 1/3)
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = spbvp(odefun, None, bcfun, max_nodes=1500)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 1], [1/3, 1]])

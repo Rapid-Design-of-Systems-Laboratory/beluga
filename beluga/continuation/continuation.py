@@ -274,7 +274,7 @@ class ProductStrategy(ContinuationStrategy):
     """
     Defines the bisection continuation strategy.
     """
-    strategy_name = 'product'
+    strategy_name = 'productspace'
 
     def __init__(self, num_subdivisions=1, sol=None):
         self.sol = sol

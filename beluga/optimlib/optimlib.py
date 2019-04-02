@@ -56,6 +56,13 @@ def init_workspace(ocp):
     workspace['constraints_activators'] = {c_type: [sympify(c_obj['activator']) for c_obj in c_list]
                                       for c_type, c_list in constraints.items() if c_type == 'path'}
 
+    if 'initial' not in workspace['constraints'].keys():
+        workspace['constraints']['initial'] = []
+        workspace['constraints_units']['initial'] = []
+
+    if 'terminal' not in workspace['constraints'].keys():
+        workspace['constraints']['terminal'] = []
+        workspace['constraints_units']['terminal'] = []
 
     if 'path' not in workspace['constraints'].keys():
         workspace['constraints']['path'] = []
