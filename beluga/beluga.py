@@ -96,11 +96,10 @@ def ocp2bvp(ocp, **kwargs):
     return bvp, ocp_map, ocp_map_inverse
 
 
-def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale):
+def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
 
-    :param ocp_ws: OCP workspace.
     :param bvp_algo: BVP algorithm to be used.
     :param steps: The steps in a continuation set.
     :param solinit: Initial guess for the first problem in steps.
@@ -113,7 +112,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
     solution_set = []
     # Initialize scaling
     s = bvp.raw['scaling']
-    problem_data = ocp_ws
 
     # Load the derivative function into the bvp algorithm
     bvp_algo.set_derivative_function(bvp.deriv_func)
@@ -152,11 +150,11 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
-            step.init(sol_guess, problem_data)
+            step.init(sol_guess)
 
-            for aux in step:  # Continuation step returns 'aux' dictionary
+            for sol_guess in step:  # Continuation step returns 'aux' dictionary
                 # gamma_guess = step.get_closest_gamma(aux)
-                sol_guess.aux = aux
+                # sol_guess.aux = aux
 
                 logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 time0 = time.time()
@@ -172,7 +170,6 @@ def run_continuation_set(ocp_ws, bvp_algo, steps, solinit, bvp, pool, autoscale)
                     sol = s.unscale(sol)
 
                 step.add_gamma(sol)
-                sol_guess = copy.deepcopy(sol)
 
                 if sol.converged:
                     # Post-processing phase
@@ -296,7 +293,7 @@ def solve(**kwargs):
 
     time0 = time.time()
 
-    out = run_continuation_set(bvp.raw, bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    out = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
