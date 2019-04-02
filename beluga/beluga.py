@@ -9,6 +9,7 @@ import numpy as np
 from beluga import problem, helpers
 import beluga.bvpsol as bvpsol
 from beluga.ivpsol import Trajectory
+from beluga.utils import save
 from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
@@ -233,6 +234,8 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | steps                  | None            | continuation_strategy                 |
     +------------------------+-----------------+---------------------------------------+
+    | save                   | False           | bool, str                             |
+    +------------------------+-----------------+---------------------------------------+
 
     """
 
@@ -247,6 +250,7 @@ def solve(**kwargs):
     ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
     optim_options = kwargs.get('optim_options', dict())
     steps = kwargs.get('steps', None)
+    save_sols = kwargs.get('save', True)
 
     if n_cpus < 1:
         raise ValueError('Number of cpus must be greater than 1.')
@@ -324,5 +328,12 @@ def solve(**kwargs):
 
     if pool is not None:
         pool.close()
+
+    if save_sols or (isinstance(save, str)):
+        if isinstance(save_sols, str):
+            filename = save_sols
+        else:
+            filename = 'data.blg'
+        save(ocp=ocp, bvp_solver=bvp_algorithm, sol_set=out, filename=filename)
 
     return out
