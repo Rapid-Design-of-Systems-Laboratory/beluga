@@ -43,6 +43,7 @@ var/
 .installed.cfg
 *.egg
 *.dill
+*.blg
 *.pkl
 *.pkl2
 *.mat

@@ -1,5 +1,5 @@
 from .helpers import root
-from .beluga import bvp_algorithm, guess_generator, ocp2bvp, run_continuation_set, solve, add_logger
+from .beluga import bvp_algorithm, guess_generator, ocp2bvp, run_continuation_set, solve, add_logger, bvpsol
 from .continuation import ContinuationList as init_continuation
 from .problem import OCP
 from .scaling import Scaling

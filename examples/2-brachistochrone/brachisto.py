@@ -63,6 +63,9 @@ sol_set = beluga.solve(ocp=ocp,
 
 sol = sol_set[-1][-1]
 
+beluga.utils.save(ocp, bvp_solver, sol_set, 'brachisto.blg')
+print(beluga.utils.load('brachisto.blg'))
+
 import matplotlib.pyplot as plt
 plt.plot(sol.y[:,0], sol.y[:,1])
 plt.show()
