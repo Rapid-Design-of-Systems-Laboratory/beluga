@@ -170,8 +170,13 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
 
                 step.add_gamma(sol)
 
+                """
+                The following line is overwritten by the looping variable UNLESS it is the final iteration. It is
+                required when chaining continuation strategies together. DO NOT DELETE!
+                """
+                sol_guess = copy.deepcopy(sol)
+
                 if sol.converged:
-                    # Post-processing phase
                     solution_set[step_idx].append(copy.deepcopy(sol))
 
                     elapsed_time = time.time() - time0
