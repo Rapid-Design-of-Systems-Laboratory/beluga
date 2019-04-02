@@ -6,7 +6,23 @@ import copy
 
 
 class spbvp(BaseAlgorithm):
+    r"""
+    Reduced dimensional sparse collocation for solving boundary value problems.
+
+    +------------------------+-----------------+-----------------+
+    | Valid kwargs           | Default Value   | Valid Values    |
+    +========================+=================+=================+
+    | max_nodes              | 1000            | > 2             |
+    +========================+=================+=================+
+
+    """
+    def __new__(cls, *args, **kwargs):
+        obj = super(spbvp, cls).__new__(cls, *args, **kwargs)
+        obj.max_nodes = kwargs.get('max_nodes', 1000)
+        return obj
+
     def solve(self, solinit, **kwargs):
+
         solinit = copy.deepcopy(solinit)
         nstates = solinit.y.shape[1]
 
@@ -32,10 +48,9 @@ class spbvp(BaseAlgorithm):
             return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], [], yb[:nstates], yb[nstates:nstates+nquads], [], params[:ndyn], params[ndyn:ndyn+nnondyn], const)
 
         if nquads > 0:
-            opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T, np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)))
+            opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T, np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)), max_nodes=self.max_nodes)
         else:
-            # breakpoint()
-            opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T, np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)))
+            opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T, np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)), max_nodes=self.max_nodes)
 
         sol = Trajectory(solinit)
         sol.t = opt['x']
@@ -49,8 +64,5 @@ class spbvp(BaseAlgorithm):
             sol.dynamical_parameters = np.array([])
             sol.nondynamical_parameters = np.array([])
 
-        if opt['status'] == 0:
-            sol.converged = True
-        else:
-            sol.converged = False
+        sol.converged = opt['success']
         return sol
