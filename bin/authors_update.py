@@ -41,9 +41,6 @@ sympy_dir = os.path.join(sympy_top, 'sympy')
 if os.path.isdir(sympy_dir):
     sys.path.insert(0, sympy_top)
 
-from sympy.utilities.misc import filldedent
-
-# check git version
 minimal = '1.8.4.2'
 git_ver = run(['git', '--version'], stdout=PIPE, encoding='utf-8').stdout[12:]
 if LooseVersion(git_ver) < LooseVersion(minimal):
@@ -69,6 +66,13 @@ git_people = run(git_command, stdout=PIPE, encoding='utf-8').stdout.strip().spli
 
 # remove duplicates, keeping the original order
 git_people = list(OrderedDict.fromkeys(git_people))
+
+try:
+    git_people.remove('jsDelivr Bot <contact@jsdelivr.com>')
+    git_people.insert(5, '*Kshitij Mall')
+except AssertionError as message:
+    print(red(message))
+    sys.exit(1)
 
 # define new lines for the file
 
