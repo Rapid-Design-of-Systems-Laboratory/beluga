@@ -80,6 +80,7 @@ def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, c
     initial_fn = make_jit_fn(boundary_args, initial_cost)
     path_fn = make_jit_fn(path_args, path_cost)
     terminal_fn = make_jit_fn(boundary_args, terminal_cost)
+
     def initial_cost(X0, u0, p, C):
         return initial_fn(*X0, *p, *C, *u0)
 
@@ -106,6 +107,7 @@ def make_constraint_func(path_constraints, states, parameters, constants, contro
     path_args = [*states, *parameters, *constants, *controls]
     path_fn = [make_jit_fn(path_args, f) for f in path_constraints]
     num_constraints = len(path_constraints)
+
     def path_constraints(X, u, p, C):
         constraint_vals = np.zeros(num_constraints)
         for ii in range(num_constraints):
@@ -184,7 +186,8 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
     return quad_func
 
 
-def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, compute_control):
+def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants,
+                 controls, compute_control):
     r"""
     Makes the boundary condition functions.
 
@@ -224,7 +227,6 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
                 ii += 1
 
             return bc_vals
-
 
         def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
             u0 = compute_control(y0, u0, p, C)
@@ -405,3 +407,6 @@ class BVP(object):
         self.terminal_cost = args[6]
         self.ineq_constraints = args[7]
         self.raw = dict()
+
+    def __repr__(self):
+        return 'BVP Object'
