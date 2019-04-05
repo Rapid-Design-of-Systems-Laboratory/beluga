@@ -1,10 +1,9 @@
 from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
-from beluga.ivpsol import Trajectory
 import numpy as np
 import copy
 from scipy.optimize import minimize
-from .collocation import *
 import logging
+
 
 class Collocation(BaseAlgorithm):
     """
@@ -145,13 +144,14 @@ class Collocation(BaseAlgorithm):
         xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None,
                         hessp=None, bounds=None,
                         constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
-                        tol=self.tolerance, callback=None, options={'maxiter':self.max_iterations})
+                        tol=self.tolerance, callback=None, options={'maxiter': self.max_iterations})
 
         sol.t = self.tspan
         sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
 
         if self.number_of_quads > 0:
-            sol.q = integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u, sol.dynamical_parameters, self.const, self.tspan, q0)
+            sol.q = self._integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u,
+                                    sol.dynamical_parameters, self.const, self.tspan, q0)
 
         logging.debug(xopt['message'])
 
@@ -164,6 +164,7 @@ class Collocation(BaseAlgorithm):
 
         return sol
 
+    @staticmethod
     def _kkt_to_dual(self, sol, kkt):
         nodes = len(sol.t)
         dual = (kkt.reshape((nodes-1, sol.y.shape[1]), order='F').T/(sol.t[:-1]-sol.t[1:])).T
@@ -176,15 +177,18 @@ class Collocation(BaseAlgorithm):
 
         y, q0, u, params, nondynamical_params = self._unwrap_params(vectorized)
         if u.size > 0:
-            cp = np.hstack([-self.inequality_constraint_function(y[ii], u[ii], params, self.const) for ii in range(self.number_of_nodes)])
+            cp = np.hstack([-self.inequality_constraint_function(y[ii], u[ii], params, self.const)
+                            for ii in range(self.number_of_nodes)])
         else:
-            cp = np.hstack([-self.inequality_constraint_function(y[ii], [], params, self.const) for ii in range(self.number_of_nodes)])
+            cp = np.hstack([-self.inequality_constraint_function(y[ii], [], params, self.const)
+                            for ii in range(self.number_of_nodes)])
 
         return cp
 
     def _collocation_constraint_midpoint(self, vectorized):
         y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        # dX1 = np.squeeze(self.derivative_function(y.T, u.T, params, self.const)).T # TODO: Vectorized our code compiler so this line works
+        # TODO: Vectorized our code compiler so this line works
+        # dX1 = np.squeeze(self.derivative_function(y.T, u.T, params, self.const)).T
         dX = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(y, u)])
         if len(dX.shape) == 1:
             dX = np.array([dX]).T
@@ -197,9 +201,11 @@ class Collocation(BaseAlgorithm):
         u0 = u[:-1]
         uf = u[1:]
         u_midpoint = (u0 + uf)/2
-        midpoint_predicted = midpoint(p0, p1, dp0, dp1, t0, t1)
-        midpoint_derivative_predicted = midpoint_derivative(p0, p1, dp0, dp1, t0, t1)
-        midpoint_derivative_actual = np.squeeze([self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)]) # TODO: Vectorize, so this one works as well
+        midpoint_predicted = self._midpoint(p0, p1, dp0, dp1, t0, t1)
+        midpoint_derivative_predicted = self._midpoint_derivative(p0, p1, dp0, dp1, t0, t1)
+        # TODO: Vectorize, so this one works as well
+        midpoint_derivative_actual = np.squeeze(
+            [self.derivative_function(yi, ui, params, self.const) for yi, ui in zip(midpoint_predicted, u_midpoint)])
         if len(midpoint_derivative_actual.shape) == 1:
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
@@ -209,7 +215,8 @@ class Collocation(BaseAlgorithm):
 
     def _collocation_constraint_boundary(self, vectorized):
         y, quads0, u, params, nondyn_params = self._unwrap_params(vectorized)
-        qf = integrate(self.quadrature_function, self.derivative_function, y, u, params, self.const, self.tspan, quads0)[-1]
+        qf = self._integrate(self.quadrature_function, self.derivative_function,
+                             y, u, params, self.const, self.tspan, quads0)[-1]
         return self.boundarycondition_function(y[0], quads0, u[0], y[-1], qf, u[-1], params, nondyn_params, self.const)
 
     def _collocation_cost(self, vectorized):
@@ -226,7 +233,8 @@ class Collocation(BaseAlgorithm):
 
         cpath = 0
         if self.path_cost_function is not None:
-            cpath = integrate(self.path_cost_function, self.derivative_function, y, u, params, self.const, self.tspan, 0)[-1]
+            cpath = self._integrate(self.path_cost_function, self.derivative_function,
+                                    y, u, params, self.const, self.tspan, 0)[-1]
 
         return c0 + cpath + cf
 
@@ -248,7 +256,8 @@ class Collocation(BaseAlgorithm):
 
         return X, quads, u, dynamical_params, nondynamical_params
 
-    def _wrap_params(self, y, q, u, params, nondyn_params):
+    @staticmethod
+    def _wrap_params(y, q, u, params, nondyn_params):
         return np.concatenate((y.flatten(), q[0], u.flatten(), params, nondyn_params))
 
     @staticmethod
@@ -274,3 +283,35 @@ class Collocation(BaseAlgorithm):
             return [1, 10]
         elif options == 'quiet':
             return [0, 10]
+
+    # TODO: Cythonize _midpoint, _midpoint_derivative, _integrate
+    @staticmethod
+    def _midpoint(p0, p1, dp0, dp1, t0, t1):
+        return (1 / 2 * (p0 + p1).T + (t1 - t0) / 8 * (dp0 - dp1).T).T
+
+    @staticmethod
+    def _midpoint_derivative(p0, p1, dp0, dp1, t0, t1):
+        return (-3 / 2 * (p0 - p1).T / (t1 - t0) - 1 / 4 * (dp0 + dp1).T).T
+
+    def _integrate(self, fun, base, y, u, params, c, t, val0):
+        val0 = np.array([val0])
+        dX = np.squeeze([base(yi, ui, params, c) for yi, ui in zip(y, u)])
+        if len(dX.shape) == 1:
+            dX = np.array([dX]).T
+        dp0 = dX[:-1]
+        dp1 = dX[1:]
+        p0 = y[:-1]
+        p1 = y[1:]
+        t0 = t[:-1]
+        t1 = t[1:]
+        u0 = u[:-1]
+        uf = u[1:]
+        u_midpoint = (u0 + uf) / 2
+        y_midpoint = self._midpoint(p0, p1, dp0, dp1, t0, t1)
+        for ii in range(len(t) - 1):
+            c0 = fun(y[ii], u[ii], params, c)
+            c_mid = fun(y_midpoint[ii], u_midpoint[ii], params, c)
+            c1 = fun(y[ii + 1], u[ii + 1], params, c)
+            val0 = np.vstack((val0, val0[-1] + (1 / 6 * c0 + 4 / 6 * c_mid + 1 / 6 * c1) * (t[ii + 1] - t[ii])))
+
+        return val0
