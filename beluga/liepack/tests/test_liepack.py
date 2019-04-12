@@ -8,6 +8,7 @@ from random import uniform
 
 tol = 1e-14
 
+
 def test_Adjoint():
     x = so(3)
     y = so(3)
@@ -31,7 +32,7 @@ def test_Adjoint():
     n2 = np.linalg.norm(z.get_vector())
     rot = np.pi/4
     np.copyto(G, exp(x*rot))
-    assert (Adjoint(G,y) - (y+z)/(np.sqrt(n1**2 + n2**2)) < tol).all()
+    assert (Adjoint(G, y) - (y+z)/(np.sqrt(n1**2 + n2**2)) < tol).all()
 
 
 def test_commutator():
@@ -39,28 +40,31 @@ def test_commutator():
     y = so(3)
     z = so(3)
 
-    x.set_vector([1,0,0])
-    y.set_vector([0,1,0])
-    z.set_vector([0,0,1])
+    x.set_vector([1, 0, 0])
+    y.set_vector([0, 1, 0])
+    z.set_vector([0, 0, 1])
 
     # Use case tests
     assert (commutator(x, y) == z).all()
     assert (commutator(y, x) == -z).all()
 
     # Lie algebra identities
-    A = uniform(-1,1)
-    B = uniform(-1,1)
+    A = uniform(-1, 1)
+    B = uniform(-1, 1)
     assert (commutator(x + y, z) == (commutator(x, z) + commutator(y, z))).all()
-    assert (commutator(x,x) == 0).all()
-    assert (commutator(x,y) == -commutator(y, x)).all()
-    assert (commutator(x, commutator(y, z)) + commutator(y, commutator(z, x)) + commutator(z, commutator(x, y)) == 0).all()
-    assert (commutator(A*x + B*y, z) == A*commutator(x,z) + B*commutator(y,z)).all()
-    assert (commutator(z, A*x + B*y) == commutator(z, x)*A + commutator(z,y)*B).all()
+    assert (commutator(x, x) == 0).all()
+    assert (commutator(x, y) == -commutator(y, x)).all()
+    assert (commutator(x, commutator(y, z)) +
+            commutator(y, commutator(z, x)) + commutator(z, commutator(x, y)) == 0).all()
+    assert (commutator(A*x + B*y, z) == A*commutator(x, z) + B*commutator(y, z)).all()
+    assert (commutator(z, A*x + B*y) == commutator(z, x)*A + commutator(z, y)*B).all()
 
     x.random()
     y.random()
     z.random()
-    assert ((commutator(x, commutator(y, z)) + commutator(y, commutator(z, x)) + commutator(z, commutator(x, y))) < tol).all()
+    assert ((commutator(x, commutator(y, z)) + commutator(y, commutator(z, x))
+             + commutator(z, commutator(x, y))) < tol).all()
+
 
 def test_exp():
     x = so(3)

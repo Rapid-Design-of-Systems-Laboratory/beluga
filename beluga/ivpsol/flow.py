@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Flow(object):
     def __new__(cls, *args, **kwargs):
         """
@@ -92,15 +93,13 @@ class Flow(object):
         return dt_new, accepted
 
     def __call__(self, y, t0, tf, dt):
-        '''
-        Computes the flow.
-
-        :param y:
-        :param t0:
-        :param tf:
-        :param dt:
+        """
+        :param y: states
+        :param t0: initial time
+        :param tf: final time
+        :param dt: time step
         :return:
-        '''
+        """
 
         self.timestepper.variablestep = self.variablestep
         yi = [y]

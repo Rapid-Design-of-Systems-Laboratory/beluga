@@ -62,7 +62,7 @@ def guess_generator(*args, **kwargs):
     :return: An instance of the guess generator.
     """
     guess_gen = problem.GuessGenerator()
-    guess_gen.setup(*args,**kwargs)
+    guess_gen.setup(*args, **kwargs)
     return guess_gen
 
 
@@ -91,8 +91,13 @@ def ocp2bvp(ocp, **kwargs):
     bvp.raw = bvp_raw
     ocp._scaling.initialize(bvp.raw)
     bvp.raw['scaling'] = ocp._scaling
-    ocp_map = lambda sol: _map(sol, _compute_control=bvp.compute_control)
-    ocp_map_inverse = lambda sol: _map_inverse(sol, _compute_control=bvp.compute_control)
+
+    def ocp_map(sol):
+        return _map(sol, _compute_control=bvp.compute_control)
+
+    def ocp_map_inverse(sol):
+        return _map_inverse(sol, _compute_control=bvp.compute_control)
+
     return bvp, ocp_map, ocp_map_inverse
 
 
@@ -123,7 +128,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     bvp_algo.set_inequality_constraint_function(bvp.ineq_constraints)
 
     sol_guess = solinit
-    sol = None
+    # sol = None
     if steps is None:
         logging.info('Solving OCP...')
         time0 = time.time()
@@ -140,7 +145,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
             elapsed_time = time.time() - time0
-            logging.info('Problem converged in %0.4f seconds\n' % (elapsed_time))
+            logging.info('Problem converged in %0.4f seconds\n' % elapsed_time)
         else:
             elapsed_time = time.time() - time0
             logging.info('Problem failed to converge!\n')
@@ -181,7 +186,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                     solution_set[step_idx].append(copy.deepcopy(sol))
 
                     elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(), elapsed_time))
+                    logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(),
+                                                                                   elapsed_time))
                 else:
                     elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
@@ -208,9 +214,9 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
     +------------------------+-----------------+---------------------------------------+
-    | ocp_map                | None            | :math:`\gamma \rightarrow \gamma`     |
+    | ocp_map                | None            | :math:`\\gamma \rightarrow \\gamma`   |
     +------------------------+-----------------+---------------------------------------+
-    | ocp_map_inverse        | None            | :math:`\gamma \rightarrow \gamma`     |
+    | ocp_map_inverse        | None            | :math:`\\gamma \rightarrow \\gamma`   |
     +------------------------+-----------------+---------------------------------------+
     | optim_options          | None            | dict()                                |
     +------------------------+-----------------+---------------------------------------+
@@ -256,7 +262,8 @@ def solve(**kwargs):
 
     solinit = Trajectory()
 
-    solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp.raw['constants'], bvp.raw['constants_values']))
+    solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp.raw['constants'],
+                                                                          bvp.raw['constants_values']))
     for const in bvp.raw['constants']:
         if not str(const) in solinit.aux['const'].keys():
             solinit.aux['const'][str(const)] = 0
@@ -268,8 +275,8 @@ def solve(**kwargs):
     initial_states = solinit.y[0, :]
     terminal_states = solinit.y[-1, :]
 
-    initial_bc = dict(zip(state_names,initial_states))
-    terminal_bc = dict(zip(state_names,terminal_states))
+    initial_bc = dict(zip(state_names, initial_states))
+    terminal_bc = dict(zip(state_names, terminal_states))
 
     if steps is not None:
         for ii in initial_bc:
@@ -311,7 +318,7 @@ def solve(**kwargs):
     if pool is not None:
         pool.close()
 
-    if save_sols or (isinstance(save, str)):
+    if save_sols or (isinstance(save_sols, str)):
         if isinstance(save_sols, str):
             filename = save_sols
         else:

@@ -10,6 +10,7 @@ from beluga.liepack.domain.liealgebras import rn
 from beluga.liepack import exp
 from beluga.liepack.field import VectorField
 
+
 class Algorithm(object):
     """
     Object representing an algorithm that solves initial valued problems.
@@ -97,7 +98,7 @@ class Propagator(Algorithm):
             vf.set_equationtype('general')
 
             def M2g(t, y):
-                vec = y[:-1,-1]
+                vec = y[:-1, -1]
                 out = eom_func(t, vec, *args)
                 g = rn(dim+1)
                 g.set_vector(out)
@@ -112,7 +113,10 @@ class Propagator(Algorithm):
             ts.setmethod(self.stepper)
             f = Flow(ts, vf, variablestep=self.variable_step)
             ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
-            gamma = Trajectory(ti, np.vstack([_[:-1,-1] for _ in yi])) # Hardcoded assuming RN
+            gamma = Trajectory(ti, np.vstack([_[:-1, -1] for _ in yi]))  # Hardcoded assuming RN
+
+        else:
+            raise NotImplementedError
 
         if quad_func is not None and len(q0) is not 0:
             if self.quick_reconstruct:
@@ -159,17 +163,17 @@ class Trajectory(object):
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
         obj.interpolation_type = interpolation_type
 
-        l = len(args)
-        if l >= 1:
+        arg_len = len(args)
+        if arg_len >= 1:
             obj.t = args[0]
 
-        if l >= 2:
+        if arg_len >= 2:
             obj.y = args[1]
 
-        if l >= 3:
+        if arg_len >= 3:
             obj.q = args[2]
 
-        if l >= 4:
+        if arg_len >= 4:
             obj.u = args[3]
 
         return obj
@@ -270,9 +274,7 @@ class Trajectory(object):
             f = [self.interpolate(self.t, self.u.T[ii]) for ii in range(udim)]
             u_val = np.array([f[ii](t) for ii in range(udim)]).T
 
-
         return y_val, q_val, u_val
-
 
     def set_interpolate_function(self, func):
         """
@@ -369,7 +371,7 @@ def integrate_quads(quadfun, tspan, gamma, *args):
         raise Exception('Time span out of integration bounds.')
 
     l = len(gamma.t)
-    x_set_temp = np.arange(0,l,1)
+    x_set_temp = np.arange(0, l, 1)
 
     ind0 = int(np.ceil(np.interp(tspan[0], gamma.t, x_set_temp)))
     indf = int(np.ceil(np.interp(tspan[-1], gamma.t, x_set_temp)))

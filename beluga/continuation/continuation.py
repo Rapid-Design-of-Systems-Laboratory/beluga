@@ -18,11 +18,14 @@ def gamma_norm(aux1, aux2):
 
 class ContinuationList(list):
     def __init__(self):
+
+        list.__init__(self)
+
         # Create list of available strategies
         clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
         self.strategy_list = {obj.strategy_name: obj
-                                for (name,obj) in clsmembers
-                                if hasattr(obj,'strategy_name')
+                              for (name, obj) in clsmembers
+                              if hasattr(obj, 'strategy_name')
                               }
 
     def add_step(self, strategy='manual', *args, **kwargs):
@@ -63,7 +66,13 @@ class ContinuationStrategy(abc.ABC):
         self.gammas = []
         self.vars = {}
 
+        self.ctr = None
+        self.num_cases = None
+
     def __str__(self):
+        return str(self.vars)
+
+    def __repr__(self):
         return str(self.vars)
 
     def __iter__(self):
@@ -80,7 +89,7 @@ class ContinuationStrategy(abc.ABC):
         norms = []
         for traj in self.gammas:
             if traj.converged is False:
-                norms.append(9e99)
+                norms.append(np.inf)
             else:
                 norms.append(gamma_norm(traj.aux, aux))
 
@@ -133,11 +142,11 @@ class ManualStrategy(ContinuationStrategy):
     # A unique short name to select this class
     strategy_name = 'manual'
 
-    def __init__(self, num_cases = 1, vars=[]):
-        super(ManualStrategy, self).__init__()
+    def __init__(self, num_cases=1, vars_={}):
+        ContinuationStrategy.__init__(self, num_cases=num_cases, vars=vars_)
         self._num_cases = num_cases
         self._spacing = 'linear'
-        self.vars = {}  # dictionary of values
+        self.vars = vars_  # dictionary of values
         self.ctr = 0   # iteration counter
         self.last_sol = None
 
@@ -186,10 +195,10 @@ class ManualStrategy(ContinuationStrategy):
             self.vars[param_type] = {}
 
         # Create continuation variable object
-        self.vars[param_type][name] = ContinuationVariable(name,target)
+        self.vars[param_type][name] = ContinuationVariable(name, target)
         return self
 
-    def num_cases(self,num_cases=None,spacing='linear'):
+    def num_cases(self, num_cases=None, spacing='linear'):
         if num_cases is None:
             return self._num_cases
 
@@ -208,7 +217,7 @@ class BisectionStrategy(ManualStrategy):
     """
     strategy_name = 'bisection'
 
-    def __init__(self, initial_num_cases = 5, max_divisions=10, num_divisions = 2):
+    def __init__(self, initial_num_cases=5, max_divisions=10, num_divisions=2):
         super(BisectionStrategy, self).__init__(num_cases=initial_num_cases)
         self.last_sol = None
         self.num_divisions = num_divisions
@@ -219,7 +228,7 @@ class BisectionStrategy(ManualStrategy):
     def __str__(self):
         return str(self.vars)
 
-    def next(self):
+    def next(self, ignore_last_step=False):
         """Generator class to create BVPs for the continuation step iterations
 
         last_converged: Specfies if the previous continuation step converged
@@ -235,7 +244,7 @@ class BisectionStrategy(ManualStrategy):
         if self.ctr == 1:
             logging.error('Initial guess should converge for automated continuation to work!!')
             raise RuntimeError('Initial guess does not converge.')
-            return self.gammas[-1]
+            # return self.gammas[-1]
 
         if self.division_ctr > self.max_divisions:
             logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
@@ -248,9 +257,10 @@ class BisectionStrategy(ManualStrategy):
             # insert new steps
             old_steps = self.vars[var_type][var_name].steps
             if self._spacing == 'linear':
-                new_steps = np.linspace(old_steps[self.ctr-2],old_steps[self.ctr-1],self.num_divisions+1)
+                new_steps = np.linspace(old_steps[self.ctr-2], old_steps[self.ctr-1], self.num_divisions+1)
             elif self._spacing == 'log':
-                new_steps = np.logspace(np.log10(old_steps[self.ctr-2]),np.log10(old_steps[self.ctr-1]),self.num_divisions+1)
+                new_steps = np.logspace(np.log10(old_steps[self.ctr-2]), np.log10(old_steps[self.ctr-1]),
+                                        self.num_divisions+1)
             else:
                 raise ValueError('Invalid spacing type')
 
@@ -258,7 +268,7 @@ class BisectionStrategy(ManualStrategy):
             self.vars[var_type][var_name].steps = np.insert(
                     self.vars[var_type][var_name].steps,
                     self.ctr-1,
-                    new_steps[1:-1] # Ignore first element as it is repeated
+                    new_steps[1:-1]  # Ignore first element as it is repeated
                 )
         # Move the counter back
         self.ctr = self.ctr - 1
@@ -277,6 +287,7 @@ class ProductStrategy(ContinuationStrategy):
     strategy_name = 'productspace'
 
     def __init__(self, num_subdivisions=1, sol=None):
+        ContinuationStrategy.__init__(self, num_subdivisions=1, sol=None)
         self.sol = sol
         self.sols = []
         self._num_cases = None
@@ -287,6 +298,9 @@ class ProductStrategy(ContinuationStrategy):
         self.const = functools.partial(self.set, param_type='const')
         self.constant = self.const
 
+        self.last_sol = None
+        self.orig_num_cases = None
+
     def __str__(self):
         return str(self.vars)
 
@@ -295,7 +309,7 @@ class ProductStrategy(ContinuationStrategy):
         self.ctr = 0
         self.last_sol = None
 
-    def set(self,name,target,param_type):
+    def set(self, name, target, param_type):
         """
         Sets the target value for the specified parameter
         """
@@ -318,12 +332,13 @@ class ProductStrategy(ContinuationStrategy):
                 self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
 
         for var_type, set_var_type in self.vars.items():
-            ls_set = [np.linspace(self.vars[var_type][var_name].value, self.vars[var_type][var_name].target, self._num_subdivisions) for var_name in set_var_type.keys()]
+            ls_set = [np.linspace(self.vars[var_type][var_name].value, self.vars[var_type][var_name].target,
+                                  self._num_subdivisions) for var_name in set_var_type.keys()]
             for val in itertools.product(*ls_set):
-                for var_type in self.vars.keys():
+                for _var_type in self.vars.keys():
                     ii = 0
-                    for var_name in self.vars[var_type].keys():
-                        self.vars[var_type][var_name].steps.append(val[ii])
+                    for var_name in self.vars[_var_type].keys():
+                        self.vars[_var_type][var_name].steps.append(val[ii])
                         ii += 1
 
     # def next(self, ignore_last_step=False):
@@ -354,7 +369,6 @@ class ProductStrategy(ContinuationStrategy):
     #     self.last_sol = self.sol
     #     return copy.deepcopy(self.sol)
 
-
     def num_cases(self, num_cases=None):
         if num_cases is None:
             return self._num_cases
@@ -374,6 +388,3 @@ class ProductStrategy(ContinuationStrategy):
                 raise RuntimeError('Cannot set num_cases during iteration')
             self._num_subdivisions = num_subdivisions
             return self
-
-
-

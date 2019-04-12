@@ -2,6 +2,7 @@ import copy
 from scipy.linalg import expm
 import numpy as np
 
+
 class HManifold(np.ndarray):
     def __new__(cls, *args, **kwargs):
         if isinstance(args[0], HManifold):

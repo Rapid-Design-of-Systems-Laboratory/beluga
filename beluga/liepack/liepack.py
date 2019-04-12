@@ -7,6 +7,7 @@ from scipy.special import bernoulli
 from math import factorial
 import numpy as np
 
+
 def algebra2group(g):
     r"""
     Returns the Lie group corresponding to an input Lie algebra element.
@@ -96,6 +97,7 @@ def commutator(g, h, **kwargs):
     """
     anticommutator = kwargs.get('anticommutator', 1)
     return np.dot(g,h) - anticommutator*np.dot(h,g)
+
 
 def dexpinv(g, h, order=5):
     r"""
