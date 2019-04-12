@@ -1,8 +1,3 @@
-"""
-problem2 -- Rename to 'problem' after refactoring.
-Contains class/functions related to defining the optimal control problems.
-"""
-
 import numpy as np
 import copy
 import json
@@ -79,7 +74,7 @@ class OCP(object):
         cost_type - str
             Type of cost function - path, initial or terminal
         """
-        return self._properties.get(cost_type + '_cost', {'expr':'0','unit':'0'})
+        return self._properties.get(cost_type + '_cost', {'expr': '0', 'unit': '0'})
 
     def set_cost(self, expr, unit, cost_type):
         """Sets cost function for problem.

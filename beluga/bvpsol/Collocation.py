@@ -33,8 +33,10 @@ class Collocation(BaseAlgorithm):
     | verbose                | False           | Bool            |
     +------------------------+-----------------+-----------------+
     """
-    def __new__(cls, *args, **kwargs):
-        obj = super(Collocation, cls).__new__(cls, *args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+
+        BaseAlgorithm.__init__(self, *args, **kwargs)
 
         adaptive_mesh = kwargs.get('adaptive_mesh', False)
         cached = kwargs.get('cached', True)
@@ -45,16 +47,31 @@ class Collocation(BaseAlgorithm):
         use_numba = kwargs.get('use_numba', False)
         verbose = kwargs.get('verbose', False)
 
-        obj.adaptive_mesh = adaptive_mesh
-        obj.cached = cached
-        obj.tolerance = tolerance
-        obj.max_error = max_error
-        obj.max_iterations = max_iterations
-        obj.number_of_nodes = number_of_nodes
-        obj.use_numba = use_numba
-        obj.verbose = verbose
-        return obj
-    
+        self.adaptive_mesh = adaptive_mesh
+        self.cached = cached
+        self.tolerance = tolerance
+        self.max_error = max_error
+        self.max_iterations = max_iterations
+        self.number_of_nodes = number_of_nodes
+        self.use_numba = use_numba
+        self.verbose = verbose
+
+        self.constraint_midpoint = None
+        self.constraint_boundary = None
+        self.constraint_path = None
+
+        self.number_of_dynamical_params = None
+        self.number_of_nondynamical_params = None
+
+        self.tspan = None
+        self.number_of_odes = None
+        self.number_of_controls = None
+
+        self.aux = None
+        self.const = None
+
+        self.number_of_quads = None
+
     def solve(self, solinit, **kwargs):
         """
         Solve a two-point boundary value problem using the collocation method.
@@ -67,7 +84,7 @@ class Collocation(BaseAlgorithm):
         number_of_datapoints = len(sol.t)
 
         # Default costs and quads to return nothing if not defined
-        def return_nil(*args, **kwargs):
+        def return_nil(*_, **__):
             return np.array([])
 
         if self.quadrature_function is None:
@@ -76,7 +93,7 @@ class Collocation(BaseAlgorithm):
         if number_of_datapoints < 4:
             # Special case where polynomial interpolation fails. Use linear interpolation to get 4 nodes.
             t_new = np.linspace(sol.t[0], sol.t[-1], num=4)
-            y_new = np.column_stack([np.interp(t_new, sol.t, sol.y[:,ii]) for ii in range(sol.y.shape[1])])
+            y_new = np.column_stack([np.interp(t_new, sol.t, sol.y[:, ii]) for ii in range(sol.y.shape[1])])
             if sol.q.size > 0:
                 q_new = np.column_stack([np.interp(t_new, sol.t, sol.q[:, ii]) for ii in range(sol.q.shape[1])])
             else:
@@ -91,7 +108,6 @@ class Collocation(BaseAlgorithm):
             sol.q = q_new
             sol.u = u_new
 
-        reconstruct = False
         if self.number_of_nodes > number_of_datapoints:
             new_t = np.linspace(sol.t[0], sol.t[-1], self.number_of_nodes)
             new_y, new_q, new_u = sol(new_t[0])
@@ -111,7 +127,7 @@ class Collocation(BaseAlgorithm):
         # self.constraint = {'type': 'eq', 'fun': self._collocation_constraint}
         self.constraint_midpoint = {'type': 'eq', 'fun': self._collocation_constraint_midpoint}
         self.constraint_boundary = {'type': 'eq', 'fun': self._collocation_constraint_boundary}
-        self.constraint_path = {'type': 'ineq', 'fun':self._collocation_constraint_path}
+        self.constraint_path = {'type': 'ineq', 'fun': self._collocation_constraint_path}
 
         self.tspan = sol.t
         self.number_of_odes = sol.y.shape[1]
@@ -141,10 +157,12 @@ class Collocation(BaseAlgorithm):
         self.const = sol.const
         sol.converged = False
 
-        xopt = minimize(self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None, hess=None,
-                        hessp=None, bounds=None,
-                        constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
-                        tol=self.tolerance, callback=None, options={'maxiter': self.max_iterations})
+        # noinspection PyTypeChecker
+        xopt = minimize(
+            self._collocation_cost, vectorized, args=(), method='SLSQP', jac=None,
+            hessp=None, bounds=None,
+            constraints=[self.constraint_midpoint, self.constraint_boundary, self.constraint_path],
+            tol=self.tolerance, callback=None, options={'maxiter': self.max_iterations})
 
         sol.t = self.tspan
         sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
@@ -165,7 +183,7 @@ class Collocation(BaseAlgorithm):
         return sol
 
     @staticmethod
-    def _kkt_to_dual(self, sol, kkt):
+    def _kkt_to_dual(sol, kkt):
         nodes = len(sol.t)
         dual = (kkt.reshape((nodes-1, sol.y.shape[1]), order='F').T/(sol.t[:-1]-sol.t[1:])).T
         dual = np.vstack((dual, np.zeros(sol.y.shape[1])))
@@ -210,7 +228,7 @@ class Collocation(BaseAlgorithm):
             midpoint_derivative_actual = np.array([midpoint_derivative_actual]).T
         outvec = midpoint_derivative_predicted - midpoint_derivative_actual
         d2 = outvec.shape[1]
-        outvec = np.hstack([outvec[:,ii][:] for ii in range(d2)])
+        outvec = np.hstack([outvec[:, ii][:] for ii in range(d2)])
         return outvec
 
     def _collocation_constraint_boundary(self, vectorized):
@@ -245,14 +263,15 @@ class Collocation(BaseAlgorithm):
         quads = vectorized[:self.number_of_quads]
         vectorized = np.delete(vectorized, np.arange(0, self.number_of_quads))
 
-        u = vectorized[:self.number_of_controls * self.number_of_nodes].reshape([self.number_of_nodes, self.number_of_controls])
+        u = vectorized[:self.number_of_controls * self.number_of_nodes].reshape([self.number_of_nodes,
+                                                                                 self.number_of_controls])
         vectorized = np.delete(vectorized, np.arange(0, self.number_of_controls * self.number_of_nodes))
 
         dynamical_params = vectorized[:self.number_of_dynamical_params]
         vectorized = np.delete(vectorized, np.arange(0, self.number_of_dynamical_params))
 
         nondynamical_params = vectorized[:self.number_of_nondynamical_params]
-        vectorized = np.delete(vectorized, np.arange(0, self.number_of_nondynamical_params))
+        # vectorized = np.delete(vectorized, np.arange(0, self.number_of_nondynamical_params))
 
         return X, quads, u, dynamical_params, nondynamical_params
 

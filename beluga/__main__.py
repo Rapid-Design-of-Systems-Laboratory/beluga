@@ -59,9 +59,12 @@ Help:
 import os
 import sys
 import logging
-import importlib
+# import importlib
+import builtins
 
 import docopt
+from yaml import load
+
 
 def load_scenario(scenario_name):
     """Loads a scenario from python module name or file name/path"""
@@ -74,7 +77,8 @@ def load_scenario(scenario_name):
         sys.path.append(module_dir)
     elif (scenario_name.endswith('.yml') or scenario_name.endswith('.json'))and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
         print('Loading from YAML scenario ..')
-        return load_yaml(scenario_name)
+        # return load_yaml(scenario_name)
+        return load(scenario_name)
     else:
         if scenario_name.isidentifier():
             sys.path.append(os.getcwd())
@@ -83,8 +87,9 @@ def load_scenario(scenario_name):
             print('Invalid scenario filename or module name')
             return None
     try:
-        scenario = importlib.import_module(module_name)
-         # Check if module has a get_problem() function
+        pass
+        # scenario = importlib.import_module(module_name)
+        # Check if module has a get_problem() function
         # if hasattr(scenario,'get_problem') and callable(scenario.get_problem):
         #     # Module loaded successfully
         #     # print('Module loaded successfully. 😂')
@@ -101,21 +106,21 @@ def load_scenario(scenario_name):
 
 
 def main():
-    options = docopt.docopt(__doc__,version=0.1)
+    options = docopt.docopt(__doc__, version=0.1)
 
-    levels = {  'ALL': logging.DEBUG,
-                'DEBUG': logging.DEBUG,
-                '0': logging.DEBUG,
-                'INFO': logging.INFO,
-                '1': logging.INFO,
-                'WARNING': logging.WARN,
-                'WARN': logging.WARN,
-                '2': logging.WARN,
-                'ERROR': logging.ERROR,
-                '3': logging.ERROR,
-                'CRITICAL': logging.CRITICAL,
-                '4': logging.CRITICAL,
-                'OFF': logging.CRITICAL + 1}
+    levels = {'ALL': logging.DEBUG,
+              'DEBUG': logging.DEBUG,
+              '0': logging.DEBUG,
+              'INFO': logging.INFO,
+              '1': logging.INFO,
+              'WARNING': logging.WARN,
+              'WARN': logging.WARN,
+              '2': logging.WARN,
+              'ERROR': logging.ERROR,
+              '3': logging.ERROR,
+              'CRITICAL': logging.CRITICAL,
+              '4': logging.CRITICAL,
+              'OFF': logging.CRITICAL + 1}
 
     # Process logging options
     if options['--nolog']:
@@ -141,14 +146,11 @@ def main():
         output = os.path.abspath(options['--output'][0].strip())
         # Check if the file locaton is writeable
         if not os.access(os.path.dirname(output), os.W_OK):
-            print('Unable to access output file location or invalid filename 😭 😭')
+            print('Unable to access output file location or invalid filename')
             return
     else:
         output = None
 
-
-    import builtins
-    # import beluga
     beluga = sys.modules['beluga']
     builtins.beluga = beluga
 

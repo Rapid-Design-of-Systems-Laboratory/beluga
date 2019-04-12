@@ -21,7 +21,8 @@ class Shooting(BaseAlgorithm):
     Given a system of ordinary differential equations, define the sensitivities as
 
     .. math::
-        A(\tau) = \left[\frac{\partial \mathbf{f}}{\partial \mathbf{x}}, \frac{\partial \mathbf{f}}{\partial \mathbf{p}}\right]
+        A(\tau) =
+        \left[\frac{\partial \mathbf{f}}{\partial \mathbf{x}}, \frac{\partial \mathbf{f}}{\partial \mathbf{p}}\right]
 
     Then, the state-transition matrix is defined as the following set of first-order differential equations
 
@@ -36,7 +37,8 @@ class Shooting(BaseAlgorithm):
     .. math::
         \begin{aligned}
             M &= \frac{\mathrm{d} \mathbf{\Phi}}{\mathrm{d} \mathbf{x}_0} \\
-            Q &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_0} + \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_f} \\
+            Q &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_0}
+            + \frac{\partial \mathbf{\Phi}}{\partial \mathbf{q}_f} \\
             P_1 &= \frac{\mathrm{d} \mathbf{\Phi}}{\mathrm{d} \mathbf{p}} \\
             P_2 &= \frac{\partial \mathbf{\Phi}}{\partial \mathbf{\lambda}}
         \end{aligned}
@@ -66,22 +68,20 @@ class Shooting(BaseAlgorithm):
     the SciPy solvers `scipy.optimize.root`, `scipy.optimize.minimize`, `scipy.optimize.fsolve` are available.
 
     """
-    def __new__(cls, *args, **kwargs):
-        obj = super(Shooting, cls).__new__(cls, *args, **kwargs)
-
-        obj.algorithm = kwargs.get('algorithm', 'Armijo')
-        obj.ivp_args = kwargs.get('ivp_args', dict())
-        obj.tolerance = kwargs.get('tolerance', 1e-4)
-        obj.max_error = kwargs.get('max_error', 100)
-        obj.max_iterations = kwargs.get('max_iterations', 100)
-        obj.num_arcs = kwargs.get('num_arcs', 1)
-
-        obj.stm_ode_func = None
-        obj.bc_func_ms = None
-
-        return obj
-
     def __init__(self, *args, **kwargs):
+
+        BaseAlgorithm.__init__(self, *args, **kwargs)
+
+        self.algorithm = kwargs.get('algorithm', 'Armijo')
+        self.ivp_args = kwargs.get('ivp_args', dict())
+        self.tolerance = kwargs.get('tolerance', 1e-4)
+        self.max_error = kwargs.get('max_error', 100)
+        self.max_iterations = kwargs.get('max_iterations', 100)
+        self.num_arcs = kwargs.get('num_arcs', 1)
+
+        self.stm_ode_func = None
+        self.bc_func_ms = None
+
         # Set up the boundary condition function
         if self.boundarycondition_function is not None:
             self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
@@ -136,7 +136,8 @@ class Shooting(BaseAlgorithm):
             u0g[ii] = _u0g
 
         def preload(args):
-            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], args[3], paramGuess, sol.const)
+            return prop(derivative_function, quadrature_function, args[0], args[1], args[2], args[3],
+                        paramGuess, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -163,7 +164,8 @@ class Shooting(BaseAlgorithm):
             q0g[ii] = _q0g
 
         def preload(args):
-            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], paramGuess, sol.const)
+            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2],
+                        paramGuess, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -178,14 +180,15 @@ class Shooting(BaseAlgorithm):
         return gamma_set_new
 
     @staticmethod
-    def _bc_jac_multi(gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func, StepSize=1e-6):
+    def _bc_jac_multi(gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func,
+                      StepSize=1e-6):
         gamma_orig = copy.deepcopy(gamma_set)
         gamma_set_perturbed = copy.copy(gamma_orig)
         h = StepSize
         t0 = gamma_orig[0].t[0]
         y0, q0, u0 = gamma_orig[0](t0)
-        tf = gamma_orig[-1].t[-1]
-        yf, qf, uf = gamma_orig[-1](tf)
+        # tf = gamma_orig[-1].t[-1]
+        # yf, qf, uf = gamma_orig[-1](tf)
 
         n_odes = len(y0)
         n_quads = len(q0)
@@ -208,7 +211,8 @@ class Shooting(BaseAlgorithm):
                 dy = np.dot(phi, dx)
                 perturbed_trajectory = Trajectory(gamma_orig[ii].t, gamma_orig[ii].y + dy)
                 if n_quads > 0:
-                    perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_orig[ii].q[0], parameters, aux)
+                    perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory,
+                                                       gamma_orig[ii].q[0], parameters, aux)
                     if ii != num_arcs-1:
                         dq = perturbed_trajectory.q[-1] - gamma_orig[ii].q[-1]
                         gamma_set_perturbed[-1].q[-1] += dq
@@ -240,9 +244,11 @@ class Shooting(BaseAlgorithm):
                 perturbed_trajectory = Trajectory(gamma_orig[kk].t, gamma_orig[kk].y + dy)
                 if n_quads > 0:
                     if kk > 0:
-                        perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_set_perturbed[kk-1].q[-1], parameters, aux)
+                        perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory,
+                                                           gamma_set_perturbed[kk-1].q[-1], parameters, aux)
                     else:
-                        perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_orig[kk].q[0], parameters, aux)
+                        perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_orig[kk].q[0],
+                                                           parameters, aux)
 
                 gamma_set_perturbed[kk] = perturbed_trajectory
 
@@ -297,7 +303,8 @@ class Shooting(BaseAlgorithm):
                 F[:, i+nOdes] = (fxh - fx) / StepSize
                 p[i] -= StepSize
 
-            phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))), np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
+            phiDot = np.dot(np.vstack((F, np.zeros((nParams, nParams + nOdes)))),
+                            np.vstack((phi, np.hstack((np.zeros((nParams, nOdes)), np.eye(nParams))))))[:nOdes, :]
             return np.hstack((fx, np.reshape(phiDot, (nOdes * (nOdes + nParams)))))
 
         return _stmode_fd
@@ -337,7 +344,7 @@ class Shooting(BaseAlgorithm):
         n_odes = y0g.shape[0]
         n_quads = q0g.shape[0]
         n_dynparams = sol.dynamical_parameters.shape[0]
-        n_nondynparams = nondynamical_parameter_guess.shape[0]
+        # n_nondynparams = nondynamical_parameter_guess.shape[0]
 
         # Make the state-transition ode matrix
         if self.stm_ode_func is None:
@@ -362,8 +369,8 @@ class Shooting(BaseAlgorithm):
             gamma_set.append(Trajectory(t_set, y_set, q_set, u_set))
 
         # Initial state of STM is an identity matrix with an additional column of zeros per parameter
-        stm0 = np.hstack((np.eye(n_odes), np.zeros((n_odes, n_dynparams)))).reshape(n_odes*(n_odes + n_dynparams))
-        y0stm = np.zeros((len(stm0) + n_odes))
+        # stm0 = np.hstack((np.eye(n_odes), np.zeros((n_odes, n_dynparams)))).reshape(n_odes*(n_odes + n_dynparams))
+        # y0stm = np.zeros((len(stm0) + n_odes))
 
         prop = Propagator(**self.ivp_args)
 
@@ -374,8 +381,8 @@ class Shooting(BaseAlgorithm):
         # Set up the initial guess vector
         Xinit = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
 
-        def quad_wrap(t,X,p,aux):
-            return self.quadrature_function(t, X[:n_odes],p,aux)
+        def quad_wrap(t, X, p, aux):
+            return self.quadrature_function(t, X[:n_odes], p, aux)
 
         # Pickle the functions for faster execution
         if pool is not None:
@@ -446,12 +453,12 @@ class Shooting(BaseAlgorithm):
                 phi_temp = np.reshape(temp[:, n_odes:], (len(gamma_set_new[ii].t), n_odes, n_odes + n_dynparams))
                 phi_full_list.append(np.copy(phi_temp))
 
-            J = self._bc_jac_multi(gamma_set_new, phi_full_list, _params, _nonparams, sol.const, self.quadrature_function,
-                                   self.bc_func_ms, StepSize=1e-6)
-            return J
+            jac = self._bc_jac_multi(gamma_set_new, phi_full_list, _params, _nonparams, sol.const,
+                                     self.quadrature_function, self.bc_func_ms, StepSize=1e-6)
+            return jac
 
-        def _jacobian_function_wrapper(X):
-            return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
+        # def _jacobian_function_wrapper(X):
+        #     return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
 
         # TODO: Sean if your reading this, the following numerical jacobian function seems to work well.
         # It causes an error on one of the test cases, however, and I haven't had time to debug specifically what
@@ -471,13 +478,15 @@ class Shooting(BaseAlgorithm):
                 def cost(x):
                     return np.linalg.norm(_constraint_function_wrapper(x)) ** 2
 
-            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=[constraint], options={'maxiter': self.max_iterations})
+            opt = minimize(cost, Xinit, method=self.algorithm, tol=self.tolerance, constraints=constraint,
+                           options={'maxiter': self.max_iterations})
             Xinit = opt.x
             n_iter = opt.nit
             converged = opt.success and isclose(opt.fun, 0, abs_tol=self.tolerance)
 
         elif self.algorithm in scipy_root_algorithms:
-            opt = root(_constraint_function_wrapper, Xinit, jac=_jacobian_function_wrapper, method=self.algorithm, tol=self.tolerance, options={'maxiter': self.max_iterations})
+            opt = root(_constraint_function_wrapper, Xinit, jac=_jacobian_function_wrapper, method=self.algorithm,
+                       tol=self.tolerance, options={'maxiter': self.max_iterations})
             Xinit = opt.x
             n_iter = -1
             converged = opt.success
@@ -509,6 +518,7 @@ class Shooting(BaseAlgorithm):
                 reduct = 0.5
                 ll = 1
                 r_try = float('Inf')
+                step = None
 
                 while (r_try >= (1-a*ll) * err) and (r_try > self.tolerance) and ll > 0.05:
                     step = ll*dy0
@@ -541,7 +551,8 @@ class Shooting(BaseAlgorithm):
         """
 
         # Unwrap the solution from the solver to put in a readable format
-        y, q, parameter_guess, nondynamical_parameter_guess = self._unwrap_y0(Xinit, n_odes, n_quads, n_dynparams, self.num_arcs)
+        y, q, parameter_guess, nondynamical_parameter_guess = self._unwrap_y0(Xinit, n_odes, n_quads, n_dynparams,
+                                                                              self.num_arcs)
         for ii in range(self.num_arcs):
             gamma_set[ii].y[0] = y[ii]
             if n_quads > 0:

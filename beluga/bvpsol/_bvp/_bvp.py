@@ -214,6 +214,8 @@ def construct_global_jac(n, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp,
             * 6: (n + k) x k block for the dependency of the boundary
               conditions on p.
 
+    h :
+
     df_dy : ndarray, shape (n, n, m)
         Jacobian of f with respect to y computed at the mesh nodes.
     df_dy_middle : ndarray, shape (n, n, m - 1)

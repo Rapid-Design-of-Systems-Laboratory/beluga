@@ -16,10 +16,14 @@ class spbvp(BaseAlgorithm):
     +========================+=================+=================+
 
     """
-    def __new__(cls, *args, **kwargs):
-        obj = super(spbvp, cls).__new__(cls, *args, **kwargs)
-        obj.max_nodes = kwargs.get('max_nodes', 1000)
-        return obj
+    # def __new__(cls, *args, **kwargs):
+    #     obj = super(spbvp, cls).__new__(cls, *args, **kwargs)
+    #     obj.max_nodes = kwargs.get('max_nodes', 1000)
+    #     return obj
+
+    def __init__(self, *args, **kwargs):
+        BaseAlgorithm.__init__(self, *args, **kwargs)
+        self.max_nodes = kwargs.get('max_nodes', 1000)
 
     def solve(self, solinit, **kwargs):
 
@@ -42,15 +46,21 @@ class spbvp(BaseAlgorithm):
             y = y.T
             o1 = np.vstack([self.derivative_function(yi[:nstates], [], params, const) for yi in y])
             o2 = np.vstack([self.quadrature_function(yi[:nstates], [], params, const) for yi in y])
-            return np.hstack((o1,o2)).T
+            return np.hstack((o1, o2)).T
 
         def _bc(ya, yb, params=np.array([]), const=solinit.const):
-            return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], [], yb[:nstates], yb[nstates:nstates+nquads], [], params[:ndyn], params[ndyn:ndyn+nnondyn], const)
+            return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], [], yb[:nstates],
+                                                   yb[nstates:nstates+nquads], [], params[:ndyn],
+                                                   params[ndyn:ndyn+nnondyn], const)
 
         if nquads > 0:
-            opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T, np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)), max_nodes=self.max_nodes)
+            opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T,
+                            np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
+                            max_nodes=self.max_nodes)
         else:
-            opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T, np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)), max_nodes=self.max_nodes)
+            opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T,
+                            np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
+                            max_nodes=self.max_nodes)
 
         sol = Trajectory(solinit)
         sol.t = opt['x']
