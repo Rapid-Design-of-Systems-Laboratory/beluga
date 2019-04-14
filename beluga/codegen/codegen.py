@@ -255,7 +255,8 @@ def make_functions(problem_data):
     Main process that generates callable functions from the problem data.
 
     :param problem_data: Problem data from optimlib.
-    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints) - Several functions to define a BVP.
+    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
+     ineq_constraints) - Several functions to define a BVP.
     """
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
@@ -324,7 +325,7 @@ def make_jit_fn(args, fn_expr):
     try:
         jit_fn = numba.jit(nopython=True)(f)
         jit_fn(*np.ones(len(args), dtype=float))
-    except:
+    except numba.errors.NumbaError:
         logging.info(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
         jit_fn = f
 
