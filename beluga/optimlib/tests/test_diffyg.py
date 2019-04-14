@@ -1,5 +1,6 @@
 from beluga.optimlib import Manifold, FiberBundle
 
+
 def test_Manifold():
     M = Manifold(['x', 'y'], 'test_manifold')
     assert M.dimension == 2

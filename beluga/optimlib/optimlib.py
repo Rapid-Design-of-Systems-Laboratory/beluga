@@ -21,7 +21,7 @@ def init_workspace(ocp):
     :return:
     """
 
-    workspace = {}
+    workspace = dict()
     workspace['problem_name'] = ocp.name
     workspace['independent_var'] = Symbol(ocp._properties['independent']['name'])
     workspace['independent_var_units'] = sympify(ocp._properties['independent']['unit'])
@@ -45,16 +45,16 @@ def init_workspace(ocp):
                                 for c_type, c_list in constraints.items()}
 
     workspace['constraints_units'] = {c_type: [sympify(c_obj['unit']) for c_obj in c_list]
-                                for c_type, c_list in constraints.items()}
+                                      for c_type, c_list in constraints.items()}
 
     workspace['constraints_lower'] = {c_type: [sympify(c_obj['lower']) for c_obj in c_list]
-                                for c_type, c_list in constraints.items() if c_type == 'path'}
+                                      for c_type, c_list in constraints.items() if c_type == 'path'}
 
     workspace['constraints_upper'] = {c_type: [sympify(c_obj['upper']) for c_obj in c_list]
                                       for c_type, c_list in constraints.items() if c_type == 'path'}
 
     workspace['constraints_activators'] = {c_type: [sympify(c_obj['activator']) for c_obj in c_list]
-                                      for c_type, c_list in constraints.items() if c_type == 'path'}
+                                           for c_type, c_list in constraints.items() if c_type == 'path'}
 
     if 'initial' not in workspace['constraints'].keys():
         workspace['constraints']['initial'] = []
@@ -93,7 +93,9 @@ def make_augmented_cost(cost, cost_units, constraints, constraints_units, locati
         \end{aligned}
 
     :param cost: The cost function, :math:`f`.
-    :param constraints: List of constraint to adjoin to the cost function, :math:`g`.
+    :param cost_units: The units of the cost function,
+    :param constraints: List of constraints to adjoin to the cost function, :math:`g`.
+    :param constraints_units: The units of the constraints,
     :param location: Location of each constraint.
 
     Returns the augmented cost function
@@ -109,15 +111,16 @@ def make_augmented_params(constraints, constraints_units, cost_units, location):
     Make the lagrange multiplier terms for adjoining boundary conditions.
 
     :param constraints: List of constraints at the boundaries.
+    :param constraints_units: Units of the constraints.
     :param cost_units: Units of the cost function.
     :param location: Location of each constraint.
     :return: Lagrange multipliers for the given constraints.
     """
 
-    def make_lagrange_mult(c, ind = 1):
+    def make_lagrange_mult(c, ind=1):
         return sympify('lagrange_' + location + '_' + str(ind))
 
-    lagrange_mult = [make_lagrange_mult(c, ind) for (ind,c) in enumerate(constraints[location], 1)]
+    lagrange_mult = [make_lagrange_mult(c, ind) for (ind, c) in enumerate(constraints[location], 1)]
     lagrange_mult_cost = [cost_units/c_units for c_units in constraints_units[location]]
     return lagrange_mult, lagrange_mult_cost
 
@@ -129,6 +132,8 @@ def make_boundary_conditions(constraints, states, costates, parameters, coparame
     :param constraints: List of boundary constraints.
     :param states: List of state variables.
     :param costates: List of costate variables.
+    :param parameters: List of parameter variables.
+    :param coparameters: List of coparameter variables.
     :param cost: Cost function.
     :param derivative_fn: Total derivative function.
     :param location: Location of each boundary constraint.
@@ -151,19 +156,28 @@ def make_boundary_conditions(constraints, states, costates, parameters, coparame
     return bc_list
 
 
-def make_constrained_arc_fns(states, costates, costates_rates, controls, parameters, constants, quantity_vars, hamiltonian):
+def make_constrained_arc_fns(states, costates, costates_rates, controls, parameters, constants, quantity_vars,
+                             hamiltonian):
     """
     Creates constrained arc control functions. Deprecated.
 
-    :param workspace:
+    :param states:
+    :param costates:
+    :param costates_rates:
+    :param controls:
+    :param parameters:
+    :param constants:
+    :param quantity_vars:
+    :param hamiltonian:
     :return:
     """
-    raise NotImplementedError
-    tf_var = sympify('tf')
-    costate_eoms = [{'eom':[str(rate*tf_var) for rate in costates_rates], 'arctype':0}]
-    bc_list = []  # Unconstrained arc placeholder
 
-    return costate_eoms, bc_list
+    raise NotImplementedError
+    # tf_var = sympify('tf')
+    # costate_eoms = [{'eom':[str(rate*tf_var) for rate in costates_rates], 'arctype':0}]
+    # bc_list = []  # Unconstrained arc placeholder
+
+    # return costate_eoms, bc_list
 
 
 def make_control_dae(states, costates, states_rates, costates_rates, controls, dhdu, derivative_fn):
@@ -172,11 +186,10 @@ def make_control_dae(states, costates, states_rates, costates_rates, controls, d
 
     :param states:
     :param costates:
+    :param states_rates:
+    :param costates_rates:
     :param controls:
-    :param constraints:
     :param dhdu:
-    :param xi_init_vals:
-    :param guess:
     :param derivative_fn:
     :return:
     """
@@ -189,7 +202,7 @@ def make_control_dae(states, costates, states_rates, costates_rates, controls, d
     dgdX = sympy.Matrix([[derivative_fn(g_i, x_i) for x_i in X] for g_i in g])
     dgdU = sympy.Matrix([[derivative_fn(g_i, u_i) for u_i in U] for g_i in g])
 
-    udot = dgdU.LUsolve(-dgdX*xdot) # dgdU * udot + dgdX * xdot = 0
+    udot = dgdU.LUsolve(-dgdX*xdot)  # dgdU * udot + dgdX * xdot = 0
 
     dae_states = U
     dae_equations = list(udot)
@@ -271,8 +284,9 @@ def make_time_bc(constraints, derivative_fn, hamiltonian, independent_var):
     Makes free or fixed final time boundary conditions.
 
     :param constraints: List of constraints.
+    :param derivative_fn: Derivative function
     :param hamiltonian: A Hamiltonian function.
-    :param bc_terminal: Terminal boundary condition.
+    :param independent_var: Independent variable
     :return: New terminal boundary condition.
     """
     hamiltonian_free_final_time = all([derivative_fn(c, independent_var) == 0 for c in constraints['terminal']])
@@ -288,6 +302,8 @@ def process_quantities(quantities, quantities_values):
     derivative operator that takes considers these definitions.
 
     :param quantities: List of quantities.
+    :param quantities_values: List of quantity values.
+
     :return: quantity_vars, quantity_list, derivative_fn, jacobian_fn
     """
 
@@ -300,12 +316,13 @@ def process_quantities(quantities, quantities_values):
     quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
 
     # Use substituted expressions to recreate quantity expressions
-    quantity_subs = [(str(qty_var),qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
+    quantity_subs = [(str(qty_var), qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
     # Dictionary for substitution
     quantity_vars = dict(quantity_subs)
 
     # Dictionary for use with mustache templating library
-    quantity_list = [{'name':str(qty_var), 'expr':str(qty_expr)} for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
+    quantity_list = [{'name': str(qty_var), 'expr': str(qty_expr)}
+                     for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
 
     # Function partial that takes derivative while considering quantities
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
@@ -348,7 +365,7 @@ def total_derivative(expr, var, dependent_vars=None):
         dependent_vars = {}
 
     dep_var_names = dependent_vars.keys()
-    dep_var_expr = [(expr) for (_,expr) in dependent_vars.items()]
+    dep_var_expr = [expr for (_, expr) in dependent_vars.items()]
 
     dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]

@@ -77,7 +77,6 @@ def ocp_to_bvp(ocp, **kwargs):
             path_constraints += [c - constraints_upper['path'][ii]]
             path_constraints_units += [constraints_units['path'][ii]]
 
-
     out = {'method': 'direct',
            'problem_name': problem_name,
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
@@ -130,6 +129,5 @@ def ocp_to_bvp(ocp, **kwargs):
         sol.t = sol.t*sol.y[:, -1]
         sol.y = np.delete(sol.y, np.s_[-1:], axis=1)
         return sol
-
 
     return out, guess_map, guess_map_inverse

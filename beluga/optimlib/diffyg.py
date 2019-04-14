@@ -8,6 +8,7 @@ import numpy as np
 import itertools as it
 from .optimlib import *
 
+
 def ocp_to_bvp(ocp, **kwargs):
     """
     Converts an OCP to a BVP using diffy G methods.
@@ -74,9 +75,11 @@ def ocp_to_bvp(ocp, **kwargs):
     num_states = len(states)
     num_states_total = len(J1tau_Q.vertical.base_coords)
 
-    hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
+    hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units,
+                                                                                path_cost, cost_units)
     for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
+                                constraints_activators['path'][ii])
 
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
     vector_names = [Symbol('D_' + str(x)) for x in states]
@@ -102,8 +105,6 @@ def ocp_to_bvp(ocp, **kwargs):
     #     constants_of_motion_values = constants_of_motion_values + [hamiltonian]
     #     constants_of_motion_units = constants_of_motion_units + [hamiltonian_units]
 
-
-
     coparameters = make_costate_names(parameters)
     coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
     coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)
@@ -119,12 +120,14 @@ def ocp_to_bvp(ocp, **kwargs):
     omega = 0
     for ii in range(num_states):
         # pi += WedgeProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states])
-        pi += TensorProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states]) - TensorProduct(J1tau_Q.base_vectors[ii + num_states], J1tau_Q.base_vectors[ii])
+        pi += TensorProduct(J1tau_Q.base_vectors[ii], J1tau_Q.base_vectors[ii + num_states]) - \
+              TensorProduct(J1tau_Q.base_vectors[ii + num_states], J1tau_Q.base_vectors[ii])
         omega += WedgeProduct(J1tau_Q.base_oneforms[ii], J1tau_Q.base_oneforms[ii + num_states])
 
     state_costate_pairing = 0
     for ii in range(num_states):
-        state_costate_pairing += TensorProduct(J1tau_Q.base_coords[ii + num_states]*J1tau_Q.base_vectors[ii]) + TensorProduct(J1tau_Q.base_coords[ii]*J1tau_Q.base_vectors[ii + num_states])
+        state_costate_pairing += TensorProduct(J1tau_Q.base_coords[ii + num_states]*J1tau_Q.base_vectors[ii]) + \
+                                 TensorProduct(J1tau_Q.base_coords[ii]*J1tau_Q.base_vectors[ii + num_states])
 
     constant_2_units = {c: u for c, u in zip(constants_of_motion, constants_of_motion_units)}
 
@@ -136,13 +139,23 @@ def ocp_to_bvp(ocp, **kwargs):
     X_H = pi.rcall(None, hamiltonian)
     equations_of_motion = [X_H.rcall(x) for x in J1tau_Q.vertical.base_coords]
 
-    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
-    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
+    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units =\
+        make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
+    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units =\
+        make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
 
     dV_cost_initial = J1tau_Q.verticalexteriorderivative(augmented_initial_cost)
     dV_cost_terminal = J1tau_Q.verticalexteriorderivative(augmented_terminal_cost)
-    bc_initial = constraints['initial'] + [costate + dV_cost_initial.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_initial_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
-    bc_terminal = constraints['terminal'] + [costate - dV_cost_terminal.rcall(D_x) for costate, D_x in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + [coparameter - derivative_fn(augmented_terminal_cost, parameter) for parameter, coparameter in zip(parameters, coparameters)]
+    bc_initial = constraints['initial'] + \
+        [costate + dV_cost_initial.rcall(D_x) for costate, D_x
+         in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + \
+        [coparameter - derivative_fn(augmented_initial_cost, parameter) for parameter, coparameter
+         in zip(parameters, coparameters)]
+    bc_terminal = constraints['terminal'] + \
+        [costate - dV_cost_terminal.rcall(D_x) for costate, D_x
+         in zip(costates, J1tau_Q.vertical.base_vectors[:num_states])] + \
+        [coparameter - derivative_fn(augmented_terminal_cost, parameter) for parameter, coparameter
+         in zip(parameters, coparameters)]
     time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
 
     if time_bc is not None:
@@ -162,10 +175,10 @@ def ocp_to_bvp(ocp, **kwargs):
         logging.info('Checking commutation relations... ')
         num_consts = len(constants_of_motion)
 
-        commutation_relations = [[None for ii in range(num_consts)] for jj in range(num_consts)]
+        commutation_relations = [[None for _ in range(num_consts)] for _ in range(num_consts)]
         for ii, c1 in enumerate(constants_of_motion_values):
             for jj, c2 in enumerate(constants_of_motion_values):
-                commutation_relations[ii][jj] = pi.rcall(c1,c2)
+                commutation_relations[ii][jj] = pi.rcall(c1, c2)
 
         for ii, c1 in enumerate(constants_of_motion_values):
             subalgebras.append({constants_of_motion[ii]})
@@ -174,8 +187,9 @@ def ocp_to_bvp(ocp, **kwargs):
                     subalgebras[-1] |= {constants_of_motion[jj]}
 
         subalgebras = [gs for ii, gs in enumerate(subalgebras) if gs not in subalgebras[ii+1:]]
-        reducible_subalgebras = [len(gs)==1 for gs in subalgebras]
-        logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras)) + ' subalgebras are double reducible.')
+        reducible_subalgebras = [len(gs) == 1 for gs in subalgebras]
+        logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras))
+                     + ' subalgebras are double reducible.')
 
     for subalgebra in subalgebras:
         constant_2_value = {c: v for c, v in zip(constants_of_motion, constants_of_motion_values)}
@@ -227,7 +241,7 @@ def ocp_to_bvp(ocp, **kwargs):
         dynamical_parameters_units.append(constant_2_units[temp2.pop()])
 
         hamiltonian = hamiltonian.subs(constants_sol, simultaneous=True)
-        pi = pi.subs(constants_sol, simultaneous=True) # TODO: Also change the vectors and differential forms
+        pi = pi.subs(constants_sol, simultaneous=True)  # TODO: Also change the vectors and differential forms
         X_H = pi.rcall(None, hamiltonian)
         equations_of_motion = [X_H.rcall(x) for x in reduced_states]
 
@@ -287,10 +301,12 @@ def ocp_to_bvp(ocp, **kwargs):
            'control_options': control_law,
            'num_controls': len(controls)}
 
-    states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c)) for c in constants_of_motion_values_original]
+    states_2_constants_fn = [make_jit_fn([str(x) for x in original_states + controls], str(c))
+                             for c in constants_of_motion_values_original]
     states_2_reduced_states_fn = [make_jit_fn([str(x) for x in original_states], str(y)) for y in reduced_states]
 
-    constants_2_states_fn = [make_jit_fn([str(x) for x in reduced_states + constants_of_motion], str(y)) for y in constants_of_motion]
+    constants_2_states_fn = [make_jit_fn([str(x) for x in reduced_states + constants_of_motion], str(y))
+                             for y in constants_of_motion]
 
     def guess_map(sol, _compute_control=None):
         if _compute_control is None:
@@ -299,11 +315,14 @@ def ocp_to_bvp(ocp, **kwargs):
         nodes = len(sol.t)
         n_c = len(constants_of_motion)
         sol_out.t = copy.copy(sol.t / sol.t[-1])
-        sol_out.y = np.array([[fn(*sol.y[ii], *sol.dual[ii]) for fn in states_2_reduced_states_fn] for ii in range(sol.t.size)])
+        sol_out.y = np.array([[fn(*sol.y[ii], *sol.dual[ii]) for fn in states_2_reduced_states_fn]
+                              for ii in range(sol.t.size)])
         sol_out.q = sol.q
         if len(quads) > 0:
             sol_out.q = -0.0*np.array([np.ones((len(quads)))])
-        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1], np.array([fn(*sol.y[0], *sol.dual[0], *sol.u[0]) for fn in states_2_constants_fn])))
+        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1],
+                                                  np.array([fn(*sol.y[0], *sol.dual[0], *sol.u[0])
+                                                            for fn in states_2_constants_fn])))
         sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
         sol_out.u = np.array([]).reshape((nodes, 0))
         sol_out.aux = sol.aux
@@ -317,6 +336,7 @@ def ocp_to_bvp(ocp, **kwargs):
         return sol_out
 
     return out, guess_map, guess_map_inverse
+
 
 class Manifold(object):
     def __new__(cls, *args):
@@ -501,10 +521,12 @@ def restrictor(M, const):
         indices.remove(ind)
 
     M_restricted = Manifold(coords, 'M_restricted')
-    extras = dict((M.base_coords[indices[ii]], M_restricted.base_coords[ii]) for ii in range(len(M_restricted.base_coords)))
+    extras = dict((M.base_coords[indices[ii]], M_restricted.base_coords[ii])
+                  for ii in range(len(M_restricted.base_coords)))
     constants_sol1.update(extras)
     mapper = Map(M, M_restricted, constants_sol1)
     return M_restricted, mapper
+
 
 class Map(object):
     def __new__(cls, source, target, function):
