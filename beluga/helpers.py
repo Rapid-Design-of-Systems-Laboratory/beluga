@@ -15,6 +15,7 @@ def init_logging(logging_level, display_level, logfile):
     class InfoFormatter(logging.Formatter):
         """Custom logging formatter to output info messages by themselves"""
         info_fmt = '%(message)s'
+
         def format(self, record):
             # Save the original format configured by the user
             # when the logger formatter was instantiated

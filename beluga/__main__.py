@@ -75,7 +75,8 @@ def load_scenario(scenario_name):
         module_dir, module_file = os.path.split(scenario_name)
         module_name, module_ext = os.path.splitext(module_file)
         sys.path.append(module_dir)
-    elif (scenario_name.endswith('.yml') or scenario_name.endswith('.json'))and os.path.exists(scenario_name) and os.path.isfile(scenario_name):
+    elif (scenario_name.endswith('.yml') or scenario_name.endswith('.json'))and os.path.exists(scenario_name)\
+            and os.path.isfile(scenario_name):
         print('Loading from YAML scenario ..')
         # return load_yaml(scenario_name)
         return load(scenario_name)
