@@ -324,7 +324,7 @@ def make_jit_fn(args, fn_expr):
     try:
         jit_fn = numba.jit(nopython=True)(f)
         jit_fn(*np.ones(len(args), dtype=float))
-    except numba.errors.UnsupportedError:
+    except:
         logging.info(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
         jit_fn = f
 

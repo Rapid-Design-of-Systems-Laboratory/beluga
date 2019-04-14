@@ -23,10 +23,11 @@ class ContinuationList(list):
 
         # Create list of available strategies
         clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
-        self.strategy_list = {obj.strategy_name: obj
-                              for (name, obj) in clsmembers
-                              if hasattr(obj, 'strategy_name')
-                              }
+        self.strategy_list = {
+            obj.strategy_name: obj
+            for (name, obj) in clsmembers
+            if hasattr(obj, 'strategy_name')
+        }
 
     def add_step(self, strategy='manual', *args, **kwargs):
         """
@@ -65,14 +66,9 @@ class ContinuationStrategy(abc.ABC):
         self.solution_reference = None
         self.gammas = []
         self.vars = {}
-
         self.ctr = None
-        self.num_cases = None
 
     def __str__(self):
-        return str(self.vars)
-
-    def __repr__(self):
         return str(self.vars)
 
     def __iter__(self):
@@ -89,7 +85,7 @@ class ContinuationStrategy(abc.ABC):
         norms = []
         for traj in self.gammas:
             if traj.converged is False:
-                norms.append(np.inf)
+                norms.append(9e99)
             else:
                 norms.append(gamma_norm(traj.aux, aux))
 
@@ -134,6 +130,9 @@ class ContinuationStrategy(abc.ABC):
             for var_name in self.vars[var_type].keys():
                 yield var_type, var_name
 
+    def num_cases(self):
+        pass
+
 
 class ManualStrategy(ContinuationStrategy):
     """
@@ -142,11 +141,14 @@ class ManualStrategy(ContinuationStrategy):
     # A unique short name to select this class
     strategy_name = 'manual'
 
-    def __init__(self, num_cases=1, vars_={}):
-        ContinuationStrategy.__init__(self, num_cases=num_cases, vars=vars_)
+    def __init__(self, num_cases=1, vars=None):  # TODO change vars to other variable name to avoid overwriting
+        super(ManualStrategy, self).__init__()
         self._num_cases = num_cases
         self._spacing = 'linear'
-        self.vars = vars_  # dictionary of values
+        if vars is None:
+            self.vars = {}
+        else:
+            self.vars = vars  # dictionary of values
         self.ctr = 0   # iteration counter
         self.last_sol = None
 
@@ -287,7 +289,7 @@ class ProductStrategy(ContinuationStrategy):
     strategy_name = 'productspace'
 
     def __init__(self, num_subdivisions=1, sol=None):
-        ContinuationStrategy.__init__(self, num_subdivisions=1, sol=None)
+        ContinuationStrategy.__init__(self)
         self.sol = sol
         self.sols = []
         self._num_cases = None
@@ -335,10 +337,10 @@ class ProductStrategy(ContinuationStrategy):
             ls_set = [np.linspace(self.vars[var_type][var_name].value, self.vars[var_type][var_name].target,
                                   self._num_subdivisions) for var_name in set_var_type.keys()]
             for val in itertools.product(*ls_set):
-                for _var_type in self.vars.keys():
+                for var_type_ in self.vars.keys():
                     ii = 0
-                    for var_name in self.vars[_var_type].keys():
-                        self.vars[_var_type][var_name].steps.append(val[ii])
+                    for var_name in self.vars[var_type_].keys():
+                        self.vars[var_type_][var_name].steps.append(val[ii])
                         ii += 1
 
     # def next(self, ignore_last_step=False):
