@@ -115,9 +115,9 @@ def ocp_to_bvp(ocp, **kwargs):
     if time_bc is not None:
         bc_terminal += [time_bc]
 
-    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+    dh_du = make_dhdu(hamiltonian, controls, derivative_fn)
     if control_method == 'pmp':
-        control_law = make_control_law(dHdu, controls)
+        control_law = make_control_law(dh_du, controls)
         control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
         dae_states = []
         dae_rates = []
@@ -126,7 +126,7 @@ def ocp_to_bvp(ocp, **kwargs):
         num_dae = 0
     elif control_method == 'icrm':
         dae_states, dae_rates, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates,
-                                                                               costates_rates, controls, dHdu,
+                                                                               costates_rates, controls, dh_du,
                                                                                derivative_fn)
         dae_units = controls_units
         controls = []
@@ -179,7 +179,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'hamiltonian': str(hamiltonian),
            'hamiltonian_units': str(hamiltonian_units),
            'num_states': len(states + costates),
-           'dHdu': str(dHdu),
+           'dHdu': str(dh_du),
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in bc_terminal + dae_bc],
            'control_options': control_law,

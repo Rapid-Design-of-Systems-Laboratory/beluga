@@ -232,10 +232,10 @@ def test_T9(algorithm, const):
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T10(algorithm, const):
     def odefun(X, u, p, const):
-        return (2 * X[1], 2 * (-X[2] * X[1] / const[0]), 2)
+        return 2 * X[1], 2 * (-X[2] * X[1] / const[0]), 2
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
-        return (X0[0], Xf[0] - 2, X0[2] + 1)
+        return X0[0], Xf[0] - 2, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
     solinit = Trajectory()
@@ -494,7 +494,7 @@ def test_T23(algorithm, const):
         return X[1], -(X[1] + X[0] * X[0]) / const[0]
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
-        return (X0[0], Xf[0] - 1 / 2)
+        return X0[0], Xf[0] - 1 / 2
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
     solinit = Trajectory()
