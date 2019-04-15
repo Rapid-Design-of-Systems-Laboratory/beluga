@@ -448,6 +448,14 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
     bc_res = bc(y[:, 0], y[:, -1], p)
     res = np.hstack((col_res.ravel(order='F'), bc_res))
 
+    step = None
+    y_new = None
+    p_new = None
+    LU = None
+    step_new = None
+    cost = None
+    cost_new = None
+
     njev = 0
     singular = False
     recompute_jac = True
@@ -642,11 +650,14 @@ def modify_mesh(x, insert_1, insert_2):
 
 def wrap_functions(fun, bc, fun_jac, bc_jac, k, a, S, D, dtype):
     """Wrap functions for unified usage in the solver."""
-    if fun_jac is None:
-        fun_jac_wrapped = None
 
-    if bc_jac is None:
-        bc_jac_wrapped = None
+    fun_jac_p, fun_jac_wrapped, bc_jac_wrapped = None, None, None
+
+    # if fun_jac is None:
+    #     fun_jac_wrapped = None
+    #
+    # if bc_jac is None:
+    #     bc_jac_wrapped = None
 
     if k == 0:
         def fun_p(x, y, _):
@@ -1064,7 +1075,7 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         raise ValueError("`bc` return is expected to have shape {}, "
                          "but actually has {}.".format((n + k,), bc_res.shape))
 
-    status = 0
+    # status = 0
     iteration = 0
     if verbose == 2:
         print_iteration_header()

@@ -40,7 +40,8 @@ def test_brachistochrone_shooting():
 
     shooting_solver = beluga.bvp_algorithm('Shooting')
 
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1, control_guess = [-pi/2], use_control_guess=True)
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1,
+                                         control_guess=[-pi/2], use_control_guess=True)
 
     continuation_steps = beluga.init_continuation()
 
@@ -156,7 +157,8 @@ def test_brachistochrone_collocation():
 
     shooting_solver = beluga.bvp_algorithm('Collocation')
 
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25, control_guess = [-pi/2], use_control_guess=True)
+    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25,
+                                         control_guess=[-pi/2], use_control_guess=True)
 
     continuation_steps = beluga.init_continuation()
 
@@ -393,7 +395,8 @@ def test_planarhypersonic():
 
     bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP', tolerance=1e-6)
 
-    guess_maker = beluga.guess_generator('auto', start=[80000, 0, 4000, -90 * pi / 180], direction='forward', costate_guess=-0.1)
+    guess_maker = beluga.guess_generator('auto', start=[80000, 0, 4000, -90 * pi / 180], direction='forward',
+                                         costate_guess=-0.1)
 
     continuation_steps = beluga.init_continuation()
 
@@ -407,8 +410,8 @@ def test_planarhypersonic():
         .const('theta_f', 5.0 * pi / 180)
 
     continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .const('rho0', 1.2)
+        .num_cases(11) \
+        .const('rho0', 1.2)
 
     cont = beluga.solve(ocp=ocp,
                         method='indirect',

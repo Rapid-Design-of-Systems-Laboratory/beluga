@@ -39,7 +39,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode']
 
-MathJax = {'tex2jax': {'inlineMath': [['$','$'],['\\(','\\)']], 'procesEscapes': True}}
+MathJax = {'tex2jax': {'inlineMath': [['$', '$'], ['\\(', '\\)']], 'procesEscapes': True}}
 
 mathjax_path = 'http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML-full'
 

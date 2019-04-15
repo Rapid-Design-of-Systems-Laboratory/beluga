@@ -252,8 +252,8 @@ def lglD(T):
 
     y, dy = lpoly(n, T)
     D = (1/((T/y)*np.array([y]).T - (1/y)*np.array([T*y]).T + np.eye(n+1)) - np.eye(n+1)).T
-    D[0,0] = -n*(n+1)/4
-    D[-1,-1] = n*(n+1)/4
+    D[0, 0] = -n*(n+1)/4
+    D[-1, -1] = n*(n+1)/4
     return D
 
 
@@ -308,7 +308,7 @@ def _eq_constraints(X, KKT, data):
 
     if num_quads > 0:
         Q = np.vstack([quad([], y[ii], params, const) for ii in range(n)])
-        qf = np.hstack([(tf - t0) / 4 * np.inner(weights, Q[:,ii]) for ii in range(num_quads)]) + q0
+        qf = np.hstack([(tf - t0) / 4 * np.inner(weights, Q[:, ii]) for ii in range(num_quads)]) + q0
     else:
         qf = []
 
@@ -322,11 +322,11 @@ def _eq_constraints(X, KKT, data):
     c1 = np.hstack([c1[:, ii][:] for ii in range(num_eoms)])
 
     if closure and KKT is not None:
-        l = _lagrange_to_costates(KKT, num_eoms, n, weights)
+        l2c = _lagrange_to_costates(KKT, num_eoms, n, weights)
         p0 = path(y[0], u[0], params, const)
         pf = path(y[-1], u[-1], params, const)
-        h0 = p0 + np.inner(l[0], eom(y[0], u[0], params, const))
-        hf = pf + np.inner(l[-1], eom(y[-1], u[-1], params, const))
+        h0 = p0 + np.inner(l2c[0], eom(y[0], u[0], params, const))
+        hf = pf + np.inner(l2c[-1], eom(y[-1], u[-1], params, const))
         out = np.hstack((c1, c0, h0-hf))
     else:
         out = np.hstack((c1, c0))

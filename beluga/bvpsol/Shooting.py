@@ -410,7 +410,8 @@ class Shooting(BaseAlgorithm):
             return self.bc_func_ms(g, _params, _nonparams, aux)
 
         def _constraint_function_wrapper(X):
-            return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs, sol.const)
+            return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,
+                                        sol.const)
 
         # Set up the jacobian of the constraint function
         def _jacobian_function(X, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs):

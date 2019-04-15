@@ -51,10 +51,10 @@ if LooseVersion(git_ver) < LooseVersion(minimal):
     print(yellow("Please use a git version >= %s" % minimal))
 
 
-def author_name(line):
-    assert line.count("<") == line.count(">") == 1
-    assert line.endswith(">")
-    return line.split("<", 1)[0].strip()
+def author_name(line_):
+    assert line_.count("<") == line_.count(">") == 1
+    assert line_.endswith(">")
+    return line_.split("<", 1)[0].strip()
 
 
 sysexit = 0
@@ -133,14 +133,16 @@ file = codecs.open(os.path.realpath(os.path.join(
         "r", "utf-8").read()
 blankline = not file or file.endswith('\n')
 lines = file.splitlines()
-def key(line):
+
+
+def key(line_):
     # return lower case first address on line or
     # raise an error if not an entry
-    if '#' in line:
-        line = line.split('#')[0]
-    L, R = line.count("<"), line.count(">")
-    assert L == R and L in (1, 2)
-    return line.split(">", 1)[0].split("<")[1].lower()
+    if '#' in line_:
+        line_ = line_.split('#')[0]
+    ll, rr = line_.count("<"), line_.count(">")
+    assert ll == rr and ll in (1, 2)
+    return line_.split(">", 1)[0].split("<")[1].lower()
 
 
 who = OrderedDict()
@@ -156,9 +158,9 @@ for k in who:
     # short entries will be ignored. The ORDER MATTERS
     # so don't re-order the lines for a given address.
     # Other tidying up could be done but we won't do that here.
-    def short_entry(line):
-        if line.count('<') == 2:
-            if line.split('>', 1)[1].split('<')[0].strip():
+    def short_entry(line_):
+        if line_.count('<') == 2:
+            if line_.split('>', 1)[1].split('<')[0].strip():
                 return False
         return True
     if len(who[k]) == 1:

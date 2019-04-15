@@ -118,7 +118,7 @@ def ocp_to_bvp(ocp, **kwargs):
             raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
         # Append time as a state
         sol = copy.deepcopy(sol)
-        sol.y = np.column_stack((sol.y, sol.t[-1]*np.ones((sol.y.shape[0],1))))
+        sol.y = np.column_stack((sol.y, sol.t[-1]*np.ones((sol.y.shape[0], 1))))
         sol.t = sol.t / sol.t[-1]
         return sol
 

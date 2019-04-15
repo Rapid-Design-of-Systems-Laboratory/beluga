@@ -96,7 +96,7 @@ def commutator(g, h, **kwargs):
     True
     """
     anticommutator = kwargs.get('anticommutator', 1)
-    return np.dot(g,h) - anticommutator*np.dot(h,g)
+    return np.dot(g, h) - anticommutator*np.dot(h, g)
 
 
 def dexpinv(g, h, order=5):
@@ -109,11 +109,14 @@ def dexpinv(g, h, order=5):
     Evaluates the map by the following formula:
 
     .. math::
-        dexp_g^{-1}(h) = h - \frac{1}{2}[g,h] + \frac{B_2}{2!}[g,[g,h]] + \cdots = \sum_{k=0}^{\text{order}} \frac{B_k}{k!}\text{ad}_g^k(h)
+        dexp_g^{-1}(h) = h - \frac{1}{2}[g,h] + \frac{B_2}{2!}[g,[g,h]] + \cdots = \sum_{k=0}^{\text{order}}
+         \frac{B_k}{k!}\text{ad}_g^k(h)
 
     where :math:`B_k` are the :math:`k`-th Bernioulli numbers. The infinite series is truncated at `order`.
 
     :param g: Element of a Lie algebra.
+    :param h:
+    :param order:
     :return:
 
     +------------------------+-----------------+-----------------+
@@ -170,7 +173,7 @@ def exp(g):
         return scipyexpm(g)
 
 
-def killing(g,h):
+def killing(g, h):
     r"""
     Determine the Killing coefficient between two elements in a Lie algebra.
 

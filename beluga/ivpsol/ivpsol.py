@@ -332,7 +332,7 @@ def reconstruct(quadfun, gamma, q0, *args):
     """
     gamma = copy.copy(gamma)
 
-    l = len(gamma)
+    # gam_len = len(gamma)
     temp_q = np.zeros_like(q0)
 
     dq = np.array([quadfun(gamma(time)[0], *args) for time in gamma.t])
@@ -370,8 +370,8 @@ def integrate_quads(quadfun, tspan, gamma, *args):
     if tspan[-1] > gamma.t[-1]:
         raise Exception('Time span out of integration bounds.')
 
-    l = len(gamma.t)
-    x_set_temp = np.arange(0, l, 1)
+    t_len = len(gamma.t)
+    x_set_temp = np.arange(0, t_len, 1)
 
     ind0 = int(np.ceil(np.interp(tspan[0], gamma.t, x_set_temp)))
     indf = int(np.ceil(np.interp(tspan[-1], gamma.t, x_set_temp)))

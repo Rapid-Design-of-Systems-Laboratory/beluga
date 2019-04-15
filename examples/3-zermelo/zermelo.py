@@ -14,8 +14,8 @@ def drift_y(x, y):
     return ((x-5)**4 - 625)/625
 
 
-ocp.custom_function('drift_x', ['x','y'], drift_x)
-ocp.custom_function('drift_y', ['x','y'], drift_y)
+ocp.custom_function('drift_x', ['x', 'y'], drift_x)
+ocp.custom_function('drift_y', ['x', 'y'], drift_y)
 
 # Define independent variables
 ocp.independent('t', 's')
