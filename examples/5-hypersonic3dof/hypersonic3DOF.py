@@ -20,14 +20,18 @@ ocp \
     .state('h', 'v*sin(gam)', 'm') \
     .state('theta', 'v*cos(gam)*cos(psi)/({}*cos(phi))'.format(r), 'rad') \
     .state('phi', 'v*cos(gam)*sin(psi)/{}'.format(r), 'rad') \
-    .state('v', '-{}/mass - mu*sin(gam)/{}**2'.format(D,r), 'm/s') \
-    .state('gam', '{}*cos(bank)/(mass*v) - mu/(v*{}**2)*cos(gam) + v/{}*cos(gam)'.format(L,r,r), 'rad') \
-    .state('psi', '{}*sin(bank)/(mass*cos(gam)*v) - v/{}*cos(gam)*cos(psi)*tan(phi)'.format(L,r), 'rad')
+    .state('v', '-{}/mass - mu*sin(gam)/{}**2'.format(D, r), 'm/s') \
+    .state('gam', '{}*cos(bank)/(mass*v) - mu/(v*{}**2)*cos(gam) + v/{}*cos(gam)'.format(L, r, r), 'rad') \
+    .state('psi', '{}*sin(bank)/(mass*cos(gam)*v) - v/{}*cos(gam)*cos(psi)*tan(phi)'.format(L, r), 'rad')
 
-ocp.constant_of_motion('c1', 'lamTHETA', 'm/(s*rad)')
-# ocp.constant_of_motion('c2r', 'lamTHETA + lamPHI*cos(theta) + lamTHETA*tan(phi)*sin(theta) + lamPSI*sin(theta)/cos(phi) + lamPHI*sin(theta) - lamTHETA*tan(phi)*cos(theta) - lamPSI*cos(theta)/cos(phi)', 'm/(s*rad)')
-# ocp.constant_of_motion('c2', 'lamPHI*cos(theta) + lamTHETA*tan(phi)*sin(theta) + lamPSI*sin(theta)/cos(phi)', 'm/(s*rad)')
-# ocp.constant_of_motion('c3', 'lamPHI*sin(theta) - lamTHETA*tan(phi)*cos(theta) - lamPSI*cos(theta)/cos(phi)', 'm/(s*rad)')
+# ocp.constant_of_motion('c1', 'lamTHETA', 'm/(s*rad)')
+# ocp.constant_of_motion('c2r', 'lamTHETA + lamPHI*cos(theta) + lamTHETA*tan(phi)*sin(theta) '
+#                               '+ lamPSI*sin(theta)/cos(phi) + lamPHI*sin(theta) - lamTHETA*tan(phi)*cos(theta)'
+#                               '- lamPSI*cos(theta)/cos(phi)', 'm/(s*rad)')
+# ocp.constant_of_motion('c2', 'lamPHI*cos(theta) + lamTHETA*tan(phi)*sin(theta) '
+#                              '+ lamPSI*sin(theta)/cos(phi)', 'm/(s*rad)')
+# ocp.constant_of_motion('c3', 'lamPHI*sin(theta) - lamTHETA*tan(phi)*cos(theta) - lamPSI*cos(theta)/cos(phi)',
+#                        'm/(s*rad)')
 
 # Define controls
 ocp.control('alpha', 'rad') \
@@ -67,22 +71,24 @@ ocp.constant('phi_f', 0, 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
-                                  derivative_method='fd',
-                                  tolerance=1e-4,
-                                  max_iterations=100,
-                                  max_error=400,
-                                  algorithm='SLSQP'
-                                  )
+bvp_solver = beluga.bvp_algorithm(
+    'Shooting',
+    derivative_method='fd',
+    tolerance=1e-4,
+    max_iterations=100,
+    max_error=400,
+    algorithm='SLSQP'
+)
 
-guess_maker = beluga.guess_generator('auto',
-                                     start=[40000, 0, 0, 2000, -(90-10)*pi/180, 0],
-                                     direction='forward',
-                                     costate_guess=-0.1,
-                                     control_guess=[0.0, 0.0],
-                                     use_control_guess=True,
-                                     time_integrate=0.5,
-                                     )
+guess_maker = beluga.guess_generator(
+    'auto',
+    start=[40000, 0, 0, 2000, -(90-10)*pi/180, 0],
+    direction='forward',
+    costate_guess=-0.1,
+    control_guess=[0.0, 0.0],
+    use_control_guess=True,
+    time_integrate=0.5,
+)
 
 
 continuation_steps = beluga.init_continuation()
@@ -103,8 +109,10 @@ continuation_steps.add_step('bisection').num_cases(41) \
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker)
+sol_set = beluga.solve(
+    ocp=ocp,
+    method='indirect',
+    bvp_algorithm=bvp_solver,
+    steps=continuation_steps,
+    guess_generator=guess_maker
+)

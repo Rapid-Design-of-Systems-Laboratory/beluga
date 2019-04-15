@@ -44,6 +44,7 @@ var/
 *.egg
 *.dill
 *.blg
+*.beluga
 *.pkl
 *.pkl2
 *.mat

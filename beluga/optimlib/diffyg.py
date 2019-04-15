@@ -182,7 +182,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
         for ii, c1 in enumerate(constants_of_motion_values):
             subalgebras.append({constants_of_motion[ii]})
-            for jj in range(0,num_consts):
+            for jj in range(0, num_consts):
                 if commutation_relations[ii][jj] != 0:
                     subalgebras[-1] |= {constants_of_motion[jj]}
 
@@ -503,6 +503,7 @@ def make_control_law(dhdu, controls):
     logging.info('Control found')
     control_options = ctrl_sol
     return control_options
+
 
 def restrictor(M, const):
     free_vars = set()

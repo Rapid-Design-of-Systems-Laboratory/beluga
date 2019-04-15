@@ -1,13 +1,18 @@
 import beluga
 import logging
 
+import matplotlib.pyplot as plt
+
 ocp = beluga.OCP('zermelos_problem')
+
 
 def drift_x(x, y):
     return 0.0
 
+
 def drift_y(x, y):
     return ((x-5)**4 - 625)/625
+
 
 ocp.custom_function('drift_x', ['x','y'], drift_x)
 ocp.custom_function('drift_y', ['x','y'], drift_y)
@@ -40,15 +45,18 @@ ocp.constraints() \
 
 ocp.scale(m='x', s='x/V', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting',
-                        derivative_method='fd',
-                        tolerance=1e-4)
+bvp_solver = beluga.bvp_algorithm(
+    'Shooting',
+    derivative_method='fd',
+    tolerance=1e-4
+)
 
-guess_maker = beluga.guess_generator('auto',
-                start=[0, 0],
-                control_guess=[0],
-                use_control_guess = True,
-                direction='forward'
+guess_maker = beluga.guess_generator(
+    'auto',
+    start=[0, 0],
+    control_guess=[0],
+    use_control_guess=True,
+    direction='forward'
 )
 
 continuation_steps = beluga.init_continuation()
@@ -67,15 +75,16 @@ continuation_steps.add_step('bisection') \
 
 beluga.add_logger(logging_level=logging.DEBUG)
 
-sol_set = beluga.solve(ocp=ocp,
-                       method='indirect',
-                       optim_options={'control_method': 'icrm'},
-                       bvp_algorithm=bvp_solver,
-                       steps=continuation_steps,
-                       guess_generator=guess_maker)
+sol_set = beluga.solve(
+    ocp=ocp,
+    method='indirect',
+    optim_options={'control_method': 'icrm'},
+    bvp_algorithm=bvp_solver,
+    steps=continuation_steps,
+    guess_generator=guess_maker
+)
 
 sol = sol_set[-1][-1]
 
-import matplotlib.pyplot as plt
-plt.plot(sol.y[:,0], sol.y[:,1])
+plt.plot(sol.y[:, 0], sol.y[:, 1])
 plt.show()

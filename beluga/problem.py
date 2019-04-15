@@ -214,7 +214,7 @@ class ConstraintList(dict):
     #     return obj
 
     def __init__(self, *args, **kwargs):
-        dict.__init__(*args, **kwargs)
+        dict.__init__(self, *args, **kwargs)
 
     def add_constraint(self, *args, constraint_type='', constraint_args=None, **kwargs):
         """
