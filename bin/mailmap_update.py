@@ -12,22 +12,28 @@ import codecs
 import sys
 import os
 
-
-if sys.version_info < (3, 6):
-    sys.exit("This script requires Python 3.6 or newer")
-
 from subprocess import run, PIPE
 from distutils.version import LooseVersion
 from collections import defaultdict, OrderedDict
 
+from sympy.utilities.misc import filldedent
+from sympy.utilities.iterables import sift
+
+if sys.version_info < (3, 6):
+    sys.exit("This script requires Python 3.6 or newer")
+
+
 def red(text):
     return "\033[31m%s\033[0m" % text
+
 
 def yellow(text):
     return "\033[33m%s\033[0m" % text
 
+
 def blue(text):
     return "\033[34m%s\033[0m" % text
+
 
 # put sympy on the path
 mailmap_update_path = os.path.abspath(__file__)
@@ -37,8 +43,6 @@ sympy_dir = os.path.join(sympy_top, 'sympy')
 if os.path.isdir(sympy_dir):
     sys.path.insert(0, sympy_top)
 
-from sympy.utilities.misc import filldedent
-from sympy.utilities.iterables import sift
 
 # check git version
 minimal = '1.8.4.2'
@@ -46,10 +50,12 @@ git_ver = run(['git', '--version'], stdout=PIPE, encoding='utf-8').stdout[12:]
 if LooseVersion(git_ver) < LooseVersion(minimal):
     print(yellow("Please use a git version >= %s" % minimal))
 
+
 def author_name(line):
     assert line.count("<") == line.count(">") == 1
     assert line.endswith(">")
     return line.split("<", 1)[0].strip()
+
 
 sysexit = 0
 print(blue("checking git authors..."))
@@ -84,7 +90,7 @@ dups = near_dups
 # some may have been real dups, so disregard those
 # for which all email addresses were the same
 multi = [k for k in dups if len(dups[k]) > 1 and
-    len(set([i for i, _ in dups[k]])) > 1]
+         len(set([i for i, _ in dups[k]])) > 1]
 if multi:
     # not fatal but make it red
     print()
@@ -135,6 +141,7 @@ def key(line):
     L, R = line.count("<"), line.count(">")
     assert L == R and L in (1, 2)
     return line.split(">", 1)[0].split("<")[1].lower()
+
 
 who = OrderedDict()
 for i, line in enumerate(lines):
