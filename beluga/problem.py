@@ -1,8 +1,3 @@
-"""
-problem2 -- Rename to 'problem' after refactoring.
-Contains class/functions related to defining the optimal control problems.
-"""
-
 import numpy as np
 import copy
 import json
@@ -68,6 +63,8 @@ class OCP(object):
 
         self._scaling = Scaling()
 
+        self.continuation = None
+
     def __repr__(self):
         return self.name + ' OCP'
 
@@ -79,7 +76,7 @@ class OCP(object):
         cost_type - str
             Type of cost function - path, initial or terminal
         """
-        return self._properties.get(cost_type + '_cost', {'expr':'0','unit':'0'})
+        return self._properties.get(cost_type + '_cost', {'expr': '0', 'unit': '0'})
 
     def set_cost(self, expr, unit, cost_type):
         """Sets cost function for problem.
@@ -92,7 +89,7 @@ class OCP(object):
         cost_type - str
             Type of cost function - path, initial or terminal
         """
-        self._properties[cost_type+'_cost'] = {'expr':expr, 'unit':unit}
+        self._properties[cost_type+'_cost'] = {'expr': expr, 'unit': unit}
 
     def set_property(self, *args, property_name, property_args, **kwargs):
         """
@@ -120,11 +117,13 @@ class OCP(object):
     state = partialmethod(set_property, property_name='states', property_args=('name', 'eom', 'unit'))
     control = partialmethod(set_property, property_name='controls', property_args=('name', 'unit'))
     constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
-    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
+    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
+                                       property_args=('name', 'function', 'unit'))
     quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
-    parameter = partialmethod(set_property, property_name='parameters', property_args=('name','unit'))
-    custom_function = partialmethod(set_property, property_name='custom_functions', property_args=('name','args','handle','derivs'))
+    parameter = partialmethod(set_property, property_name='parameters', property_args=('name', 'unit'))
+    custom_function = partialmethod(set_property, property_name='custom_functions',
+                                    property_args=('name', 'args', 'handle', 'derivs'))
 
     states = partialmethod(get_property, property_name='states')
     controls = partialmethod(get_property, property_name='controls')
@@ -146,7 +145,6 @@ class OCP(object):
 
     Lagrange = path_cost
     Mayer = terminal_cost
-
 
     def constraints(self):
         """
@@ -170,7 +168,8 @@ class OCP(object):
                     'constraints': self._constraints,
                     'continuation': str(self.continuation)})
 
-    def _format_name(self, name):
+    @staticmethod
+    def _format_name(name):
         """Validates that the name is in the right format
             Only alphabets, numbers and underscores allowed
             Should not start with a number or underscore
@@ -198,28 +197,35 @@ class ConstraintList(dict):
 
     Valid parameters and their arguments are in the following table.
 
-    +--------------------------------+----------------------------------------+---------------------------------------------+
-    | Valid parameters               | arguments                              | datatype                                    |
-    +================================+========================================+=============================================+
-    | initial                        | (function, unit)                       | (string, string)                            |
-    +--------------------------------+----------------------------------------+---------------------------------------------+
-    | terminal                       | (function, unit)                       | (string, string)                            |
-    +--------------------------------+----------------------------------------+---------------------------------------------+
-    | path                           | (function, unit, lb, ub, activator)    | (string, string, str/num, str/num, string)  |
-    +--------------------------------+----------------------------------------+---------------------------------------------+
+    +--------------------------------+----------------------------------------+----------------------------------------+
+    | Valid parameters               | arguments                              | datatype                               |
+    +================================+========================================+========================================+
+    | initial                        | (function, unit)                       | (string, string)                       |
+    +--------------------------------+----------------------------------------+----------------------------------------+
+    | terminal                       | (function, unit)                       | (string, string)                       |
+    +--------------------------------+----------------------------------------+----------------------------------------+
+    | path                           | (function, unit, lb, ub, activator)    | (string, string, str/num, str/num,     |
+    |                                |                                        |                               string)  |
+    +--------------------------------+----------------------------------------+----------------------------------------+
 
     """
-    def __new__(cls, *args, **kwargs):
-        obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
-        return obj
+    # def __new__(cls, *args, **kwargs):
+    #     obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
+    #     return obj
 
-    def add_constraint(self, *args, constraint_type='', constraint_args=[], **kwargs):
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+
+    def add_constraint(self, *args, constraint_type='', constraint_args=None, **kwargs):
         """
         Adds constraint of the specified type
         Returns reference to self.constraint_aliases for chaining
         """
 
         c_list = self.get(constraint_type, [])
+
+        if constraint_args is None:
+            constraint_args = list()
 
         constraint = _combine_args_kwargs(constraint_args, args, kwargs)
         c_list.append(constraint)
@@ -261,11 +267,11 @@ def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
     """
     pos_args = {key: val for (key, val) in zip_longest(arg_list, args, fillvalue=fillvalue)}
     arg_dict = dict(ChainMap(kwargs, pos_args))
-    return (arg_dict)
+    return arg_dict
 
 
 BVP = namedtuple('BVP', 'deriv_func bc_func compute_control path_constraints')
-BVP.__new__.__defaults__ = (None,) # path constraints optional
+BVP.__new__.__defaults__ = (None,)  # path constraints optional
 
 
 class GuessGenerator(object):
@@ -279,6 +285,17 @@ class GuessGenerator(object):
                                'ones': self.ones}
         self.setup(**kwargs)
         self.dae_num_states = 0
+
+        self.mode = None
+        self.solinit = None
+        self.direction = None
+        self.time_integrate = None
+        self.start = None
+        self.quad_guess = None
+        self.costate_guess = None
+        self.param_guess = None
+        self.control_guess = None
+        self.use_control_guess = None
 
     def setup(self, mode='auto', **kwargs):
         """Sets up the initial guess generation process"""
@@ -369,7 +386,8 @@ class GuessGenerator(object):
         solinit.dynamical_parameters = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
-        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0], sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
+                      sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
         solout = copy.deepcopy(solivp)
         solout.dynamical_parameters = sol.dynamical_parameters
         solout.nondynamical_parameters = sol.nondynamical_parameters

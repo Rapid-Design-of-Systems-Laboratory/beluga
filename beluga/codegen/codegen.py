@@ -170,7 +170,7 @@ def make_quad_func(quads_rates, states, quads, parameters, constants, controls, 
     num_params = len(parameters)
     num_quads = len(quad_fn)
     if num_quads == 0:
-        def dummy_quad_func(*args, **kwargs):
+        def dummy_quad_func(*_, **__):
             return np.array([])
         return dummy_quad_func
 
@@ -255,7 +255,8 @@ def make_functions(problem_data):
     Main process that generates callable functions from the problem data.
 
     :param problem_data: Problem data from optimlib.
-    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints) - Several functions to define a BVP.
+    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
+     ineq_constraints) - Several functions to define a BVP.
     """
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
@@ -274,18 +275,23 @@ def make_functions(problem_data):
     ham = problem_data['hamiltonian']
     logging.info('Making unconstrained control')
     if problem_data['method'] is not 'direct':
-        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters, constants, controls, ham)
-        def initial_cost(*args, **kwargs):
+        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters,
+                                                     constants, controls, ham)
+
+        def initial_cost(*_, **__):
             return 0
-        def path_cost(*args, **kwargs):
+
+        def path_cost(*_, **__):
             return 0
-        def terminal_cost(*args, **kwargs):
+
+        def terminal_cost(*_, **__):
             return 0
     else:
         def control_fn(X, u, p, C):
             return u
         ham_fn = None
-        initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states, dynamical_parameters, constants, controls)
+        initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states,
+                                                                dynamical_parameters, constants, controls)
 
     if problem_data['method'] is not 'direct' and len(path_constraints) > 0:
         raise NotImplementedError('Path constraints not implemented for indirect-type methods.')
@@ -299,7 +305,8 @@ def make_functions(problem_data):
     quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn)
     bc_initial = problem_data['bc_initial']
     bc_terminal = problem_data['bc_terminal']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants, controls, control_fn)
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
+                           constants, controls, control_fn)
 
     return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints
 
@@ -318,7 +325,8 @@ def make_jit_fn(args, fn_expr):
     try:
         jit_fn = numba.jit(nopython=True)(f)
         jit_fn(*np.ones(len(args), dtype=float))
-    except:
+    except numba.errors.NumbaError:
+        logging.info(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
         jit_fn = f
 
     return jit_fn
@@ -341,7 +349,7 @@ def make_sympy_fn(args, fn_expr):
         jit_fns = [make_jit_fn(args, str(expr)) for expr in fn_expr]
         len_output = len(fn_expr)
 
-        def vector_fn(*args):
+        def vector_fn(*_):
             output = np.zeros(output_shape)
             for i in numba.prange(len_output):
                 output.flat[i] = jit_fns[i](*args)
@@ -380,16 +388,17 @@ def preprocess(problem_data):
             s = sympy.sympify(state_rate)
             derivs = s.atoms(sympy.Derivative)
             for deriv in derivs:
-                name = re.sub('[\(\[].*?[\)\]]','',str(deriv.expr))
+                name = re.sub('[\\(\\[].*?[\\)\\]]', '', str(deriv.expr))
                 dx = deriv.args[1]
                 name += '_d' + str(dx[0])
                 df = sympy.Function(name)(*deriv.expr.args)
-                s = s.subs(deriv,df)
+                s = s.subs(deriv, df)
             new_states += [str(s)]
 
         problem_data['states_rates'] = new_states
 
-    deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints = make_functions(problem_data)
+    deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints\
+        = make_functions(problem_data)
 
     bvp = BVP(deriv_func, quad_func, bc_func, compute_control, initial_cost, path_cost, terminal_cost, ineq_constraints)
 
@@ -397,7 +406,7 @@ def preprocess(problem_data):
 
 
 class BVP(object):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **__):
         self.deriv_func = args[0]
         self.quad_func = args[1]
         self.bc_func = args[2]

@@ -16,22 +16,27 @@ import codecs
 import sys
 import os
 
-
-if sys.version_info < (3, 6):
-    sys.exit("This script requires Python 3.6 or newer")
-
 from subprocess import run, PIPE
 from distutils.version import LooseVersion
 from collections import defaultdict, OrderedDict
 
+from sympy.utilities.misc import filldedent
+
+if sys.version_info < (3, 6):
+    sys.exit("This script requires Python 3.6 or newer")
+
+
 def red(text):
     return "\033[31m%s\033[0m" % text
+
 
 def yellow(text):
     return "\033[33m%s\033[0m" % text
 
+
 def green(text):
     return "\033[32m%s\033[0m" % text
+
 
 # put sympy on the path
 mailmap_update_path = os.path.abspath(__file__)
@@ -46,12 +51,12 @@ git_ver = run(['git', '--version'], stdout=PIPE, encoding='utf-8').stdout[12:]
 if LooseVersion(git_ver) < LooseVersion(minimal):
     print(yellow("Please use a git version >= %s" % minimal))
 
-from sympy.utilities.misc import filldedent
 
 def author_name(line):
     assert line.count("<") == line.count(">") == 1
     assert line.endswith(">")
     return line.split("<", 1)[0].strip()
+
 
 def move(l, i1, i2, who):
     x = l.pop(i1)
@@ -59,6 +64,7 @@ def move(l, i1, i2, who):
     assert who == author_name(x), \
         '%s was not found at line %i' % (who, i1)
     l.insert(i2, x)
+
 
 # find who git knows ahout
 git_command = ["git", "log", "--topo-order", "--reverse", "--format=%aN <%aE>"]

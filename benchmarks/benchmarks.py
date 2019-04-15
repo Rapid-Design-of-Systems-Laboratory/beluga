@@ -1,14 +1,24 @@
 # Write the benchmarking functions here.
 # See "Writing benchmarks" in the asv docs for more information.
 
+
 class beluga:
-    def time_import(self):
+    @staticmethod
+    def time_import():
         import beluga
+
 
 class Brachistochrone:
     timeout = 240
+
+    def __init__(self):
+        self.beluga = None
+        self.ocp = None
+        self.continuation_steps = None
+
     def setup(self):
         import beluga
+
         self.beluga = beluga
         ocp = beluga.OCP('brachisto')
 
@@ -58,35 +68,39 @@ class Brachistochrone:
         from math import pi
 
         bvp_solver = self.beluga.bvp_algorithm('Shooting')
-        guess_maker = self.beluga.guess_generator('auto',
-                                             start=[0, 0, 0],  # Starting values for states in order
-                                             direction='forward',
-                                             costate_guess=-0.1,
-                                             control_guess=[-pi / 2],
-                                             use_control_guess=True,
-                                             )
+        guess_maker = self.beluga.guess_generator(
+            'auto',
+            start=[0, 0, 0],  # Starting values for states in order
+            direction='forward',
+            costate_guess=-0.1,
+            control_guess=[-pi/2],
+            use_control_guess=True,
+        )
 
-        self.beluga.solve(ocp=self.ocp,
-                           method='traditional',
-                           bvp_algorithm=bvp_solver,
-                           steps=self.continuation_steps,
-                           guess_generator=guess_maker, autoscale=True)
-
+        self.beluga.solve(
+            ocp=self.ocp,
+            method='traditional',
+            bvp_algorithm=bvp_solver,
+            steps=self.continuation_steps,
+            guess_generator=guess_maker, autoscale=True
+        )
 
     def time_pseudospectral(self):
         from math import pi
 
         bvp_solver = self.beluga.bvp_algorithm('Pseudospectral')
-        guess_maker = self.beluga.guess_generator('auto',
-                                             start=[0, 0, 0],  # Starting values for states in order
-                                             direction='forward',
-                                             costate_guess=-0.1,
-                                             control_guess=[-pi / 2],
-                                             use_control_guess=True,
-                                             )
+        guess_maker = self.beluga.guess_generator(
+            'auto',
+            start=[0, 0, 0],  # Starting values for states in order
+            direction='forward',
+            costate_guess=-0.1,
+            control_guess=[-pi/2],
+            use_control_guess=True,
+        )
 
-        self.beluga.solve(ocp=self.ocp,
-                           method='traditional',
-                           bvp_algorithm=bvp_solver,
-                           steps=self.continuation_steps,
-                           guess_generator=guess_maker, autoscale=True)
+        self.beluga.solve(
+            ocp=self.ocp,
+            method='traditional',
+            bvp_algorithm=bvp_solver,
+            steps=self.continuation_steps,
+            guess_generator=guess_maker, autoscale=True)

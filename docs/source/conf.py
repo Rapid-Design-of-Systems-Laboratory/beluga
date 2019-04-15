@@ -19,10 +19,11 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('../..'))
 
 import beluga
+
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -38,7 +39,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode']
 
-MathJax = {'tex2jax': {'inlineMath': [['$','$'],['\\(','\\)']], 'procesEscapes': True}}
+MathJax = {'tex2jax': {'inlineMath': [['$', '$'], ['\\(', '\\)']], 'procesEscapes': True}}
 
 mathjax_path = 'http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML-full'
 
@@ -177,9 +178,6 @@ texinfo_documents = [
      author, 'beluga', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}

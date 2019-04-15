@@ -2,35 +2,36 @@ import abc
 
 
 class BaseAlgorithm(object):
-    '''
+    """
     Object representing an algorithm that solves boundary valued problems.
 
     This object serves as a base class for other algorithms.
-    '''
+    """
     # Define class as abstract class
     __metaclass__ = abc.ABCMeta
 
     # Define common interface for algorithm classes
-    def __new__(cls, *args, **kwargs):
-        obj = super(BaseAlgorithm, cls).__new__(cls)
-        obj.derivative_function = None
-        obj.quadrature_function = None
-        obj.boundarycondition_function = None
-        obj.initial_cost_function = None
-        obj.path_cost_function = None
-        obj.terminal_cost_function = None
-        obj.inequality_constraint_function = None
+    def __init__(self, *args, **kwargs):
+
+        self.derivative_function = None
+        self.quadrature_function = None
+        self.boundarycondition_function = None
+        self.initial_cost_function = None
+        self.path_cost_function = None
+        self.terminal_cost_function = None
+        self.inequality_constraint_function = None
 
         if len(args) > 0:
-            obj.derivative_function = args[0]
+            self.derivative_function = args[0]
 
         if len(args) > 1:
-            obj.quadrature_function = args[1]
+            self.quadrature_function = args[1]
 
         if len(args) > 2:
-            obj.boundarycondition_function = args[2]
+            self.boundarycondition_function = args[2]
 
-        return obj
+        self.bc_func_ms = None
+        self.stm_ode_func = None
 
     def set_boundarycondition_function(self, boundarycondition_function):
         self.boundarycondition_function = boundarycondition_function

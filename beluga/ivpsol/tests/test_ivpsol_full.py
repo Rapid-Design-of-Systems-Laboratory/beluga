@@ -2,16 +2,17 @@ from beluga.ivpsol import Propagator
 import numpy as np
 from math import *
 
-def compute_hamiltonian(X,p,aux,u):
-    [x,y,v,lamX,lamY,lamV,tf] = X[:7]
+
+def compute_hamiltonian(X, p, aux, u):
+    [x, y, v, lamX, lamY, lamV, tf] = X[:7]
     g = aux['const']['g']
 
     thetta = u[0]
     return lamX*v*cos(thetta) + g*lamV*sin(thetta) + lamY*v*sin(thetta) + 1
 
 
-def compute_control(X,p,aux):
-    [x,y,v,lamX,lamY,lamV,tf] = X[:7]
+def compute_control(X, p, aux):
+    [x, y, v, lamX, lamY, lamV, tf] = X[:7]
     g = aux['const']['g']
 
     thetta_saved = float('inf')
@@ -19,35 +20,35 @@ def compute_control(X,p,aux):
 
     try:
         thetta = -acos(-((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2)))
-    except:
+    except (ValueError, ZeroDivisionError):
         thetta = 0
-    ham = compute_hamiltonian(X,p,aux,[thetta])
+    ham = compute_hamiltonian(X, p, aux, [thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
     try:
         thetta = acos(-((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2)))
-    except:
+    except (ValueError, ZeroDivisionError):
         thetta = 0
-    ham = compute_hamiltonian(X,p,aux,[thetta])
+    ham = compute_hamiltonian(X, p, aux, [thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
 
     try:
         thetta = -acos((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2))
-    except:
+    except (ValueError, ZeroDivisionError):
         thetta = 0
-    ham = compute_hamiltonian(X,p,aux,[thetta])
+    ham = compute_hamiltonian(X, p, aux, [thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
 
     try:
         thetta = acos((lamX*v)/sqrt(g**2*lamV**2+2*g*lamV*lamY*v+(lamX**2+lamY**2)*v**2))
-    except:
+    except (ValueError, ZeroDivisionError):
         thetta = 0
-    ham = compute_hamiltonian(X,p,aux,[thetta])
+    ham = compute_hamiltonian(X, p, aux, [thetta])
     if ham < ham_saved:
         ham_saved = ham
         thetta_saved = thetta
@@ -57,7 +58,7 @@ def compute_control(X,p,aux):
     return thetta_saved
 
 
-def brachisto_ode(_X,_p,aux):
+def brachisto_ode(_X, _p, aux):
     [x, y, v, lamX, lamY, lamV, tf] = _X[:7]
     g = aux['const']['g']
 
@@ -89,4 +90,4 @@ def test_ode45_2():
     solout = prop(brachisto_ode, None, tspan, x0, q0, [], aux)
     x1 = solout.y
 
-    assert (x1[-1,:] - x_end < 1e-5).all()
+    assert (x1[-1, :] - x_end < 1e-5).all()

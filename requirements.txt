@@ -13,3 +13,4 @@ pathos>=0.2.2.1
 pytest>=3.5.1
 pytest-cov>=2.5.1
 pytest-describe>=0.11.1
+PyYAML>=5.0

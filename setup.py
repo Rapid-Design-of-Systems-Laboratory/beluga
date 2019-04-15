@@ -1,5 +1,6 @@
 from setuptools import find_packages, setup
-import os, sys
+import os
+import sys
 
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
@@ -29,6 +30,7 @@ tests = ['beluga.bvpsol.tests',
 
 dir_setup = os.path.dirname(os.path.realpath(__file__))
 
+__version__ = None
 with open(os.path.join(dir_setup, 'beluga', 'release.py')) as f:
     # Defines __version__
     exec(f.read())
@@ -45,7 +47,7 @@ setup(name="beluga",
       url="https://github.com/Rapid-Design-of-Systems-Laboratory/beluga",
       py_modules=['beluga'],
       packages=['beluga'] + modules + tests,
-    #   scripts=['bin/beluga'],
+      #   scripts=['bin/beluga'],
       entry_points={
           'console_scripts': [
               'beluga = beluga.__main__:main'

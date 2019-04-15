@@ -5,7 +5,7 @@ from beluga.utils import sympify
 import itertools as it
 import logging
 import numpy as np
-from scipy.optimize import minimize
+# from scipy.optimize import minimize
 
 
 def ocp_to_bvp(ocp, **kwargs):
@@ -64,7 +64,8 @@ def ocp_to_bvp(ocp, **kwargs):
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
     for ii, c in enumerate(constraints['path']):
-        path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii], constraints_activators['path'][ii])
+        path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
+                              constraints_activators['path'][ii])
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     for var in quantity_vars.keys():
@@ -74,7 +75,7 @@ def ocp_to_bvp(ocp, **kwargs):
     terminal_bcs_to_aug = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
                            derivative_fn(bc, independent_variable) == 0]
     terminal_bcs_time = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
-                           derivative_fn(bc, independent_variable) != 0]
+                         derivative_fn(bc, independent_variable) != 0]
 
     constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
     constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
@@ -114,9 +115,9 @@ def ocp_to_bvp(ocp, **kwargs):
     if time_bc is not None:
         bc_terminal += [time_bc]
 
-    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
+    dh_du = make_dhdu(hamiltonian, controls, derivative_fn)
     if control_method == 'pmp':
-        control_law = make_control_law(dHdu, controls)
+        control_law = make_control_law(dh_du, controls)
         control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
         dae_states = []
         dae_rates = []
@@ -125,8 +126,8 @@ def ocp_to_bvp(ocp, **kwargs):
         num_dae = 0
     elif control_method == 'icrm':
         dae_states, dae_rates, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates,
-                                                                                   costates_rates, controls, dHdu,
-                                                                                   derivative_fn)
+                                                                               costates_rates, controls, dh_du,
+                                                                               derivative_fn)
         dae_units = controls_units
         controls = []
         control_law = []
@@ -144,7 +145,6 @@ def ocp_to_bvp(ocp, **kwargs):
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
     # breakpoint()
-
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
@@ -179,7 +179,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'hamiltonian': str(hamiltonian),
            'hamiltonian_units': str(hamiltonian_units),
            'num_states': len(states + costates),
-           'dHdu': str(dHdu),
+           'dHdu': str(dh_du),
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in bc_terminal + dae_bc],
            'control_options': control_law,

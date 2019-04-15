@@ -3,6 +3,7 @@ import copy
 
 import numpy as np
 
+
 class LieGroup(np.ndarray):
     """
     This serves as the default superclass on which all Lie groups are constructed from.
@@ -29,7 +30,7 @@ class LieGroup(np.ndarray):
             elif isinstance(args[1], list):
                 for ii in range(len(args[1])):
                     for jj in range(len(args[1])):
-                        obj[ii,jj] = args[1][ii][jj]
+                        obj[ii, jj] = args[1][ii][jj]
         else:
             np.copyto(obj, np.eye(shape))
 

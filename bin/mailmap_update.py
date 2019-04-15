@@ -12,22 +12,28 @@ import codecs
 import sys
 import os
 
-
-if sys.version_info < (3, 6):
-    sys.exit("This script requires Python 3.6 or newer")
-
 from subprocess import run, PIPE
 from distutils.version import LooseVersion
 from collections import defaultdict, OrderedDict
 
+from sympy.utilities.misc import filldedent
+from sympy.utilities.iterables import sift
+
+if sys.version_info < (3, 6):
+    sys.exit("This script requires Python 3.6 or newer")
+
+
 def red(text):
     return "\033[31m%s\033[0m" % text
+
 
 def yellow(text):
     return "\033[33m%s\033[0m" % text
 
+
 def blue(text):
     return "\033[34m%s\033[0m" % text
+
 
 # put sympy on the path
 mailmap_update_path = os.path.abspath(__file__)
@@ -37,8 +43,6 @@ sympy_dir = os.path.join(sympy_top, 'sympy')
 if os.path.isdir(sympy_dir):
     sys.path.insert(0, sympy_top)
 
-from sympy.utilities.misc import filldedent
-from sympy.utilities.iterables import sift
 
 # check git version
 minimal = '1.8.4.2'
@@ -46,10 +50,12 @@ git_ver = run(['git', '--version'], stdout=PIPE, encoding='utf-8').stdout[12:]
 if LooseVersion(git_ver) < LooseVersion(minimal):
     print(yellow("Please use a git version >= %s" % minimal))
 
-def author_name(line):
-    assert line.count("<") == line.count(">") == 1
-    assert line.endswith(">")
-    return line.split("<", 1)[0].strip()
+
+def author_name(line_):
+    assert line_.count("<") == line_.count(">") == 1
+    assert line_.endswith(">")
+    return line_.split("<", 1)[0].strip()
+
 
 sysexit = 0
 print(blue("checking git authors..."))
@@ -84,7 +90,7 @@ dups = near_dups
 # some may have been real dups, so disregard those
 # for which all email addresses were the same
 multi = [k for k in dups if len(dups[k]) > 1 and
-    len(set([i for i, _ in dups[k]])) > 1]
+         len(set([i for i, _ in dups[k]])) > 1]
 if multi:
     # not fatal but make it red
     print()
@@ -127,14 +133,17 @@ file = codecs.open(os.path.realpath(os.path.join(
         "r", "utf-8").read()
 blankline = not file or file.endswith('\n')
 lines = file.splitlines()
-def key(line):
+
+
+def key(line_):
     # return lower case first address on line or
     # raise an error if not an entry
-    if '#' in line:
-        line = line.split('#')[0]
-    L, R = line.count("<"), line.count(">")
-    assert L == R and L in (1, 2)
-    return line.split(">", 1)[0].split("<")[1].lower()
+    if '#' in line_:
+        line_ = line_.split('#')[0]
+    ll, rr = line_.count("<"), line_.count(">")
+    assert ll == rr and ll in (1, 2)
+    return line_.split(">", 1)[0].split("<")[1].lower()
+
 
 who = OrderedDict()
 for i, line in enumerate(lines):
@@ -149,9 +158,9 @@ for k in who:
     # short entries will be ignored. The ORDER MATTERS
     # so don't re-order the lines for a given address.
     # Other tidying up could be done but we won't do that here.
-    def short_entry(line):
-        if line.count('<') == 2:
-            if line.split('>', 1)[1].split('<')[0].strip():
+    def short_entry(line_):
+        if line_.count('<') == 2:
+            if line_.split('>', 1)[1].split('<')[0].strip():
                 return False
         return True
     if len(who[k]) == 1:
