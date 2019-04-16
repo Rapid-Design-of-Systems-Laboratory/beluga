@@ -22,6 +22,3 @@ Base Class Reference
 
 .. autoclass:: BisectionStrategy
     :members:
-
-.. autoclass:: HPA_Variable
-    :members:
