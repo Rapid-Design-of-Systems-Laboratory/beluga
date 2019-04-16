@@ -10,7 +10,6 @@ long_description = '''beluga is a unified direct and indirect trajectory optimiz
 modules = ['beluga.bvpsol',
            'beluga.codegen',
            'beluga.continuation',
-           'beluga.continuation.strategies',
            'beluga.ivpsol',
            'beluga.ivpsol.integrators',
            'beluga.liepack',
