@@ -3,7 +3,7 @@ Computes the necessary conditions of optimality using Bryson & Ho's method
 """
 
 from .optimlib import init_workspace, process_quantities
-from sympy import Symbol
+from sympy import Symbol, sympify
 import itertools as it
 import numpy as np
 import copy
@@ -42,7 +42,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     # Adjoin time as a state
     states += [independent_variable]
-    states_rates += [0]
+    states_rates += [sympify(0)]
     states_units += [independent_variable_units]
 
     if initial_cost != 0:
@@ -50,14 +50,14 @@ def ocp_to_bvp(ocp, **kwargs):
     elif terminal_cost != 0:
         cost_units = terminal_cost_units
     elif path_cost != 0:
-        cost_units = path_cost_units*independent_variable_units
+        cost_units = path_cost_units * independent_variable_units
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
-    for var in quantity_vars.keys():
+    for quantity_var in quantity_vars.keys():
         for ii in range(len(states_rates)):
-            states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+            states_rates[ii] = states_rates[ii].subs(Symbol(quantity_var), quantity_vars[quantity_var])
 
     # Generate the problem data
     # tf_var = sympify('tf')
