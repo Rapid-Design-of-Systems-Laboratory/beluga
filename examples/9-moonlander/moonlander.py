@@ -23,9 +23,6 @@ ocp.constant('v_0', -2.5, 'm/s')
 ocp.constant('h_f', 0, 'm')
 ocp.constant('v_f', 0, 'm/s')
 
-ocp.constant('y_f', 1.8e5, 'm')
-ocp.constant('v_y_f', 0, 'm/s')
-
 ocp.constant('u_lower', -1, 'newton')
 ocp.constant('u_upper', 5, 'newton')
 
@@ -64,11 +61,11 @@ continuation_steps.add_step('bisection') \
 
 continuation_steps.add_step('bisection') \
     .num_cases(20, 'log') \
-    .const('epsilon1', 1e-4)
+    .const('epsilon1', 1e-5)
 
 sol_set = beluga.solve(ocp=ocp,
                        method='indirect',
-                       optim_options={'control_method':'icrm'},
+                       optim_options={'control_method': 'icrm'},
                        bvp_algorithm=bvp_solver,
                        steps=continuation_steps,
                        guess_generator=guess_maker, autoscale=False)
