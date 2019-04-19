@@ -41,9 +41,9 @@ def ocp_to_bvp(ocp, **kwargs):
     path_cost_units = ws['path_cost_units']
 
     # Adjoin time as a state
-    states += [independent_variable]
-    states_rates += [sympify(0)]
-    states_units += [independent_variable_units]
+    # states += [independent_variable]
+    # states_rates += [sympify(0)]
+    # states_units += [independent_variable_units]
 
     if initial_cost != 0:
         cost_units = initial_cost_units
@@ -60,12 +60,12 @@ def ocp_to_bvp(ocp, **kwargs):
             states_rates[ii] = states_rates[ii].subs(Symbol(quantity_var), quantity_vars[quantity_var])
 
     # Generate the problem data
-    # tf_var = sympify('tf')
-    dynamical_parameters = parameters
-    dynamical_parameters_units = parameters_units
+    tf = sympify('_tf')
+    dynamical_parameters = parameters + [tf]
+    dynamical_parameters_units = parameters_units + [independent_variable_units]
     bc_initial = [c for c in constraints['initial']]
     bc_terminal = [c for c in constraints['terminal']]
-
+    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
     path_constraints = []
     path_constraints_units = []
     for ii, c in enumerate(constraints['path']):
@@ -82,12 +82,12 @@ def ocp_to_bvp(ocp, **kwargs):
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'initial_cost': str(initial_cost),
            'initial_cost_units': str(initial_cost_units),
-           'path_cost': str(path_cost * states[-1]),
+           'path_cost': str(path_cost * tf),
            'path_cost_units': str(path_cost_units * independent_variable_units),
            'terminal_cost': str(terminal_cost),
            'terminal_cost_units': str(terminal_cost_units),
            'states': [str(x) for x in it.chain(states)],
-           'states_rates': [str(states[-1] * rate) for rate in states_rates],
+           'states_rates': [str(tf * rate) for rate in states_rates],
            'states_units': [str(x) for x in states_units],
            'quads': [],
            'quads_rates': [],
@@ -118,7 +118,7 @@ def ocp_to_bvp(ocp, **kwargs):
             raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
         # Append time as a state
         sol = copy.deepcopy(sol)
-        sol.y = np.column_stack((sol.y, sol.t[-1]*np.ones((sol.y.shape[0], 1))))
+        sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
         sol.t = sol.t / sol.t[-1]
         return sol
 
@@ -126,8 +126,8 @@ def ocp_to_bvp(ocp, **kwargs):
         if _compute_control is None:
             raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
         sol = copy.deepcopy(sol)
-        sol.t = sol.t*sol.y[:, -1]
-        sol.y = np.delete(sol.y, np.s_[-1:], axis=1)
+        sol.t = sol.t*sol.dynamical_parameters[-1]
+        sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1])
         return sol
 
     return out, guess_map, guess_map_inverse
