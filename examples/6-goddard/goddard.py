@@ -47,43 +47,43 @@ d_c = 0.5 * v_c * m_0 / g_0
 thrust_max = t_c * g_0 * m_0
 
 # Define constants
-ocp.constant('g_0', g_0, 'm/s^2')  # Gravity at surface
+ocp.constant('g_0', g_0, '1')  # Gravity at surface
 
 ocp.constant('t_c', t_c, '1')      # Constant for computing max thrust
-ocp.constant('h_c', h_c, 'm')      # Scale height
-ocp.constant('v_c', v_c, 'm/s')    # Scale height
-ocp.constant('m_c', m_c, 'kg')     # Terminal mass fraction
+ocp.constant('h_c', h_c, '1')      # Constant for height
+ocp.constant('v_c', v_c, '1')      # Constant for velocity
+ocp.constant('m_c', m_c, '1')      # Terminal mass fraction
 
 ocp.constant('c', c, '1')          # Thrust to fuel ratio
-ocp.constant('d_c', d_c, '1/s')      # Drag scaling
-ocp.constant('thrust_max', thrust_max, 'kg*m/s**2')  # Max thrust
+ocp.constant('d_c', d_c, '1')      # Drag scaling
+ocp.constant('thrust_max', thrust_max, '1')  # Max thrust
 
 # Define constants for BCs
-ocp.constant('h_0', h_0, 'm')
-ocp.constant('v_0', v_0, 'm/s')
-ocp.constant('m_0', m_0, 'kg')
+ocp.constant('h_0', h_0, '1')
+ocp.constant('v_0', v_0, '1')
+ocp.constant('m_0', m_0, '1')
 
-ocp.constant('v_f', v_0, 'm/s')
-ocp.constant('m_f', tar_m_f, 'kg')
+ocp.constant('v_f', v_0, '1')
+ocp.constant('m_f', tar_m_f, '1')
 
 # Define smoothing constant
-ocp.constant('eps', 0.01, 'm/s')
+ocp.constant('eps', 0.01, '1')
 
 # Define costs
-ocp.terminal_cost('-h', 'm')
-ocp.path_cost('-eps*cos(u)', 'm/s')
+ocp.terminal_cost('-h', '1')
+ocp.path_cost('-eps*cos(u)', '1')
 
 # Define constraints
 ocp.constraints() \
-    .initial('h - h_0', 'm') \
-    .initial('v - v_0', 'm/s') \
-    .initial('m - m_0', 'kg') \
+    .initial('h - h_0', '1') \
+    .initial('v - v_0', '1') \
+    .initial('m - m_0', '1') \
     \
-    .terminal('v - v_f', 'm/s') \
-    .terminal('m - m_f', 'kg')
+    .terminal('v - v_f', '1') \
+    .terminal('m - m_f', '1')
 
 
-ocp.scale(m='h', s=1, kg='m', rad=1, nd=1)
+ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp', algorithm='armijo', num_arcs=4)
 
@@ -102,12 +102,12 @@ continuation_steps.add_step() \
     .const('v_f', 0)
 
 continuation_steps.add_step() \
-    .num_cases(10, spacing='log') \
-    .const('eps', 0.001)
+    .num_cases(3, spacing='log') \
+    .const('m_f', tar_m_f)
 
 continuation_steps.add_step() \
     .num_cases(10, spacing='log') \
-    .const('m_f', tar_m_f)
+    .const('eps', 0.000002)
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
 
@@ -117,34 +117,35 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=True,
+    autoscale=False,
     save='goddard.beluga',
 )
 
+# Plot Results
 sol = sol_set[-1][-1]
 
-plt.figure()
+plt.figure(1)
 plt.plot(sol.t, sol.y[:, 0])
 plt.xlabel('Time [s]')
 plt.ylabel('Altitude [nd]')
 plt.title('Altitude Profile')
 plt.grid('on')
 
-plt.figure()
+plt.figure(2)
 plt.plot(sol.t, sol.y[:, 1])
 plt.xlabel('Time [s]')
 plt.ylabel('Velocity [nd]')
 plt.title('Velocity Profile')
 plt.grid('on')
 
-plt.figure()
+plt.figure(3)
 plt.plot(sol.t, sol.y[:, 2])
 plt.xlabel('Time [s]')
 plt.ylabel('Mass [nd]')
 plt.title('Mass Profile')
 plt.grid('on')
 
-plt.figure()
+plt.figure(4)
 plt.plot(sol.t, thrust_max*(np.sin(sol.u[:, 0]) + 1)/2, label='Thrust')
 plt.plot(sol.t, 1 * d_c * sol.y[:, 1]**2 * np.exp(-h_c * (sol.y[:, 0] - h_0) / h_0), label='Drag')
 plt.xlabel('Time [s]')
@@ -153,3 +154,4 @@ plt.title('Forces')
 plt.grid('on')
 plt.legend()
 plt.show()
+
