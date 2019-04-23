@@ -5,7 +5,7 @@ Base functions shared by all optimization methods.
 
 from beluga.utils import sympify
 import sympy
-from sympy import Symbol
+from sympy import Symbol, zoo
 import functools as ft
 import re
 
@@ -203,6 +203,8 @@ def make_control_dae(states, costates, states_rates, costates_rates, controls, d
     dgdU = sympy.Matrix([[derivative_fn(g_i, u_i) for u_i in U] for g_i in g])
 
     udot = dgdU.LUsolve(-dgdX*xdot)  # dgdU * udot + dgdX * xdot = 0
+    if zoo in udot.atoms():
+        raise NotImplementedError('Complex infinity in ICRM control law. Potential bang-bang solution.')
 
     dae_states = U
     dae_equations = list(udot)
