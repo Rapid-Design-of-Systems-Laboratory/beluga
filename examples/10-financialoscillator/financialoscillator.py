@@ -60,7 +60,7 @@ ocp_direct.constraints().path('u', 'rad', lower=-2, upper=2, activator=None)
 ocp_direct.constraints().terminal('t - 1', 'nd')
 ocp_direct.constraints().terminal('tau - 1', 'nd')
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=60)
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator(
@@ -96,8 +96,8 @@ sol_set_direct = beluga.solve(
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-    .num_cases(40, 'log') \
-    .const('epsilon1', 1e-4)
+    .num_cases(60, 'log') \
+    .const('epsilon1', 1e-6)
 
 sol_set_indirect = beluga.solve(
     ocp=ocp_indirect,
