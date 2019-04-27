@@ -5,6 +5,7 @@ from beluga.utils import sympify
 import itertools as it
 import logging
 import numpy as np
+import sympy
 # from scipy.optimize import minimize
 
 
@@ -36,6 +37,7 @@ def ocp_to_bvp(ocp, **kwargs):
     constraints_lower = ws['constraints_lower']
     constraints_upper = ws['constraints_upper']
     constraints_activators = ws['constraints_activators']
+    constraints_method = ws['constraints_method']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -64,9 +66,28 @@ def ocp_to_bvp(ocp, **kwargs):
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
     for ii, c in enumerate(constraints['path']):
-        path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
-                              constraints_activators['path'][ii])
+        if constraints_method['path'] is None:
+            raise NotImplementedError
 
+        if constraints_method['path'][ii].lower() == 'utm':
+            path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
+                                  constraints_activators['path'][ii])
+        elif constraints_method['path'][ii].lower() == 'epstrig':
+            path_cost += epstrig_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
+                                  constraints_activators['path'][ii])
+            upper = constraints_upper['path'][ii]
+            lower = constraints_lower['path'][ii]
+            subber = dict(zip([constraints['path'][ii]], [(upper - lower)/2*sympy.sin(constraints['path'][ii]) + (upper+lower)/2]))
+            for ii in range(len(states_rates)):
+                states_rates[ii] = states_rates[ii].subs(subber, simultaneous=True)
+        else:
+            raise NotImplementedError('Unknown path constraint method \"' + str(constraints_method['path'][ii]) + '\"')
+            # breakpoint()
+    # path_cost
+    # -epsilon1 * cos(u) + (5 * t + x1 - 5) ** 2
+    # states_rates
+    # [T * x2, -B * T ** 2 * x2 - T * x1 + 2 * T * sin(u), 1]
+    # breakpoint()
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
     for var in quantity_vars.keys():
         for ii in range(len(states_rates)):

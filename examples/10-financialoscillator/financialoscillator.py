@@ -21,7 +21,7 @@ ocp_direct.independent('tau', 'nd')
 
 # Define equations of motion
 ocp_indirect.state('x1', 'T*x2', 'nd')
-ocp_indirect.state('x2', '-T*x1 + T*2*sin(u) - T**2*B*x2', 'nd')
+ocp_indirect.state('x2', '-T*x1 + T*u - T**2*B*x2', 'nd') # 2*sin(u)
 ocp_indirect.state('t', '1', 'nd')
 ocp_direct.state('x1', 'T*x2', 'nd')
 ocp_direct.state('x2', '-T*x1 + T*u - T**2*B*x2', 'nd')
@@ -44,19 +44,20 @@ ocp_direct.constant('x2_0', 5, 'nd')
 ocp_direct.constant('epsilon1', 10, 'nd')
 
 # Define costs
-ocp_indirect.path_cost('(x1 + 5*t - 5)**2 - epsilon1*cos(u)', 'nd')
+ocp_indirect.path_cost('(x1 + 5*t - 5)**2', 'nd')
 ocp_direct.path_cost('abs(x1 + 5*t - 5)', 'nd')
 
 # Define constraints
 ocp_indirect.constraints().initial('x1 - x1_0', 'nd')
 ocp_indirect.constraints().initial('x2 - x2_0', 'nd')
 ocp_indirect.constraints().initial('t', 'nd')
+ocp_indirect.constraints().path('u', 'rad', lower=-2, upper=2, activator='epsilon1', method='epstrig')
 ocp_indirect.constraints().terminal('t - 1', 'nd')
 ocp_indirect.constraints().terminal('tau - 1', 'nd')
 ocp_direct.constraints().initial('x1 - x1_0', 'nd')
 ocp_direct.constraints().initial('x2 - x2_0', 'nd')
 ocp_direct.constraints().initial('t', 'nd')
-ocp_direct.constraints().path('u', 'rad', lower=-2, upper=2, activator=None)
+ocp_direct.constraints().path('u', 'rad', lower=-2, upper=2, activator=None, method=None)
 ocp_direct.constraints().terminal('t - 1', 'nd')
 ocp_direct.constraints().terminal('tau - 1', 'nd')
 
@@ -96,7 +97,7 @@ sol_set_direct = beluga.solve(
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-    .num_cases(60, 'log') \
+    .num_cases(80, 'log') \
     .const('epsilon1', 1e-6)
 
 sol_set_indirect = beluga.solve(

@@ -56,6 +56,9 @@ def init_workspace(ocp):
     workspace['constraints_activators'] = {c_type: [sympify(c_obj['activator']) for c_obj in c_list]
                                            for c_type, c_list in constraints.items() if c_type == 'path'}
 
+    workspace['constraints_method'] = {c_type: [c_obj['method'] for c_obj in c_list]
+                                           for c_type, c_list in constraints.items() if c_type == 'path'}
+
     if 'initial' not in workspace['constraints'].keys():
         workspace['constraints']['initial'] = []
         workspace['constraints_units']['initial'] = []
@@ -373,6 +376,21 @@ def total_derivative(expr, var, dependent_vars=None):
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
     out = sum(d1 * d2 for d1, d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
     return out
+
+
+def epstrig_path(constraint, lower, upper, activator):
+    r"""
+    Creates an interior penalty-type term to enforce path constraints.
+
+    :param constraint: The path constraint.
+    :param lower: Lower bounds on the path constraint.
+    :param upper: Upper bounds on the path constraint.
+    :param activator: Activation term used in the path constraint.
+    :return: Term to augment a Hamiltonian with.
+    """
+    if lower is None or upper is None:
+        raise NotImplementedError('Lower and upper bounds on epsilon-trig-style path constraints MUST be defined.')
+    return -activator*(sympy.cos(constraint))
 
 
 def utm_path(constraint, lower, upper, activator):
