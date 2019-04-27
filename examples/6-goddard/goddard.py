@@ -19,7 +19,6 @@ ocp.independent('t', 's')
 # Define quantities used in the problem
 ocp.quantity('drag', '1 * d_c * v**2 * exp(-h_c * (h - h_0) / h_0)')
 ocp.quantity('g', 'g_0 * (h_0 / h)**2')
-ocp.quantity('thrust', 'thrust_max * (sin(u) + 1) / 2')
 
 # Define equations of motion
 ocp.state('h', 'v', 'm') \
@@ -27,7 +26,7 @@ ocp.state('h', 'v', 'm') \
    .state('m', '-thrust/c', 'kg')
 
 # Define controls
-ocp.control('u', '1')
+ocp.control('thrust', '1')
 
 # Define constants' numerical values
 g_0 = 1.0
@@ -71,14 +70,14 @@ ocp.constant('eps', 0.01, '1')
 
 # Define costs
 ocp.terminal_cost('-h', '1')
-ocp.path_cost('-eps*cos(u)', '1')
+# ocp.path_cost('-eps*cos(u)', '1')
 
 # Define constraints
 ocp.constraints() \
     .initial('h - h_0', '1') \
     .initial('v - v_0', '1') \
     .initial('m - m_0', '1') \
-    \
+    .path('thrust', '1', lower=0, upper=thrust_max, activator='eps', method='epstrig') \
     .terminal('v - v_f', '1') \
     .terminal('m - m_f', '1')
 
@@ -107,7 +106,7 @@ continuation_steps.add_step() \
 
 continuation_steps.add_step() \
     .num_cases(10, spacing='log') \
-    .const('eps', 0.000002)
+    .const('eps', 0.000005)
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
 

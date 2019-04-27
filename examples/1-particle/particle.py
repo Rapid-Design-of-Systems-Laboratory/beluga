@@ -35,7 +35,7 @@ ocp.path_cost('u**2', 'rad**2')
 ocp.constraints() \
     .initial('x - x_0', 'm')    \
     .initial('v - v_0', 'm/s') \
-    .path('x', 'm', lower=-0.1, upper='x_max', activator='epsilon1') \
+    .path('x', 'm', lower=-0.1, upper='x_max', activator='epsilon1', method='utm') \
     .terminal('x - x_f', 'm')   \
     .terminal('v - v_f', 'm')   \
     .terminal('t - 1', 's')

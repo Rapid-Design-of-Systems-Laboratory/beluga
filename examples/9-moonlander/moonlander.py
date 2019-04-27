@@ -33,7 +33,7 @@ ocp.path_cost('u', 'newton')
 ocp.constraints() \
     .initial('h - h_0', 'm')    \
     .initial('v - v_0', 'm/2') \
-    .path('u', 'm', lower='u_lower', upper='u_upper', activator='epsilon1') \
+    .path('u', 'm', lower='u_lower', upper='u_upper', activator='epsilon1', method='utm') \
     .terminal('h - h_f', 'm')  \
     .terminal('v - v_f', 'm/s')
 
