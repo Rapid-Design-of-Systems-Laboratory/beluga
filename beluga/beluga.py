@@ -184,11 +184,11 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
 
                 if sol.converged:
                     solution_set[step_idx].append(copy.deepcopy(sol))
-
                     elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(),
                                                                                    elapsed_time))
                 else:
+                    solution_set[step_idx].append(copy.deepcopy(sol))
                     elapsed_time = time.time() - time0
                     logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
 
