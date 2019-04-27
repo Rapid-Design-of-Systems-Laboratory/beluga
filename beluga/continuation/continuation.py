@@ -244,7 +244,7 @@ class BisectionStrategy(ManualStrategy):
 
         # If first step didn't converge, the process fails
         if self.ctr == 1:
-            logging.error('Initial guess should converge for automated continuation to work!!')
+            logging.error('Initial guess should converge for automated continuation to work.')
             raise RuntimeError('Initial guess does not converge.')
             # return self.gammas[-1]
 
@@ -305,6 +305,18 @@ class ProductStrategy(ContinuationStrategy):
 
     def __str__(self):
         return str(self.vars)
+
+    def next(self, ignore_last_step=False):
+        if self.ctr == 0 or self.gammas[-1].converged:
+            # Reset division counter
+            self.division_ctr = 0
+            return super(ProductStrategy, self).next(False)
+
+        if self.ctr == 1:
+            logging.error('Initial guess should converge for automated continuation to work.')
+            raise RuntimeError('Initial guess does not converge.')
+
+        return super(ProductStrategy, self).next(True)
 
     def reset(self):
         """Resets the internal step counter to zero"""
