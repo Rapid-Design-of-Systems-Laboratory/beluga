@@ -39,6 +39,7 @@ def ocp_to_bvp(ocp, **kwargs):
     constraints_lower = ws['constraints_lower']
     constraints_upper = ws['constraints_upper']
     constraints_activators = ws['constraints_activators']
+    constraints_method = ws['constraints_method']
     quantities = ws['quantities']
     quantities_values = ws['quantities_values']
     parameters = ws['parameters']
@@ -59,6 +60,24 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
+    for ii, c in enumerate(constraints['path']):
+        if constraints_method['path'] is None:
+            raise NotImplementedError
+
+        if constraints_method['path'][ii].lower() == 'utm':
+            path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
+                                  constraints_activators['path'][ii])
+        elif constraints_method['path'][ii].lower() == 'epstrig':
+            path_cost += epstrig_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
+                                  constraints_activators['path'][ii])
+            upper = constraints_upper['path'][ii]
+            lower = constraints_lower['path'][ii]
+            subber = dict(zip([constraints['path'][ii]], [(upper - lower)/2*sympy.sin(constraints['path'][ii]) + (upper+lower)/2]))
+            for ii in range(len(states_rates)):
+                states_rates[ii] = states_rates[ii].subs(subber, simultaneous=True)
+        else:
+            raise NotImplementedError('Unknown path constraint method \"' + str(constraints_method['path'][ii]) + '\"')
+
     dynamical_parameters = []
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
@@ -77,9 +96,6 @@ def ocp_to_bvp(ocp, **kwargs):
 
     hamiltonian, hamiltonian_units, costates, costates_units = make_hamiltonian(states, states_rates, states_units,
                                                                                 path_cost, cost_units)
-    for ii, c in enumerate(constraints['path']):
-        hamiltonian += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
-                                constraints_activators['path'][ii])
 
     setx = dict(zip(states + costates, J1tau_Q.vertical.base_coords))
     vector_names = [Symbol('D_' + str(x)) for x in states]
