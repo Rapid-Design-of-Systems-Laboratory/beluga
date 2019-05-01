@@ -5,7 +5,7 @@ import sys
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
-long_description = '''beluga is a unified direct and indirect trajectory optimization library.'''
+long_description = '''beluga is a general purpose indirect trajectory optimization framework.'''
 
 modules = ['beluga.bvpsol',
            'beluga.bvpsol._bvp',
@@ -37,7 +37,7 @@ with open(os.path.join(dir_setup, 'beluga', 'release.py')) as f:
 
 setup(name="beluga",
       version=__version__,
-      description="An indirect trajectory optimization framework.",
+      description="A general purpose indirect trajectory optimization framework.",
       long_description=long_description,
       author="Michael Sparapany",
       author_email='msparapa@purdue.edu',

@@ -33,6 +33,15 @@ beluga
 Installation
 ============
 
++------------+
+| PyPI_      |
++============+
+| |pypi|     |
++------------+
+
+.. |pypi| image:: https://badge.fury.io/py/beluga.svg
+    :target: https://pypi.org/project/beluga/
+
 Installation using pip
 ----------------------
 
