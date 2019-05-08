@@ -75,3 +75,5 @@ Base Class Reference
 .. autofunction:: total_derivative
 
 .. autofunction:: utm_path
+
+.. autofunction:: rash_mult
