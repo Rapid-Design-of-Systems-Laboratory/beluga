@@ -74,8 +74,26 @@ def init_workspace(ocp):
         workspace['constraints_upper']['path'] = []
 
     workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
-    workspace['quantities'] = [sympify(q['name']) for q in ocp.quantities()]
-    workspace['quantities_values'] = [sympify(q['value']) for q in ocp.quantities()]
+    workspace['switches'] = []
+    workspace['switches_values'] = []
+    workspace['switches_conditions'] = []
+    workspace['switches_tolerance'] = []
+    for q in ocp.switches():
+        workspace['switches'] += [sympify(q['name'])]
+        if isinstance(q['value'], list):
+            workspace['switches_values'] += [[sympify(v) for v in q['value']]]
+            main_condition = []
+            for cond in q['conditions']:
+                if not isinstance(cond, list):
+                    raise ValueError('Conditions for switches must be a list of lists')
+                main_condition += [[sympify(v) for v in cond]]
+            workspace['switches_conditions'] += [main_condition]
+            workspace['switches_tolerance'] += [sympify(q['tolerance'])]
+        else:
+            workspace['switches_values'] += [sympify(q['value'])]
+            workspace['switches_conditions'] += [None]
+            workspace['switches_tolerance'] += [None]
+
     workspace['initial_cost'] = sympify(ocp.get_cost('initial')['expr'])
     workspace['initial_cost_units'] = sympify(ocp.get_cost('initial')['unit'])
     workspace['terminal_cost'] = sympify(ocp.get_cost('terminal')['expr'])
@@ -406,3 +424,6 @@ def utm_path(constraint, lower, upper, activator):
     if lower is None or upper is None:
         raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
     return activator*(1/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower))) - 1)
+
+def rash_mult(condition, tolerance):
+    return 1/(1+sympy.exp(condition/tolerance))

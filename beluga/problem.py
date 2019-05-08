@@ -119,7 +119,8 @@ class OCP(object):
     constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
     constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
                                        property_args=('name', 'function', 'unit'))
-    quantity = partialmethod(set_property, property_name='quantities', property_args=('name', 'value'))
+    switch = partialmethod(set_property, property_name='switches', property_args=('name', 'value', 'conditions', 'tolerance'))
+    quantity = partialmethod(set_property, property_name='switches', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
     parameter = partialmethod(set_property, property_name='parameters', property_args=('name', 'unit'))
     custom_function = partialmethod(set_property, property_name='custom_functions',
@@ -129,7 +130,8 @@ class OCP(object):
     controls = partialmethod(get_property, property_name='controls')
     constants = partialmethod(get_property, property_name='constants')
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
-    quantities = partialmethod(get_property, property_name='quantities')
+    switches = partialmethod(get_property, property_name='switches')
+    quantities = switches
     symmetries = partialmethod(get_property, property_name='symmetries')
     parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
