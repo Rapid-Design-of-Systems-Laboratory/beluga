@@ -38,8 +38,10 @@ def ocp_to_bvp(ocp, **kwargs):
     constraints_upper = ws['constraints_upper']
     constraints_activators = ws['constraints_activators']
     constraints_method = ws['constraints_method']
-    quantities = ws['quantities']
-    quantities_values = ws['quantities_values']
+    switches = ws['switches']
+    switches_values = ws['switches_values']
+    switches_conditions = ws['switches_conditions']
+    switches_tolerance = ws['switches_tolerance']
     parameters = ws['parameters']
     parameters_units = ws['parameters_units']
     initial_cost = ws['initial_cost']
@@ -50,11 +52,6 @@ def ocp_to_bvp(ocp, **kwargs):
     path_cost_units = ws['path_cost_units']
 
     control_method = kwargs.get('control_method', 'pmp').lower()
-
-    # Adjoin time as a state
-    # states += [independent_variable]
-    # states_rates += [sympify('0')]
-    # states_units += [independent_variable_units]
 
     if initial_cost != 0:
         cost_units = initial_cost_units
@@ -82,16 +79,27 @@ def ocp_to_bvp(ocp, **kwargs):
                 states_rates[ii] = states_rates[ii].subs(subber, simultaneous=True)
         else:
             raise NotImplementedError('Unknown path constraint method \"' + str(constraints_method['path'][ii]) + '\"')
-            # breakpoint()
-    # path_cost
-    # -epsilon1 * cos(u) + (5 * t + x1 - 5) ** 2
-    # states_rates
-    # [T * x2, -B * T ** 2 * x2 - T * x1 + 2 * T * sin(u), 1]
-    # breakpoint()
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
-    for var in quantity_vars.keys():
+
+    """
+    Deal with staging and switches
+    """
+    for ii in range(len(switches)):
+        if isinstance(switches_values[ii], list):
+            true_value = 0
+            for jj in range(len(switches_values[ii])):
+                temp_value = switches_values[ii][jj]
+                for kk in range(len(switches_conditions[ii][jj])):
+                    temp_value *= rash_mult(switches_conditions[ii][jj][kk], switches_tolerance[ii])
+                true_value += temp_value
+            switches_values[ii] = true_value
+
+    """
+    Make substitutions with the switches
+    """
+    switch_vars, switch_list, derivative_fn = process_quantities(switches, switches_values)
+    for var in switch_vars.keys():
         for ii in range(len(states_rates)):
-            states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+            states_rates[ii] = states_rates[ii].subs(Symbol(var), switch_vars[var])
 
     terminal_bcs_to_aug = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
                            derivative_fn(bc, independent_variable) == 0]
