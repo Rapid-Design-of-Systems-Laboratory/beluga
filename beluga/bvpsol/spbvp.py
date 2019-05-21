@@ -68,7 +68,8 @@ class spbvp(BaseAlgorithm):
         sol = Trajectory(solinit)
         sol.t = opt['x']
         sol.y = opt['y'].T
-        sol.q = opt['q'].T
+        if opt['q'] is not None:
+            sol.q = opt['q'].T
         sol.dual = np.zeros_like(sol.y)
         if opt['p'] is not None:
             sol.dynamical_parameters = opt['p'][:ndyn]
