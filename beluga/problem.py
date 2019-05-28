@@ -345,7 +345,12 @@ class GuessGenerator(object):
     def auto(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
         """Generates initial guess by forward/reverse integration."""
 
-        tspan = np.array([0, self.time_integrate])
+        if self.direction == 'forward':
+            tspan = np.array([0, self.time_integrate])
+        elif self.direction == 'reverse':
+            tspan = np.array([0, -self.time_integrate])
+        else:
+            tspan = np.array([0, self.time_integrate])
 
         x0 = np.array(self.start)
         q0 = np.array(self.quad_guess)
@@ -372,9 +377,6 @@ class GuessGenerator(object):
 
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
-
-        if self.direction == 'reverse':
-            tspan = [0, -self.time_integrate]
 
         time0 = time.time()
         prop = Propagator()
@@ -421,7 +423,13 @@ class GuessGenerator(object):
         self.use_control_guess = use_control_guess
 
     def ones(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
-        tspan = np.array([0, self.time_integrate])
+
+        if self.direction == 'forward':
+            tspan = np.array([0, self.time_integrate])
+        elif self.direction == 'reverse':
+            tspan = np.array([0, -self.time_integrate])
+        else:
+            tspan = np.array([0, self.time_integrate])
 
         x0 = np.array(self.start)
         q0 = np.array(self.quad_guess)
@@ -448,9 +456,6 @@ class GuessGenerator(object):
 
         logging.debug('Generating initial guess by propagating: ')
         logging.debug(str(x0))
-
-        if self.direction == 'reverse':
-            tspan = [0, -self.time_integrate]
 
         time0 = time.time()
         solinit.t = np.linspace(tspan[0], tspan[-1], num=4)
