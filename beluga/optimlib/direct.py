@@ -29,8 +29,8 @@ def ocp_to_bvp(ocp, **kwargs):
     constraints_units = ws['constraints_units']
     constraints_lower = ws['constraints_lower']
     constraints_upper = ws['constraints_upper']
-    quantities = ws['quantities']
-    quantities_values = ws['quantities_values']
+    switches = ws['switches']
+    switches_values = ws['switches_values']
     parameters = ws['parameters']
     parameters_units = ws['parameters_units']
     initial_cost = ws['initial_cost']
@@ -54,7 +54,7 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
+    quantity_vars, quantity_list, derivative_fn = process_quantities(switches, switches_values)
     for quantity_var in quantity_vars.keys():
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(quantity_var), quantity_vars[quantity_var])

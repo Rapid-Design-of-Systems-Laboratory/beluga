@@ -40,8 +40,10 @@ def ocp_to_bvp(ocp, **kwargs):
     constraints_upper = ws['constraints_upper']
     constraints_activators = ws['constraints_activators']
     constraints_method = ws['constraints_method']
-    quantities = ws['quantities']
-    quantities_values = ws['quantities_values']
+    switches = ws['switches']
+    switches_values = ws['switches_values']
+    switches_conditions = ws['switches_conditions']
+    switches_tolerance = ws['switches_tolerance']
     parameters = ws['parameters']
     parameters_units = ws['parameters_units']
     initial_cost = ws['initial_cost']
@@ -80,10 +82,26 @@ def ocp_to_bvp(ocp, **kwargs):
 
     dynamical_parameters = []
 
-    quantity_vars, quantity_list, derivative_fn = process_quantities(quantities, quantities_values)
-    for var in quantity_vars.keys():
+    """
+        Deal with staging and switches
+        """
+    for ii in range(len(switches)):
+        if isinstance(switches_values[ii], list):
+            true_value = 0
+            for jj in range(len(switches_values[ii])):
+                temp_value = switches_values[ii][jj]
+                for kk in range(len(switches_conditions[ii][jj])):
+                    temp_value *= rash_mult(switches_conditions[ii][jj][kk], switches_tolerance[ii])
+                true_value += temp_value
+            switches_values[ii] = true_value
+
+    """
+    Make substitutions with the switches
+    """
+    switch_vars, switch_list, derivative_fn = process_quantities(switches, switches_values)
+    for var in switch_vars.keys():
         for ii in range(len(states_rates)):
-            states_rates[ii] = states_rates[ii].subs(Symbol(var), quantity_vars[var])
+            states_rates[ii] = states_rates[ii].subs(Symbol(var), switch_vars[var])
 
     Q = Manifold(states, 'State_Space')
     E = Manifold(states + controls, 'Input_Space')

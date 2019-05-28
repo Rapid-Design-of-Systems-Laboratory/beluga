@@ -258,6 +258,7 @@ def make_functions(problem_data):
     :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
      ineq_constraints) - Several functions to define a BVP.
     """
+    logging.info('Compiling BVP functions...')
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
     quads = problem_data['quads']
@@ -298,7 +299,6 @@ def make_functions(problem_data):
     else:
         ineq_constraints = make_constraint_func(path_constraints, states, dynamical_parameters, constants, controls)
 
-    logging.info('Making derivative function and bc function')
     deriv_list = problem_data['states_rates']
 
     deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, control_fn)
@@ -307,7 +307,7 @@ def make_functions(problem_data):
     bc_terminal = problem_data['bc_terminal']
     bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
                            constants, controls, control_fn)
-
+    logging.info('BVP functions compiled.')
     return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints
 
 

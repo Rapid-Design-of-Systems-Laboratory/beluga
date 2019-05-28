@@ -5,6 +5,9 @@ import sys
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
+with open('requirements_dev.txt') as f:
+    requirements_dev = f.read().splitlines()
+
 long_description = '''beluga is a general purpose indirect trajectory optimization framework.'''
 
 modules = ['beluga.bvpsol',
@@ -54,6 +57,7 @@ setup(name="beluga",
           ]
       },
       install_requires=requirements,
+      extras_require={'dev': requirements_dev},
       include_package_data=True,
       classifiers=(
         'Intended Audience :: Developers',
