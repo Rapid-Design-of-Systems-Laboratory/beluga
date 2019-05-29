@@ -77,7 +77,7 @@ continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .const('rho0', 1.2) \
 
-beluga.add_logger(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,

@@ -38,7 +38,8 @@ def init_logging(logging_level, display_level, logfile):
             return result
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging_level)
+    logger._displayLevel = display_level
 
     fh = logging.FileHandler(logfile)
     fh.setLevel(logging_level)

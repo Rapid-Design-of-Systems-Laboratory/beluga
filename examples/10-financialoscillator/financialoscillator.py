@@ -84,7 +84,7 @@ guess_maker_indirect = beluga.guess_generator(
 )
 
 
-beluga.add_logger(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set_direct = beluga.solve(
     ocp=ocp_direct,

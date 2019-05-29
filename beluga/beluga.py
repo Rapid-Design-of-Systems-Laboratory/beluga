@@ -3,6 +3,7 @@ import warnings
 import copy
 
 from beluga.codegen.codegen import *
+from tqdm import tqdm
 
 import numpy as np
 
@@ -20,7 +21,7 @@ import pathos
 config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
 
-def add_logger(logging_level=logging.INFO, display_level=logging.INFO):
+def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
     """
     Attaches a logger to beluga's main process.
 
@@ -76,7 +77,7 @@ def ocp2bvp(ocp, **kwargs):
     method = kwargs.get('method', 'indirect').lower()
     optim_options = kwargs.get('optim_options', dict())
 
-    logging.info("Computing the necessary conditions of optimality")
+    logging.debug("Computing the necessary conditions of optimality")
     if method == 'indirect' or method == 'traditional' or method == 'brysonho':
         bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
     elif method == 'diffyg':
@@ -145,25 +146,33 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
             elapsed_time = time.time() - time0
-            logging.info('Problem converged in %0.4f seconds\n' % elapsed_time)
+            logging.debug('Problem converged in %0.4f seconds\n' % elapsed_time)
         else:
             elapsed_time = time.time() - time0
-            logging.info('Problem failed to converge!\n')
+            logging.debug('Problem failed to converge!\n')
     else:
         for step_idx, step in enumerate(steps):
-            logging.info('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+            logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
             step.init(sol_guess)
+            try:
+                log_level = logging.getLogger()._displayLevel
+            except:
+                log_level = logging.getLogger().getEffectiveLevel()
 
-            for sol_guess in step:  # Continuation step returns 'aux' dictionary
-                # gamma_guess = step.get_closest_gamma(aux)
-                # sol_guess.aux = aux
+            L = len(step)
+            continuation_progress = tqdm(step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
+                                  ascii=True, unit='trajectories')
+            for sol_guess in continuation_progress:
+                continuation_progress.total = len(step)
+                if L != continuation_progress.total:
+                    L = continuation_progress.total
+                    continuation_progress.refresh()
 
-                logging.info('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                logging.debug('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
                 time0 = time.time()
-
                 if autoscale:
                     s.compute_scaling(sol_guess)
                     sol_guess = s.scale(sol_guess)
@@ -181,16 +190,15 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 required when chaining continuation strategies together. DO NOT DELETE!
                 """
                 sol_guess = copy.deepcopy(sol)
-
                 if sol.converged:
                     solution_set[step_idx].append(copy.deepcopy(sol))
                     elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(),
+                    logging.debug('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(),
                                                                                    elapsed_time))
                 else:
                     solution_set[step_idx].append(copy.deepcopy(sol))
                     elapsed_time = time.time() - time0
-                    logging.info('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+                    logging.debug('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
 
     return solution_set
 
