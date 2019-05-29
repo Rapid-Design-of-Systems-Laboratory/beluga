@@ -258,7 +258,7 @@ def make_functions(problem_data):
     :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
      ineq_constraints) - Several functions to define a BVP.
     """
-    logging.info('Compiling BVP functions...')
+    logging.debug('Compiling BVP functions...')
     unc_control_law = problem_data['control_options']
     states = problem_data['states']
     quads = problem_data['quads']
@@ -274,7 +274,7 @@ def make_functions(problem_data):
     path_constraints = problem_data['path_constraints']
 
     ham = problem_data['hamiltonian']
-    logging.info('Making unconstrained control')
+    logging.debug('Making unconstrained control')
     if problem_data['method'] is not 'direct':
         control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters,
                                                      constants, controls, ham)
@@ -307,7 +307,7 @@ def make_functions(problem_data):
     bc_terminal = problem_data['bc_terminal']
     bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
                            constants, controls, control_fn)
-    logging.info('BVP functions compiled.')
+    logging.debug('BVP functions compiled.')
     return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints
 
 
@@ -326,7 +326,7 @@ def make_jit_fn(args, fn_expr):
         jit_fn = numba.jit(nopython=True)(f)
         jit_fn(*np.ones(len(args), dtype=float))
     except:
-        logging.info(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
+        logging.warning(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
         jit_fn = f
 
     return jit_fn

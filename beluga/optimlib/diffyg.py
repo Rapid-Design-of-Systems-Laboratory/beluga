@@ -212,7 +212,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     subalgebras = []
     if len(constants_of_motion) > 0:
-        logging.info('Checking commutation relations... ')
+        logging.debug('Checking commutation relations... ')
         num_consts = len(constants_of_motion)
 
         commutation_relations = [[None for _ in range(num_consts)] for _ in range(num_consts)]
@@ -228,7 +228,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
         subalgebras = [gs for ii, gs in enumerate(subalgebras) if gs not in subalgebras[ii+1:]]
         reducible_subalgebras = [len(gs) == 1 for gs in subalgebras]
-        logging.info('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras))
+        logging.debug('Done. ' + str(sum(reducible_subalgebras)) + ' of ' + str(len(subalgebras))
                      + ' subalgebras are double reducible.')
 
     for subalgebra in subalgebras:
@@ -240,7 +240,7 @@ def ocp_to_bvp(ocp, **kwargs):
         # G = LieGroup(list(subalgebra), G_name)
         # h = constant_2_value[constants_of_motion[0]]
 
-        logging.info('Attempting reduction of ' + str(subalgebra) + '...')
+        logging.debug('Attempting reduction of ' + str(subalgebra) + '...')
         # M_r, phi = restrictor(M, dict([(x, constant_2_value[x]) for x in list(subalgebra)]))
         free_vars = set()
         const = dict([(x, constant_2_value[x]) for x in list(subalgebra)])
@@ -301,7 +301,7 @@ def ocp_to_bvp(ocp, **kwargs):
         for ii in range(len(bc_terminal)):
             bc_terminal[ii] = bc_terminal[ii].subs(constants_sol, simultaneous=True)
 
-        logging.info('Done.')
+        logging.debug('Done.')
 
     # Generate the problem data
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
@@ -538,9 +538,9 @@ def make_control_law(dhdu, controls):
     """
     var_list = list(controls)
     from sympy import __version__
-    logging.info("Attempting using SymPy (v" + __version__ + ")...")
+    logging.debug("Attempting using SymPy (v" + __version__ + ")...")
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
-    logging.info('Control found')
+    logging.debug('Control found')
     control_options = ctrl_sol
     return control_options
 

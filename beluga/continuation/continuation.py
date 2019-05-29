@@ -78,6 +78,9 @@ class ContinuationStrategy(abc.ABC):
     def __next__(self):
         return self.next()
 
+    def __len__(self):
+        return self.num_cases()
+
     def add_gamma(self, gamma):
         self.gammas.append(copy.deepcopy(gamma))
 
@@ -277,7 +280,7 @@ class BisectionStrategy(ManualStrategy):
         # Increment total number of steps
         self._num_cases = self._num_cases + self.num_divisions-1
 
-        logging.info('Increasing number of cases to '+str(self._num_cases)+'\n')
+        logging.debug('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
         return super(BisectionStrategy, self).next(True)
 

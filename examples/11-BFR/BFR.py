@@ -101,7 +101,7 @@ guess_maker = beluga.guess_generator('auto',
                 use_control_guess=False
 )
 
-beluga.add_logger(logging_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(ocp=ocp,
              method='indirect',
