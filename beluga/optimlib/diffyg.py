@@ -62,6 +62,9 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
+    """
+    Deal with path constraints
+    """
     for ii, c in enumerate(constraints['path']):
         if constraints_method['path'] is None:
             raise NotImplementedError
@@ -83,8 +86,8 @@ def ocp_to_bvp(ocp, **kwargs):
     dynamical_parameters = []
 
     """
-        Deal with staging and switches
-        """
+    Deal with staging and switches
+    """
     for ii in range(len(switches)):
         if isinstance(switches_values[ii], list):
             true_value = 0
@@ -100,6 +103,9 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     switch_vars, switch_list, derivative_fn = process_quantities(switches, switches_values)
     for var in switch_vars.keys():
+        initial_cost = initial_cost.subs(Symbol(var), switch_vars[var])
+        path_cost = path_cost.subs(Symbol(var), switch_vars[var])
+        terminal_cost = terminal_cost.subs(Symbol(var), switch_vars[var])
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(var), switch_vars[var])
 

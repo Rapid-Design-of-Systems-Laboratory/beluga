@@ -56,6 +56,9 @@ def ocp_to_bvp(ocp, **kwargs):
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(switches, switches_values)
     for quantity_var in quantity_vars.keys():
+        initial_cost = initial_cost.subs(Symbol(quantity_var), quantity_vars[quantity_var])
+        path_cost = path_cost.subs(Symbol(quantity_var), quantity_vars[quantity_var])
+        terminal_cost = terminal_cost.subs(Symbol(quantity_var), quantity_vars[quantity_var])
         for ii in range(len(states_rates)):
             states_rates[ii] = states_rates[ii].subs(Symbol(quantity_var), quantity_vars[quantity_var])
 
