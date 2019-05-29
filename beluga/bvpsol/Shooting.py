@@ -570,9 +570,9 @@ class Shooting(BaseAlgorithm):
 
         if err < self.tolerance and converged:
             if n_iter == -1:
-                logging.info("Converged in an unknown number of iterations.")
+                logging.debug("Converged in an unknown number of iterations.")
             else:
-                logging.info("Converged in " + str(n_iter) + " iterations.")
+                logging.debug("Converged in " + str(n_iter) + " iterations.")
 
         # Stitch the arcs together to make a single trajectory, removing the boundary points inbetween each arc
         t_out = gamma_set[0].t
