@@ -164,7 +164,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
 
             L = len(step)
             continuation_progress = tqdm(step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
-                                  ascii=True, unit='trajectories')
+                                  ascii=True, unit='trajectory')
             for sol_guess in continuation_progress:
                 continuation_progress.total = len(step)
                 if L != continuation_progress.total:
