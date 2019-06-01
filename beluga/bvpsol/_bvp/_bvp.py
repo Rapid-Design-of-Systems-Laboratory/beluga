@@ -32,7 +32,7 @@ def estimate_fun_jac(fun, x, y, p, f0=None):
 
     dtype = y.dtype
 
-    df_dy = np.empty((n, n, m), dtype=dtype)
+    df_dy = np.empty((f0.shape[0], n, m), dtype=dtype)
     h = EPS**0.5 * (1 + np.abs(y))
     for i in range(n):
         y_new = y.copy()
@@ -45,7 +45,7 @@ def estimate_fun_jac(fun, x, y, p, f0=None):
     if k == 0:
         df_dp = None
     else:
-        df_dp = np.empty((n, k, m), dtype=dtype)
+        df_dp = np.empty((f0.shape[0], k, m), dtype=dtype)
         h = EPS**0.5 * (1 + np.abs(p))
         for i in range(k):
             p_new = p.copy()
@@ -57,7 +57,18 @@ def estimate_fun_jac(fun, x, y, p, f0=None):
     return df_dy, df_dp
 
 
-def estimate_bc_jac(bc, ya, yb, p, bc0=None):
+def reconstruct(fun, quad, x, y, q, p):
+    h = np.diff(x)
+    f = fun(x, y, p)
+    fq = quad(x, y, p)
+    y_middle = (0.5 * (y[:, 1:] + y[:, :-1]) - 0.125 * h * (f[:, 1:] - f[:, :-1]))
+    fq_middle = quad(x[:-1] + 0.5 * h, y_middle, p)
+    int_fq = np.cumsum(1 / 6 * h * (fq[:, 1:] + 4 * fq_middle + fq[:, :-1]), axis=1)
+    q = np.hstack((np.array([q.T[0]]).T, (int_fq.T + q.T[0]).T))
+    return q
+
+
+def estimate_bc_jac(fun, quad, bc, x, y, q, ya, qa, yb, qb, p, bc0=None):
     """Estimate derivatives of boundary conditions with forward differences.
 
     Returns
@@ -73,50 +84,91 @@ def estimate_bc_jac(bc, ya, yb, p, bc0=None):
         d bc_i / d p_j. If `p` is empty, None is returned.
     """
     n = ya.shape[0]
+    nq = qa.shape[0]
     k = p.shape[0]
 
     if bc0 is None:
-        bc0 = bc(ya, yb, p)
+        bc0 = bc(ya, qa, yb, qb, p)
+
+    if nq > 0:
+        q = reconstruct(fun, quad, x, y, q, p)
 
     dtype = ya.dtype
 
-    dbc_dya = np.empty((n, n + k), dtype=dtype)
+    dbc_dya = np.empty((n, n + nq + k), dtype=dtype)
     h = EPS**0.5 * (1 + np.abs(ya))
     for i in range(n):
         ya_new = ya.copy()
         ya_new[i] += h[i]
         hi = ya_new[i] - ya[i]
-        bc_new = bc(ya_new, yb, p)
+        if nq > 0:
+            _q = reconstruct(fun, quad, x, np.hstack((np.array([ya_new]).T, y[:,1:])), q, p)
+            qa_new = _q[:,0]
+            qb_new = _q[:,-1]
+        else:
+            qa_new = qa
+            qb_new = qb
+
+        bc_new = bc(ya_new, qa_new, yb, qb_new, p)
         dbc_dya[i] = (bc_new - bc0) / hi
     dbc_dya = dbc_dya.T
 
+    dbc_dqa = np.empty((nq, n + nq + k), dtype=dtype)
+    if nq > 0:
+        h = EPS ** 0.5 * (1 + np.abs(ya))
+        for i in range(n):
+            qa_new = qa.copy()
+            qa_new[i] += h[i]
+            hi = qa_new[i] - qa[i]
+            bc_new = bc(ya, qa_new, yb, qb, p)
+            dbc_dqa[i] = (bc_new - bc0) / hi
+    dbc_dqa = dbc_dqa.T
+
     h = EPS**0.5 * (1 + np.abs(yb))
-    dbc_dyb = np.empty((n, n + k), dtype=dtype)
+    dbc_dyb = np.empty((n, n + nq + k), dtype=dtype)
     for i in range(n):
         yb_new = yb.copy()
         yb_new[i] += h[i]
         hi = yb_new[i] - yb[i]
-        bc_new = bc(ya, yb_new, p)
+        if nq > 0:
+            _q = reconstruct(fun, quad, x, np.hstack((y[:,:-1], np.array([yb_new]).T,)), q, p)
+            qa_new = _q[:,0]
+            qb_new = _q[:,-1]
+        else:
+            qa_new = qa
+            qb_new = qb
+        bc_new = bc(ya, qa_new, yb_new, qb_new, p)
         dbc_dyb[i] = (bc_new - bc0) / hi
     dbc_dyb = dbc_dyb.T
+
+    dbc_dqb = np.empty((nq, n + nq + k), dtype=dtype)
+    if nq > 0:
+        h = EPS ** 0.5 * (1 + np.abs(ya))
+        for i in range(n):
+            qb_new = qb.copy()
+            qb_new[i] += h[i]
+            hi = qb_new[i] - qb[i]
+            bc_new = bc(ya, qa, yb, qb_new, p)
+            dbc_dqb[i] = (bc_new - bc0) / hi
+    dbc_dqb = dbc_dqb.T
 
     if k == 0:
         dbc_dp = None
     else:
         h = EPS**0.5 * (1 + np.abs(p))
-        dbc_dp = np.empty((k, n + k), dtype=dtype)
+        dbc_dp = np.empty((k, n + nq + k), dtype=dtype)
         for i in range(k):
             p_new = p.copy()
             p_new[i] += h[i]
             hi = p_new[i] - p[i]
-            bc_new = bc(ya, yb, p_new)
+            bc_new = bc(ya, qa, yb, qb, p_new)
             dbc_dp[i] = (bc_new - bc0) / hi
         dbc_dp = dbc_dp.T
 
-    return dbc_dya, dbc_dyb, dbc_dp
+    return dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp
 
 
-def compute_jac_indices(n, m, k):
+def compute_jac_indices(n, nq, m, k):
     """Compute indices for the collocation system Jacobian construction.
 
     See `construct_global_jac` for the explanation.
@@ -125,8 +177,8 @@ def compute_jac_indices(n, m, k):
     j_col = (np.tile(np.arange(n), n * (m - 1)) +
              np.repeat(np.arange(m - 1) * n, n**2))
 
-    i_bc = np.repeat(np.arange((m - 1) * n, m * n + k), n)
-    j_bc = np.tile(np.arange(n), n + k)
+    i_bc = np.repeat(np.arange((m - 1) * n, m * n + nq + k), n)
+    j_bc = np.tile(np.arange(n), n + nq + k)
 
     i_p_col = np.repeat(np.arange((m - 1) * n), k)
     j_p_col = np.tile(np.arange(m * n, m * n + k), (m - 1) * n)
@@ -134,10 +186,13 @@ def compute_jac_indices(n, m, k):
     i_p_bc = np.repeat(np.arange((m - 1) * n, m * n + k), k)
     j_p_bc = np.tile(np.arange(m * n, m * n + k), n + k)
 
-    i = np.hstack((i_col, i_col, i_bc, i_bc, i_p_col, i_p_bc))
+    i_q_bc = np.repeat(np.arange((m - 1) * n + k, m * n + nq + k), nq)
+    j_q_bc = np.tile(np.arange(m * n, m * n + nq), n + nq)
+
+    i = np.hstack((i_col, i_col, i_bc, i_bc, i_p_col, i_p_bc, i_q_bc))
     j = np.hstack((j_col, j_col + n,
                    j_bc, j_bc + (m - 1) * n,
-                   j_p_col, j_p_bc))
+                   j_p_col, j_p_bc, j_q_bc))
 
     return i, j
 
@@ -158,8 +213,8 @@ def stacked_matmul(a, b):
         return np.einsum('...ij,...jk->...ik', a, b)
 
 
-def construct_global_jac(n, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp,
-                         df_dp_middle, dbc_dya, dbc_dyb, dbc_dp):
+def construct_global_jac(n, nq, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp, df_dp_middle,
+                         dfq_dy, dfq_dy_middle, dfq_dp, dqf_dp_middle, dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp):
     """Construct the Jacobian of the collocation system.
 
     There are n * m + k functions: m - 1 collocations residuals, each
@@ -233,7 +288,7 @@ def construct_global_jac(n, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp,
 
     Returns
     -------
-    J : csc_matrix, shape (n * m + k, n * m + k)
+    J : csc_matrix, shape (n * m + k + nq, n * m + k + nq)
         Jacobian of the collocation system in a sparse form.
 
     References
@@ -244,6 +299,9 @@ def construct_global_jac(n, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp,
     """
     df_dy = np.transpose(df_dy, (2, 0, 1))
     df_dy_middle = np.transpose(df_dy_middle, (2, 0, 1))
+
+    dfq_dy = np.transpose(dfq_dy, (2, 0, 1))
+    dfq_dy_middle = np.transpose(dfq_dy_middle, (2, 0, 1))
 
     h = h[:, np.newaxis, np.newaxis]
 
@@ -274,11 +332,28 @@ def construct_global_jac(n, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp,
         dPhi_dp = -h/6 * (df_dp[:-1] + df_dp[1:] + 4 * df_dp_middle)
         values = np.hstack((values, dPhi_dp.ravel(), dbc_dp.ravel()))
 
+    if nq > 0:
+        # dbc/dq0 = dbc/dqa + dbc/dqb
+        # breakpoint()
+        # TODO: This aint right
+        values = np.hstack((values, (dbc_dqa + dbc_dqb).flatten()))
+
+    # if nq > 0:
+    #     import matplotlib.pyplot as plt
+    #     z = np.zeros((np.max(i_jac)+1, np.max(j_jac)+1))
+    #
+    #     for k in range(len(i_jac)):
+    #         z[i_jac[k], j_jac[k]] = values[k]
+    #
+    #     plt.spy(z)
+    #     plt.show()
+    #     breakpoint()
+    # breakpoint()
     J = coo_matrix((values, (i_jac, j_jac)))
     return csc_matrix(J)
 
 
-def collocation_fun(fun, y, p, x, h):
+def collocation_fun(fun, quad, y, q, p, x, h):
     """Evaluate collocation residuals.
 
     This function lies in the core of the method. The solution is sought
@@ -310,46 +385,58 @@ def collocation_fun(fun, y, p, x, h):
            Number 3, pp. 299-316, 2001.
     """
     f = fun(x, y, p)
+    fq = quad(x, y, p)
     y_middle = (0.5 * (y[:, 1:] + y[:, :-1]) -
                 0.125 * h * (f[:, 1:] - f[:, :-1]))
     f_middle = fun(x[:-1] + 0.5 * h, y_middle, p)
+    fq_middle = quad(x[:-1] + 0.5 * h, y_middle, p)
     col_res = y[:, 1:] - y[:, :-1] - h / 6 * (f[:, :-1] + f[:, 1:] +
                                               4 * f_middle)
 
-    return col_res, y_middle, f, f_middle
+    return col_res, y_middle, f, f_middle, fq, fq_middle
 
 
-def prepare_sys(n, m, k, fun, bc, fun_jac, bc_jac, x, h):
+def prepare_sys(n, nq, m, k, fun, quad, bc, fun_jac, quad_jac, bc_jac, x, h):
     """Create the function and the Jacobian for the collocation system."""
     x_middle = x[:-1] + 0.5 * h
-    i_jac, j_jac = compute_jac_indices(n, m, k)
+    i_jac, j_jac = compute_jac_indices(n, nq, m, k)
 
-    def col_fun(y, p):
-        return collocation_fun(fun, y, p, x, h)
+    def col_fun(y, q, p):
+        return collocation_fun(fun, quad, y, q, p, x, h)
 
-    def sys_jac(y, p, y_middle, f, f_middle, bc0):
+    def sys_jac(y, q, p, y_middle, f, f_middle, fq, fq_middle, bc0):
         if fun_jac is None:
             df_dy, df_dp = estimate_fun_jac(fun, x, y, p, f)
-            df_dy_middle, df_dp_middle = estimate_fun_jac(
-                fun, x_middle, y_middle, p, f_middle)
+            df_dy_middle, df_dp_middle = estimate_fun_jac(fun, x_middle, y_middle, p, f_middle)
         else:
             df_dy, df_dp = fun_jac(x, y, p)
             df_dy_middle, df_dp_middle = fun_jac(x_middle, y_middle, p)
 
-        if bc_jac is None:
-            dbc_dya, dbc_dyb, dbc_dp = estimate_bc_jac(bc, y[:, 0], y[:, -1],
-                                                       p, bc0)
+        if quad_jac is None:
+            dfq_dy, dfq_dp = estimate_fun_jac(quad, x, y, p)
+            dfq_dy_middle, dfq_dp_middle = estimate_fun_jac(quad, x_middle, y_middle, p)
         else:
-            dbc_dya, dbc_dyb, dbc_dp = bc_jac(y[:, 0], y[:, -1], p)
+            dfq_dy, dfq_dp = quad_jac(x, y, p)
+            dfq_dy_middle, dfq_dp_middle = quad_jac(x_middle, y_middle, p)
 
-        return construct_global_jac(n, m, k, i_jac, j_jac, h, df_dy,
-                                    df_dy_middle, df_dp, df_dp_middle, dbc_dya,
-                                    dbc_dyb, dbc_dp)
+        if bc_jac is None:
+            if nq > 0:
+                dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp = estimate_bc_jac(fun, quad, bc, x, y, q, y[:, 0], q[:, 0], y[:, -1], q[:, -1], p, bc0)
+            else:
+                dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp = estimate_bc_jac(fun, quad, bc, x, y, q, y[:, 0], np.empty((0,)), y[:, -1], np.empty((0,)), p, bc0)
+        else:
+            if nq > 0:
+                dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp = bc_jac(y[:, 0], q[:, 0], y[:, -1], q[:, -1], np.empty((0,)), p)
+            else:
+                dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp = bc_jac(y[:, 0], np.empty((0,)), y[:, -1], np.empty((0,)), p)
+
+        return construct_global_jac(n, nq, m, k, i_jac, j_jac, h, df_dy, df_dy_middle, df_dp, df_dp_middle,
+                                    dfq_dy, dfq_dy_middle, dfq_dp, dfq_dp_middle, dbc_dya, dbc_dqa, dbc_dyb, dbc_dqb, dbc_dp)
 
     return col_fun, sys_jac
 
 
-def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
+def solve_newton(fun, quad, n, nq, m, h, col_fun, bc, jac, x, y, q, p, B, bvp_tol):
     """Solve the nonlinear collocation system by a Newton method.
 
     This is a simple Newton method with a backtracking line search. As
@@ -444,8 +531,11 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
     # tau ** n_trial.
     n_trial = 4
 
-    col_res, y_middle, f, f_middle = col_fun(y, p)
-    bc_res = bc(y[:, 0], y[:, -1], p)
+    col_res, y_middle, f, f_middle, fq, fq_middle = col_fun(y, q, p)
+    if nq > 0:
+        bc_res = bc(y[:, 0], q[:, 0], y[:, -1], q[:, -1], p)
+    else:
+        bc_res = bc(y[:, 0], np.empty((0,)), y[:, -1], np.empty((0,)), p)
     res = np.hstack((col_res.ravel(order='F'), bc_res))
 
     step = None
@@ -461,7 +551,7 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
     recompute_jac = True
     for iteration in range(max_iter):
         if recompute_jac:
-            J = jac(y, p, y_middle, f, f_middle, bc_res)
+            J = jac(y, q, p, y_middle, f, f_middle, fq, fq_middle, bc_res)
             njev += 1
             try:
                 LU = splu(J)
@@ -473,17 +563,25 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
             cost = np.dot(step, step)
 
         y_step = step[:m * n].reshape((n, m), order='F')
-        p_step = step[m * n:]
+        q_step = step[m * n: m * n + nq]
+        p_step = step[m * n + nq:]
 
         alpha = 1
         for trial in range(n_trial + 1):
             y_new = y - alpha * y_step
+            if nq > 0:
+                q_new = reconstruct(fun, quad, x, y, q - alpha * q_step, p)
+            else:
+                q_new = np.empty((0,x.shape[0]))
+
             if B is not None:
                 y_new[:, 0] = np.dot(B, y_new[:, 0])
             p_new = p - alpha * p_step
 
-            col_res, y_middle, f, f_middle = col_fun(y_new, p_new)
-            bc_res = bc(y_new[:, 0], y_new[:, -1], p_new)
+            col_res, y_middle, f, f_middle, fq, fq_middle = col_fun(y_new, q_new, p_new)
+
+            bc_res = bc(y_new[:, 0], q_new[:, 0], y_new[:, -1], q_new[:, -1], p)
+
             res = np.hstack((col_res.ravel(order='F'), bc_res))
 
             step_new = LU.solve(res)
@@ -495,6 +593,7 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
                 alpha *= tau
 
         y = y_new
+        q = q_new
         p = p_new
 
         if njev == max_njev:
@@ -513,7 +612,7 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
         else:
             recompute_jac = True
 
-    return y, p, singular
+    return y, q, p, singular
 
 
 def print_iteration_header():
@@ -648,53 +747,64 @@ def modify_mesh(x, insert_1, insert_2):
     )))
 
 
-def wrap_functions(fun, bc, fun_jac, bc_jac, k, a, S, D, dtype):
+def wrap_functions(fun, quad, bc, fun_jac, quad_jac, bc_jac, k, a, S, D, dtype):
     """Wrap functions for unified usage in the solver."""
 
     fun_jac_p, fun_jac_wrapped, bc_jac_wrapped = None, None, None
-
-    # if fun_jac is None:
-    #     fun_jac_wrapped = None
-    #
-    # if bc_jac is None:
-    #     bc_jac_wrapped = None
+    quad_jac_p, quad_jac_wrapped = None, None
 
     if k == 0:
         def fun_p(x, y, _):
             return np.asarray(fun(x, y), dtype)
 
-        def bc_wrapped(ya, yb, _):
-            return np.asarray(bc(ya, yb), dtype)
+        def quad_p(x, y, _):
+            return np.asarray(quad(x, y), dtype)
+
+        def bc_wrapped(ya, qa, yb, qb, _):
+            return np.asarray(bc(ya, qa, yb, qb), dtype)
 
         if fun_jac is not None:
             def fun_jac_p(x, y, _):
                 return np.asarray(fun_jac(x, y), dtype), None
 
+        if quad_jac is not None:
+            def quad_jac_p(x, y, _):
+                return np.asarray(quad_jac(x, y), dtype), None
+
         if bc_jac is not None:
-            def bc_jac_wrapped(ya, yb, _):
-                dbc_dya, dbc_dyb = bc_jac(ya, yb)
+            def bc_jac_wrapped(ya, qa, yb, qb, _):
+                dbc_dya, dbc_dyb = bc_jac(ya, qa, yb, qb)
                 return (np.asarray(dbc_dya, dtype),
                         np.asarray(dbc_dyb, dtype), None)
     else:
         def fun_p(x, y, p):
             return np.asarray(fun(x, y, p), dtype)
 
-        def bc_wrapped(x, y, p):
-            return np.asarray(bc(x, y, p), dtype)
+        def quad_p(x, y, p):
+            return np.asarray(quad(x, y, p), dtype)
+
+        def bc_wrapped(ya, qa, yb, qb, p):
+            return np.asarray(bc(ya, qa, yb, qb, p), dtype)
 
         if fun_jac is not None:
             def fun_jac_p(x, y, p):
                 df_dy, df_dp = fun_jac(x, y, p)
                 return np.asarray(df_dy, dtype), np.asarray(df_dp, dtype)
 
+        if quad_jac is not None:
+            def quad_jac_p(x, y, p):
+                dfq_dy, dfq_dp = quad_jac(x, y, p)
+                return np.asarray(dfq_dy, dtype), np.asarray(dfq_dp, dtype)
+
         if bc_jac is not None:
-            def bc_jac_wrapped(ya, yb, p):
-                dbc_dya, dbc_dyb, dbc_dp = bc_jac(ya, yb, p)
+            def bc_jac_wrapped(ya, qa, yb, qb, p):
+                dbc_dya, dbc_dyb, dbc_dp = bc_jac(ya, qa, yb, qb, p)
                 return (np.asarray(dbc_dya, dtype), np.asarray(dbc_dyb, dtype),
                         np.asarray(dbc_dp, dtype))
 
     if S is None:
         fun_wrapped = fun_p
+        quad_wrapped = quad_p
     else:
         def fun_wrapped(x, y, p):
             f = fun_p(x, y, p)
@@ -705,9 +815,19 @@ def wrap_functions(fun, bc, fun_jac, bc_jac, k, a, S, D, dtype):
                 f += np.dot(S, y) / (x - a)
             return f
 
+        def quad_wrapped(x, y, p):
+            fq = quad_p(x, y, p)
+            if x[0] == a:
+                fq[:, 0] = np.dot(D, fq[:, 0])
+                fq[:, 1:] += np.dot(S, y[:, 1:]) / (x[1:] - a)
+            else:
+                fq += np.dot(S, y) / (x - a)
+            return fq
+
     if fun_jac is not None:
         if S is None:
             fun_jac_wrapped = fun_jac_p
+            quad_jac_wrapped = quad_jac_p
         else:
             Sr = S[:, :, np.newaxis]
 
@@ -721,10 +841,20 @@ def wrap_functions(fun, bc, fun_jac, bc_jac, k, a, S, D, dtype):
 
                 return df_dy, df_dp
 
-    return fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped
+            def quad_jac_wrapped(x, y, p):
+                dfq_dy, dfq_dp = quad_jac_p(x, y, p)
+                if x[0] == a:
+                    dfq_dy[:, :, 0] = np.dot(D, dfq_dy[:, :, 0])
+                    dfq_dy[:, :, 1:] += Sr / (x[1:] - a)
+                else:
+                    dfq_dy += Sr / (x - a)
+
+                return dfq_dy, dfq_dp
+
+    return fun_wrapped, quad_wrapped, bc_wrapped, fun_jac_wrapped, quad_jac_wrapped, bc_jac_wrapped
 
 
-def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
+def solve_bvp(fun, quad, bc, x, y, q, p=None, S=None, fun_jac=None, quad_jac=None, bc_jac=None,
               tol=1e-3, max_nodes=1000, verbose=0):
     """Solve a boundary-value problem for a system of ODEs.
 
@@ -1028,6 +1158,15 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         raise ValueError("`y` is expected to have {} columns, but actually "
                          "has {}.".format(x.shape[0], y.shape[1]))
 
+    q = np.asarray(q)
+    q = q.astype(dtype, copy=False)
+
+    if q.shape[0] != 0 and q.ndim != 2:
+        raise ValueError("`q` must be 2 dimensional.")
+    if q.shape[0] != 0 and q.shape[1] != x.shape[0]:
+        raise ValueError("`q` is expected to have {} columns, but actually "
+                         "has {}.".format(x.shape[0], y.shape[1]))
+
     if p is None:
         p = np.array([])
     else:
@@ -1043,6 +1182,11 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         raise ValueError("`verbose` must be in [0, 1, 2].")
 
     n = y.shape[0]
+    if q.shape[0] != 0:
+        nq = q.shape[0]
+    else:
+        nq = 0
+
     k = p.shape[0]
 
     if S is not None:
@@ -1062,18 +1206,21 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         B = None
         D = None
 
-    fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
-        fun, bc, fun_jac, bc_jac, k, a, S, D, dtype)
+    fun_wrapped, quad_wrapped, bc_wrapped, fun_jac_wrapped, quad_jac_wrapped, bc_jac_wrapped = wrap_functions(
+        fun, quad, bc, fun_jac, quad_jac, bc_jac, k, a, S, D, dtype)
 
     f = fun_wrapped(x, y, p)
     if f.shape != y.shape:
         raise ValueError("`fun` return is expected to have shape {}, "
                          "but actually has {}.".format(y.shape, f.shape))
+    if nq > 0:
+        bc_res = bc_wrapped(y[:, 0], q[:, 0], y[:, -1], q[:, -1], p)
+    else:
+        bc_res = bc_wrapped(y[:, 0], np.empty((0,)), y[:, -1], np.empty((0,)), p)
 
-    bc_res = bc_wrapped(y[:, 0], y[:, -1], p)
-    if bc_res.shape != (n + k,):
+    if bc_res.shape != (n + nq + k,):
         raise ValueError("`bc` return is expected to have shape {}, "
-                         "but actually has {}.".format((n + k,), bc_res.shape))
+                         "but actually has {}.".format((n + nq + k,), bc_res.shape))
 
     # status = 0
     iteration = 0
@@ -1083,19 +1230,16 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
     while True:
         m = x.shape[0]
 
-        col_fun, jac_sys = prepare_sys(n, m, k, fun_wrapped, bc_wrapped,
-                                       fun_jac_wrapped, bc_jac_wrapped, x, h)
-        y, p, singular = solve_newton(n, m, h, col_fun, bc_wrapped, jac_sys,
-                                      y, p, B, tol)
+        col_fun, jac_sys = prepare_sys(n, nq, m, k, fun_wrapped, quad_wrapped, bc_wrapped,
+                                       fun_jac_wrapped, quad_jac_wrapped, bc_jac_wrapped, x, h)
+        y, q, p, singular = solve_newton(fun_wrapped, quad_wrapped, n, nq, m, h, col_fun, bc_wrapped, jac_sys, x, y, q, p, B, tol)
         iteration += 1
 
-        col_res, y_middle, f, f_middle = collocation_fun(fun_wrapped, y,
-                                                         p, x, h)
+        col_res, y_middle, f, f_middle, fq, fq_middle = collocation_fun(fun_wrapped, quad_wrapped, y, q, p, x, h)
         # This relation is not trivial, but can be verified.
         r_middle = 1.5 * col_res / h
         sol = create_spline(y, f, x, h)
-        rms_res = estimate_rms_residuals(fun_wrapped, sol, x, h, p,
-                                         r_middle, f_middle)
+        rms_res = estimate_rms_residuals(fun_wrapped, sol, x, h, p, r_middle, f_middle)
         max_rms_res = np.max(rms_res)
 
         if singular:
@@ -1142,6 +1286,6 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
     if p.size == 0:
         p = None
 
-    return BVPResult(sol=sol, p=p, x=x, y=y, yp=f, rms_residuals=rms_res,
+    return BVPResult(sol=sol, p=p, x=x, y=y, q=q, yp=f, rms_residuals=rms_res,
                      niter=iteration, status=status,
                      message=TERMINATION_MESSAGES[status], success=status == 0)
