@@ -284,7 +284,7 @@ class Shooting(BaseAlgorithm):
     def make_stmode(odefn, n_odes, step_size=1e-6):
         xh = np.eye(n_odes)*step_size
 
-        def _stmode_fd(t, _xx, p, aux):
+        def _stmode_fd(_xx, u, p, aux):
             """ Finite difference version of state transition matrix """
             n_params = p.size
             ff = np.empty((n_odes, n_odes+n_params))
@@ -292,15 +292,15 @@ class Shooting(BaseAlgorithm):
             xx = _xx[0:n_odes]  # Just states
 
             # Compute Jacobian matrix, F using finite difference
-            fx = np.squeeze([odefn(t, xx, p, aux)])
+            fx = np.squeeze([odefn(xx, u, p, aux)])
 
             for i in range(n_odes):
-                fxh = odefn(t, xx + xh[i, :], p, aux)
+                fxh = odefn(xx + xh[i, :], u, p, aux)
                 ff[:, i] = (fxh-fx) / step_size
 
             for i in range(n_params):
                 p[i] += step_size
-                fxh = odefn(t, xx, p, aux)
+                fxh = odefn(xx, u, p, aux)
                 ff[:, i+n_odes] = (fxh - fx) / step_size
                 p[i] -= step_size
 
@@ -410,8 +410,8 @@ class Shooting(BaseAlgorithm):
             g = _gamma_maker(deriv_func, quad_func, g, _params, sol, prop, pool, n_quads)
             return self.bc_func_ms(g, _params, _nonparams, aux)
 
-        def _constraint_function_wrapper(xx):
-            return _constraint_function(xx, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,
+        def _constraint_function_wrapper(X):
+            return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,
                                         sol.const)
 
         # Set up the jacobian of the constraint function
@@ -459,14 +459,13 @@ class Shooting(BaseAlgorithm):
                                      self.quadrature_function, self.bc_func_ms, step_size=1e-6)
             return jac
 
-        # def _jacobian_function_wrapper(X):
-        #     return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
+        if n_quads == 0:
+            def _jacobian_function_wrapper(X):
+                return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
+        else:
+            def _jacobian_function_wrapper(X):
+                return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
 
-        # TODO: Sean if your reading this, the following numerical jacobian function seems to work well.
-        # It causes an error on one of the test cases, however, and I haven't had time to debug specifically what
-        # is happening here. This is slower, but is more stable.
-        def _jacobian_function_wrapper(xx):
-            return approx_jacobian(xx, _constraint_function_wrapper, 1e-6)
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 
         # Set up the cost function. This should just return 0 unless the specified method cannot handle constraints
