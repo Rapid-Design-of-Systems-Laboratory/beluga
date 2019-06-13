@@ -259,8 +259,8 @@ class Shooting(BaseAlgorithm):
             y0, q0, u0 = gamma_set[0](t0)
             tf = gamma_set[-1].t[-1]
             yf, qf, uf = gamma_set[-1](tf)
-            bc1 = np.array(bc_func(y0, q0, u0, yf, qf, uf, param_guess, nondynamical_parameters, *args)).flatten()
-            bc2 = np.array([gamma_set[ii].y[-1] - gamma_set[ii+1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
+            bc1 = np.array([gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
+            bc2 = np.array(bc_func(y0, q0, u0, yf, qf, uf, param_guess, nondynamical_parameters, *args)).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
         return _bc_func
@@ -452,54 +452,58 @@ class Shooting(BaseAlgorithm):
 
             dbc_dya, dbc_dyb, dbc_dp = estimate_bc_jac(bc_wrapped, gamma_set_new[0].y[0], [], gamma_set_new[-1].y[-1],
                                                        [], _params, _nonparams)
+
             values = np.empty((0,))
             i_jac = np.empty((0,), dtype=int)
             j_jac = np.empty((0,), dtype=int)
 
             if n_arcs == 1:
-                jac = dbc_dya + np.dot(dbc_dyb, phi_full_list[-1][-1])
-                i_bc = np.repeat(np.arange(0, n_odes), n_odes)
-                j_bc = np.tile(np.arange(n_odes), n_odes)
+                jac = np.hstack((dbc_dya, np.zeros((n_odes + n_dynparams, n_dynparams)))) +\
+                      np.dot(dbc_dyb, phi_full_list[-1][-1])
+                if dbc_dp is not None:
+                    jac += np.dot(dbc_dp, phi_full_list[-1][-1])
+
+                i_bc = np.repeat(np.arange(0, n_odes + n_dynparams), n_odes + n_dynparams)
+                j_bc = np.tile(np.arange(n_odes + n_dynparams), n_odes + n_dynparams)
                 values = np.hstack((values, jac.ravel()))
                 i_jac = np.hstack((i_jac, i_bc))
                 j_jac = np.hstack((j_jac, j_bc))
             else:
+                for ii in range(n_arcs-1):
+                    jac = np.dot(np.eye(n_odes), phi_full_list[ii][-1])
+                    i_bc = np.repeat(np.arange(n_odes*ii, n_odes*(ii+1)), n_odes + n_dynparams)
+                    j_bc = np.tile(np.arange(n_odes*ii, n_odes*(ii+1) + n_dynparams), n_odes) + n_dynparams
+                    values = np.hstack((values, jac.ravel()))
+                    i_jac = np.hstack((i_jac, i_bc))
+                    j_jac = np.hstack((j_jac, j_bc))
+
+                    jac = -np.eye(n_odes)
+
+                    i_bc = np.repeat(np.arange(n_odes * ii, n_odes * (ii + 1)), n_odes + n_dynparams)
+                    j_bc = np.tile(np.arange(n_odes * ii, n_odes * (ii + 1) + n_dynparams), n_odes) + n_odes
+                    values = np.hstack((values, jac.ravel()))
+                    i_jac = np.hstack((i_jac, i_bc))
+                    j_jac = np.hstack((j_jac, j_bc))
+
                 jac = dbc_dya
-                i_bc = np.repeat(np.arange(0, n_odes), n_odes)
+                i_bc = np.repeat(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
                 j_bc = np.tile(np.arange(n_odes), n_odes)
                 values = np.hstack((values, jac.ravel()))
                 i_jac = np.hstack((i_jac, i_bc))
                 j_jac = np.hstack((j_jac, j_bc))
-                for ii in range(n_arcs-1):
-                    jac = np.dot(np.eye(n_odes), phi_full_list[ii][-1])
 
-                    i_bc = np.repeat(np.arange(n_odes + n_odes*ii, n_odes + n_odes*(ii+1)), n_odes)
-                    j_bc = np.tile(np.arange(n_odes*ii, n_odes*(ii+1)), n_odes)
-                    values = np.hstack((values, jac.ravel()))
-                    i_jac = np.hstack((i_jac, i_bc))
-                    j_jac = np.hstack((j_jac, j_bc))
-
-                    if ii == n_arcs - 2:
-                        jac = np.dot(dbc_dyb, phi_full_list[ii][-1])
-                        i_bc = np.repeat(np.arange(0, n_odes), n_odes)
-                        j_bc = np.tile(np.arange(n_odes + n_odes*ii, n_odes + n_odes*(ii+1)), n_odes)
-                        values = np.hstack((values, jac.ravel()))
-                        i_jac = np.hstack((i_jac, i_bc))
-                        j_jac = np.hstack((j_jac, j_bc))
-
-                    jac = -np.eye(n_odes)
-
-                    i_bc = np.repeat(np.arange(n_odes + n_odes * ii, n_odes + n_odes * (ii + 1)), n_odes)
-                    j_bc = np.tile(np.arange(n_odes + n_odes * ii, n_odes + n_odes * (ii + 1)), n_odes)
-                    values = np.hstack((values, jac.ravel()))
-                    i_jac = np.hstack((i_jac, i_bc))
-                    j_jac = np.hstack((j_jac, j_bc))
+                jac = np.dot(dbc_dyb, phi_full_list[-1][-1])
+                i_bc = np.repeat(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
+                j_bc = np.tile(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
+                values = np.hstack((values, jac.ravel()))
+                i_jac = np.hstack((i_jac, i_bc))
+                j_jac = np.hstack((j_jac, j_bc))
 
             J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
             return J
 
         is_sparse = False
-        if n_quads == 0:
+        if n_quads == 0 and self.algorithm.lower() == 'armijo':
             is_sparse = True
             def _jacobian_function_wrapper(X):
                 return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
@@ -522,6 +526,7 @@ class Shooting(BaseAlgorithm):
 
             opt = minimize(cost, x_init, method=self.algorithm, tol=self.tolerance, constraints=constraint,
                            options={'maxiter': self.max_iterations})
+
             x_init = opt.x
             n_iter = opt.nit
             converged = opt.success and isclose(opt.fun, 0, abs_tol=self.tolerance)
