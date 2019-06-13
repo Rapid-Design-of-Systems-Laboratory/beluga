@@ -3,9 +3,12 @@ import copy
 import logging
 import numpy as np
 from math import isclose
+from ._shooting import *
 
 from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
 from beluga.ivpsol import Propagator, Trajectory, reconstruct
+from scipy.sparse import coo_matrix, csc_matrix
+from scipy.sparse.linalg import splu
 from scipy.optimize.slsqp import approx_jacobian
 from scipy.optimize import minimize, root, fsolve
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
@@ -181,61 +184,43 @@ class Shooting(BaseAlgorithm):
         return gamma_set_new
 
     @staticmethod
-    def _bc_jac_multi(gamma_set, phi_full_list, parameters, nondynamical_params, aux, quad_func, bc_func,
-                      step_size=1e-6):
-        gamma_orig = copy.deepcopy(gamma_set)
-        gamma_set_perturbed = copy.copy(gamma_orig)
+    def _bc_jac(gamma, phi_full, parameters, nondynamical_params, aux, quad_func, bc_func, step_size=1e-6):
+        gamma_orig = copy.deepcopy(gamma)
         h = step_size
-        t0 = gamma_orig[0].t[0]
-        y0, q0, u0 = gamma_orig[0](t0)
-        # tf = gamma_orig[-1].t[-1]
-        # yf, qf, uf = gamma_orig[-1](tf)
+        t0 = gamma_orig.t[0]
+        y0, q0, u0 = gamma_orig(t0)
 
         n_odes = len(y0)
         n_quads = len(q0)
         num_arcs = len(gamma_orig)
-
-        fx = bc_func(gamma_orig, parameters, nondynamical_params, aux)
+        fx = np.array(bc_func(gamma_orig.y[0], [], [], gamma_orig.y[-1], [], [], parameters, nondynamical_params, aux))
         n_bcs = len(fx)
 
-        m_i = np.zeros((n_bcs, n_odes))
-        m = np.zeros((n_bcs, n_odes * num_arcs))
+        m = np.zeros((n_bcs, n_odes))
         q = np.zeros((n_bcs, n_quads))
         p1 = np.zeros((n_bcs, parameters.size))
         p2 = np.zeros((n_bcs, nondynamical_params.size))
 
         dx = np.zeros((n_odes + parameters.size))
-        for ii, phi in zip(range(len(gamma_orig)), phi_full_list):
-            gamma_orig = copy.deepcopy(gamma_set)
-            for jj in range(n_odes):
-                dx[jj] = dx[jj] + h
-                dy = np.dot(phi, dx)
-                perturbed_trajectory = Trajectory(gamma_orig[ii].t, gamma_orig[ii].y + dy)
-                if n_quads > 0:
-                    perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory,
-                                                       gamma_orig[ii].q[0], parameters, aux)
-                    if ii != num_arcs-1:
-                        dq = perturbed_trajectory.q[-1] - gamma_orig[ii].q[-1]
-                        gamma_set_perturbed[-1].q[-1] += dq
-                gamma_set_perturbed[ii] = perturbed_trajectory
+        gamma_orig = copy.deepcopy(gamma)
+        for jj in range(n_odes):
+            dx[jj] = dx[jj] + h
+            dy = np.dot(phi_full, dx)
+            p = Trajectory(gamma_orig.t, gamma_orig.y + dy)
+            f = np.array(bc_func(p.y[0], [], [], p.y[-1], [], [], parameters, nondynamical_params, aux))
+            m[:, jj] = (f-fx)/h
+            dx[jj] = dx[jj] - h
 
-                f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
-                gamma_set_perturbed[ii] = copy.deepcopy(gamma_orig[ii])
-                gamma_set_perturbed[-1] = copy.deepcopy(gamma_orig[-1])
-                m_i[:, jj] = (f-fx)/h
-                dx[jj] = dx[jj] - h
-            m_slice = slice(n_odes * ii, n_odes * (ii + 1))
-            m[:, m_slice] = m_i
-
-        dq = np.zeros(n_quads)
-        for ii in range(n_quads):
-            dq[ii] = dq[ii] + h
-            gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_orig]
-            f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
-            q[:, ii] = (f-fx)/h
-            dq[ii] = dq[ii] - h
+        # dq = np.zeros(n_quads)
+        # for ii in range(n_quads):
+        #     dq[ii] = dq[ii] + h
+        #     gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_orig]
+        #     f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
+        #     q[:, ii] = (f-fx)/h
+        #     dq[ii] = dq[ii] - h
 
         for ii in range(parameters.size):
+            raise NotImplementedError
             gamma_set_perturbed = copy.deepcopy(gamma_orig)
             parameters[ii] = parameters[ii] + h
             jj = ii + n_odes
@@ -455,11 +440,24 @@ class Shooting(BaseAlgorithm):
                 phi_temp = np.reshape(temp[:, n_odes:], (len(gamma_set_new[ii].t), n_odes, n_odes + n_dynparams))
                 phi_full_list.append(np.copy(phi_temp))
 
-            jac = self._bc_jac_multi(gamma_set_new, phi_full_list, _params, _nonparams, sol.const,
-                                     self.quadrature_function, self.bc_func_ms, step_size=1e-6)
-            return jac
+            for ii in range(n_arcs):
+                print('Im on line 444')
+                breakpoint()
+                estimate_bc_jac(self.boundarycondition_function, gamma_set_new[0].y[0], gamma_set_new[-1].y[-1], _params)
+                jac = self._bc_jac(gamma_set_new[0], phi_full_list[0], _params, _nonparams, sol.const, self.quadrature_function, self.boundarycondition_function)
+            values = jac.ravel()
 
+            i_bc = np.repeat(np.arange(0, n_odes), n_odes)
+            j_bc = np.tile(np.arange(n_odes), n_odes)
+
+            i_jac = i_bc
+            j_jac = j_bc
+            J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
+            return J
+
+        is_sparse = False
         if n_quads == 0:
+            is_sparse = True
             def _jacobian_function_wrapper(X):
                 return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
         else:
@@ -508,9 +506,12 @@ class Shooting(BaseAlgorithm):
 
                 err = np.linalg.norm(residual)
                 jac = _jacobian_function_wrapper(x_init)
-
                 try:
-                    dy0 = np.linalg.solve(jac, -residual)
+                    if is_sparse:
+                        LU = splu(jac)
+                        dy0 = LU.solve(-residual)
+                    else:
+                        dy0 = np.linalg.solve(jac, -residual)
                 except np.linalg.LinAlgError as error:
                     logging.warning(error)
                     dy0, *_ = np.linalg.lstsq(jac, -residual)
@@ -535,8 +536,7 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
 
-                logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err,
-                                                                                       np.linalg.cond(jac)))
+                logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac.todense())))
         elif self.algorithm.lower() == 'npnlp':
             from npnlp import minimize as mini
             opt = mini(cost, x_init, method='sqp', tol=self.tolerance,
