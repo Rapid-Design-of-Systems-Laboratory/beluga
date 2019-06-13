@@ -2,7 +2,7 @@ import numpy as np
 
 EPS = np.finfo(float).eps
 
-def estimate_bc_jac(bc, ya, yb, p, bc0=None):
+def estimate_bc_jac(bc, ya, qa, yb, qb, p, ndp, bc0=None):
     """Estimate derivatives of boundary conditions with forward differences.
 
     Returns
@@ -12,7 +12,7 @@ def estimate_bc_jac(bc, ya, yb, p, bc0=None):
         d bc_i / d ya_j.
     dbc_dyb : ndarray, shape (n + k, n)
         Derivatives with respect to yb. An element (i, j) corresponds to
-        d bc_i / d ya_j.
+        d bc_i / d yb_j.
     dbc_dp : ndarray with shape (n + k, k) or None
         Derivatives with respect to p. An element (i, j) corresponds to
         d bc_i / d p_j. If `p` is empty, None is returned.
@@ -59,3 +59,50 @@ def estimate_bc_jac(bc, ya, yb, p, bc0=None):
         dbc_dp = dbc_dp.T
 
     return dbc_dya, dbc_dyb, dbc_dp
+
+
+def wrap_functions(fun, bc, fun_jac, bc_jac, aux, k, dtype):
+    """Wrap functions for unified usage in the solver."""
+
+    fun_jac_p, fun_jac_wrapped, bc_jac_wrapped = None, None, None
+
+    if k == 0:
+        def fun_p(x, y, _):
+            return np.asarray(fun(x, y), dtype)
+
+        def bc_wrapped(ya, yb, _):
+            return np.asarray(bc(ya, [], [], yb, [], [], _, [], aux), dtype)
+
+        if fun_jac is not None:
+            def fun_jac_p(x, y, _):
+                return np.asarray(fun_jac(x, y), dtype), None
+
+        if bc_jac is not None:
+            def bc_jac_wrapped(ya, yb, _):
+                dbc_dya, dbc_dyb = bc_jac(ya, yb)
+                return (np.asarray(dbc_dya, dtype),
+                        np.asarray(dbc_dyb, dtype), None)
+    else:
+        def fun_p(x, y, p):
+            return np.asarray(fun(x, y, p), dtype)
+
+        def bc_wrapped(ya, yb, p):
+            return np.asarray(bc(ya, [], [], yb, [], [], p, [], aux), dtype)
+
+        if fun_jac is not None:
+            def fun_jac_p(x, y, p):
+                df_dy, df_dp = fun_jac(x, y, p)
+                return np.asarray(df_dy, dtype), np.asarray(df_dp, dtype)
+
+        if bc_jac is not None:
+            def bc_jac_wrapped(ya, yb, p):
+                dbc_dya, dbc_dyb, dbc_dp = bc_jac(ya, yb, p)
+                return (np.asarray(dbc_dya, dtype), np.asarray(dbc_dyb, dtype),
+                        np.asarray(dbc_dp, dtype))
+
+    fun_wrapped = fun_p
+
+    if fun_jac is not None:
+        fun_jac_wrapped = fun_jac_p
+
+    return fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped

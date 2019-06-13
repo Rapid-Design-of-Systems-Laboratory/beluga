@@ -307,9 +307,19 @@ class Shooting(BaseAlgorithm):
         sol = copy.deepcopy(solinit)
         sol.t = np.array(sol.t, dtype=np.float64)
         sol.y = np.array(sol.y, dtype=np.float64)
+        if np.issubdtype(sol.y.dtype, np.complexfloating):
+            dtype = complex
+        else:
+            dtype = float
         sol.q = np.array(sol.q, dtype=np.float64)
         sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
+
+        n = sol.y[0].shape[0]
+        k = sol.dynamical_parameters.shape[0]
+
+        fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
+            self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
 
         pool = kwargs.get('pool', None)
 
@@ -440,18 +450,51 @@ class Shooting(BaseAlgorithm):
                 phi_temp = np.reshape(temp[:, n_odes:], (len(gamma_set_new[ii].t), n_odes, n_odes + n_dynparams))
                 phi_full_list.append(np.copy(phi_temp))
 
-            for ii in range(n_arcs):
-                print('Im on line 444')
-                breakpoint()
-                estimate_bc_jac(self.boundarycondition_function, gamma_set_new[0].y[0], gamma_set_new[-1].y[-1], _params)
-                jac = self._bc_jac(gamma_set_new[0], phi_full_list[0], _params, _nonparams, sol.const, self.quadrature_function, self.boundarycondition_function)
-            values = jac.ravel()
+            dbc_dya, dbc_dyb, dbc_dp = estimate_bc_jac(bc_wrapped, gamma_set_new[0].y[0], [], gamma_set_new[-1].y[-1],
+                                                       [], _params, _nonparams)
+            values = np.empty((0,))
+            i_jac = np.empty((0,), dtype=int)
+            j_jac = np.empty((0,), dtype=int)
 
-            i_bc = np.repeat(np.arange(0, n_odes), n_odes)
-            j_bc = np.tile(np.arange(n_odes), n_odes)
+            if n_arcs == 1:
+                jac = dbc_dya + np.dot(dbc_dyb, phi_full_list[-1][-1])
+                i_bc = np.repeat(np.arange(0, n_odes), n_odes)
+                j_bc = np.tile(np.arange(n_odes), n_odes)
+                values = np.hstack((values, jac.ravel()))
+                i_jac = np.hstack((i_jac, i_bc))
+                j_jac = np.hstack((j_jac, j_bc))
+            else:
+                jac = dbc_dya
+                i_bc = np.repeat(np.arange(0, n_odes), n_odes)
+                j_bc = np.tile(np.arange(n_odes), n_odes)
+                values = np.hstack((values, jac.ravel()))
+                i_jac = np.hstack((i_jac, i_bc))
+                j_jac = np.hstack((j_jac, j_bc))
+                for ii in range(n_arcs-1):
+                    jac = np.dot(np.eye(n_odes), phi_full_list[ii][-1])
 
-            i_jac = i_bc
-            j_jac = j_bc
+                    i_bc = np.repeat(np.arange(n_odes + n_odes*ii, n_odes + n_odes*(ii+1)), n_odes)
+                    j_bc = np.tile(np.arange(n_odes*ii, n_odes*(ii+1)), n_odes)
+                    values = np.hstack((values, jac.ravel()))
+                    i_jac = np.hstack((i_jac, i_bc))
+                    j_jac = np.hstack((j_jac, j_bc))
+
+                    if ii == n_arcs - 2:
+                        jac = np.dot(dbc_dyb, phi_full_list[ii][-1])
+                        i_bc = np.repeat(np.arange(0, n_odes), n_odes)
+                        j_bc = np.tile(np.arange(n_odes + n_odes*ii, n_odes + n_odes*(ii+1)), n_odes)
+                        values = np.hstack((values, jac.ravel()))
+                        i_jac = np.hstack((i_jac, i_bc))
+                        j_jac = np.hstack((j_jac, j_bc))
+
+                    jac = -np.eye(n_odes)
+
+                    i_bc = np.repeat(np.arange(n_odes + n_odes * ii, n_odes + n_odes * (ii + 1)), n_odes)
+                    j_bc = np.tile(np.arange(n_odes + n_odes * ii, n_odes + n_odes * (ii + 1)), n_odes)
+                    values = np.hstack((values, jac.ravel()))
+                    i_jac = np.hstack((i_jac, i_bc))
+                    j_jac = np.hstack((j_jac, j_bc))
+
             J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
             return J
 
@@ -530,7 +573,6 @@ class Shooting(BaseAlgorithm):
 
                 x_init += step
                 err = r_try
-                # print('Residual: {}'.format(err))
                 n_iter += 1
 
                 if err <= self.tolerance:
