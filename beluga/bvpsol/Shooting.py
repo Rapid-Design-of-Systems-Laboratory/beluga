@@ -477,7 +477,8 @@ class Shooting(BaseAlgorithm):
                     values = np.hstack((values, jac[:,:n_odes].ravel()))
                     i_jac = np.hstack((i_jac, i_bc))
                     j_jac = np.hstack((j_jac, j_bc))
-                    p_jac = np.vstack((p_jac, jac[:, -n_odes:]))
+                    if n_dynparams > 0:
+                        p_jac = np.vstack((p_jac, jac[:, -n_odes:]))
 
                     jac = -np.eye(n_odes)
                     i_bc = np.repeat(np.arange(n_odes * ii, n_odes * (ii + 1)), n_odes)
@@ -488,26 +489,26 @@ class Shooting(BaseAlgorithm):
 
                 if n_dynparams > 0:
                     values = np.hstack((values, p_jac.ravel()))
-                    print('Im on line 491')
-                    breakpoint()
-
+                    i_p = np.repeat(np.arange(0, n_odes*(n_arcs-1)), n_dynparams)
+                    j_p = np.tile(np.arange(0, n_dynparams), n_odes*(n_arcs-1)) + n_odes * (ii + 1) + 1
+                    i_jac = np.hstack((i_jac, i_p))
+                    j_jac = np.hstack((j_jac, j_p))
 
                 jac = dbc_dya
-                i_bc = np.repeat(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
-                j_bc = np.tile(np.arange(n_odes), n_odes)
+                i_bc = np.repeat(np.arange(0, n_odes + n_dynparams), n_odes) + n_odes*(n_arcs - 1)
+                j_bc = np.tile(np.arange(n_odes), n_odes + n_dynparams)
                 values = np.hstack((values, jac.ravel()))
                 i_jac = np.hstack((i_jac, i_bc))
                 j_jac = np.hstack((j_jac, j_bc))
 
                 jac = np.dot(dbc_dyb, phi_full_list[-1][-1])
-                i_bc = np.repeat(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
-                j_bc = np.tile(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
+                i_bc = np.repeat(np.arange(0, n_odes + n_dynparams), n_odes + n_dynparams) + n_odes * (n_arcs - 1)
+                j_bc = np.tile(np.arange(n_odes + n_dynparams), n_odes + n_dynparams) + n_odes * (n_arcs - 1)
                 values = np.hstack((values, jac.ravel()))
                 i_jac = np.hstack((i_jac, i_bc))
                 j_jac = np.hstack((j_jac, j_bc))
 
             J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
-            # breakpoint()
             return J
 
         is_sparse = False
@@ -590,8 +591,10 @@ class Shooting(BaseAlgorithm):
 
                 if err <= self.tolerance:
                     converged = True
-
-                logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac.todense())))
+                if is_sparse:
+                    logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac.todense())))
+                else:
+                    logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac)))
         elif self.algorithm.lower() == 'npnlp':
             from npnlp import minimize as mini
             opt = mini(cost, x_init, method='sqp', tol=self.tolerance,
