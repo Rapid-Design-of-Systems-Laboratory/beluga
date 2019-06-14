@@ -469,21 +469,28 @@ class Shooting(BaseAlgorithm):
                 i_jac = np.hstack((i_jac, i_bc))
                 j_jac = np.hstack((j_jac, j_bc))
             else:
+                p_jac = np.empty((0,n_dynparams))
                 for ii in range(n_arcs-1):
                     jac = np.dot(np.eye(n_odes), phi_full_list[ii][-1])
-                    i_bc = np.repeat(np.arange(n_odes*ii, n_odes*(ii+1)), n_odes + n_dynparams)
-                    j_bc = np.tile(np.arange(n_odes*ii, n_odes*(ii+1) + n_dynparams), n_odes) + n_dynparams
-                    values = np.hstack((values, jac.ravel()))
+                    i_bc = np.repeat(np.arange(n_odes*ii, n_odes*(ii+1)), n_odes)
+                    j_bc = np.tile(np.arange(0, n_odes), n_odes) + n_odes * ii
+                    values = np.hstack((values, jac[:,:n_odes].ravel()))
                     i_jac = np.hstack((i_jac, i_bc))
                     j_jac = np.hstack((j_jac, j_bc))
+                    p_jac = np.vstack((p_jac, jac[:, -n_odes:]))
 
                     jac = -np.eye(n_odes)
-
-                    i_bc = np.repeat(np.arange(n_odes * ii, n_odes * (ii + 1)), n_odes + n_dynparams)
-                    j_bc = np.tile(np.arange(n_odes * ii, n_odes * (ii + 1) + n_dynparams), n_odes) + n_odes
+                    i_bc = np.repeat(np.arange(n_odes * ii, n_odes * (ii + 1)), n_odes)
+                    j_bc = np.tile(np.arange(0, n_odes), n_odes) + n_odes * (ii + 1)
                     values = np.hstack((values, jac.ravel()))
                     i_jac = np.hstack((i_jac, i_bc))
                     j_jac = np.hstack((j_jac, j_bc))
+
+                if n_dynparams > 0:
+                    values = np.hstack((values, p_jac.ravel()))
+                    print('Im on line 491')
+                    breakpoint()
+
 
                 jac = dbc_dya
                 i_bc = np.repeat(np.arange(0, n_odes), n_odes) + n_odes*(n_arcs - 1)
@@ -500,6 +507,7 @@ class Shooting(BaseAlgorithm):
                 j_jac = np.hstack((j_jac, j_bc))
 
             J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
+            # breakpoint()
             return J
 
         is_sparse = False
