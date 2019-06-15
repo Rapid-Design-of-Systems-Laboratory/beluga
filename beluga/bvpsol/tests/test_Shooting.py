@@ -216,7 +216,7 @@ def test_T9(algorithm, const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1
 
-    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=2)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
@@ -307,7 +307,7 @@ def test_T13(algorithm, const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] + 1, X0[2] + 1
 
-    algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=2)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
