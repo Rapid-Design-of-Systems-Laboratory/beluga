@@ -254,13 +254,13 @@ class Shooting(BaseAlgorithm):
 
     @staticmethod
     def _bc_func_multiple_shooting(bc_func=None):
-        def _bc_func(gamma_set, param_guess, nondynamical_parameters, *args):
+        def _bc_func(gamma_set, param_guess, _, k, *args):
             t0 = gamma_set[0].t[0]
             y0, q0, u0 = gamma_set[0](t0)
             tf = gamma_set[-1].t[-1]
             yf, qf, uf = gamma_set[-1](tf)
             bc1 = np.array([gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
-            bc2 = np.array(bc_func(y0, q0, u0, yf, qf, uf, param_guess, nondynamical_parameters, *args)).flatten()
+            bc2 = np.array(bc_func(y0, q0, u0, yf, qf, uf, param_guess[:k], param_guess[k:], *args)).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
         return _bc_func
@@ -317,6 +317,8 @@ class Shooting(BaseAlgorithm):
 
         n = sol.y[0].shape[0]
         k = sol.dynamical_parameters.shape[0]
+        sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.nondynamical_parameters))
+        sol.nondynamical_parameters = np.empty((0,))
 
         fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
             self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
@@ -403,7 +405,7 @@ class Shooting(BaseAlgorithm):
                 if n_quads > 0:
                     g[ii].q[0] = _q
             g = _gamma_maker(deriv_func, quad_func, g, _params, sol, prop, pool, n_quads)
-            return self.bc_func_ms(g, _params, _nonparams, aux)
+            return self.bc_func_ms(g, _params, _nonparams, k, aux)
 
         def _constraint_function_wrapper(X):
             return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,
@@ -413,6 +415,7 @@ class Shooting(BaseAlgorithm):
         def _jacobian_function(xx, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs):
             g = copy.deepcopy(gamma_set)
             _y, _q, _params, _nonparams = self._unwrap_y0(xx, n_odes, n_quads, n_dynparams, n_arcs)
+            n_nondyn = _nonparams.shape[0]
             for ii in range(n_arcs):
                 g[ii].y[0] = _y[ii]
                 if n_quads > 0:
@@ -453,15 +456,17 @@ class Shooting(BaseAlgorithm):
             dbc_dya, dbc_dyb, dbc_dp = estimate_bc_jac(bc_wrapped, gamma_set_new[0].y[0], [], gamma_set_new[-1].y[-1],
                                                        [], _params, _nonparams)
 
+            if dbc_dp is None:
+                dbc_dp = np.empty((dbc_dya.shape[0],0))
+
             values = np.empty((0,))
             i_jac = np.empty((0,), dtype=int)
             j_jac = np.empty((0,), dtype=int)
 
             if n_arcs == 1:
-                jac = np.hstack((dbc_dya, np.zeros((n_odes + n_dynparams, n_dynparams)))) +\
-                      np.dot(dbc_dyb, phi_full_list[-1][-1])
-                if dbc_dp is not None:
-                    jac += np.dot(dbc_dp, phi_full_list[-1][-1])
+                jac = np.hstack((dbc_dya, dbc_dp))
+                _phi = np.vstack((phi_full_list[-1][-1], np.zeros((n_dynparams, n_odes + n_dynparams))))
+                jac += np.dot(np.hstack((dbc_dyb, dbc_dp)), _phi)
 
                 i_bc = np.repeat(np.arange(0, n_odes + n_dynparams), n_odes + n_dynparams)
                 j_bc = np.tile(np.arange(n_odes + n_dynparams), n_odes + n_dynparams)
@@ -477,8 +482,9 @@ class Shooting(BaseAlgorithm):
                     values = np.hstack((values, jac[:,:n_odes].ravel()))
                     i_jac = np.hstack((i_jac, i_bc))
                     j_jac = np.hstack((j_jac, j_bc))
+
                     if n_dynparams > 0:
-                        p_jac = np.vstack((p_jac, jac[:, -n_odes:]))
+                        p_jac = np.vstack((p_jac, jac[:, n_odes:]))
 
                     jac = -np.eye(n_odes)
                     i_bc = np.repeat(np.arange(n_odes * ii, n_odes * (ii + 1)), n_odes)
@@ -490,7 +496,7 @@ class Shooting(BaseAlgorithm):
                 if n_dynparams > 0:
                     values = np.hstack((values, p_jac.ravel()))
                     i_p = np.repeat(np.arange(0, n_odes*(n_arcs-1)), n_dynparams)
-                    j_p = np.tile(np.arange(0, n_dynparams), n_odes*(n_arcs-1)) + n_odes * (ii + 1) + 1
+                    j_p = np.tile(np.arange(0, n_dynparams), n_odes*(n_arcs-1)) + n_odes * n_arcs
                     i_jac = np.hstack((i_jac, i_p))
                     j_jac = np.hstack((j_jac, j_p))
 
@@ -501,7 +507,9 @@ class Shooting(BaseAlgorithm):
                 i_jac = np.hstack((i_jac, i_bc))
                 j_jac = np.hstack((j_jac, j_bc))
 
-                jac = np.dot(dbc_dyb, phi_full_list[-1][-1])
+                _phi = np.vstack((phi_full_list[-1][-1], np.zeros((n_dynparams, n_odes + n_dynparams))))
+                jac = np.dot(np.hstack((dbc_dyb, dbc_dp)), _phi)
+                jac[:, n_odes:] += dbc_dp
                 i_bc = np.repeat(np.arange(0, n_odes + n_dynparams), n_odes + n_dynparams) + n_odes * (n_arcs - 1)
                 j_bc = np.tile(np.arange(n_odes + n_dynparams), n_odes + n_dynparams) + n_odes * (n_arcs - 1)
                 values = np.hstack((values, jac.ravel()))
@@ -516,6 +524,9 @@ class Shooting(BaseAlgorithm):
             is_sparse = True
             def _jacobian_function_wrapper(X):
                 return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
+        elif n_quads == 0:
+            def _jacobian_function_wrapper(X):
+                return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs).toarray()
         else:
             def _jacobian_function_wrapper(X):
                 return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
@@ -592,7 +603,7 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
                 if is_sparse:
-                    logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac.todense())))
+                    logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
                 else:
                     logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac)))
         elif self.algorithm.lower() == 'npnlp':
@@ -648,7 +659,7 @@ class Shooting(BaseAlgorithm):
         sol.q = q_out
         sol.u = u_out
 
-        sol.dynamical_parameters = parameter_guess
-        sol.nondynamical_parameters = nondynamical_parameter_guess
+        sol.dynamical_parameters = parameter_guess[:k]
+        sol.nondynamical_parameters = parameter_guess[k:]
         sol.converged = converged
         return sol

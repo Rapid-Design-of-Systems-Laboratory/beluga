@@ -87,7 +87,9 @@ def wrap_functions(fun, bc, fun_jac, bc_jac, aux, k, dtype):
             return np.asarray(fun(x, y, p), dtype)
 
         def bc_wrapped(ya, yb, p):
-            return np.asarray(bc(ya, [], [], yb, [], [], p, [], aux), dtype)
+            _p = p[:k]
+            _ndp = p[k:]
+            return np.asarray(bc(ya, [], [], yb, [], [], _p, _ndp, aux), dtype)
 
         if fun_jac is not None:
             def fun_jac_p(x, y, p):
