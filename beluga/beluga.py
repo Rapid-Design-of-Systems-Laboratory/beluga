@@ -383,6 +383,8 @@ def solve(**kwargs):
         if isinstance(save_sols, str):
             filename = save_sols
         else:
+            filename = 'data.beluga'
+        save(ocp=ocp, bvp_solver=bvp_algorithm, sol_set=out, filename=filename)
             filename = 'data.blg'
         save(ocp=ocp, bvp=bvp, bvp_solver=bvp_algorithm, sol_set=out, filename=filename)
 
