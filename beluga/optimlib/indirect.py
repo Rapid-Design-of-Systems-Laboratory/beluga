@@ -179,7 +179,20 @@ def ocp_to_bvp(ocp, **kwargs):
     dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
     nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
-    # breakpoint()
+
+    states_rates = [tf*f for f in states_rates]
+    costates_rates = [tf*f for f in costates_rates]
+    dae_rates = [tf*f for f in dae_rates]
+
+    df_dy = [[0 for f in states_rates + costates_rates + dae_rates] for s in states + costates + dae_states]
+    for ii, f in enumerate(states_rates + costates_rates + dae_rates):
+        for jj, s in enumerate(states + costates + dae_states):
+            df_dy[jj][ii] = str(derivative_fn(f,s))
+
+    df_dp = [[0 for f in states_rates + costates_rates + dae_rates] for s in dynamical_parameters]
+    for ii, f in enumerate(states_rates + costates_rates + dae_rates):
+        for jj, s in enumerate(dynamical_parameters):
+            df_dp[jj][ii] = str(derivative_fn(f,s))
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
@@ -192,10 +205,11 @@ def ocp_to_bvp(ocp, **kwargs):
            'terminal_cost_units': None,
            'states': [str(x) for x in it.chain(states, costates, dae_states)],
            'states_rates':
-               [str(tf * rate) for rate in states_rates] +
-               [str(tf * rate) for rate in costates_rates] +
-               [str(tf * rate) for rate in dae_rates],
+               [str(rate) for rate in states_rates] +
+               [str(rate) for rate in costates_rates] +
+               [str(rate) for rate in dae_rates],
            'states_units': [str(x) for x in states_units + costates_units + dae_units],
+           'states_jac': [df_dy, df_dp],
            'quads': [str(x) for x in coparameters],
            'quads_rates': [str(tf * x) for x in coparameters_rates],
            'quads_units': [str(x) for x in coparameters_units],

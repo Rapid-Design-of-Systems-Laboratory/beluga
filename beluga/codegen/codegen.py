@@ -27,7 +27,7 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     u_args = [*states, *parameters, *constants]
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
 
-    u_str = 'np.array(['
+    u_str = '['
     for ii in range(len(control_opts)):
         if ii > 0:
             u_str += ','
@@ -35,9 +35,9 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
         u_str += ','.join(control_opt_mat[ii])
         u_str += ']'
 
-    u_str += '])'
-    control_opt_fn = make_jit_fn(u_args, u_str)
+    u_str += ']'
 
+    control_opt_fn = make_jit_fn(u_args, u_str)
     hamiltonian_fn = make_sympy_fn(ham_args, ham)
     num_options = len(control_opts)
     num_states = len(states)
@@ -47,7 +47,7 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     if num_controls > 0:
         def compute_control_fn(X, u, p, C):
             p = p[:num_params]
-            u_list = np.array(control_opt_fn(*X, *p, *C))
+            u_list = np.asarray(control_opt_fn(*X, *p, *C))
             # u_list = ucont_wrap(*X, *p, *C)
             ham_val = np.zeros(num_options)
 

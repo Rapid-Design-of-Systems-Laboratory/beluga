@@ -21,6 +21,9 @@ class BaseAlgorithm(object):
         self.terminal_cost_function = None
         self.inequality_constraint_function = None
 
+        self.derivative_function_jac = None
+        self.boundarycondition_function_jac = None
+
         if len(args) > 0:
             self.derivative_function = args[0]
 
