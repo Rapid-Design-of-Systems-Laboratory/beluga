@@ -193,7 +193,7 @@ class Shooting(BaseAlgorithm):
         n_odes = len(y0)
         n_quads = len(q0)
         num_arcs = len(gamma_orig)
-        fx = np.array(bc_func(gamma_orig.y[0], [], [], gamma_orig.y[-1], [], [], parameters, nondynamical_params, aux))
+        fx = np.asarray(bc_func(gamma_orig.y[0], [], [], gamma_orig.y[-1], [], [], parameters, nondynamical_params, aux))
         n_bcs = len(fx)
 
         m = np.zeros((n_bcs, n_odes))
@@ -207,7 +207,7 @@ class Shooting(BaseAlgorithm):
             dx[jj] = dx[jj] + h
             dy = np.dot(phi_full, dx)
             p = Trajectory(gamma_orig.t, gamma_orig.y + dy)
-            f = np.array(bc_func(p.y[0], [], [], p.y[-1], [], [], parameters, nondynamical_params, aux))
+            f = np.asarray(bc_func(p.y[0], [], [], p.y[-1], [], [], parameters, nondynamical_params, aux))
             m[:, jj] = (f-fx)/h
             dx[jj] = dx[jj] - h
 
@@ -259,8 +259,8 @@ class Shooting(BaseAlgorithm):
             y0, q0, u0 = gamma_set[0](t0)
             tf = gamma_set[-1].t[-1]
             yf, qf, uf = gamma_set[-1](tf)
-            bc1 = np.array([gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
-            bc2 = np.array(bc_func(y0, q0, u0, yf, qf, uf, param_guess[:k], param_guess[k:], *args)).flatten()
+            bc1 = np.asarray([gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
+            bc2 = np.asarray(bc_func(y0, q0, u0, yf, qf, uf, param_guess[:k], param_guess[k:], *args)).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
         return _bc_func

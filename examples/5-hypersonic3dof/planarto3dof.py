@@ -176,7 +176,7 @@ ocp_2.constant('phi_f', 0, 'rad')
 
 ocp_2.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver_2 = beluga.bvp_algorithm('spbvp')
+bvp_solver_2 = beluga.bvp_algorithm('Shooting', num_arcs=8)
 
 guess_maker_2 = beluga.guess_generator(
     'auto',
