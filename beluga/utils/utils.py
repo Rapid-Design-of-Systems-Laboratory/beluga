@@ -20,7 +20,7 @@ import beluga
 # import sympy as smpy
 
 
-def save(ocp=None, bvp_solver=None, sol_set=None, filename='data.blg'):
+def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg'):
     assert any([ocp is not None, bvp_solver is not None, sol_set is not None]), 'No data given to save.'
 
     save_dict = {}
