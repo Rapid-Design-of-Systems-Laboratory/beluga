@@ -12,6 +12,7 @@ long_description = '''beluga is a general purpose indirect trajectory optimizati
 
 modules = ['beluga.bvpsol',
            'beluga.bvpsol._bvp',
+           'beluga.bvpsol._shooting',
            'beluga.codegen',
            'beluga.continuation',
            'beluga.ivpsol',
