@@ -121,6 +121,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
 
     # Load the derivative function into the bvp algorithm
     bvp_algo.set_derivative_function(bvp.deriv_func)
+    bvp_algo.set_derivative_jacobian(bvp.deriv_jac_func)
     bvp_algo.set_quadrature_function(bvp.quad_func)
     bvp_algo.set_boundarycondition_function(bvp.bc_func)
     bvp_algo.set_initial_cost_function(bvp.initial_cost)

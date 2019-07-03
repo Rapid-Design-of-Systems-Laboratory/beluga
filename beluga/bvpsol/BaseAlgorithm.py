@@ -44,6 +44,9 @@ class BaseAlgorithm(object):
         self.derivative_function = derivative_function
         self.stm_ode_func = None
 
+    def set_derivative_jacobian(self, derivative_jacobian):
+        self.derivative_function_jac = derivative_jacobian
+
     def set_quadrature_function(self, quadrature_function):
         self.quadrature_function = quadrature_function
 

@@ -97,13 +97,13 @@ sol_set_direct = beluga.solve(
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-    .num_cases(80, 'log') \
-    .const('epsilon1', 1e-6)
+    .num_cases(40, 'log') \
+    .const('epsilon1', 1e-4)
 
 sol_set_indirect = beluga.solve(
     ocp=ocp_indirect,
     method='indirect',
-    optim_options={'control_method': 'icrm'},
+    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,

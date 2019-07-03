@@ -51,6 +51,7 @@ def ocp_to_bvp(ocp, **kwargs):
     path_cost = ws['path_cost']
     path_cost_units = ws['path_cost_units']
 
+    analytical_jacobian = kwargs.get('analytical_jacobian', False)
     control_method = kwargs.get('control_method', 'pmp').lower()
 
     if initial_cost != 0:
@@ -184,15 +185,22 @@ def ocp_to_bvp(ocp, **kwargs):
     costates_rates = [tf*f for f in costates_rates]
     dae_rates = [tf*f for f in dae_rates]
 
-    df_dy = [[0 for f in states_rates + costates_rates + dae_rates] for s in states + costates + dae_states]
-    for ii, f in enumerate(states_rates + costates_rates + dae_rates):
-        for jj, s in enumerate(states + costates + dae_states):
-            df_dy[jj][ii] = str(derivative_fn(f,s))
+    if analytical_jacobian:
+        if control_method == 'pmp':
+            raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')
 
-    df_dp = [[0 for f in states_rates + costates_rates + dae_rates] for s in dynamical_parameters]
-    for ii, f in enumerate(states_rates + costates_rates + dae_rates):
-        for jj, s in enumerate(dynamical_parameters):
-            df_dp[jj][ii] = str(derivative_fn(f,s))
+        df_dy = [[0 for f in states_rates + costates_rates + dae_rates] for s in states + costates + dae_states]
+        for ii, f in enumerate(states_rates + costates_rates + dae_rates):
+            for jj, s in enumerate(states + costates + dae_states):
+                df_dy[ii][jj] = str(derivative_fn(f, s))
+
+        df_dp = [[0 for f in states_rates + costates_rates + dae_rates] for s in dynamical_parameters]
+        for ii, f in enumerate(states_rates + costates_rates + dae_rates):
+            for jj, s in enumerate(dynamical_parameters):
+                df_dp[jj][ii] = str(derivative_fn(f, s))
+    else:
+        df_dy = None
+        df_dp = None
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,

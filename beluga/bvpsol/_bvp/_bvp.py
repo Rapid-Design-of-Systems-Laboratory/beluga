@@ -653,12 +653,6 @@ def wrap_functions(fun, bc, fun_jac, bc_jac, k, a, S, D, dtype):
 
     fun_jac_p, fun_jac_wrapped, bc_jac_wrapped = None, None, None
 
-    # if fun_jac is None:
-    #     fun_jac_wrapped = None
-    #
-    # if bc_jac is None:
-    #     bc_jac_wrapped = None
-
     if k == 0:
         def fun_p(x, y, _):
             return np.asarray(fun(x, y), dtype)

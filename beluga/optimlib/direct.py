@@ -92,6 +92,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'states': [str(x) for x in it.chain(states)],
            'states_rates': [str(tf * rate) for rate in states_rates],
            'states_units': [str(x) for x in states_units],
+           'states_jac': [None, None],
            'quads': [],
            'quads_rates': [],
            'quads_units': [],
