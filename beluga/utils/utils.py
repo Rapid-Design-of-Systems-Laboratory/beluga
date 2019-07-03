@@ -28,6 +28,9 @@ def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg')
         assert ocp.__class__ is beluga.problem.OCP, 'ocp should be of beluga.problem.OCP class'
         save_dict['ocp'] = ocp
 
+    if bvp is not None:
+        save_dict['bvp'] = bvp
+
     if bvp_solver is not None:
         assert issubclass(bvp_solver.__class__, beluga.bvpsol.BaseAlgorithm), 'bvp_solver should be subclass ' \
                                                                               'of beluga.bvpsol.BaseAlgorithm'
