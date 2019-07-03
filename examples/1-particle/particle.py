@@ -98,7 +98,7 @@ continuation_steps.add_step('bisection') \
 sol_set_indirect = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method': 'icrm'},
+    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,

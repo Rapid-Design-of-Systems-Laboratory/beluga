@@ -97,26 +97,26 @@ sol_set_direct = beluga.solve(
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-    .num_cases(80, 'log') \
-    .const('epsilon1', 1e-6)
+    .num_cases(40, 'log') \
+    .const('epsilon1', 1e-4)
 
 sol_set_indirect = beluga.solve(
     ocp=ocp_indirect,
     method='indirect',
-    optim_options={'control_method': 'icrm'},
+    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,
     autoscale=False
 )
 
-sol_direct = sol_set_direct[-1][-1]
+# sol_direct = sol_set_direct[-1][-1]
 sol_indirect = sol_set_indirect[-1][-1]
 
-ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
+# ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
 
-plt.plot(sol_direct.t, sol_direct.y[:, 0], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 0], ts), linestyle='-', color='r', label='direct')
+# plt.plot(sol_direct.t, sol_direct.y[:, 0], linestyle='--', color='r', marker='o')
+# plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 0], ts), linestyle='-', color='r', label='direct')
 plt.plot(sol_indirect.t, sol_indirect.y[:, 0], linestyle='-', color='b', label='indirect')
 plt.xlabel('Time [nd]')
 plt.ylabel('$x_1$ [nd]')
@@ -124,8 +124,8 @@ plt.grid('on')
 plt.legend()
 plt.show()
 
-plt.plot(sol_direct.y[:,0], sol_direct.y[:, 1], linestyle='--', color='r', marker='o')
-plt.plot(linter(sol_direct.t, sol_direct.y[:, 0], ts), linter(sol_direct.t, sol_direct.y[:, 1], ts), linestyle='-', color='r', label='direct')
+# plt.plot(sol_direct.y[:,0], sol_direct.y[:, 1], linestyle='--', color='r', marker='o')
+# plt.plot(linter(sol_direct.t, sol_direct.y[:, 0], ts), linter(sol_direct.t, sol_direct.y[:, 1], ts), linestyle='-', color='r', label='direct')
 plt.plot(sol_indirect.y[:, 0], sol_indirect.y[:, 1], linestyle='-', color='b', label='indirect')
 plt.title('State-Space')
 plt.xlabel('$x_1$ [nd]')

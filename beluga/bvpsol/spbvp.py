@@ -53,16 +53,30 @@ class spbvp(BaseAlgorithm):
                                                    yb[nstates:nstates+nquads], [], params[:ndyn],
                                                    params[ndyn:ndyn+nnondyn], const)
 
+        if self.derivative_function_jac is not None:
+            def _fun_jac(t, y, params=np.array([]), const=solinit.const):
+                y = y.T
+                df_dy = np.zeros((y[0].size, y[0].size, t.size))
+                df_dp = np.zeros((y[0].size, ndyn+nnondyn, t.size))
+
+                for ii, yi in enumerate(y):
+                    df_dy[:, :, ii], _df_dp = self.derivative_function_jac(yi, [], params, const)
+                    df_dp[:, :, ii] = np.hstack((_df_dp.T, np.zeros((nstates, nnondyn))))
+
+                return df_dy, df_dp
+        else:
+            _fun_jac = None
+
         if nquads > 0:
             opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T,
                             np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
-                            max_nodes=self.max_nodes, fun_jac=self.derivative_function_jac,
-                            bc_jac=self.boundarycondition_function_jac)
+                            max_nodes=self.max_nodes, fun_jac=_fun_jac,
+                            bc_jac=None)
         else:
             opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T,
                             np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
-                            max_nodes=self.max_nodes, fun_jac=self.derivative_function_jac,
-                            bc_jac=self.boundarycondition_function_jac)
+                            max_nodes=self.max_nodes, fun_jac=_fun_jac,
+                            bc_jac=None)
 
         sol = Trajectory(solinit)
         sol.t = opt['x']

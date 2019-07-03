@@ -11,6 +11,76 @@ import math
 from math import *
 
 
+def make_bvp(problem_data):
+    r"""
+    Main process that generates callable functions from the problem data.
+
+    :param problem_data: Problem data from optimlib.
+    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
+     ineq_constraints) - Several functions to define a BVP.
+    """
+    logging.debug('Compiling BVP functions...')
+    unc_control_law = problem_data['control_options']
+    states = problem_data['states']
+    states_rates = problem_data['states_rates']
+    states_jac = problem_data['states_jac']
+    quads = problem_data['quads']
+    quads_rates = problem_data['quads_rates']
+    nondynamical_parameters = problem_data['nondynamical_parameters']
+    dynamical_parameters = problem_data['dynamical_parameters']
+    constants = problem_data['constants']
+    controls = problem_data['controls']
+    initial_cost = problem_data['initial_cost']
+    path_cost = problem_data['path_cost']
+    terminal_cost = problem_data['terminal_cost']
+
+    # states_jac
+    # df_dy = problem_data['states_jac'][0]
+    # df_dp = problem_data['states_jac'][1]
+    # breakpoint()
+
+    path_constraints = problem_data['path_constraints']
+
+    ham = problem_data['hamiltonian']
+    logging.debug('Making unconstrained control')
+    if problem_data['method'] is not 'direct':
+        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters,
+                                                     constants, controls, ham)
+
+        def initial_cost(*_, **__):
+            return 0
+
+        def path_cost(*_, **__):
+            return 0
+
+        def terminal_cost(*_, **__):
+            return 0
+    else:
+        def control_fn(X, u, p, C):
+            return u
+        ham_fn = None
+        initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states,
+                                                                dynamical_parameters, constants, controls)
+
+    if problem_data['method'] is not 'direct' and len(path_constraints) > 0:
+        raise NotImplementedError('Path constraints not implemented for indirect-type methods.')
+    else:
+        ineq_constraints = make_constraint_func(path_constraints, states, dynamical_parameters, constants, controls)
+
+    deriv_func = make_deriv_func(states_rates, states, dynamical_parameters, constants, controls, control_fn)
+    deriv_jac_func = make_deriv_jac_func(states_jac, states, dynamical_parameters, constants, controls, control_fn)
+    quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn)
+    bc_initial = problem_data['bc_initial']
+    bc_terminal = problem_data['bc_terminal']
+    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
+                           constants, controls, control_fn)
+    logging.debug('BVP functions compiled.')
+
+    bvp = BVP(deriv_func, deriv_jac_func, quad_func, bc_func, control_fn, initial_cost, path_cost, terminal_cost, ineq_constraints)
+
+    return bvp
+
+
 def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham):
     r"""
     Makes the control and Hamiltonian functions.
@@ -150,6 +220,61 @@ def make_deriv_func(deriv_list, states, parameters, constants, controls, compute
     return deriv_func
 
 
+def make_deriv_jac_func(deriv_jac, states, parameters, constants, controls, compute_control):
+    r"""
+    Makes the derivative functions for each state.
+
+    :param deriv_jac: A list of lists of derivative sensitivity functions.
+    :param states: List of states.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :param compute_control: The compute_control function.
+    :return: deriv_func - The derivative function.
+    """
+    if deriv_jac[0] is None:
+        return None
+
+    ham_args = [*states, *parameters, *constants, *controls]
+    df_dy = deriv_jac[0]
+    df_dp = deriv_jac[1]
+
+    df_dy_str = '('
+    for ii, f in enumerate(df_dy):
+        df_dy_str += '('
+        df_dy_str += ','.join(f)
+        df_dy_str += '),'
+    df_dy_str += ')'
+
+    df_dp_str = '('
+    for ii, f in enumerate(df_dp):
+        df_dp_str += '('
+        df_dp_str += ','.join(f)
+        df_dp_str += '),'
+    df_dp_str += ')'
+
+    df_dy_fun = make_jit_fn(ham_args, df_dy_str)
+    df_dp_fun = make_jit_fn(ham_args, df_dp_str)
+
+    num_params = len(parameters)
+
+    if compute_control is not None:
+        def deriv_jac_func(X, u, p, C):
+            p = p[:num_params]
+            u = compute_control(X, u, p, C)
+            df_dy = np.asarray(df_dy_fun(*X, *p, *C, *u))
+            df_dp = np.asarray(df_dp_fun(*X, *p, *C, *u))
+            return df_dy, df_dp
+    else:
+        def deriv_jac_func(X, u, p, C):
+            p = p[:num_params]
+            df_dy = np.asarray(df_dy_fun(*X, *p, *C, *u))
+            df_dp = np.asarray(df_dp_fun(*X, *p, *C, *u))
+            return df_dy, df_dp
+
+    return deriv_jac_func
+
+
 def make_quad_func(quads_rates, states, quads, parameters, constants, controls, compute_control):
     r"""
     Makes the derivative functions for each quad.
@@ -250,67 +375,6 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
     return bc_func
 
 
-def make_functions(problem_data):
-    r"""
-    Main process that generates callable functions from the problem data.
-
-    :param problem_data: Problem data from optimlib.
-    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
-     ineq_constraints) - Several functions to define a BVP.
-    """
-    logging.debug('Compiling BVP functions...')
-    unc_control_law = problem_data['control_options']
-    states = problem_data['states']
-    quads = problem_data['quads']
-    quads_rates = problem_data['quads_rates']
-    nondynamical_parameters = problem_data['nondynamical_parameters']
-    dynamical_parameters = problem_data['dynamical_parameters']
-    constants = problem_data['constants']
-    controls = problem_data['controls']
-    initial_cost = problem_data['initial_cost']
-    path_cost = problem_data['path_cost']
-    terminal_cost = problem_data['terminal_cost']
-
-    path_constraints = problem_data['path_constraints']
-
-    ham = problem_data['hamiltonian']
-    logging.debug('Making unconstrained control')
-    if problem_data['method'] is not 'direct':
-        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters,
-                                                     constants, controls, ham)
-
-        def initial_cost(*_, **__):
-            return 0
-
-        def path_cost(*_, **__):
-            return 0
-
-        def terminal_cost(*_, **__):
-            return 0
-    else:
-        def control_fn(X, u, p, C):
-            return u
-        ham_fn = None
-        initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states,
-                                                                dynamical_parameters, constants, controls)
-
-    if problem_data['method'] is not 'direct' and len(path_constraints) > 0:
-        raise NotImplementedError('Path constraints not implemented for indirect-type methods.')
-    else:
-        ineq_constraints = make_constraint_func(path_constraints, states, dynamical_parameters, constants, controls)
-
-    deriv_list = problem_data['states_rates']
-
-    deriv_func = make_deriv_func(deriv_list, states, dynamical_parameters, constants, controls, control_fn)
-    quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn)
-    bc_initial = problem_data['bc_initial']
-    bc_terminal = problem_data['bc_terminal']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
-                           constants, controls, control_fn)
-    logging.debug('BVP functions compiled.')
-    return deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints
-
-
 def make_jit_fn(args, fn_expr):
     r"""
     JIT compiles a string function to a callable function.
@@ -397,10 +461,7 @@ def preprocess(problem_data):
 
         problem_data['states_rates'] = new_states
 
-    deriv_func, quad_func, bc_func, compute_control, ham_fn, initial_cost, path_cost, terminal_cost, ineq_constraints\
-        = make_functions(problem_data)
-
-    bvp = BVP(deriv_func, quad_func, bc_func, compute_control, initial_cost, path_cost, terminal_cost, ineq_constraints)
+    bvp = make_bvp(problem_data)
 
     return bvp
 
@@ -408,13 +469,14 @@ def preprocess(problem_data):
 class BVP(object):
     def __init__(self, *args, **__):
         self.deriv_func = args[0]
-        self.quad_func = args[1]
-        self.bc_func = args[2]
-        self.compute_control = args[3]
-        self.initial_cost = args[4]
-        self.path_cost = args[5]
-        self.terminal_cost = args[6]
-        self.ineq_constraints = args[7]
+        self.deriv_jac_func = args[1]
+        self.quad_func = args[2]
+        self.bc_func = args[3]
+        self.compute_control = args[4]
+        self.initial_cost = args[5]
+        self.path_cost = args[6]
+        self.terminal_cost = args[7]
+        self.ineq_constraints = args[8]
         self.raw = dict()
 
     def __repr__(self):
