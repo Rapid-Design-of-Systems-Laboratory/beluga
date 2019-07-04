@@ -67,7 +67,6 @@ class Collocation(BaseAlgorithm):
         self.number_of_odes = None
         self.number_of_controls = None
 
-        self.aux = None
         self.const = None
 
         self.number_of_quads = None
@@ -153,7 +152,6 @@ class Collocation(BaseAlgorithm):
 
         vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
 
-        self.aux = sol.aux
         self.const = sol.const
         sol.converged = False
 

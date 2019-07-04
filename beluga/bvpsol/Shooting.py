@@ -184,7 +184,7 @@ class Shooting(BaseAlgorithm):
         return gamma_set_new
 
     @staticmethod
-    def _bc_jac(gamma, phi_full, parameters, nondynamical_params, aux, quad_func, bc_func, step_size=1e-6):
+    def _bc_jac(gamma, phi_full, parameters, nondynamical_params, const, quad_func, bc_func, step_size=1e-6):
         gamma_orig = copy.deepcopy(gamma)
         h = step_size
         t0 = gamma_orig.t[0]
@@ -193,7 +193,7 @@ class Shooting(BaseAlgorithm):
         n_odes = len(y0)
         n_quads = len(q0)
         num_arcs = len(gamma_orig)
-        fx = np.asarray(bc_func(gamma_orig.y[0], [], [], gamma_orig.y[-1], [], [], parameters, nondynamical_params, aux))
+        fx = np.asarray(bc_func(gamma_orig.y[0], [], [], gamma_orig.y[-1], [], [], parameters, nondynamical_params, const))
         n_bcs = len(fx)
 
         m = np.zeros((n_bcs, n_odes))
@@ -207,7 +207,7 @@ class Shooting(BaseAlgorithm):
             dx[jj] = dx[jj] + h
             dy = np.dot(phi_full, dx)
             p = Trajectory(gamma_orig.t, gamma_orig.y + dy)
-            f = np.asarray(bc_func(p.y[0], [], [], p.y[-1], [], [], parameters, nondynamical_params, aux))
+            f = np.asarray(bc_func(p.y[0], [], [], p.y[-1], [], [], parameters, nondynamical_params, const))
             m[:, jj] = (f-fx)/h
             dx[jj] = dx[jj] - h
 
@@ -215,7 +215,7 @@ class Shooting(BaseAlgorithm):
         # for ii in range(n_quads):
         #     dq[ii] = dq[ii] + h
         #     gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_orig]
-        #     f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
+        #     f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, const)
         #     q[:, ii] = (f-fx)/h
         #     dq[ii] = dq[ii] - h
 
@@ -231,21 +231,21 @@ class Shooting(BaseAlgorithm):
                 if n_quads > 0:
                     if kk > 0:
                         perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory,
-                                                           gamma_set_perturbed[kk-1].q[-1], parameters, aux)
+                                                           gamma_set_perturbed[kk-1].q[-1], parameters, const)
                     else:
                         perturbed_trajectory = reconstruct(quad_func, perturbed_trajectory, gamma_orig[kk].q[0],
-                                                           parameters, aux)
+                                                           parameters, const)
 
                 gamma_set_perturbed[kk] = perturbed_trajectory
 
-            f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, aux)
+            f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, const)
             p1[:, ii] += (f-fx)/h
             dx[jj] = dx[jj] - h
             parameters[ii] = parameters[ii] - h
 
         for ii in range(nondynamical_params.size):
             nondynamical_params[ii] = nondynamical_params[ii] + h
-            f = bc_func(gamma_orig, parameters, nondynamical_params, aux)
+            f = bc_func(gamma_orig, parameters, nondynamical_params, const)
             p2[:, ii] = (f-fx)/h
             nondynamical_params[ii] = nondynamical_params[ii] - h
 
@@ -269,7 +269,7 @@ class Shooting(BaseAlgorithm):
     def make_stmode(odefn, n_odes, step_size=1e-6):
         xh = np.eye(n_odes)*step_size
 
-        def _stmode_fd(_xx, u, p, aux):
+        def _stmode_fd(_xx, u, p, const):
             """ Finite difference version of state transition matrix """
             n_params = p.size
             ff = np.empty((n_odes, n_odes+n_params))
@@ -277,15 +277,15 @@ class Shooting(BaseAlgorithm):
             xx = _xx[0:n_odes]  # Just states
 
             # Compute Jacobian matrix, F using finite difference
-            fx = np.squeeze([odefn(xx, u, p, aux)])
+            fx = np.squeeze([odefn(xx, u, p, const)])
 
             for i in range(n_odes):
-                fxh = odefn(xx + xh[i, :], u, p, aux)
+                fxh = odefn(xx + xh[i, :], u, p, const)
                 ff[:, i] = (fxh-fx) / step_size
 
             for i in range(n_params):
                 p[i] += step_size
-                fxh = odefn(xx, u, p, aux)
+                fxh = odefn(xx, u, p, const)
                 ff[:, i+n_odes] = (fxh - fx) / step_size
                 p[i] -= step_size
 
@@ -379,8 +379,8 @@ class Shooting(BaseAlgorithm):
         # Set up the initial guess vector
         x_init = self._wrap_y0(gamma_set, parameter_guess, nondynamical_parameter_guess)
 
-        def quad_wrap(t, xx, p, aux):
-            return self.quadrature_function(t, xx[:n_odes], p, aux)
+        def quad_wrap(t, xx, p, const):
+            return self.quadrature_function(t, xx[:n_odes], p, const)
 
         # Pickle the functions for faster execution
         if pool is not None:
@@ -397,7 +397,7 @@ class Shooting(BaseAlgorithm):
             _gamma_maker = self._make_gammas
 
         # Set up the constraint function
-        def _constraint_function(xx, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs, aux):
+        def _constraint_function(xx, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs, const):
             g = copy.deepcopy(gamma_set)
             _y, _q, _params, _nonparams = self._unwrap_y0(xx, n_odes, n_quads, n_dynparams, n_arcs)
             for ii in range(n_arcs):
@@ -405,7 +405,7 @@ class Shooting(BaseAlgorithm):
                 if n_quads > 0:
                     g[ii].q[0] = _q
             g = _gamma_maker(deriv_func, quad_func, g, _params, sol, prop, pool, n_quads)
-            return self.bc_func_ms(g, _params, _nonparams, k, aux)
+            return self.bc_func_ms(g, _params, _nonparams, k, const)
 
         def _constraint_function_wrapper(X):
             return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,

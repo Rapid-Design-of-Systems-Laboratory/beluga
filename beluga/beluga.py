@@ -138,7 +138,6 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             s.compute_scaling(sol_guess)
             sol_guess = s.scale(sol_guess)
 
-        sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
         sol = bvp_algo.solve(sol_guess, pool=pool)
 
         if autoscale:
@@ -157,7 +156,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
-            step.init(sol_guess)
+            step.init(sol_guess, bvp)
             try:
                 log_level = logging.getLogger()._displayLevel
             except:
@@ -178,7 +177,6 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                     s.compute_scaling(sol_guess)
                     sol_guess = s.scale(sol_guess)
 
-                sol_guess.const = np.fromiter(sol_guess.aux['const'].values(), dtype=np.float64)
                 sol = bvp_algo.solve(sol_guess, pool=pool)
 
                 if autoscale:
@@ -270,12 +268,13 @@ def solve(**kwargs):
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
     solinit = Trajectory()
+    solinit.const = np.array(bvp.raw['constants_values'])
+    # breakpoint()
+    # solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp.raw['constants'], bvp.raw['constants_values']))
 
-    solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp.raw['constants'],
-                                                                          bvp.raw['constants_values']))
-    for const in bvp.raw['constants']:
-        if not str(const) in solinit.aux['const'].keys():
-            solinit.aux['const'][str(const)] = 0
+    # for const in bvp.raw['constants']:
+    #     if not str(const) in solinit.aux['const'].keys():
+    #         solinit.aux['const'][str(const)] = 0
 
     solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
 
@@ -288,13 +287,15 @@ def solve(**kwargs):
     terminal_bc = dict(zip(state_names, terminal_states))
 
     if steps is not None:
-        for ii in initial_bc:
-            if ii + '_0' in solinit.aux['const'].keys():
-                solinit.aux['const'][ii + '_0'] = initial_bc[ii]
+        for ii, bc0 in enumerate(initial_bc):
+            if bc0 + '_0' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bc0 + '_0')
+                solinit.const[jj] = initial_bc[bc0]
 
-        for ii in terminal_bc:
-            if ii + '_f' in solinit.aux['const'].keys():
-                solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
+        for ii, bcf in enumerate(terminal_bc):
+            if bcf + '_f' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bcf + '_f')
+                solinit.const[jj] = terminal_bc[bcf]
 
     quad_names = bvp.raw['quads']
     n_quads = len(quad_names)

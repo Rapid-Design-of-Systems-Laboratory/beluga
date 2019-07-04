@@ -157,7 +157,7 @@ class Trajectory(object):
         obj.u = np.array([])
         obj.dynamical_parameters = np.array([])
         obj.nondynamical_parameters = np.array([])
-        obj.aux = dict()
+        obj.const = np.array([])
         obj.converged = False
 
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()

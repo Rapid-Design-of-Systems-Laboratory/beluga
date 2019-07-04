@@ -8,11 +8,8 @@ import functools
 import sys
 
 
-def gamma_norm(aux1, aux2):
-    norm = 0
-    for var in aux1['const']:
-        norm += abs(aux2['const'][var] - aux1['const'][var])
-
+def gamma_norm(const1, const2):
+    norm = sum(abs(const2 - const1))
     return norm
 
 
@@ -67,6 +64,7 @@ class ContinuationStrategy(abc.ABC):
         self.gammas = []
         self.vars = {}
         self.ctr = None
+        self.bvp = None
 
     def __str__(self):
         return str(self.vars)
@@ -84,20 +82,21 @@ class ContinuationStrategy(abc.ABC):
     def add_gamma(self, gamma):
         self.gammas.append(copy.deepcopy(gamma))
 
-    def get_closest_gamma(self, aux):
+    def get_closest_gamma(self, const):
         norms = []
         for traj in self.gammas:
             if traj.converged is False:
                 norms.append(9e99)
             else:
-                norms.append(gamma_norm(traj.aux, aux))
+                norms.append(gamma_norm(traj.const, const))
 
         return np.argmin(norms)
 
-    def init(self, gamma):
-        for var_type, var_name in self.var_iterator():
-            if var_name not in gamma.aux[var_type].keys():
-                raise ValueError('Variable '+var_name+' not found in boundary value problem')
+    def init(self, gamma, bvp):
+        self.bvp = bvp
+        for var_name in self.var_iterator():
+            if var_name not in self.bvp.raw['constants']:
+                raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
         gamma_in = copy.deepcopy(gamma)
         gamma_in.converged = False
         self.gammas = [gamma_in]
@@ -115,23 +114,22 @@ class ContinuationStrategy(abc.ABC):
 
         # Update auxiliary variables using previously calculated step sizes
         total_change = 0.0
-        aux0 = copy.deepcopy(self.gammas[-1].aux)
-        for var_type in self.vars:
-            for var_name in self.vars[var_type]:
-                aux0[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
-                total_change += abs(self.vars[var_type][var_name].steps[self.ctr])
+        const0 = copy.deepcopy(self.gammas[-1].const)
+        for var_name in self.vars:
+            jj = self.bvp.raw['constants'].index(var_name)
+            const0[jj] = self.vars[var_name].steps[self.ctr]
+            total_change += abs(self.vars[var_name].steps[self.ctr])
 
-        i = self.get_closest_gamma(aux0)
+        i = self.get_closest_gamma(const0)
         gamma_guess = copy.deepcopy(self.gammas[i])
-        gamma_guess.aux = aux0
+        gamma_guess.const = const0
         self.ctr += 1
         logging.debug('Using trajectory #' + str(i) + ' as guess.')
         return gamma_guess
 
     def var_iterator(self):
-        for var_type in self.vars.keys():
-            for var_name in self.vars[var_type].keys():
-                yield var_type, var_name
+        for var_name in self.vars.keys():
+            yield var_name
 
     def num_cases(self):
         pass
@@ -155,8 +153,6 @@ class ManualStrategy(ContinuationStrategy):
         self.ctr = 0   # iteration counter
         self.last_sol = None
 
-        self.terminal = functools.partial(self.set, param_type='terminal')
-        self.initial = functools.partial(self.set, param_type='initial')
         self.const = functools.partial(self.set, param_type='const')
         self.orig_num_cases = num_cases
         self.constant = self.const
@@ -172,35 +168,33 @@ class ManualStrategy(ContinuationStrategy):
         self.reset()
 
     # TODO: Change to store only stepsize and use yield
-    def init(self, sol):
-        super(ManualStrategy, self).init(sol)
+    def init(self, sol, bvp):
+        super(ManualStrategy, self).init(sol, bvp)
 
         # Iterate through all types of variables
-        for var_type, var_name in self.var_iterator():
-            if var_name not in sol.aux[var_type].keys():
-                raise ValueError('Variable '+var_name+' not found in boundary value problem')
+        for var_name in self.var_iterator():
+            if var_name not in bvp.raw['constants']:
+                raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
 
             # Set current value of each continuation variable
-            self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
+            jj = bvp.raw['constants'].index(var_name)
+            self.vars[var_name].value = sol.const[jj]
             # Calculate update steps for continuation process
             if self._spacing == 'linear':
-                self.vars[var_type][var_name].steps = np.linspace(self.vars[var_type][var_name].value,
-                                                                  self.vars[var_type][var_name].target,
+                self.vars[var_name].steps = np.linspace(self.vars[var_name].value,
+                                                                  self.vars[var_name].target,
                                                                   self._num_cases)
             elif self._spacing == 'log':
-                self.vars[var_type][var_name].steps = np.logspace(np.log10(self.vars[var_type][var_name].value),
-                                                                  np.log10(self.vars[var_type][var_name].target),
+                self.vars[var_name].steps = np.logspace(np.log10(self.vars[var_name].value),
+                                                                  np.log10(self.vars[var_name].target),
                                                                   self._num_cases)
 
     def set(self, name, target, param_type):
         """
         Sets the target value for the specified parameter
         """
-        if param_type not in self.vars.keys():
-            self.vars[param_type] = {}
-
         # Create continuation variable object
-        self.vars[param_type][name] = ContinuationVariable(name, target)
+        self.vars[name] = ContinuationVariable(name, target)
         return self
 
     def num_cases(self, num_cases=None, spacing='linear'):
@@ -256,11 +250,8 @@ class BisectionStrategy(ManualStrategy):
             raise RuntimeError('Exceeded max_divisions')
 
         # If previous step did not converge, move back a half step
-        for var_type, var_name in self.var_iterator():
-            # Set current value of each continuation variable
-            # self.vars[var_type][var_name].value = aux[var_type][var_name]
-            # insert new steps
-            old_steps = self.vars[var_type][var_name].steps
+        for var_name in self.var_iterator():
+            old_steps = self.vars[var_name].steps
             if self._spacing == 'linear':
                 new_steps = np.linspace(old_steps[self.ctr-2], old_steps[self.ctr-1], self.num_divisions+1)
             elif self._spacing == 'log':
@@ -270,8 +261,8 @@ class BisectionStrategy(ManualStrategy):
                 raise ValueError('Invalid spacing type')
 
             # Insert new steps
-            self.vars[var_type][var_name].steps = np.insert(
-                    self.vars[var_type][var_name].steps,
+            self.vars[var_name].steps = np.insert(
+                    self.vars[var_name].steps,
                     self.ctr-1,
                     new_steps[1:-1]  # Ignore first element as it is repeated
                 )
@@ -330,33 +321,25 @@ class ProductStrategy(ContinuationStrategy):
         """
         Sets the target value for the specified parameter
         """
-        if param_type not in self.vars.keys():
-            self.vars[param_type] = {}
-
-        # Create continuation variable object
-        self.vars[param_type][name] = ContinuationVariable(name, target)
+        self.vars[name] = ContinuationVariable(name, target)
         return self
 
-    def init(self, sol):
-        super(ProductStrategy, self).init(sol)
+    def init(self, sol, bvp):
+        super(ProductStrategy, self).init(sol, bvp)
 
-        for var_type in self.vars.keys():
-            num_vars = len(self.vars[var_type])
-            self.num_cases(self.num_subdivisions() ** num_vars)
-            for var_name in self.vars[var_type].keys():
-                if var_name not in sol.aux[var_type].keys():
-                    raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
-                self.vars[var_type][var_name].value = sol.aux[var_type][var_name]
+        num_vars = len(self.vars)
+        self.num_cases(self.num_subdivisions() ** num_vars)
+        for var_name in self.vars.keys():
+            jj = bvp.raw['constants'].index(var_name)
+            self.vars[var_name].value = sol.const[jj]
 
-        for var_type, set_var_type in self.vars.items():
-            ls_set = [np.linspace(self.vars[var_type][var_name].value, self.vars[var_type][var_name].target,
-                                  self._num_subdivisions) for var_name in set_var_type.keys()]
-            for val in itertools.product(*ls_set):
-                for var_type_ in self.vars.keys():
-                    ii = 0
-                    for var_name in self.vars[var_type_].keys():
-                        self.vars[var_type_][var_name].steps.append(val[ii])
-                        ii += 1
+        ls_set = [np.linspace(self.vars[var_name].value, self.vars[var_name].target,
+                              self._num_subdivisions) for var_name in self.vars.keys()]
+        for val in itertools.product(*ls_set):
+            ii = 0
+            for var_name in self.vars.keys():
+                self.vars[var_name].steps.append(val[ii])
+                ii += 1
 
     # def next(self, ignore_last_step=False):
     #     if len(self.gammas) == 0:

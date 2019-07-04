@@ -48,6 +48,8 @@ ocp.switch('mass_flow', ['md0', 'md1'], [['mass_0f - mass'], ['mass - mass_0f']]
 
 
 # Define constants
+ocp.constant('stage_tol', 100, '1')
+
 ocp.constant('F0_sea', 2.1e6, 'newton')
 ocp.constant('F0_vac', 2.1e6, 'newton')
 ocp.constant('F1_sea', 2.1e6, 'newton')
@@ -71,7 +73,7 @@ ocp.constant('mass_0', 60880, 'kg')
 ocp.constant('mass_0f', 0, 'kg')
 ocp.constant('drop_mass', 2000, 'kg')
 
-ocp.constant('stage_tol', 100, '1')
+
 
 ocp.constant('y_f', 1.5e5, 'm')
 ocp.constant('v_y_f', 0, 'm/s')
@@ -180,7 +182,7 @@ plt.show()
 
 engine0 = bfr_thrust0_sea*np.exp(-sol.y[:,1]/Hscale) + bfr_thrust0_vac*(1-np.exp(-sol.y[:,1]/Hscale))
 engine1 = bfr_thrust1_sea*np.exp(-sol.y[:,1]/Hscale) + bfr_thrust1_vac*(1-np.exp(-sol.y[:,1]/Hscale))
-stage_tol = sol.aux['const']['stage_tol']
+stage_tol = sol.const[0]
 Thrust = engine0/(1+np.exp((bfr_mass0f - sol.y[:,4])/stage_tol)) + engine1/(1+np.exp((sol.y[:,4] - bfr_mass0f)/stage_tol))
 
 plt.plot(sol.t, Thrust/1e6)

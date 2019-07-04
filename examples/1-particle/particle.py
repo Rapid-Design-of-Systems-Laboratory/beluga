@@ -21,12 +21,12 @@ ocp.state('x', 'v', 'm') \
 ocp.control('u', 'rad')
 
 # Define constants
+ocp.constant('x_max', 0.1, 'm')
 ocp.constant('x_0', 0, 'm')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
 ocp.constant('epsilon1', 10, 'rad**2')
-ocp.constant('x_max', 0.1, 'm')
 
 # Define costs
 ocp.path_cost('u**2', 'rad**2')
@@ -113,7 +113,7 @@ ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
 plt.plot(sol_direct.t, sol_direct.y[:, 0], linestyle='--', color='r', marker='o')
 plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 0], ts), linestyle='-', color='r', label='direct')
 plt.plot(sol_indirect.t, sol_indirect.y[:, 0], linestyle='-', color='b', label='indirect')
-plt.plot([sol_direct.t[0], sol_direct.t[-1]], [sol_direct.aux['const']['x_max']]*2, linestyle='--', color='k')
+plt.plot([sol_direct.t[0], sol_direct.t[-1]], [sol_direct.const[0]]*2, linestyle='--', color='k')
 plt.title('Position')
 plt.xlabel('Time [s]')
 plt.legend()
