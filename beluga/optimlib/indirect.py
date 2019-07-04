@@ -204,7 +204,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
-           'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+           'consts': [str(k) for k in constants],
            'initial_cost': None,
            'initial_cost_units': None,
            'path_cost': None,

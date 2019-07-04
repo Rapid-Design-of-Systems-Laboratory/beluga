@@ -391,11 +391,11 @@ class GuessGenerator(object):
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
         solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
-                      sol.dynamical_parameters, np.fromiter(sol.aux['const'].values(), dtype=np.float64))
+                      sol.dynamical_parameters, sol.const)
         solout = copy.deepcopy(solivp)
         solout.dynamical_parameters = sol.dynamical_parameters
         solout.nondynamical_parameters = sol.nondynamical_parameters
-        solout.aux = sol.aux
+        solout.const = sol.const
         elapsed_time = time.time() - time0
         logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
         logging.debug('Terminal states of guess:')
@@ -469,7 +469,7 @@ class GuessGenerator(object):
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
         solout = copy.deepcopy(sol)
-        solout.aux = sol.aux
+        solout.const = sol.const
         elapsed_time = time.time() - time0
         logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
         logging.debug('Terminal states of guess:')

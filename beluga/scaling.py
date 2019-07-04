@@ -75,11 +75,7 @@ class Scaling(dict):
             # If scaling factor is a number, use it
             return scale_expr
         else:
-            variables = [(aux_name, aux_val)
-                         for aux_type in sol.aux
-                         if isinstance(sol.aux[aux_type], dict)
-                         for (aux_name, aux_val) in sol.aux[aux_type].items()
-                         ]
+            variables = [(const_name, const_val) for (const_name, const_val) in zip(self.problem_data['constants'], self.problem_data['constants_values'])]
             # Have to do in this order to override state values with arrays
             variables += [(state, max(abs(sol.y[:, idx]))) for idx, state in enumerate(self.problem_data['states'])]
             variables += [(quad, max(abs(sol.q[:, idx]))) for idx, quad in enumerate(self.problem_data['quads'])]
@@ -124,10 +120,13 @@ class Scaling(dict):
             solout.q[:, idx] /= self.scale_vals['quads'][quad]
 
         # Scale auxiliary variables
-        for aux in (self.problem_data['aux_list']):
-            if aux['type'] not in Scaling.excluded_aux:
-                for var_ in aux['vars']:
-                    solout.aux[aux['type']][var_] /= self.scale_vals[aux['type']][var_]
+        for idx, const in enumerate(self.problem_data['consts']):
+            solout.const[idx] /= self.scale_vals['const'][const]
+
+        # for aux in (self.problem_data['aux_list']):
+        #     if aux['type'] not in Scaling.excluded_aux:
+        #         for var_ in aux['vars']:
+        #             solout.aux[aux['type']][var_] /= self.scale_vals[aux['type']][var_]
 
         # Scale parameters
         for idx, param in enumerate([str(p) for p in self.problem_data['dynamical_parameters']]):
@@ -150,10 +149,12 @@ class Scaling(dict):
             solout.q[:, idx] *= self.scale_vals['quads'][quad]
 
         # Scale auxiliary variables
-        for aux in (self.problem_data['aux_list']):
-            if aux['type'] not in Scaling.excluded_aux:
-                for var_ in aux['vars']:
-                    solout.aux[aux['type']][var_] *= self.scale_vals[aux['type']][var_]
+        for idx, const in enumerate(self.problem_data['consts']):
+            solout.const[idx] *= self.scale_vals['const'][const]
+        # for aux in (self.problem_data['aux_list']):
+        #     if aux['type'] not in Scaling.excluded_aux:
+        #         for var_ in aux['vars']:
+        #             solout.aux[aux['type']][var_] *= self.scale_vals[aux['type']][var_]
 
         # Scale parameters
         for idx, param in enumerate([str(p) for p in self.problem_data['dynamical_parameters']]):
