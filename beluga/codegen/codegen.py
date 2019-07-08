@@ -388,7 +388,8 @@ def make_jit_fn(args, fn_expr):
     f = eval(fn_str)
     try:
         jit_fn = numba.jit(nopython=True)(f)
-        jit_fn(*np.ones(len(args), dtype=float))
+        in_rand = np.random.rand(len(args))
+        jit_fn(*in_rand)
     except:
         logging.warning(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
         jit_fn = f
