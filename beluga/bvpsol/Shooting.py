@@ -265,29 +265,36 @@ class Shooting(BaseAlgorithm):
             return bc
         return _bc_func
 
-    @staticmethod
-    def make_stmode(odefn, n_odes, step_size=1e-6):
+    def make_stmode(self, odefn, n_odes, step_size=1e-6):
         xh = np.eye(n_odes)*step_size
 
         def _stmode_fd(_xx, u, p, const):
             """ Finite difference version of state transition matrix """
             n_params = p.size
-            ff = np.empty((n_odes, n_odes+n_params))
-            phi = _xx[n_odes:].reshape((n_odes, n_odes+n_params))
+            phi = _xx[n_odes:].reshape((n_odes, n_odes + n_params))
             xx = _xx[0:n_odes]  # Just states
 
-            # Compute Jacobian matrix, F using finite difference
             fx = np.squeeze([odefn(xx, u, p, const)])
 
-            for i in range(n_odes):
-                fxh = odefn(xx + xh[i, :], u, p, const)
-                ff[:, i] = (fxh-fx) / step_size
+            if self.derivative_function_jac is not None:
+                _df_dy, _df_dp = self.derivative_function_jac(xx, [], p, const)
+                Z = np.zeros((n_odes, n_params - _df_dp.shape[0]))
+                ff = np.hstack((_df_dy, _df_dp.T, Z))
+            else:
+                ff = np.empty((n_odes, n_odes+n_params))
 
-            for i in range(n_params):
-                p[i] += step_size
-                fxh = odefn(xx, u, p, const)
-                ff[:, i+n_odes] = (fxh - fx) / step_size
-                p[i] -= step_size
+
+                for i in range(n_odes):
+                    fxh = odefn(xx + xh[i, :], u, p, const)
+                    ff[:, i] = (fxh-fx) / step_size
+
+                for i in range(n_params):
+                    p[i] += step_size
+                    fxh = odefn(xx, u, p, const)
+                    ff[:, i+n_odes] = (fxh - fx) / step_size
+                    p[i] -= step_size
+
+
 
             phi_dot = np.dot(np.vstack((ff, np.zeros((n_params, n_params + n_odes)))),
                              np.vstack((phi, np.hstack((np.zeros((n_params, n_odes)), np.eye(n_params))))))[:n_odes, :]
