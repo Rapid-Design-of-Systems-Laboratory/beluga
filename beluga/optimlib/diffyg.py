@@ -307,7 +307,7 @@ def ocp_to_bvp(ocp, **kwargs):
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
     out = {'method': 'diffyg',
            'problem_name': problem_name,
-           'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
+           'consts': [str(k) for k in constants],
            'initial_cost': None,
            'initial_cost_units': None,
            'path_cost': None,
@@ -317,6 +317,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'states': [str(x) for x in reduced_states],
            'states_units': [str(state_2_units[x]) for x in reduced_states],
            'states_rates': [str(tf * rate) for rate in equations_of_motion],
+           'states_jac': [None, None],
            'quads': [str(x) for x in quads],
            'quads_rates': [str(tf * x) for x in quads_rates],
            'quads_units': [str(x) for x in quads_units],
@@ -365,7 +366,7 @@ def ocp_to_bvp(ocp, **kwargs):
                                                             for fn in states_2_constants_fn])))
         sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
         sol_out.u = np.array([]).reshape((nodes, 0))
-        sol_out.aux = sol.aux
+        sol_out.const = sol.const
         return sol_out
 
     def guess_map_inverse(sol, _compute_control=None):

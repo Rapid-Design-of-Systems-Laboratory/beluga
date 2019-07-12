@@ -305,13 +305,15 @@ def solve(**kwargs):
         initial_bc = dict(zip(quad_names, initial_quads))
         terminal_bc = dict(zip(quad_names, terminal_quads))
 
-        for ii in initial_bc:
-            if ii + '_0' in solinit.aux['const'].keys():
-                solinit.aux['const'][ii + '_0'] = initial_bc[ii]
+        for ii, bc0 in enumerate(initial_bc):
+            if bc0 + '_0' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bc0 + '_0')
+                solinit.const[ii + '_0'] = initial_bc[bc0]
 
-        for ii in terminal_bc:
-            if ii + '_f' in solinit.aux['const'].keys():
-                solinit.aux['const'][ii + '_f'] = terminal_bc[ii]
+        for ii, bcf in enumerate(terminal_bc):
+            if bcf + '_f' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bcf + '_f')
+                solinit.const[jj] = terminal_bc[bcf]
 
     time0 = time.time()
 
