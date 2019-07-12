@@ -1,12 +1,15 @@
 """
 "T#" test cases from https://archimede.dm.uniba.it/~bvpsolvers/testsetbvpsolvers/?page_id=27, [1]_.
+"R#" test cases from https://doi.org/10.2514/6.2019-3666, [2]_.
 
 References
 ----------
 .. [1] Francesca Mazzia and Jeff R. Cash. "A fortran test set for boundary value problem solvers."
     AIP Conference Proceedings. 1648(1):020009, 2015.
-"""
 
+.. [2] Michael J Sparapany and Michael J Grant. "Numerical Algorithms for Solving Boundary-Value Problems on Reduced Dimensional Manifolds."
+    AIAA Aviation 2019 Forum. 2019.
+"""
 
 import pytest
 from beluga.ivpsol import Trajectory

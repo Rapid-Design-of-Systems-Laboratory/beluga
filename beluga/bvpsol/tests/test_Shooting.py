@@ -1,10 +1,14 @@
 """
 "T#" test cases from https://archimede.dm.uniba.it/~bvpsolvers/testsetbvpsolvers/?page_id=27, [1]_.
+"R#" test cases from https://doi.org/10.2514/6.2019-3666, [2]_.
 
 References
 ----------
 .. [1] Francesca Mazzia and Jeff R. Cash. "A fortran test set for boundary value problem solvers."
     AIP Conference Proceedings. 1648(1):020009, 2015.
+
+.. [2] Michael J Sparapany and Michael J Grant. "Numerical Algorithms for Solving Boundary-Value Problems on Reduced Dimensional Manifolds."
+    AIAA Aviation 2019 Forum. 2019.
 """
 
 import pytest
@@ -491,10 +495,16 @@ def test_T17(algorithm, const):
     def odefun(X, u, p, const):
         return 0.2 * X[1], 0.2 * (-3 * const[0] * X[0] / (const[0] + X[2] ** 2) ** 2), 0.2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 0.2, 0], [-(3*const[0])/(5*(X[2]**2 + const[0])**2), 0, (12*const[0]*X[0]*X[2])/(5*(X[2]**2 + const[0])**3)], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -512,10 +522,16 @@ def test_T18(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (-X[1] / const[0]), 1
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -533,10 +549,16 @@ def test_T19(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (-X[1] / const[0]), 1
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0], X0[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -551,10 +573,16 @@ def test_T21(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (X[0] * (1 + X[0]) - np.exp(-2 * X[2] / np.sqrt(const[0]))) / const[0], 1
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0], [(2*X[0] + 1)/const[0], 0, (2*np.exp(-(2*X[2])/np.sqrt(const[0])))/const[0]**(3/2)], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - np.exp(-1 / np.sqrt(const[0])), X0[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
@@ -572,10 +600,16 @@ def test_T22(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], -(X[1] + X[0] * X[0]) / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [-(2*X[0])/const[0], -1/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 1 / 2
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0], [0, 0]])
@@ -590,10 +624,16 @@ def test_T23(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], -(X[1] + X[0] * X[0]) / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [-(2*X[0])/const[0], -1/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 1 / 2
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0], [0, 0]])
@@ -612,10 +652,20 @@ def test_T24(algorithm, const):
         return (X[1], (((1 + y) / 2 - const[0] * Apx) * X[0] * X[1] - X[1] / X[0] - (Apx / Ax) * (
                     1 - (y - 1) / 2 * X[0] ** 2)) / (const[0] * Ax * X[0]), 1)
 
+    def odejac(X, u, p, const):
+        y = 1.4
+        df_dy = np.array([[0, 1, 0], [(X[1]*(y/2 - 2*const*X[2] + 1/2) + X[1]/X[0]**2 + (4*X[0]*X[2]*(y/2 - 1/2))/(X[2]**2 + 1))/(const[0]*X[0]*(X[2]**2 + 1)) - ((2*X[2]*((y/2 - 1/2)*X[0]**2 - 1))/(X[2]**2 + 1) - X[1]/X[0] + X[0]*X[1]*(y/2 - 2*const[0]*X[2] + 1/2))/(const[0]*X[0]**2*(X[2]**2 + 1)),
+                                      (X[0] * (y / 2 - 2 * const[0] * X[2] + 1 / 2) - 1 / X[0]) / (const[0] * X[0] * (X[2] ** 2 + 1)),
+                                      -((4 * X[2] ** 2 * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) ** 2 - (2 * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) + 2 * const[0] * X[0] * X[1]) / (const[0] * X[0] * (X[2] ** 2 + 1)) - (2 * X[2] * ((2 * X[2] * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) - X[1] / X[0] + X[0] * X[1] * (y / 2 - 2 * const[0] * X[2] + 1 / 2))) / (const[0] * X[0] * (X[2] ** 2 + 1) ** 2)],
+                          [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
         return X0[0] - 0.9129, Xf[0] - 0.375, X0[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 1, 0], [0.1, 0.1, 1]])
@@ -634,10 +684,16 @@ def test_T25(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], X[0] * (1 - X[1]) / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1 / 3, Xf[0] - 1 / 3
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=16)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-1/3, 1], [1/3, 1]])
@@ -656,10 +712,16 @@ def test_T26(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], X[0] * (1 - X[1]) / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] + 1/3
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=64)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 0], [-1/3, 0]])
@@ -678,10 +740,16 @@ def test_T27(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], X[0] * (1 - X[1]) / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 1 / 3
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 0], [1 / 3, 0]])
@@ -700,10 +768,16 @@ def test_T28(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (X[0] - X[0]*X[1])/const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 3/2
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=1)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 0], [3/2, 0]])
@@ -718,10 +792,16 @@ def test_T29(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (X[0] - X[0]*X[1])/const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 3/2
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=1)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0], [3/2, 0]])
@@ -736,10 +816,16 @@ def test_T30(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (X[0] - X[0]*X[1])/const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 7/6, Xf[0] - 3/2
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=8)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-7/6, 0], [3/2, 0]])
@@ -759,10 +845,16 @@ def test_T31(algorithm, const):
         return np.sin(X[1]), X[2], -X[3]/const[0],\
                ((X[0]-1)*np.cos(X[1]) - X[2]/np.cos(X[1]) - const[0]*X[3]*np.tan(X[1]))/const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, np.cos(X[1]), 0, 0], [0, 0, 1, 0], [0, 0, 0, -1/const[0]], [np.cos(X[1])/const[0], -(np.sin(X[1])*(X[0] - 1) + const[0]*X[3]*(np.tan(X[1])**2 + 1) + (X[2]*np.sin(X[1]))/np.cos(X[1])**2)/const[0], -1/(const[0]*np.cos(X[1])), -np.tan(X[1])]])
+        df_dp = np.empty((0, 4))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], X0[2], Xf[0], Xf[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=12)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
@@ -781,10 +873,16 @@ def test_T32(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], X[2], X[3], (X[1]*X[2] - X[0]*X[3])/const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1], [-X[3]/const[0], X[2]/const[0], X[1]/const[0], -X[0]/const[0]]])
+        df_dp = np.empty((0, 4))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], X0[1], Xf[0] - 1, Xf[1]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0, 0], [1, 0, 0, 0]])
@@ -799,10 +897,16 @@ def test_T33(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (X[0]*X[3] - X[2]*X[1])/const[0], X[3], X[4], X[5], (-X[2]*X[5] - X[0]*X[1])/const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0, 0, 0, 0], [X[3]/const[0], -X[2]/const[0], -X[1]/const[0], X[0]/const[0], 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1], [-X[1]/const[0], -X[0]/const[0], -X[5]/const[0], 0, 0, -X[2]/const[0]]])
+        df_dp = np.empty((0, 6))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, X0[2], X0[3], Xf[0] - 1, Xf[2], Xf[3]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=12)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-1, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]])
