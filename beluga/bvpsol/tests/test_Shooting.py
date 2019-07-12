@@ -29,10 +29,16 @@ def test_T1(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], X[0] / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [1 / const[0], 0]])
+        df_dp = np.empty((0,2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
@@ -52,10 +58,16 @@ def test_T2(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], X[1] / const[0]
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1], [0, 1 / const[0]]])
+        df_dp = np.empty((0,2))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
@@ -74,10 +86,17 @@ def test_T3(algorithm, const):
         return (2 * X[1], 2 * (-(2 + np.cos(np.pi * X[2])) * X[1] + X[0] - (1 + const[0] * np.pi * np.pi) * np.cos(
             np.pi * X[2]) - (2 + np.cos(np.pi * X[2])) * np.pi * np.sin(np.pi * X[2])) / const[0], 2)
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2 / const[0], -(2 * np.cos(np.pi * X[2]) + 4)/const[0], (2*np.pi**2 * np.sin(np.pi * X[2])**2 + 2 * np.pi*np.sin(np.pi*X[2])*(const[0]*np.pi**2 + 1) - 2*np.pi**2*np.cos(np.pi*X[2])*(np.cos(np.pi*X[2]) + 2) + 2*X[1]*np.pi*np.sin(np.pi*X[2]))/const[0]],
+                          [0,0,0]])
+        df_dp = np.empty((0,3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] + 1, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -95,10 +114,16 @@ def test_T4(algorithm, const):
     def odefun(X, u, p, const):
         return 2 * X[1], 2 * (((1 + const[0]) * X[0] - X[1]) / const[0]), 2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2*(1 + const[0])/const[0], 2*(-1)/const[0], 0], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -115,15 +140,19 @@ def test_T4(algorithm, const):
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T5(algorithm, const):
     def odefun(X, u, p, const):
-        return 2 * X[1],\
-               2 * ((X[0] + X[2] * X[1] - (1 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) + X[2] * np.pi
-                     * np.sin(np.pi * X[2])) / const[0]),\
-               2
+        return (2 * X[1], 2 * ((X[0] + X[2] * X[1] - (1 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) + X[2] * np.pi * np.sin(np.pi * X[2])) / const[0]), 2)
+
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2 / const[0], 2*X[2]/const[0], (2*(X[1] + np.pi*np.sin(np.pi*X[2]) + np.pi*np.sin(np.pi*X[2])*(const*np.pi**2 + 1) + np.pi*np.pi*X[2]*np.cos(np.pi*X[2])))/const[0]],
+                          [0,0,0]])
+        df_dp = np.empty((0,3))
+        return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] + 1, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -142,10 +171,17 @@ def test_T6(algorithm, const):
         return (2 * X[1], 2 * ((-X[2] * X[1] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.pi * X[2] * np.sin(
             np.pi * X[2])) / const[0]), 2)
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [0, -2*X[2]/const[0], -(2*(X[1] + np.pi*np.sin(np.pi*X[2]) - const[0]*np.pi**3*np.sin(np.pi*X[2]) + np.pi**2*X[2]*np.cos(np.pi*X[2])))/const[0]],
+                          [0,0,0]])
+        df_dp = np.empty((0,3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 2, Xf[0], X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -165,10 +201,17 @@ def test_T7(algorithm, const):
         return 2 * X[1], 2 * ((-X[2] * X[1] + X[0] - (1.0e0 + const[0] * np.pi ** 2) * np.cos(np.pi * X[2]) - np.pi *
                                X[2] * np.sin(np.pi * X[2])) / const[0]), 2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2/const[0], -2*X[2]/const[0], -(2*(X[1] + np.pi*np.sin(np.pi*X[2]) + np.pi**2*X[2]*np.cos(np.pi*X[2]) - np.pi*np.sin(np.pi*X[2])*(const[0]*np.pi**2 + 1)))/const[0]],
+                          [0,0,0]])
+        df_dp = np.empty((0,3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] - 1, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
@@ -192,10 +235,16 @@ def test_T8(algorithm, const):
     def odefun(X, u, p, const):
         return X[1], (-X[1] / const[0]), 1
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 2, X0[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
@@ -213,10 +262,16 @@ def test_T9(algorithm, const):
     def odefun(X, u, p, const):
         return 2 * X[1], 2 * (-(4 * X[2] * X[1] + 2 * X[0]) / (const[0] + X[2] ** 2)), 2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [-4/(X[2]**2 + const[0]), -(8*X[2])/(X[2]**2 + const[0]), (4*X[2]*(2*X[0] + 4*X[1]*X[2]))/(X[2]**2 + const[0])**2 - (8*X[1])/(X[2]**2 + const[0])], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=2)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
@@ -234,10 +289,16 @@ def test_T10(algorithm, const):
     def odefun(X, u, p, const):
         return 2 * X[1], 2 * (-X[2] * X[1] / const[0]), 2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [0, 2*(-X[2])/const[0], 2*(-X[1]/const[0])], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 2, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
@@ -258,10 +319,16 @@ def test_T11(algorithm, const):
                2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]),\
                2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] + 1, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
@@ -281,10 +348,16 @@ def test_T12(algorithm, const):
                2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]),\
                2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0], X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
@@ -304,10 +377,16 @@ def test_T13(algorithm, const):
                2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]),\
                2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] + 1, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=2)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
@@ -328,10 +407,16 @@ def test_T14(algorithm, const):
                2 * ((X[0] - const[0] * np.pi ** 2 * np.cos(np.pi * X[2]) - np.cos(np.pi * X[2])) / const[0]),\
                2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0], X0[2]+1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm, num_arcs=4)
+    algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, -1], [0, 0, 1]])
@@ -355,10 +440,16 @@ def test_T15(algorithm, const):
     def odefun(X, u, p, const):
         return 2 * X[1], 2 * (X[2] * X[0] / const[0]), 2
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 2, 0], [2*(X[2]/const[0]), 0, 2*(X[0]/const[0])], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 1, X0[2] + 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
@@ -373,10 +464,16 @@ def test_T16(algorithm, const):
     def odefun(X, u, p, const):
         return 1 * X[1], 1 * (-X[0] * np.pi ** 2 / (4 * const[0])), 1
 
+    def odejac(X, u, p, const):
+        df_dy = np.array([[0, 1, 0], [-np.pi**2/(4*const[0]), 0, 0], [0, 0, 0]])
+        df_dp = np.empty((0, 3))
+        return df_dy, df_dp
+
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2]
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
+    algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
