@@ -622,21 +622,21 @@ def test_T22(algorithm, const):
 @pytest.mark.parametrize("algorithm, const", itertools.product(ALGORITHMS, MEDIUM))
 def test_T23(algorithm, const):
     def odefun(X, u, p, const):
-        return X[1], -(X[1] + X[0] * X[0]) / const[0]
+        return X[1], 1 / const[0] * np.sinh(X[0] / const[0])
 
     def odejac(X, u, p, const):
-        df_dy = np.array([[0, 1], [-(2*X[0])/const[0], -1/const[0]]])
+        df_dy = np.array([[0, 1], [np.cosh(X[0] / const[0]) / const[0] ** 2, 0]])
         df_dp = np.empty((0, 2))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
-        return X0[0], Xf[0] - 1 / 2
+        return X0[0], Xf[0] - 1
 
     algo = Shooting(odefun, None, bcfun, algorithm=algorithm)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
-    solinit.y = np.array([[0, 0], [0, 0]])
+    solinit.y = np.array([[0, 0], [1, 0]])
     solinit.const = np.array([const])
     sol = algo.solve(solinit)
 

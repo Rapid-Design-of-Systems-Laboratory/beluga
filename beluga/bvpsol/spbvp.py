@@ -63,7 +63,10 @@ class spbvp(BaseAlgorithm):
                     df_dy[:, :, ii], _df_dp = self.derivative_function_jac(yi, [], params, const)
                     df_dp[:, :, ii] = np.hstack((_df_dp.T, np.zeros((nstates, nnondyn))))
 
-                return df_dy, df_dp
+                if ndyn + nnondyn == 0:
+                    return df_dy
+                else:
+                    return df_dy, df_dp
         else:
             _fun_jac = None
 
