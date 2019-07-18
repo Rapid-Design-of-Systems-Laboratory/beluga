@@ -155,26 +155,27 @@ class Shooting(BaseAlgorithm):
         return gamma_set_new
 
     @staticmethod
-    def _make_gammas_parallel(derivative_function, quadrature_function, gamma_set, param_guess, sol, prop, pool,
-                              nquads):
+    def _make_gammas_parallel(derivative_function, quadrature_function, gamma_set, param_guess, sol, prop, pool, nquads):
         n_arcs = len(gamma_set)
         tspan = [None] * n_arcs
         y0g = [None] * n_arcs
         q0g = [None] * n_arcs
+        u0g = [None]*n_arcs
         for ii in range(len(gamma_set)):
             _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
             tspan[ii] = gamma_set[ii].t
             y0g[ii] = _y0g
             q0g[ii] = _q0g
+            u0g[ii] = _u0g
 
         def preload(args):
-            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2],
+            return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], args[3],
                         param_guess, sol.const)
 
         if pool is not None:
-            gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
+            gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g, u0g))
         else:
-            gamma_set_new = [preload([T, Y, Q]) for T, Y, Q in zip(tspan, y0g, q0g)]
+            gamma_set_new = [preload([T, Y, Q, U]) for T, Y, Q, U in zip(tspan, y0g, q0g, u0g)]
 
         if n_arcs > 1 and nquads > 0:
             for ii in range(n_arcs - 1):
