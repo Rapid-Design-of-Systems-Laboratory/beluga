@@ -82,6 +82,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     out = {'method': 'direct',
            'problem_name': problem_name,
+           'control_method': '',
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'initial_cost': str(initial_cost),
            'initial_cost_units': str(initial_cost_units),

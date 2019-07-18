@@ -307,6 +307,7 @@ def ocp_to_bvp(ocp, **kwargs):
     control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
     out = {'method': 'diffyg',
            'problem_name': problem_name,
+           'control_method': '',
            'consts': [str(k) for k in constants],
            'initial_cost': None,
            'initial_cost_units': None,
@@ -336,7 +337,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'hamiltonian': str(hamiltonian),
            'hamiltonian_units': str(hamiltonian_units),
            'num_states': len(reduced_states),
-           'dHdu': str(dHdu),
+           'dHdu': [str(x) for x in dHdu],
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in bc_terminal],
            'control_options': control_law,

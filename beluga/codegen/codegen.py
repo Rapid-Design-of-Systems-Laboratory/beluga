@@ -4,6 +4,7 @@ import re
 import sympy
 from autograd import grad
 from autograd import numpy as np
+from scipy.optimize import fsolve, minimize
 
 # The following import statements *look* unused, but is in fact used by the code compiler. This enables users to use
 # various basic math functions like `cos` and `atan`. Do not delete.
@@ -34,6 +35,9 @@ def make_bvp(problem_data):
     path_cost = problem_data['path_cost']
     terminal_cost = problem_data['terminal_cost']
 
+    dHdu = problem_data['dHdu']
+    control_method = problem_data['control_method']
+
     # states_jac
     # df_dy = problem_data['states_jac'][0]
     # df_dp = problem_data['states_jac'][1]
@@ -45,7 +49,7 @@ def make_bvp(problem_data):
     logging.debug('Making unconstrained control')
     if problem_data['method'] is not 'direct':
         control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters,
-                                                     constants, controls, ham)
+                                                     constants, controls, ham, dHdu, control_method)
 
         def initial_cost(*_, **__):
             return 0
@@ -81,7 +85,7 @@ def make_bvp(problem_data):
     return bvp
 
 
-def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham):
+def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham, dHdu, control_method):
     r"""
     Makes the control and Hamiltonian functions.
 
@@ -91,30 +95,33 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     :param constants: List of constants.
     :param controls: List of controls.
     :param ham: The Hamiltonian function.
+    :param dHdu: Derivative of the Hamiltonian with respect to the control variables.
+    :param control_method: The name of the control method.
     :return: (compute_control_fn, hamiltonian_fn) - Functions that compute the optimal control and the Hamiltonian.
     """
     ham_args = [*states, *parameters, *constants, *controls]
     u_args = [*states, *parameters, *constants]
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
 
-    u_str = '['
-    for ii in range(len(control_opts)):
-        if ii > 0:
-            u_str += ','
-        u_str += '['
-        u_str += ','.join(control_opt_mat[ii])
-        u_str += ']'
 
-    u_str += ']'
-
-    control_opt_fn = make_jit_fn(u_args, u_str)
     hamiltonian_fn = make_sympy_fn(ham_args, ham)
     num_options = len(control_opts)
     num_states = len(states)
     num_controls = len(controls)
     num_params = len(parameters)
 
-    if num_controls > 0:
+    if control_method == 'traditional' or control_method == 'pmp':
+        u_str = '['
+        for ii in range(len(control_opts)):
+            if ii > 0:
+                u_str += ','
+            u_str += '['
+            u_str += ','.join(control_opt_mat[ii])
+            u_str += ']'
+        u_str += ']'
+
+        control_opt_fn = make_jit_fn(u_args, u_str)
+
         def compute_control_fn(X, u, p, C):
             p = p[:num_params]
             u_list = np.asarray(control_opt_fn(*X, *p, *C))
@@ -125,9 +132,25 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
                 ham_val[i] = hamiltonian_fn(*X, *p, *C, *u_list[i])
 
             return u_list[np.argmin(ham_val)]
-    else:
+
+    elif control_method == 'icrm':
         def compute_control_fn(X, u, p, C):
             return np.array([])
+
+    elif control_method == 'numerical':
+        dHdu_str = '(' + ','.join(dHdu) + ')'
+        dHdu_fn = make_jit_fn(ham_args, dHdu_str)
+
+        def compute_control_fn(X, u, p, C):
+            opt = fsolve(lambda _u: dHdu_fn(*X, *p, *C, *_u), x0=[-1]*num_controls)
+
+            # def loss2(X, _u, p, C):
+            #     return (dHdu_fn(*X, *p, *C, *_u))**2
+
+            # opt2 = minimize(lambda _u: loss2(X, _u, p, C), x0=[1]*num_controls)
+            return opt
+    else:
+        raise NotImplementedError('Control method \'' + control_method + '\' does not have an associated codegen method.')
 
     return compute_control_fn, hamiltonian_fn
 
