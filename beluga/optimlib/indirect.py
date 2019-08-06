@@ -66,6 +66,9 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Deal with path constraints
     """
+
+    control_constraint_mapping = dict()
+
     for ii, c in enumerate(constraints['path']):
         if constraints_method['path'] is None:
             raise NotImplementedError
@@ -74,6 +77,15 @@ def ocp_to_bvp(ocp, **kwargs):
             path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
                                   constraints_activators['path'][ii])
         elif constraints_method['path'][ii].lower() == 'epstrig':
+            constraint_is_control = False
+            for jj, val in enumerate(controls):
+                if constraints['path'][ii] == val:
+                    constraint_is_control = True
+                    control_constraint_mapping.update({ii: jj})
+
+            if not constraint_is_control:
+                raise NotImplementedError('Epsilon-Trig must be used with pure control-constraints.')
+
             path_cost += epstrig_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
                                   constraints_activators['path'][ii])
             upper = constraints_upper['path'][ii]
@@ -260,7 +272,7 @@ def ocp_to_bvp(ocp, **kwargs):
             sol_out.y = np.column_stack((sol.y, sol.dual))
         else:
             sol_out.y = np.column_stack((sol.y, sol.dual, sol.u))
-
+        # (upper - lower) / 2 * sympy.sin(constraints['path'][ii]) + (upper + lower) / 2
         sol_out.dual = np.array([])
         sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
         sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
@@ -282,6 +294,21 @@ def ocp_to_bvp(ocp, **kwargs):
         sol.y = np.delete(sol.y, np.s_[-len(costates)-num_dae:], axis=1)
         sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
+
+        cmap = dict(zip([str(c) for c in constants], np.arange(0, len(constants)-1)))
+
+        for ele in control_constraint_mapping.keys():
+            ctrl = control_constraint_mapping[ele]
+            lower = str(constraints_lower['path'][ele])
+            upper = str(constraints_upper['path'][ele])
+            for ele2 in cmap.keys():
+                upper = upper.replace(ele2, str(sol.const[cmap[ele2]]))
+                lower = lower.replace(ele2, str(sol.const[cmap[ele2]]))
+
+            upper = eval(upper)
+            lower = eval(lower)
+            sol.u[:, ctrl] = (upper - lower)*(np.sin(sol.u[:, ctrl]) + 1)/2 + lower
+
         return sol
 
     return out, guess_map, guess_map_inverse

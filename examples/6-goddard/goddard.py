@@ -70,7 +70,6 @@ ocp.constant('eps', 0.01, '1')
 
 # Define costs
 ocp.terminal_cost('-h', '1')
-# ocp.path_cost('-eps*cos(u)', '1')
 
 # Define constraints
 ocp.constraints() \
@@ -145,7 +144,8 @@ plt.title('Mass Profile')
 plt.grid('on')
 
 plt.figure(4)
-plt.plot(sol.t, thrust_max*(np.sin(sol.u[:, 0]) + 1)/2, label='Thrust')
+# plt.plot(sol.t, thrust_max*(np.sin(sol.u[:, 0]) + 1)/2, label='Thrust')
+plt.plot(sol.t, sol.u[:,0], label='Thrust')
 plt.plot(sol.t, 1 * d_c * sol.y[:, 1]**2 * np.exp(-h_c * (sol.y[:, 0] - h_0) / h_0), label='Drag')
 plt.xlabel('Time [s]')
 plt.ylabel('Force [nd]')

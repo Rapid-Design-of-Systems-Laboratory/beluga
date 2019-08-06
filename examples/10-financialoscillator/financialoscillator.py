@@ -61,7 +61,7 @@ ocp_direct.constraints().path('u', 'rad', lower=-2, upper=2, activator=None, met
 ocp_direct.constraints().terminal('t - 1', 'nd')
 ocp_direct.constraints().terminal('tau - 1', 'nd')
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=60)
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator(
@@ -136,9 +136,9 @@ plt.show()
 
 plt.plot([0,1], [2,2], linestyle='--', color='k')
 plt.plot([0,1], [-2,-2], linestyle='--', color='k')
-plt.plot(sol_direct.t, 2*np.sin(sol_direct.u), linestyle='--', color='r', marker='o')
-plt.plot(ts, 2*np.sin(linter(sol_direct.t, sol_direct.u[:, 0], ts)), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, 2*np.sin(sol_indirect.u), linestyle='-', color='b', label='indirect')
+plt.plot(sol_direct.t, sol_direct.u, linestyle='--', color='r', marker='o')
+plt.plot(ts, linter(sol_direct.t, sol_direct.u[:, 0], ts), linestyle='-', color='r', label='direct')
+plt.plot(sol_indirect.t, sol_indirect.u, linestyle='-', color='b', label='indirect')
 plt.title('Control')
 plt.xlabel('Time [nd]')
 plt.ylabel('$u$ [nd]')
