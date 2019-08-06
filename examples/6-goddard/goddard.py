@@ -116,6 +116,7 @@ sol_set = beluga.solve(
     steps=continuation_steps,
     guess_generator=guess_maker,
     autoscale=False,
+    initial_helper=True,
     save='goddard.beluga',
 )
 

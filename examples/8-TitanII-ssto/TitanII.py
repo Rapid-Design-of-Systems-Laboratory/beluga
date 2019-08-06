@@ -57,7 +57,6 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
 guess_maker = beluga.guess_generator('auto',
@@ -68,14 +67,6 @@ guess_maker = beluga.guess_generator('auto',
 )
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
-
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=None,
-             guess_generator=guess_maker, autoscale=True)
-
-guess_maker = beluga.guess_generator('static', solinit=sol_set[-1][-1])
 
 continuation_steps = beluga.init_continuation()
 

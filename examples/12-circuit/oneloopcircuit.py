@@ -26,9 +26,9 @@ ocp.state('i', '-Rc/L*i + u/L', 'a')
 ocp.control('u', 'v')
 
 # Define constants
-ocp.constant('i_0', 0.1, 'a')
 ocp.constant('u_min', -300, 'v')
 ocp.constant('u_max', 300, 'v')
+ocp.constant('i_0', 0.1, 'a')
 ocp.constant('Rc', 145, 'o')
 ocp.constant('L', 3.5, 'H')
 ocp.constant('lu', 1, '1')
@@ -102,8 +102,8 @@ ax2 = ax1.twinx()
 color = 'tab:blue'
 ax2.set_ylabel('Voltage [volts]', color=color)
 ax2.plot(sol_indirect.t, sol_indirect.u[:,0], color=color)
-ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.aux['const']['u_max']]*2, linestyle='--', color='k')
-ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.aux['const']['u_min']]*2, linestyle='--', color='k', label='Min/Max Voltage')
+ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.const[0]]*2, linestyle='--', color='k')
+ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.const[1]]*2, linestyle='--', color='k', label='Min/Max Voltage')
 ax2.tick_params(axis='y', labelcolor=color)
 
 plt.legend()

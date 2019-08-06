@@ -217,6 +217,8 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | guess_generator        | None            | guess generator                       |
     +------------------------+-----------------+---------------------------------------+
+    | initial_helper         | False           | bool                                  |
+    +------------------------+-----------------+---------------------------------------+
     | method                 | 'traditional'   | string                                |
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
@@ -238,6 +240,7 @@ def solve(**kwargs):
     bvp = kwargs.get('bvp', None)
     bvp_algorithm = kwargs.get('bvp_algorithm', None)
     guess_generator = kwargs.get('guess_generator', None)
+    initial_helper = kwargs.get('initial_helper', False)
     method = kwargs.get('method', 'traditional')
     n_cpus = int(kwargs.get('n_cpus', 1))
     ocp = kwargs.get('ocp', None)
@@ -269,12 +272,6 @@ def solve(**kwargs):
 
     solinit = Trajectory()
     solinit.const = np.array(bvp.raw['constants_values'])
-    # breakpoint()
-    # solinit.aux['const'] = OrderedDict((const, val) for const, val in zip(bvp.raw['constants'], bvp.raw['constants_values']))
-
-    # for const in bvp.raw['constants']:
-    #     if not str(const) in solinit.aux['const'].keys():
-    #         solinit.aux['const'][str(const)] = 0
 
     solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
 
@@ -286,7 +283,7 @@ def solve(**kwargs):
     initial_bc = dict(zip(state_names, initial_states))
     terminal_bc = dict(zip(state_names, terminal_states))
 
-    if steps is not None:
+    if steps is not None and initial_helper:
         for ii, bc0 in enumerate(initial_bc):
             if bc0 + '_0' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bc0 + '_0')

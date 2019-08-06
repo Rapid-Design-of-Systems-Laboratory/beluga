@@ -149,6 +149,7 @@ sol_set = beluga.solve(
     steps=continuation_steps,
     guess_generator=guess_maker,
     optim_options={'control_method': 'icrm'},
+    initial_helper=True
 )
 
 sol = sol_set[-1][-1]

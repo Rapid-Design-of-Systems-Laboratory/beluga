@@ -64,7 +64,8 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=True
+    autoscale=True,
+    initial_helper=True
 )
 
 sol = sol_set[-1][-1]

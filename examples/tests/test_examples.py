@@ -55,7 +55,8 @@ def test_brachistochrone_shooting():
                         optim_options={'control_method': 'icrm'},
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
-                        guess_generator=guess_maker)
+                        guess_generator=guess_maker,
+                        initial_helper=True)
 
     sol = cont[-1][-1]
     assert isinstance(sol, Trajectory)
@@ -89,7 +90,8 @@ def test_brachistochrone_shooting():
                         method='indirect',
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
-                        guess_generator=guess_maker)
+                        guess_generator=guess_maker,
+                        initial_helper=True)
     sol = cont[-1][-1]
 
     y0 = sol.y[0]
@@ -171,7 +173,8 @@ def test_brachistochrone_collocation():
                         method='indirect',
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
-                        guess_generator=guess_maker)
+                        guess_generator=guess_maker,
+                        initial_helper=True)
 
     sol = cont[-1][-1]
 
@@ -208,7 +211,8 @@ def test_brachistochrone_collocation():
                         optim_options={'control_method': 'icrm'},
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
-                        guess_generator=guess_maker)
+                        guess_generator=guess_maker,
+                        initial_helper=True)
 
     sol = cont[-1][-1]
 
@@ -310,7 +314,8 @@ def test_zermelo_custom_functions():
                         optim_options={'control_method': 'icrm'},
                         bvp_algorithm=bvp_solver,
                         steps=continuation_steps,
-                        guess_generator=guess_maker)
+                        guess_generator=guess_maker,
+                        initial_helper=True)
 
     sol = cont[-1][-1]
 
@@ -417,7 +422,8 @@ def test_planarhypersonic():
                         method='indirect',
                         bvp_algorithm=bvp_solver,
                         steps=continuation_steps,
-                        guess_generator=guess_maker)
+                        guess_generator=guess_maker,
+                        initial_helper=True)
 
     sol = cont[-1][-1]
 

@@ -109,5 +109,6 @@ sol_set = beluga.solve(
     method='indirect',
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
-    guess_generator=guess_maker
+    guess_generator=guess_maker,
+    initial_helper=True
 )
