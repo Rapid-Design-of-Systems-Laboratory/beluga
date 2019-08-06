@@ -109,7 +109,8 @@ cont_planar = beluga.solve(ocp=ocp,
                            optim_options={'control_method': 'icrm'},
                            bvp_algorithm=bvp_solver,
                            steps=continuation_steps,
-                           guess_generator=guess_maker)
+                           guess_generator=guess_maker,
+                           initial_helper=True)
 
 sol = cont_planar[-1][-1]
 

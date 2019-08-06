@@ -21,12 +21,12 @@ ocp.state('x', 'v', 'm') \
 ocp.control('u', 'rad')
 
 # Define constants
-ocp.constant('x_max', 0.1, 'm')
 ocp.constant('x_0', 0, 'm')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
 ocp.constant('epsilon1', 10, 'rad**2')
+ocp.constant('x_max', 0.1, 'm')
 
 # Define costs
 ocp.path_cost('u**2', 'rad**2')

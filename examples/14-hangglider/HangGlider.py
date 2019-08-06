@@ -111,11 +111,12 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method':'icrm'},
+    optim_options={'control_method': 'icrm'},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=False
+    autoscale=False,
+    initial_helper=True
 )
 
 sol = sol_set[-1][-1]
@@ -146,7 +147,7 @@ plt.ylabel('Vertical Velocity [m/s]')
 plt.xlabel('Time [s]')
 plt.show()
 
-plt.plot(sol.t, 1.4*(np.sin(sol.u[:, 0]) + 1)/2)
+plt.plot(sol.t, sol.u[:, 0])
 plt.ylabel('Lift Coefficient')
 plt.xlabel('Time [s]')
 plt.show()

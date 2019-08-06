@@ -105,14 +105,6 @@ guess_maker = beluga.guess_generator('auto',
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=None,
-             guess_generator=guess_maker, autoscale=True)
-
-guess_maker = beluga.guess_generator('static', solinit=sol_set[-1][-1])
-
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
@@ -136,7 +128,6 @@ continuation_steps.add_step('bisection') \
 continuation_steps.add_step('bisection') \
                 .num_cases(20, 'log') \
                 .const('stage_tol', 1e-3)
-
 
 sol_set = beluga.solve(ocp=ocp,
              method='indirect',
