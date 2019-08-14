@@ -61,7 +61,7 @@ ocp_direct.constraints().path('u', 'rad', lower=-2, upper=2, activator=None, met
 ocp_direct.constraints().terminal('t - 1', 'nd')
 ocp_direct.constraints().terminal('tau - 1', 'nd')
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=60)
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator(
@@ -98,7 +98,7 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
     .num_cases(40, 'log') \
-    .const('epsilon1', 1e-4)
+    .const('epsilon1', 2e-4)
 
 sol_set_indirect = beluga.solve(
     ocp=ocp_indirect,
@@ -115,25 +115,26 @@ sol_indirect = sol_set_indirect[-1][-1]
 
 ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
 
+plt.figure()
 plt.plot(sol_direct.t, sol_direct.y[:, 0], linestyle='--', color='r', marker='o')
 plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 0], ts), linestyle='-', color='r', label='direct')
 plt.plot(sol_indirect.t, sol_indirect.y[:, 0], linestyle='-', color='b', label='indirect')
 plt.xlabel('Time [nd]')
 plt.ylabel('$x_1$ [nd]')
-plt.grid('on')
+plt.grid(True)
 plt.legend()
-plt.show()
 
+plt.figure()
 plt.plot(sol_direct.y[:,0], sol_direct.y[:, 1], linestyle='--', color='r', marker='o')
 plt.plot(linter(sol_direct.t, sol_direct.y[:, 0], ts), linter(sol_direct.t, sol_direct.y[:, 1], ts), linestyle='-', color='r', label='direct')
 plt.plot(sol_indirect.y[:, 0], sol_indirect.y[:, 1], linestyle='-', color='b', label='indirect')
 plt.title('State-Space')
 plt.xlabel('$x_1$ [nd]')
 plt.ylabel('$x_2$ [nd]')
-plt.grid('on')
+plt.grid(True)
 plt.legend()
-plt.show()
 
+plt.figure()
 plt.plot([0,1], [2,2], linestyle='--', color='k')
 plt.plot([0,1], [-2,-2], linestyle='--', color='k')
 plt.plot(sol_direct.t, sol_direct.u, linestyle='--', color='r', marker='o')
@@ -142,6 +143,6 @@ plt.plot(sol_indirect.t, sol_indirect.u, linestyle='-', color='b', label='indire
 plt.title('Control')
 plt.xlabel('Time [nd]')
 plt.ylabel('$u$ [nd]')
-plt.grid('on')
+plt.grid(True)
 plt.legend()
 plt.show()

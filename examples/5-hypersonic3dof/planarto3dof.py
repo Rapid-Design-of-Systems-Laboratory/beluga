@@ -209,10 +209,12 @@ cont_3dof = beluga.solve(
 
 final_continuation = cont_3dof[-1]
 
+plt.figure()
 for trajectory in final_continuation:
     # Plot altitude vs velocity for the swept crossrange cases
     plt.plot(trajectory.y[:, 3], trajectory.y[:, 0])
 
 plt.xlabel('Velocity [m/s]')
 plt.ylabel('Altitude [m]')
+plt.grid(True)
 plt.show()

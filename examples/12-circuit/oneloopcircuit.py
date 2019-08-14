@@ -107,5 +107,6 @@ ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.const[1]]*2, lin
 ax2.tick_params(axis='y', labelcolor=color)
 
 plt.legend()
+plt.grid(True)
 fig.tight_layout()
 plt.show()

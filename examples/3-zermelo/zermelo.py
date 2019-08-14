@@ -87,5 +87,7 @@ sol_set = beluga.solve(
 
 sol = sol_set[-1][-1]
 
+plt.figure()
 plt.plot(sol.y[:, 0], sol.y[:, 1])
+plt.grid(True)
 plt.show()

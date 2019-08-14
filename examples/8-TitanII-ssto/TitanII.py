@@ -87,25 +87,26 @@ sol_set = beluga.solve(ocp=ocp,
 
 sol = sol_set[-1][-1]
 
+plt.figure()
 plt.plot(sol.y[:,0]/1000, sol.y[:,1]/1000)
 plt.xlabel('Downrange [km]')
 plt.ylabel('Altitude [km]')
 plt.title('Time Optimal Launch of a Titan-II Trajectory')
-plt.grid('on')
-plt.show()
+plt.grid(True)
 
+plt.figure()
 plt.plot(sol.t, sol.y[:,2]/1000, label='Horizontal Velocity')
 plt.plot(sol.t, sol.y[:,3]/1000, label='Vertical Velocity')
 plt.xlabel('Time [s]')
 plt.ylabel('Velocity [km/s]')
 plt.title('Velocities of a Titan-II')
 plt.legend()
-plt.grid('on')
-plt.show()
+plt.grid(True)
 
+plt.figure()
 plt.plot(sol.t, sol.u*180/np.pi)
 plt.xlabel('Time [s]')
 plt.ylabel('Control [degrees]')
 plt.title('Titan-II Steering Angle')
-plt.grid('on')
+plt.grid(True)
 plt.show()
