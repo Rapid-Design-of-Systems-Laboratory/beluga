@@ -103,6 +103,27 @@ def init_workspace(ocp):
     return workspace
 
 
+def exterior_derivative(f, basis, derivative_fn):
+    r"""
+
+    :param f:
+    :param basis:
+    :return:
+    """
+
+    n = len(basis)
+    if isinstance(f, sympy.Array):
+        raise NotImplementedError
+
+    if isinstance(f, sympy.Expr):
+        df = [0]*len(basis)
+        df = sympy.MutableDenseNDimArray(df)
+        for ii in range(n):
+            df[ii] = derivative_fn(f, basis[ii])
+
+    return df
+
+
 def make_augmented_cost(cost, cost_units, constraints, constraints_units, location):
     r"""
     Augments the cost function with the given list of constraints.
@@ -301,6 +322,44 @@ def make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_un
 
     return hamiltonian, hamiltonian_units, costates, costates_units
 
+
+def make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn):
+    r"""
+    Makes a Hamiltonian vector field.
+
+    :param states: A list of state variables, :math:`x`.
+    :param states_rates: A list of rates of change for the state variables :math:`\dot{x} = f'.
+    :param costates: A list of co-state variables, :math:`\lambda`.
+    :param costates_rates: A list of costate rates, :math:`\dot{\lambda}_x`
+    :return: :math:`\X_H`, the Hamiltonian vector field.
+    """
+    dH = exterior_derivative(hamiltonian, basis, derivative_fn)
+    X_H = sympy.tensorcontraction(sympy.tensorproduct(omega, dH), (1, 2))
+    return X_H
+
+
+def make_standard_symplectic_form(states, costates):
+    r"""
+    Makes the standard symplectic form.
+
+    :param states: A list of state variables, :math:`x`.
+    :param costates: A list of co-state variables, :math:`\lambda`.
+    :return: :math:`\omega`, the standard symplectic form
+    """
+    if len(states) != len(costates):
+        raise ValueError
+
+    n = len(states)
+    omega = sympy.zeros(2*n, 2*n)
+    omega = sympy.MutableDenseNDimArray(omega)
+    for ii in range(2*n):
+        for jj in range(2*n):
+            if jj-ii == n:
+                omega[ii,jj] = 1
+            if ii-jj == n:
+                omega[ii,jj] = -1
+
+    return omega
 
 def make_time_bc(constraints, derivative_fn, hamiltonian, independent_var):
     """
