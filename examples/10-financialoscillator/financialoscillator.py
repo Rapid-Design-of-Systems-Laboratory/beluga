@@ -16,16 +16,14 @@ ocp_indirect = beluga.OCP('financial_oscillator_indirect')
 ocp_direct = beluga.OCP('financial_oscillator_direct')
 
 # Define independent variables
-ocp_indirect.independent('tau', 'nd')
-ocp_direct.independent('tau', 'nd')
+ocp_indirect.independent('t', 'nd')
+ocp_direct.independent('t', 'nd')
 
 # Define equations of motion
 ocp_indirect.state('x1', 'T*x2', 'nd')
 ocp_indirect.state('x2', '-T*x1 + T*u - T**2*B*x2', 'nd') # 2*sin(u)
-ocp_indirect.state('t', '1', 'nd')
 ocp_direct.state('x1', 'T*x2', 'nd')
 ocp_direct.state('x2', '-T*x1 + T*u - T**2*B*x2', 'nd')
-ocp_direct.state('t', '1', 'nd')
 
 # Define controls
 ocp_indirect.control('u', 'rad')
@@ -53,20 +51,18 @@ ocp_indirect.constraints().initial('x2 - x2_0', 'nd')
 ocp_indirect.constraints().initial('t', 'nd')
 ocp_indirect.constraints().path('u', 'rad', lower=-2, upper=2, activator='epsilon1', method='epstrig')
 ocp_indirect.constraints().terminal('t - 1', 'nd')
-ocp_indirect.constraints().terminal('tau - 1', 'nd')
 ocp_direct.constraints().initial('x1 - x1_0', 'nd')
 ocp_direct.constraints().initial('x2 - x2_0', 'nd')
 ocp_direct.constraints().initial('t', 'nd')
 ocp_direct.constraints().path('u', 'rad', lower=-2, upper=2, activator=None, method=None)
 ocp_direct.constraints().terminal('t - 1', 'nd')
-ocp_direct.constraints().terminal('tau - 1', 'nd')
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=60)
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=45)
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator(
     'ones',
-    start=[3, 5, 0],
+    start=[3, 5],
     costate_guess=0,
     control_guess=[0],
     use_control_guess=True,
@@ -75,7 +71,7 @@ guess_maker_direct = beluga.guess_generator(
 
 guess_maker_indirect = beluga.guess_generator(
     'auto',
-    start=[3, 5, 0],
+    start=[3, 5],
     direction='forward',
     costate_guess=-0.1,
     control_guess=[0],

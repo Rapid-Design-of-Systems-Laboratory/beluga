@@ -310,7 +310,8 @@ def ocp_to_bvp(ocp, **kwargs):
         sol.y = np.delete(sol.y, np.s_[-(len(costates)-1)-num_dae:], axis=1)
         sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
-        cmap = dict(zip([str(c) for c in constants], np.arange(0, len(constants)-1)))
+
+        cmap = dict(zip([str(c) for c in constants], np.arange(0, len(constants))))
 
         for ele in control_constraint_mapping.keys():
             ctrl = control_constraint_mapping[ele]

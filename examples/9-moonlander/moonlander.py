@@ -31,10 +31,11 @@ ocp.path_cost('u', 'newton')
 
 # Define constraints
 ocp.constraints() \
-    .initial('h - h_0', 'm')    \
+    .initial('h - h_0', 'm') \
     .initial('v - v_0', 'm/2') \
+    .initial('t', 's') \
     .path('u', 'm', lower='u_lower', upper='u_upper', activator='epsilon1', method='utm') \
-    .terminal('h - h_f', 'm')  \
+    .terminal('h - h_f', 'm') \
     .terminal('v - v_f', 'm/s')
 
 bvp_solver = beluga.bvp_algorithm('spbvp')

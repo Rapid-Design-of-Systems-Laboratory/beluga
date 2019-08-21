@@ -59,6 +59,7 @@ ocp.constraints() \
     .initial('theta', 'rad') \
     .initial('v-v_0', 'm/s') \
     .initial('gam-gam_0', 'rad') \
+    .initial('t', 's') \
     .terminal('h-h_f', 'm')  \
     .terminal('theta-theta_f', 'rad')
 
@@ -153,6 +154,7 @@ ocp_2.constraints() \
     .initial('v-v_0', 'm/s') \
     .initial('gam-gam_0', 'rad') \
     .initial('psi-psi_0', 'rad') \
+    .initial('t', 's') \
     .terminal('h-h_f', 'm') \
     .terminal('theta-theta_f', 'rad') \
     .terminal('phi-phi_f', 'rad')
