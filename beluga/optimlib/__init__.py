@@ -1,4 +1,4 @@
 from .optimlib import *
 from .indirect import *
+from .diffyg_deprecated import *
 from .diffyg import *
-from .diffyg2 import *

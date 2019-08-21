@@ -333,8 +333,15 @@ def make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn):
     :param costates_rates: A list of costate rates, :math:`\dot{\lambda}_x`
     :return: :math:`\X_H`, the Hamiltonian vector field.
     """
+    if omega.shape[0] != omega.shape[1]:
+        raise ValueError('omega must be square.')
+
+    if omega.shape[0] % 2 != 0:
+        raise ValueError('omega must be even-dimensional.')
+
     dH = exterior_derivative(hamiltonian, basis, derivative_fn)
-    X_H = sympy.tensorcontraction(sympy.tensorproduct(omega, dH), (1, 2))
+    omega_inverse = omega.tomatrix().inv()
+    X_H = sympy.tensorcontraction(sympy.tensorproduct(dH, omega_inverse), (0, 1))
     return X_H
 
 
@@ -347,7 +354,7 @@ def make_standard_symplectic_form(states, costates):
     :return: :math:`\omega`, the standard symplectic form
     """
     if len(states) != len(costates):
-        raise ValueError
+        raise ValueError('Number of states and costates must be equal.')
 
     n = len(states)
     omega = sympy.zeros(2*n, 2*n)
