@@ -55,7 +55,8 @@ ocp.constant('m_c', m_c, '1')      # Terminal mass fraction
 
 ocp.constant('c', c, '1')          # Thrust to fuel ratio
 ocp.constant('d_c', d_c, '1')      # Drag scaling
-ocp.constant('thrust_max', thrust_max, '1')  # Max thrust
+ocp.constant('T_max', thrust_max, '1')  # Max thrust
+ocp.constant('T_min', 0, '1')
 
 # Define constants for BCs
 ocp.constant('h_0', h_0, '1')
@@ -76,7 +77,8 @@ ocp.constraints() \
     .initial('h - h_0', '1') \
     .initial('v - v_0', '1') \
     .initial('m - m_0', '1') \
-    .path('thrust', '1', lower=0, upper=thrust_max, activator='eps', method='epstrig') \
+    .initial('t', 's') \
+    .path('thrust', '1', lower='T_min', upper='T_max', activator='eps', method='epstrig') \
     .terminal('v - v_f', '1') \
     .terminal('m - m_f', '1')
 

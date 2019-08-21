@@ -40,6 +40,7 @@ ocp.path_cost('1', '1')
 ocp.constraints() \
     .initial('x', 'm') \
     .initial('y', 'm') \
+    .initial('t', 's') \
     .terminal('x-x_f', 'm') \
     .terminal('y-y_f', 'm')
 

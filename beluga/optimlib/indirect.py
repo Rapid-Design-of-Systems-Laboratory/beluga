@@ -63,6 +63,11 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise ValueError('Initial, path, and terminal cost functions are not defined.')
 
+    states += [independent_variable]
+    states_units += [independent_variable_units]
+    states_rates += [sympify('1')]
+    independent_index = len(states)-1
+
     """
     Deal with path constraints
     """
@@ -194,7 +199,7 @@ def ocp_to_bvp(ocp, **kwargs):
     # TODO: We're not handling time well. This is hardcoded.
 
     tf = sympify('_tf')
-    bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    # bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
     dynamical_parameters = parameters + [tf]
     dynamical_parameters_units = parameters_units + [independent_variable_units]
     nondynamical_parameters = initial_lm_params + terminal_lm_params
@@ -268,14 +273,20 @@ def ocp_to_bvp(ocp, **kwargs):
         sol_out = copy.deepcopy(sol)
         nodes = len(sol.t)
 
+        if len(sol.dual_t) == 0:
+            sol.dual_t = np.zeros_like(sol.t)
+
         if num_dae == 0:
-            sol_out.y = np.column_stack((sol.y, sol.dual))
+            sol_out.y = np.column_stack((sol.y, sol.t, sol.dual, sol.dual_t))
         else:
-            sol_out.y = np.column_stack((sol.y, sol.dual, sol.u))
+            sol_out.y = np.column_stack((sol.y, sol.t, sol.dual, sol.dual_t, sol.u))
+
         # (upper - lower) / 2 * sympy.sin(constraints['path'][ii]) + (upper + lower) / 2
         sol_out.dual = np.array([])
-        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1]))
+        sol_out.dual_t = np.array([])
+        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1] - sol.t[0]))
         sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
+
         sol_out.t = sol.t / sol.t[-1]
         sol_out.u = np.array([]).reshape((nodes, 0))
         return sol_out
@@ -284,18 +295,23 @@ def ocp_to_bvp(ocp, **kwargs):
         if _compute_control is None:
             raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
         sol = copy.deepcopy(sol)
-        sol.t = sol.t*sol.dynamical_parameters[-1]
-        sol.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
+        # sol.t = sol.t*sol.dynamical_parameters[-1]
+        sol.t = sol.y[:, independent_index]
+        sol.dual_t = sol.y[:, (independent_index+1)*2-1]
         if num_dae == 0:
-            sol.dual = sol.y[:, -len(costates):]
+            sol.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
+            sol.y = np.delete(sol.y, np.s_[independent_index, (independent_index + 1) * 2 - 1], axis=1)
+            sol.dual = sol.y[:, -(len(costates)-1):]
         else:
             sol.u = sol.y[:, -num_dae:]
-            sol.dual = sol.y[:, -len(costates)-num_dae:-num_dae]
-        sol.y = np.delete(sol.y, np.s_[-len(costates)-num_dae:], axis=1)
+            sol.y = np.delete(sol.y, np.s_[independent_index, (independent_index + 1) * 2 - 1], axis=1)
+            sol.dual = sol.y[:, -(len(costates)-1)-num_dae:-num_dae]
+
+        sol.y = np.delete(sol.y, np.s_[-(len(costates)-1)-num_dae:], axis=1)
         sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
         sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
 
-        cmap = dict(zip([str(c) for c in constants], np.arange(0, len(constants)-1)))
+        cmap = dict(zip([str(c) for c in constants], np.arange(0, len(constants))))
 
         for ele in control_constraint_mapping.keys():
             ctrl = control_constraint_mapping[ele]

@@ -40,8 +40,9 @@ ocp.path_cost('1', '1')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x1 - x1_0', '1')    \
+    .initial('x1 - x1_0', '1') \
     .initial('x2 - x2_0', '1') \
+    .initial('t', 's') \
     .path('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='epstrig') \
     .terminal('x1 - x1_f', '1')   \
     .terminal('x2 - x2_f', '1')

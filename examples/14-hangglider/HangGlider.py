@@ -63,6 +63,7 @@ ocp.constraints() \
     .initial('y - y_0', 'm') \
     .initial('vx - vx_0', 'm/s') \
     .initial('vy - vy_0', 'm/s') \
+    .initial('t', 's') \
     .terminal('y - y_f', 'm') \
     .terminal('vx - vx_f', 'm/s') \
     .terminal('vy - vy_f', 'm/s') \

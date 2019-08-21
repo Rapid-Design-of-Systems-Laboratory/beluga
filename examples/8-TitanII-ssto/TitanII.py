@@ -51,6 +51,7 @@ ocp.constraints() \
     .initial('v_x - v_x_0', 'm/s')  \
     .initial('v_y - v_y_0', 'm/s')  \
     .initial('mass - mass_0', 'kg') \
+    .initial('t', 's') \
     .terminal('y - y_f', 'm') \
     .terminal('v_x - sqrt(mu/(y_f+Re))', 'm/s') \
     .terminal('v_y - v_y_f', 'm/s')

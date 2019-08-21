@@ -151,10 +151,12 @@ class Trajectory(object):
             return args[0]
 
         obj.t = np.array([])
+        obj.dual_t = np.array([])
         obj.y = np.array([])
         obj.dual = np.array([])
         obj.q = np.array([])
         obj.u = np.array([])
+        obj.dual_u = np.array([])
         obj.dynamical_parameters = np.array([])
         obj.nondynamical_parameters = np.array([])
         obj.const = np.array([])

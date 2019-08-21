@@ -33,6 +33,7 @@ def test_brachistochrone_shooting():
         .initial('x', 'm') \
         .initial('y', 'm') \
         .initial('v', 'm/s') \
+        .initial('t', 's') \
         .terminal('x-x_f', 'm') \
         .terminal('y-y_f', 'm')
 
@@ -152,6 +153,7 @@ def test_brachistochrone_collocation():
         .initial('x', 'm') \
         .initial('y', 'm') \
         .initial('v', 'm/s') \
+        .initial('t', 's') \
         .terminal('x-x_f', 'm') \
         .terminal('y-y_f', 'm')
 
@@ -280,6 +282,7 @@ def test_zermelo_custom_functions():
     ocp.constraints() \
         .initial('x', 'm') \
         .initial('y', 'm') \
+        .initial('t', 's') \
         .terminal('x-x_f', 'm') \
         .terminal('y-y_f', 'm')
 
@@ -393,6 +396,7 @@ def test_planarhypersonic():
         .initial('h-h_0', 'm') \
         .initial('theta', 'rad') \
         .initial('v-v_0', 'm/s') \
+        .initial('t', 's') \
         .terminal('h-h_f', 'm') \
         .terminal('theta-theta_f', 'rad')
 

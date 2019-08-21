@@ -41,6 +41,7 @@ ocp.path_cost('lu*u**2/2 + lq*(i-i_0)**2/2', '1')
 # Define constraints
 ocp.constraints() \
     .initial('i + i_0', 'a') \
+    .initial('t', 's') \
     .path('u', 'v', lower='u_min', upper='u_max', activator='eps1', method='utm') \
     .terminal('i - i_0', 'a') \
     .terminal('t-1', 's')

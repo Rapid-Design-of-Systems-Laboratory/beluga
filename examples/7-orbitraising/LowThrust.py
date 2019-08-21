@@ -44,6 +44,7 @@ ocp.constraints() \
     .initial('v_r - v_r_0', 'L/s') \
     .initial('v_theta - v_theta_0', 'L/s') \
     .initial('m - m_0', 'M') \
+    .initial('t', 's') \
     .terminal('v_r - v_r_f', 'L/s')  \
     .terminal('v_theta - sqrt(mu / r)', 'L/s') \
     .terminal('t - t_f', 's')

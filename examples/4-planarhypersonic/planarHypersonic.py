@@ -48,6 +48,7 @@ ocp.constraints() \
     .initial('h-h_0', 'm') \
     .initial('theta', 'rad') \
     .initial('v-v_0', 'm/s') \
+    .initial('t', 's') \
     .terminal('h-h_f', 'm')  \
     .terminal('theta-theta_f', 'rad')
 

@@ -88,6 +88,7 @@ ocp.constraints() \
     .initial('v-v_0', 'm/s') \
     .initial('gam-gam_0', 'rad') \
     .initial('psi-psi_0', 'rad') \
+    .initial('t', 's') \
     .terminal('h-h_f', 'm') \
     .path('alpha', 'rad', lower='-amax', upper='amax', activator='eps', method='utm') \
     .path('bank', 'rad', lower='-bmax', upper='bmax', activator='eps', method='utm')

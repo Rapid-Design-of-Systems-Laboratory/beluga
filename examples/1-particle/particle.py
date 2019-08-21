@@ -35,14 +35,15 @@ ocp.path_cost('u**2', 'rad**2')
 ocp.constraints() \
     .initial('x - x_0', 'm')    \
     .initial('v - v_0', 'm/s') \
-    .path('x', 'm', lower=-0.1, upper='x_max', activator='epsilon1', method='utm') \
+    .initial('t', 's') \
+    .path('x', 'm', lower='-x_max', upper='x_max', activator='epsilon1', method='utm') \
     .terminal('x - x_f', 'm')   \
     .terminal('v - v_f', 'm')   \
     .terminal('t - 1', 's')
 
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=30)
+bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=20)
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_direct = beluga.guess_generator(
