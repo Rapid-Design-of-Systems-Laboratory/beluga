@@ -7,6 +7,7 @@ from beluga.utils import sympify
 import sympy
 from sympy import Symbol, zoo
 import functools as ft
+import itertools as it
 import re
 
 
@@ -111,15 +112,41 @@ def exterior_derivative(f, basis, derivative_fn):
     :return:
     """
 
-    n = len(basis)
-    if isinstance(f, sympy.Array):
-        raise NotImplementedError
-
+    # Handle the (0)-grade case
     if isinstance(f, sympy.Expr):
+        n = len(basis)
         df = [0]*len(basis)
         df = sympy.MutableDenseNDimArray(df)
         for ii in range(n):
             df[ii] = derivative_fn(f, basis[ii])
+
+    # Handle the (1+)-grade cases
+    if isinstance(f, sympy.Array) or isinstance(f, sympy.NDimArray):
+        n = (len(basis),) + f.shape
+        df = sympy.MutableDenseNDimArray(sympy.zeros(*n))
+        if len(n) == 2:
+            for ii in range(df.shape[0]):
+                for jj in range(df.shape[1]):
+                    if ii == jj:
+                        df[ii, jj] = 0
+
+                    if ii < jj:
+                        df[ii, jj] += derivative_fn(f[jj], basis[ii])
+                        df[ii, jj] += -derivative_fn(f[ii], basis[jj])
+                        df[jj, ii] += -derivative_fn(f[jj], basis[ii])
+                        df[jj, ii] += derivative_fn(f[ii], basis[jj])
+
+        if len(n) > 2:
+            raise NotImplementedError
+
+        # t = [range(d) for d in df.shape]
+        # for indices in it.product(*t):
+        #     if all(x < y for x, y in zip(indices, indices[1:])):
+        #         for ind in it.permutations(indices):
+        #             df[ind] = derivative_fn(f[ind[1:]], basis[ind[0]])
+        #             breakpoint()
+        #     # df[indices] = 1
+        #     # breakpoint()
 
     return df
 

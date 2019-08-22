@@ -1,9 +1,10 @@
 import pytest
 from beluga.optimlib import *
 
-METHODS = ['indirect', 'direct']
+METHODS = ['indirect', 'direct', 'diffyg']
 tol = 1e-8
 
+_, _, derivative_fn = process_quantities([], [])
 
 @pytest.mark.parametrize("method", METHODS)
 def test_composable_functors(method):
@@ -63,6 +64,31 @@ def test_composable_functors(method):
 
     assert g2.nondynamical_parameters.size == gamma.nondynamical_parameters.size
     assert (g2.nondynamical_parameters - gamma.nondynamical_parameters < tol).all()
+
+
+def test_exterior_derivative():
+    basis = [Symbol('x'), Symbol('y')]
+
+    f = basis[0]**2 + basis[1]**2
+    df = exterior_derivative(f, basis, derivative_fn)
+
+    assert df[0] == 2*basis[0]
+    assert df[1] == 2*basis[1]
+
+    ddf = exterior_derivative(df, basis, derivative_fn)
+
+    assert ddf[0, 0] == 0
+    assert ddf[0, 1] == 0
+    assert ddf[1, 0] == 0
+    assert ddf[1, 1] == 0
+
+    f = sympy.Array([basis[0]*basis[1], 0])
+    df = exterior_derivative(f, basis, derivative_fn)
+
+    assert df[0, 0] == 0
+    assert df[0, 1] == -basis[0]
+    assert df[1, 0] == basis[0]
+    assert df[1, 1] == 0
 
 
 def test_init_workspace():
