@@ -12,8 +12,9 @@ import beluga.bvpsol as bvpsol
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
 from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
-from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
+from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
+from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
 import time
 from collections import OrderedDict
 import pathos
@@ -82,6 +83,8 @@ def ocp2bvp(ocp, **kwargs):
         bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
     elif method == 'diffyg':
         bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp, **optim_options)
+    elif method == 'diffyg_deprecated':
+        bvp_raw, _map, _map_inverse = DIFFYG_DEP_ocp_to_bvp(ocp, **optim_options)
     elif method == 'direct':
         bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp, **optim_options)
     else:

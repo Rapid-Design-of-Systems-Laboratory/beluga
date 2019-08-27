@@ -159,10 +159,6 @@ def ocp_to_bvp(ocp, **kwargs):
     bc_terminal += [bc[0] for bc in terminal_bcs_time]
     constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
 
-    # if bc_initial[-1] == bc_terminal[-1]:
-    #     breakpoint()
-    #     del initial_lm_params[-1]
-    #     del bc_initial[-1]
     time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
 
     if time_bc is not None:
@@ -281,9 +277,9 @@ def ocp_to_bvp(ocp, **kwargs):
         else:
             sol_out.y = np.column_stack((sol.y, sol.t, sol.dual, sol.dual_t, sol.u))
 
-        # (upper - lower) / 2 * sympy.sin(constraints['path'][ii]) + (upper + lower) / 2
         sol_out.dual = np.array([])
         sol_out.dual_t = np.array([])
+        sol_out.dual_u = np.array([])
         sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1] - sol.t[0]))
         sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
 
@@ -295,7 +291,6 @@ def ocp_to_bvp(ocp, **kwargs):
         if _compute_control is None:
             raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
         sol = copy.deepcopy(sol)
-        # sol.t = sol.t*sol.dynamical_parameters[-1]
         sol.t = sol.y[:, independent_index]
         sol.dual_t = sol.y[:, (independent_index+1)*2-1]
         if num_dae == 0:
@@ -323,7 +318,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
             upper = eval(upper)
             lower = eval(lower)
-            sol.u[:, ctrl] = (upper - lower)*(np.sin(sol.u[:, ctrl]) + 1)/2 + lower
+            sol.u[:, ctrl] = (upper - lower) * (np.sin(sol.u[:, ctrl]) + 1)/2 + lower
 
         return sol
 
