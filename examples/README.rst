@@ -1,12 +1,12 @@
 .. _BFR: AscentVehicles/BFR
 .. _`Bryson-Denham`: Classic/BrysonDenham
 .. _`Financial Oscillator`: Oscillators/FinancialOscillator
-.. _`Goddard Rocket`: AscentVehicles/GoddarcRocket
+.. _`Goddard Rocket`: AscentVehicles/GoddardRocket
 .. _`Hang Glider`: AtmosphericFlight/HangGlider
 .. _`Mall's Oscillator`: Oscillators/MallsOscillator
 .. _`Moon Lander`: Classic/MoonLander
 .. _`One-Loop Circuit`: ElectricityandMagnetism/oneloopcircuit
-.. _`Rayleigh Oscillator`: Oscillators/rayleigh
+.. _`Rayleigh Oscillator`: Oscillators/Rayleigh
 .. _`Space Shuttle`: AtmosphericFlight/SpaceShuttle
 .. _`Zermelo's Problem`: Classic/ZermelosProblem
 
