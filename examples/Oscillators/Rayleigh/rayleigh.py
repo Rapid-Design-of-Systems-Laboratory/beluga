@@ -37,9 +37,7 @@ ocp.constraints() \
     .initial('y1 - y1_0', '1') \
     .initial('y2 - y2_0', '1') \
     .initial('t', 's') \
-    .path('u', '1', lower='path_min', upper='path_max', activator='epsilon1', method='utm') \
-    .terminal('y1 - y1_f', '1') \
-    .terminal('y2 - y2_f', '1') \
+    .path('u + y1/6', '1', lower='path_min', upper='path_max', activator='epsilon1', method='utm') \
     .terminal('t - t_f', 's') \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
@@ -63,15 +61,15 @@ continuation_steps.add_step('bisection') \
                 .const('t_f', 4.5)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(30) \
+                .num_cases(40) \
                 .const('path_min', -1) \
-                .const('path_max', 1)
+                .const('path_max', 0)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(60, 'log') \
-                .const('epsilon1', 1e-4)
+                .num_cases(100, 'log') \
+                .const('epsilon1', 1e-5)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
@@ -98,7 +96,6 @@ plt.figure()
 plt.plot(sol.y[:, 0], sol.y[:, 1])
 plt.xlabel('$y_1$')
 plt.ylabel('$y_2$')
-plt.legend()
 plt.grid(True)
 
 plt.figure()
@@ -114,4 +111,12 @@ plt.grid(True)
 plt.xlabel('Time [s]')
 plt.ylabel('Costate Variables')
 plt.legend()
+
+plt.figure()
+plt.plot(sol.t, sol.u[:,0] + sol.y[:,0]/6)
+plt.plot([sol.t[0], sol.t[-1]], [0, 0], color='k', linestyle='--')
+plt.plot([sol.t[0], sol.t[-1]], [-1, -1], color='k', linestyle='--')
+plt.grid(True)
+plt.xlabel('Time [s]')
+plt.ylabel('Path-constraint')
 plt.show()

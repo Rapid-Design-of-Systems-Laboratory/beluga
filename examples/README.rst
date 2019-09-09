@@ -23,12 +23,15 @@ Pure control path-constrained:
 - `Mall's Oscillator`_
 - `Moon Lander`_
 - `One-Loop Circuit`_
-- `Rayleigh Oscillator`_
 - `Space Shuttle`_
 
 Pure state path-constrained:
 
 - `Bryson-Denham`_
+
+Mixed state-control path-constrained:
+
+- `Rayleigh Oscillator`_
 
 Staged vehicles and discontinuous functions:
 
