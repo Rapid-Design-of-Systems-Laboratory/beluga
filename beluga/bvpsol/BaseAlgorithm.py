@@ -40,6 +40,9 @@ class BaseAlgorithm(object):
         self.boundarycondition_function = boundarycondition_function
         self.bc_func_ms = None
 
+    def set_boundarycondition_jacobian(self, boundarycondition_jacobian):
+        self.boundarycondition_function_jac = boundarycondition_jacobian
+
     def set_derivative_function(self, derivative_function):
         self.derivative_function = derivative_function
         self.stm_ode_func = None

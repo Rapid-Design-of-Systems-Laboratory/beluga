@@ -32,7 +32,7 @@ def test_T1(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [1 / const[0], 0]])
-        df_dp = np.empty((0,2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -61,7 +61,7 @@ def test_T2(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [0, 1 / const[0]]])
-        df_dp = np.empty((0,2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -90,7 +90,7 @@ def test_T3(const):
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2 / const[0], -(2 * np.cos(np.pi * X[2]) + 4)/const[0], (2*np.pi**2 * np.sin(np.pi * X[2])**2 + 2 * np.pi*np.sin(np.pi*X[2])*(const[0]*np.pi**2 + 1) - 2*np.pi**2*np.cos(np.pi*X[2])*(np.cos(np.pi*X[2]) + 2) + 2*X[1]*np.pi*np.sin(np.pi*X[2]))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -117,7 +117,7 @@ def test_T4(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2*(1 + const[0])/const[0], 2*(-1)/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -149,7 +149,7 @@ def test_T5(const):
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2 / const[0], 2*X[2]/const[0], (2*(X[1] + np.pi*np.sin(np.pi*X[2]) + np.pi*np.sin(np.pi*X[2])*(const*np.pi**2 + 1) + np.pi*np.pi*X[2]*np.cos(np.pi*X[2])))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -178,7 +178,7 @@ def test_T6():
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [0, -2*X[2]/const[0], -(2*(X[1] + np.pi*np.sin(np.pi*X[2]) - const[0]*np.pi**3*np.sin(np.pi*X[2]) + np.pi**2*X[2]*np.cos(np.pi*X[2])))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -208,7 +208,7 @@ def test_T7(const):
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], -2*X[2]/const[0], -(2*(X[1] + np.pi*np.sin(np.pi*X[2]) + np.pi**2*X[2]*np.cos(np.pi*X[2]) - np.pi*np.sin(np.pi*X[2])*(const[0]*np.pi**2 + 1)))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -241,7 +241,7 @@ def test_T8(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -268,7 +268,7 @@ def test_T9(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [-4/(X[2]**2 + const[0]), -(8*X[2])/(X[2]**2 + const[0]), (4*X[2]*(2*X[0] + 4*X[1]*X[2]))/(X[2]**2 + const[0])**2 - (8*X[1])/(X[2]**2 + const[0])], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -295,7 +295,7 @@ def test_T10(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [0, 2*(-X[2])/const[0], 2*(-X[1]/const[0])], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -324,7 +324,7 @@ def test_T11(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -352,7 +352,7 @@ def test_T12(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -380,7 +380,7 @@ def test_T13(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -409,7 +409,7 @@ def test_T14(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -438,7 +438,7 @@ def test_T15(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2*(X[2]/const[0]), 0, 2*(X[0]/const[0])], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -461,7 +461,7 @@ def test_T16(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [-np.pi**2/(4*const[0]), 0, 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -488,7 +488,7 @@ def test_T17(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 0.2, 0], [-(3*const[0])/(5*(X[2]**2 + const[0])**2), 0, (12*const[0]*X[0]*X[2])/(5*(X[2]**2 + const[0])**3)], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -515,7 +515,7 @@ def test_T18(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -542,7 +542,7 @@ def test_T19(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -570,7 +570,7 @@ def test_T21(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [(2*X[0] + 1)/const[0], 0, (2*np.exp(-(2*X[2])/np.sqrt(const[0])))/const[0]**(3/2)], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -597,7 +597,7 @@ def test_T22(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [-(2*X[0])/const[0], -1/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -621,7 +621,7 @@ def test_T23(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [np.cosh(X[0] / const[0]) / const[0] ** 2, 0]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -657,7 +657,7 @@ def test_T24(const):
                                       (X[0] * (y / 2 - 2 * const[0] * X[2] + 1 / 2) - 1 / X[0]) / (const[0] * X[0] * (X[2] ** 2 + 1)),
                                       -((4 * X[2] ** 2 * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) ** 2 - (2 * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) + 2 * const[0] * X[0] * X[1]) / (const[0] * X[0] * (X[2] ** 2 + 1)) - (2 * X[2] * ((2 * X[2] * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) - X[1] / X[0] + X[0] * X[1] * (y / 2 - 2 * const[0] * X[2] + 1 / 2))) / (const[0] * X[0] * (X[2] ** 2 + 1) ** 2)],
                           [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
@@ -685,7 +685,7 @@ def test_T25(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -713,7 +713,7 @@ def test_T26(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -741,7 +741,7 @@ def test_T27(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -769,7 +769,7 @@ def test_T28(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -797,7 +797,7 @@ def test_T29(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -825,7 +825,7 @@ def test_T30(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -854,7 +854,7 @@ def test_T31(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, np.cos(X[1]), 0, 0], [0, 0, 1, 0], [0, 0, 0, -1/const[0]], [np.cos(X[1])/const[0], -(np.sin(X[1])*(X[0] - 1) + const[0]*X[3]*(np.tan(X[1])**2 + 1) + (X[2]*np.sin(X[1]))/np.cos(X[1])**2)/const[0], -1/(const[0]*np.cos(X[1])), -np.tan(X[1])]])
-        df_dp = np.empty((0, 4))
+        df_dp = np.empty((4, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -878,7 +878,7 @@ def test_T32(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1], [-X[3]/const[0], X[2]/const[0], X[1]/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 4))
+        df_dp = np.empty((4, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -906,7 +906,7 @@ def test_T33(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0, 0, 0, 0], [X[3]/const[0], -X[2]/const[0], -X[1]/const[0], X[0]/const[0], 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1], [-X[1]/const[0], -X[0]/const[0], -X[5]/const[0], 0, 0, -X[2]/const[0]]])
-        df_dp = np.empty((0, 6))
+        df_dp = np.empty((6, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):

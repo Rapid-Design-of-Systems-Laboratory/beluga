@@ -115,6 +115,10 @@ def ocp_to_bvp(ocp, **kwargs):
            'dHdu': None,
            'bc_initial': [str(_) for _ in bc_initial],
            'bc_terminal': [str(_) for _ in bc_terminal],
+           'bc_initial_jac': None,
+           'bc_terminal_jac': None,
+           'bc_initial_parameter_jac': None,
+           'bc_terminal_parameter_jac': None,
            'control_options': None,
            'num_controls': len(controls)}
 

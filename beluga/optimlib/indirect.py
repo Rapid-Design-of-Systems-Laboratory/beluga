@@ -171,7 +171,6 @@ def ocp_to_bvp(ocp, **kwargs):
         dae_states = []
         dae_rates = []
         dae_units = []
-        dae_bc = []
         num_dae = 0
     elif control_method == 'icrm':
         dae_states, dae_rates, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates,
@@ -180,12 +179,12 @@ def ocp_to_bvp(ocp, **kwargs):
         dae_units = controls_units
         controls = []
         control_law = []
+        bc_terminal += dae_bc
         num_dae = len(dae_states)
     elif control_method == 'numerical':
         dae_states = []
         dae_rates = []
         dae_units = []
-        dae_bc = []
         num_dae = 0
         control_law = []
     else:
@@ -209,18 +208,43 @@ def ocp_to_bvp(ocp, **kwargs):
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')
 
-        df_dy = [[0 for f in states_rates + costates_rates + dae_rates] for s in states + costates + dae_states]
+        df_dy = [['0' for f in states_rates + costates_rates + dae_rates] for s in states + costates + dae_states]
         for ii, f in enumerate(states_rates + costates_rates + dae_rates):
             for jj, s in enumerate(states + costates + dae_states):
                 df_dy[ii][jj] = str(derivative_fn(f, s))
 
-        df_dp = [[0 for f in states_rates + costates_rates + dae_rates] for s in dynamical_parameters]
+        df_dp = [['0' for s in dynamical_parameters] for f in states_rates + costates_rates + dae_rates]
         for ii, f in enumerate(states_rates + costates_rates + dae_rates):
             for jj, s in enumerate(dynamical_parameters):
-                df_dp[jj][ii] = str(derivative_fn(f, s))
+                df_dp[ii][jj] = str(derivative_fn(f, s))
+
+        dbc_dya = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_initial):
+            for jj, s in enumerate(states + costates + dae_states):
+                dbc_dya[ii][jj] = str(derivative_fn(f, s))
+
+        dbc_dyb = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_terminal):
+            for jj, s in enumerate(states + costates + dae_states):
+                dbc_dyb[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
+
+        dbc_dp_a = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_initial):
+            for jj, s in enumerate(dynamical_parameters + nondynamical_parameters):
+                dbc_dp_a[ii][jj] = str(derivative_fn(f, s))
+
+        dbc_dp_b = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_terminal):
+            for jj, s in enumerate(dynamical_parameters + nondynamical_parameters):
+                dbc_dp_b[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
+
     else:
         df_dy = None
         df_dp = None
+        dbc_dya = None
+        dbc_dyb = None
+        dbc_dp_a = None
+        dbc_dp_b = None
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
@@ -259,7 +283,11 @@ def ocp_to_bvp(ocp, **kwargs):
            'num_states': len(states + costates),
            'dHdu': [str(x) for x in dHdu],
            'bc_initial': [str(_) for _ in bc_initial],
-           'bc_terminal': [str(_) for _ in bc_terminal + dae_bc],
+           'bc_terminal': [str(_) for _ in bc_terminal],
+           'bc_initial_jac': dbc_dya,
+           'bc_terminal_jac': dbc_dyb,
+           'bc_initial_parameter_jac': dbc_dp_a,
+           'bc_terminal_parameter_jac': dbc_dp_b,
            'control_options': control_law,
            'num_controls': len(controls)}
 

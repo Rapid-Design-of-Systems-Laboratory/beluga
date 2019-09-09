@@ -279,8 +279,11 @@ class Shooting(BaseAlgorithm):
 
             if self.derivative_function_jac is not None:
                 _df_dy, _df_dp = self.derivative_function_jac(xx, [], p, const)
-                Z = np.zeros((n_odes, n_params - _df_dp.shape[0]))
-                ff = np.hstack((_df_dy, _df_dp.T, Z))
+                if n_odes > 1 and len(_df_dp.shape) == 1:
+                    _df_dp = np.array([_df_dp]).T
+
+                Z = np.zeros((n_odes, n_params - _df_dp.shape[1]))
+                ff = np.hstack((_df_dy, _df_dp, Z))
             else:
                 ff = np.empty((n_odes, n_odes+n_params))
 
