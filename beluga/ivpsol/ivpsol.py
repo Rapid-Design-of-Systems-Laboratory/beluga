@@ -106,7 +106,7 @@ class Propagator(Algorithm):
 
             def M2g(t, y):
                 vec = y[:-1, -1]
-                out = eom_func(t, vec, *args)
+                out = eom_func(vec, *args)
                 g = rn(dim+1)
                 g.set_vector(out)
                 return g
