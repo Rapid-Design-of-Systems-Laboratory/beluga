@@ -76,11 +76,18 @@ def make_bvp(problem_data):
     quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn)
     bc_initial = problem_data['bc_initial']
     bc_terminal = problem_data['bc_terminal']
+    dbc_dya = problem_data['bc_initial_jac']
+    dbc_dyb = problem_data['bc_terminal_jac']
+    dbc_dp_a = problem_data['bc_initial_parameter_jac']
+    dbc_dp_b = problem_data['bc_terminal_parameter_jac']
     bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
                            constants, controls, control_fn)
+    bc_func_jac = make_bc_jac(dbc_dya, dbc_dyb, dbc_dp_a, dbc_dp_b, states,
+                              dynamical_parameters + nondynamical_parameters, constants, controls, control_fn)
+
     logging.debug('BVP functions compiled.')
 
-    bvp = BVP(deriv_func, deriv_jac_func, quad_func, bc_func, control_fn, initial_cost, path_cost, terminal_cost, ineq_constraints)
+    bvp = BVP(deriv_func, deriv_jac_func, quad_func, bc_func, bc_func_jac, control_fn, initial_cost, path_cost, terminal_cost, ineq_constraints)
 
     return bvp
 
@@ -398,6 +405,81 @@ def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, n
     return bc_func
 
 
+def make_bc_jac(dbc_dya, dbc_dyb, dbc_dp_a, dbc_dp_b, states, parameters, constants, controls, compute_control):
+    r"""
+    Makes the derivative functions for each state.
+    :param dbc_dya: Sensitivities with respect to initial state.
+    :param dbc_dyb: Sensititivies with respect to final state.
+    :param dbc_dp: Sensitivities with respect to parameters.
+    :param states: List of states.
+    :param parameters: List of parameters.
+    :param constants: List of constants.
+    :param controls: List of controls.
+    :param compute_control: The compute_control function.
+    :return: deriv_func - The derivative function.
+    """
+    if dbc_dya is None:
+        return None
+
+    ham_args = [*states, *parameters, *constants, *controls]
+
+    dbc_dya_str = '('
+    for ii, f in enumerate(dbc_dya):
+        dbc_dya_str += '('
+        dbc_dya_str += ','.join(f)
+        dbc_dya_str += '),'
+    dbc_dya_str += ')'
+
+    dbc_dyb_str = '('
+    for ii, f in enumerate(dbc_dyb):
+        dbc_dyb_str += '('
+        dbc_dyb_str += ','.join(f)
+        dbc_dyb_str += '),'
+    dbc_dyb_str += ')'
+
+    dbc_dp_a_str = '('
+    for ii, f in enumerate(dbc_dp_a):
+        dbc_dp_a_str += '('
+        dbc_dp_a_str += ','.join(f)
+        dbc_dp_a_str += '),'
+    dbc_dp_a_str += ')'
+
+    dbc_dp_b_str = '('
+    for ii, f in enumerate(dbc_dp_b):
+        dbc_dp_b_str += '('
+        dbc_dp_b_str += ','.join(f)
+        dbc_dp_b_str += '),'
+    dbc_dp_b_str += ')'
+
+    dbc_dya_fun = make_jit_fn(ham_args, dbc_dya_str)
+    dbc_dyb_fun = make_jit_fn(ham_args, dbc_dyb_str)
+    dbc_dp_a_fun = make_jit_fn(ham_args, dbc_dp_a_str)
+    dbc_dp_b_fun = make_jit_fn(ham_args, dbc_dp_b_str)
+
+    num_params = len(parameters)
+
+    if compute_control is not None:
+        def bc_func_jac(ya, yb, u, p, C):
+            _p = p[:num_params]
+            ua = compute_control(ya, u, p, C)
+            ub = compute_control(yb, u, p, C)
+            dbc_dya = np.asarray(dbc_dya_fun(*ya, *p, *C, *ua))
+            dbc_dyb = np.asarray(dbc_dyb_fun(*yb, *p, *C, *ub))
+            dbc_dp_a = np.asarray(dbc_dp_a_fun(*ya, *p, *C, *u))
+            dbc_dp_b = np.asarray(dbc_dp_b_fun(*ya, *p, *C, *u))
+            return dbc_dya, dbc_dyb, dbc_dp_a + dbc_dp_b
+    else:
+        def bc_func_jac(ya, yb, u, p, C):
+            p = p[:num_params]
+            dbc_dya = np.asarray(dbc_dya_fun(*ya, *p, *C, *u))
+            dbc_dyb = np.asarray(dbc_dyb_fun(*yb, *p, *C, *u))
+            dbc_dp_a = np.asarray(dbc_dp_a_fun(*ya, *p, *C, *u))
+            dbc_dp_b = np.asarray(dbc_dp_b_fun(*ya, *p, *C, *u))
+            return dbc_dya, dbc_dyb, dbc_dp_a + dbc_dp_b
+
+    return bc_func_jac
+
+
 def make_jit_fn(args, fn_expr):
     r"""
     JIT compiles a string function to a callable function.
@@ -496,11 +578,12 @@ class BVP(object):
         self.deriv_jac_func = args[1]
         self.quad_func = args[2]
         self.bc_func = args[3]
-        self.compute_control = args[4]
-        self.initial_cost = args[5]
-        self.path_cost = args[6]
-        self.terminal_cost = args[7]
-        self.ineq_constraints = args[8]
+        self.bc_func_jac = args[4]
+        self.compute_control = args[5]
+        self.initial_cost = args[6]
+        self.path_cost = args[7]
+        self.terminal_cost = args[8]
+        self.ineq_constraints = args[9]
         self.raw = dict()
 
     def __repr__(self):
