@@ -1,4 +1,5 @@
 import inspect
+import sys
 import warnings
 import copy
 
@@ -9,6 +10,7 @@ import numpy as np
 
 from beluga import problem, helpers
 import beluga.bvpsol as bvpsol
+from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
 from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
@@ -16,7 +18,6 @@ from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bv
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
 import time
-from collections import OrderedDict
 import pathos
 
 config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
@@ -157,6 +158,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     else:
         for step_idx, step in enumerate(steps):
             logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+            logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
@@ -175,16 +177,39 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                     L = continuation_progress.total
                     continuation_progress.refresh()
 
-                logging.debug('Starting iteration '+str(step.ctr)+'/'+str(step.num_cases()))
+                logging.debug('START Iter '+str(step.ctr)+'/'+str(step.num_cases()))
                 time0 = time.time()
                 if autoscale:
                     s.compute_scaling(sol_guess)
                     sol_guess = s.scale(sol_guess)
 
-                sol = bvp_algo.solve(sol_guess, pool=pool)
+                opt = bvp_algo.solve(sol_guess, pool=pool)
+                sol = opt['sol']
 
                 if autoscale:
                     sol = s.unscale(sol)
+
+                ya = sol.y[0,:]
+                yb = sol.y[-1,:]
+                if sol.q.size > 0:
+                    qa = sol.q[0,:]
+                    qb = sol.q[-1,:]
+                else:
+                    qa = []
+                    qb = []
+
+                if sol.u.size > 0:
+                    ua = sol.u[0,:]
+                    ub = sol.u[-1,:]
+                else:
+                    ua = []
+                    ub = []
+
+                dp = sol.dynamical_parameters
+                ndp = sol.nondynamical_parameters
+                C = sol.const
+
+                bc_residuals_unscaled = bvp_algo.boundarycondition_function(ya, qa, ua, yb, qb, ub, dp, ndp, C)
 
                 step.add_gamma(sol)
 
@@ -193,14 +218,10 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 required when chaining continuation strategies together. DO NOT DELETE!
                 """
                 sol_guess = copy.deepcopy(sol)
-                if sol.converged:
-                    solution_set[step_idx].append(copy.deepcopy(sol))
-                    elapsed_time = time.time() - time0
-                    logging.debug('Iteration %d/%d converged in %0.4f seconds\n' % (step.ctr, step.num_cases(),
-                                                                                   elapsed_time))
-                else:
-                    solution_set[step_idx].append(copy.deepcopy(sol))
-                    elapsed_time = time.time() - time0
+                elapsed_time = time.time() - time0
+                logging.debug('{:4d}\t\t\t\t{:13.8E}\t\t{:13.8f}'.format(opt['niter'], max(bc_residuals_unscaled), elapsed_time))
+                solution_set[step_idx].append(copy.deepcopy(sol))
+                if not sol.converged:
                     logging.debug('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
 
     return solution_set
@@ -254,15 +275,32 @@ def solve(**kwargs):
     steps = kwargs.get('steps', None)
     save_sols = kwargs.get('save', True)
 
+    # Display useful info about the environment to debug logger.
+    logging.debug('\n'+__splash__+'\n')
+    from beluga import __version__ as beluga_version
+    from llvmlite import __version__ as llvmlite_version
+    from numba import __version__ as numba_version
+    from numpy import __version__ as numpy_version
+    from scipy import __version__ as scipy_version
+    from sympy import __version__ as sympy_version
+
+    logging.debug('beluga:\t\t' + str(beluga_version))
+    logging.debug('llvmlite:\t' + str(llvmlite_version))
+    logging.debug('numba:\t\t' + str(numba_version))
+    logging.debug('numpy:\t\t' + str(numpy_version))
+    logging.debug('python:\t\t' + str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]))
+    logging.debug('scipy:\t\t' + str(scipy_version))
+    logging.debug('sympy:\t\t' + str(sympy_version))
+    logging.debug('\n')
+
     if n_cpus < 1:
         raise ValueError('Number of cpus must be greater than 1.')
-
     if n_cpus > 1:
-        logging.debug('Starting processing pool with ' + str(n_cpus) + 'cpus... ')
         pool = pathos.multiprocessing.Pool(processes=n_cpus)
-        logging.debug('Done.')
     else:
         pool = None
+
+    logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
         bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)

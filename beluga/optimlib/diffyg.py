@@ -382,8 +382,7 @@ def make_control_law(dhdu, controls):
     :return: Control law options.
     """
     var_list = list(controls)
-    from sympy import __version__
-    logging.debug("Attempting using SymPy (v" + __version__ + ")...")
+    logging.debug("Solving dH/du...")
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
     logging.debug('Control found')
     control_options = ctrl_sol

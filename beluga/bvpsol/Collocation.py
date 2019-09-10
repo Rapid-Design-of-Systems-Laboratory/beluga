@@ -1,4 +1,4 @@
-from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
+from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm, BVPResult
 import numpy as np
 import copy
 from scipy.optimize import minimize
@@ -169,8 +169,6 @@ class Collocation(BaseAlgorithm):
             sol.q = self._integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u,
                                     sol.dynamical_parameters, self.const, self.tspan, q0)
 
-        logging.debug(xopt['message'])
-
         if 'kkt' in xopt:
             sol.dual = self._kkt_to_dual(sol, xopt['kkt'][0])
         else:
@@ -178,7 +176,10 @@ class Collocation(BaseAlgorithm):
 
         sol.converged = xopt['success']
 
-        return sol
+        out = BVPResult(sol=sol, success=xopt['success'], message=xopt['message'],
+                        niter=xopt['nit'])
+
+        return out
 
     @staticmethod
     def _kkt_to_dual(sol, kkt):

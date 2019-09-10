@@ -124,7 +124,7 @@ class ContinuationStrategy(abc.ABC):
         gamma_guess = copy.deepcopy(self.gammas[i])
         gamma_guess.const = const0
         self.ctr += 1
-        logging.debug('Using trajectory #' + str(i) + ' as guess.')
+        logging.debug('CHOOSE traj #' + str(i) + ' as guess.')
         return gamma_guess
 
     def var_iterator(self):
