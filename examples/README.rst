@@ -3,6 +3,7 @@
 .. _`Financial Oscillator`: Oscillators/FinancialOscillator
 .. _`Goddard Rocket`: AscentVehicles/GoddardRocket
 .. _`Hang Glider`: AtmosphericFlight/HangGlider
+.. _`Hypersonic Nose Cone`: AtmosphericFlight/HypersonicNose
 .. _`Mall's Oscillator`: Oscillators/MallsOscillator
 .. _`Moon Lander`: Classic/MoonLander
 .. _`One-Loop Circuit`: ElectricityandMagnetism/oneloopcircuit
@@ -20,6 +21,7 @@ Pure control path-constrained:
 - `Financial Oscillator`_
 - `Goddard Rocket`_
 - `Hang Glider`_
+- `Hypersonic Nose Cone`_
 - `Mall's Oscillator`_
 - `Moon Lander`_
 - `One-Loop Circuit`_
