@@ -158,7 +158,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     else:
         for step_idx, step in enumerate(steps):
             logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
-            logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
+            # logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
@@ -177,7 +177,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                     L = continuation_progress.total
                     continuation_progress.refresh()
 
-                logging.debug('START Iter '+str(step.ctr)+'/'+str(step.num_cases()))
+                logging.debug('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
                 time0 = time.time()
                 if autoscale:
                     s.compute_scaling(sol_guess)
@@ -219,7 +219,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 """
                 sol_guess = copy.deepcopy(sol)
                 elapsed_time = time.time() - time0
-                logging.debug('{:4d}\t\t\t\t{:13.8E}\t\t{:13.8f}'.format(opt['niter'], max(bc_residuals_unscaled), elapsed_time))
+                logging.debug('STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'.format(step.ctr, step.num_cases(), opt['niter'], max(bc_residuals_unscaled), elapsed_time))
                 solution_set[step_idx].append(copy.deepcopy(sol))
                 if not sol.converged:
                     logging.debug('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
