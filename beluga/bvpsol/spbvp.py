@@ -1,9 +1,8 @@
-from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
+from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm, BVPResult
 from beluga.ivpsol import Trajectory
 from ._bvp import *
 import numpy as np
 import copy
-
 
 class spbvp(BaseAlgorithm):
     r"""
@@ -102,4 +101,7 @@ class spbvp(BaseAlgorithm):
             sol.nondynamical_parameters = np.array([])
 
         sol.converged = opt['success']
-        return sol
+        out = BVPResult(sol=sol, success=opt['success'], message=opt['message'], rms_residuals=opt['rms_residuals'],
+                        niter=opt['niter'])
+
+        return out

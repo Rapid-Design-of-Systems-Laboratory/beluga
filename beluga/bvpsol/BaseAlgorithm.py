@@ -71,3 +71,18 @@ class BaseAlgorithm(object):
 
     def close(self):
         pass
+
+class BVPResult(dict):
+    """ Represents the BVP solver result.
+
+    :param dict:
+    :return:
+    """
+
+    def __repr__(self):
+        if self.keys():
+            m = max(map(len, list(self.keys()))) + 1
+            return '\n'.join([k.rjust(m) + ': ' + repr(v)
+                              for k, v in sorted(self.items())])
+        else:
+            return self.__class__.__name__ + "()"
