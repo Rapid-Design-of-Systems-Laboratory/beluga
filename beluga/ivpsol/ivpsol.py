@@ -3,12 +3,12 @@ from scipy.integrate import solve_ivp, simps
 import scipy.interpolate
 import copy
 
-from beluga.ivpsol import RKMK, Flow
-from beluga.liepack.domain.hspaces import HManifold
-from beluga.liepack.domain.liegroups import RN
-from beluga.liepack.domain.liealgebras import rn
-from beluga.liepack import exp
-from beluga.liepack.field import VectorField
+from liepack.flow import RKMK, Flow
+from liepack.domain.hspaces import HManifold
+from liepack.domain.liegroups import RN
+from liepack.domain.liealgebras import rn
+from liepack import exp
+from liepack.field import VectorField
 
 
 class Algorithm(object):
