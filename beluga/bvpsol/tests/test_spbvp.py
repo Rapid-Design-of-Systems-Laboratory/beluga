@@ -32,7 +32,7 @@ def test_T1(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [1 / const[0], 0]])
-        df_dp = np.empty((0,2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -44,7 +44,7 @@ def test_T1(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = (np.exp(-sol.t / np.sqrt(sol.const)) - np.exp((sol.t - 2) / np.sqrt(sol.const))) / (
                 1 - np.exp(-2.e0 / np.sqrt(sol.const)))
@@ -61,7 +61,7 @@ def test_T2(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [0, 1 / const[0]]])
-        df_dp = np.empty((0,2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -73,7 +73,7 @@ def test_T2(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
@@ -90,7 +90,7 @@ def test_T3(const):
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2 / const[0], -(2 * np.cos(np.pi * X[2]) + 4)/const[0], (2*np.pi**2 * np.sin(np.pi * X[2])**2 + 2 * np.pi*np.sin(np.pi*X[2])*(const[0]*np.pi**2 + 1) - 2*np.pi**2*np.cos(np.pi*X[2])*(np.cos(np.pi*X[2]) + 2) + 2*X[1]*np.pi*np.sin(np.pi*X[2]))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -102,7 +102,7 @@ def test_T3(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -117,7 +117,7 @@ def test_T4(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2*(1 + const[0])/const[0], 2*(-1)/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -129,7 +129,7 @@ def test_T4(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.const[0]) * (1 + sol.y[:, 2]) / sol.const[0]))
     e2 = np.exp(sol.y[:, 2] - 1) - (sol.const[0] + 1) / (
@@ -149,7 +149,7 @@ def test_T5(const):
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2 / const[0], 2*X[2]/const[0], (2*(X[1] + np.pi*np.sin(np.pi*X[2]) + np.pi*np.sin(np.pi*X[2])*(const*np.pi**2 + 1) + np.pi*np.pi*X[2]*np.cos(np.pi*X[2])))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -161,7 +161,7 @@ def test_T5(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -178,7 +178,7 @@ def test_T6():
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [0, -2*X[2]/const[0], -(2*(X[1] + np.pi*np.sin(np.pi*X[2]) - const[0]*np.pi**3*np.sin(np.pi*X[2]) + np.pi**2*X[2]*np.cos(np.pi*X[2])))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -190,7 +190,7 @@ def test_T6():
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([1])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
     e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
@@ -208,7 +208,7 @@ def test_T7(const):
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], -2*X[2]/const[0], -(2*(X[1] + np.pi*np.sin(np.pi*X[2]) + np.pi**2*X[2]*np.cos(np.pi*X[2]) - np.pi*np.sin(np.pi*X[2])*(const[0]*np.pi**2 + 1)))/const[0]],
                           [0,0,0]])
-        df_dp = np.empty((0,3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -220,7 +220,7 @@ def test_T7(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + sol.y[:, 2] + (
                 sol.y[:, 2] * erf(sol.y[:, 2] / np.sqrt(2.0e0 * sol.const[0]))
@@ -241,7 +241,7 @@ def test_T8(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -253,7 +253,7 @@ def test_T8(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = (2 - np.exp(-1 / sol.const[0]) - np.exp(-sol.y[:, 2] / sol.const[0])) / (1 - np.exp(-1 / sol.const[0]))
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]) * (1 / np.exp(1 / sol.const[0]) - 1))
@@ -268,7 +268,7 @@ def test_T9(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [-4/(X[2]**2 + const[0]), -(8*X[2])/(X[2]**2 + const[0]), (4*X[2]*(2*X[0] + 4*X[1]*X[2]))/(X[2]**2 + const[0])**2 - (8*X[1])/(X[2]**2 + const[0])], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -280,7 +280,7 @@ def test_T9(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = 1 / (sol.const[0] + sol.y[:, 2] ** 2)
     e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
@@ -295,7 +295,7 @@ def test_T10(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [0, 2*(-X[2])/const[0], 2*(-X[1]/const[0])], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -307,7 +307,7 @@ def test_T10(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = 1 + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
     e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
@@ -324,7 +324,7 @@ def test_T11(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -336,7 +336,7 @@ def test_T11(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -352,7 +352,7 @@ def test_T12(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -364,7 +364,7 @@ def test_T12(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
     e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -380,7 +380,7 @@ def test_T13(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -392,7 +392,7 @@ def test_T13(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
     e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -409,7 +409,7 @@ def test_T14(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2/const[0], 0, (2*(np.pi*np.sin(np.pi*X[2]) + const[0]*np.pi**3*np.sin(np.pi*X[2])))/const[0]], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -421,7 +421,7 @@ def test_T14(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0])) + np.exp(
         -(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
@@ -438,7 +438,7 @@ def test_T15(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 2, 0], [2*(X[2]/const[0]), 0, 2*(X[0]/const[0])], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -450,7 +450,7 @@ def test_T15(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
     assert sol.converged
 
 
@@ -461,7 +461,7 @@ def test_T16(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [-np.pi**2/(4*const[0]), 0, 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -473,7 +473,7 @@ def test_T16(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.sin(np.pi * sol.y[:, 2] / (2 * np.sqrt(sol.const[0])))
     e2 = (np.pi * np.cos((np.pi * sol.y[:, 2]) / (2 * np.sqrt(sol.const[0])))) / (2 * np.sqrt(sol.const[0]))
@@ -488,7 +488,7 @@ def test_T17(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 0.2, 0], [-(3*const[0])/(5*(X[2]**2 + const[0])**2), 0, (12*const[0]*X[0]*X[2])/(5*(X[2]**2 + const[0])**3)], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -500,7 +500,7 @@ def test_T17(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = sol.y[:, 2]/np.sqrt(sol.const[0]+sol.y[:, 2]**2)
     e2 = 1/np.sqrt(sol.y[:, 2]**2 + sol.const[0]) - sol.y[:, 2]**2/(sol.y[:, 2]**2 + sol.const[0])**(3/2)
@@ -515,7 +515,7 @@ def test_T18(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -527,7 +527,7 @@ def test_T18(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.exp(-sol.y[:, 2] / sol.const[0])
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
@@ -542,7 +542,7 @@ def test_T19(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [0, -1/const[0], 0], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -558,7 +558,7 @@ def test_T19(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -570,7 +570,7 @@ def test_T21(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0], [(2*X[0] + 1)/const[0], 0, (2*np.exp(-(2*X[2])/np.sqrt(const[0])))/const[0]**(3/2)], [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -582,7 +582,7 @@ def test_T21(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.exp(-sol.y[:, 2] / np.sqrt(const))
     e2 = -np.exp(-sol.y[:, 2] / np.sqrt(const)) / np.sqrt(const)
@@ -597,7 +597,7 @@ def test_T22(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [-(2*X[0])/const[0], -1/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -609,7 +609,7 @@ def test_T22(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0], [0, 0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     assert sol.converged
 
@@ -621,7 +621,7 @@ def test_T23(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [np.cosh(X[0] / const[0]) / const[0] ** 2, 0]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -637,7 +637,7 @@ def test_T23(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -657,7 +657,7 @@ def test_T24(const):
                                       (X[0] * (y / 2 - 2 * const[0] * X[2] + 1 / 2) - 1 / X[0]) / (const[0] * X[0] * (X[2] ** 2 + 1)),
                                       -((4 * X[2] ** 2 * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) ** 2 - (2 * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) + 2 * const[0] * X[0] * X[1]) / (const[0] * X[0] * (X[2] ** 2 + 1)) - (2 * X[2] * ((2 * X[2] * ((y / 2 - 1 / 2) * X[0] ** 2 - 1)) / (X[2] ** 2 + 1) - X[1] / X[0] + X[0] * X[1] * (y / 2 - 2 * const[0] * X[2] + 1 / 2))) / (const[0] * X[0] * (X[2] ** 2 + 1) ** 2)],
                           [0, 0, 0]])
-        df_dp = np.empty((0, 3))
+        df_dp = np.empty((3, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
@@ -673,7 +673,7 @@ def test_T24(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -685,7 +685,7 @@ def test_T25(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -701,7 +701,7 @@ def test_T25(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -713,7 +713,7 @@ def test_T26(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -729,7 +729,7 @@ def test_T26(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -741,7 +741,7 @@ def test_T27(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -757,7 +757,7 @@ def test_T27(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -769,7 +769,7 @@ def test_T28(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -785,7 +785,7 @@ def test_T28(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -797,7 +797,7 @@ def test_T29(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -813,7 +813,7 @@ def test_T29(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -825,7 +825,7 @@ def test_T30(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1], [(1-X[1])/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 2))
+        df_dp = np.empty((2, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -841,7 +841,7 @@ def test_T30(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -854,7 +854,7 @@ def test_T31(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, np.cos(X[1]), 0, 0], [0, 0, 1, 0], [0, 0, 0, -1/const[0]], [np.cos(X[1])/const[0], -(np.sin(X[1])*(X[0] - 1) + const[0]*X[3]*(np.tan(X[1])**2 + 1) + (X[2]*np.sin(X[1]))/np.cos(X[1])**2)/const[0], -1/(const[0]*np.cos(X[1])), -np.tan(X[1])]])
-        df_dp = np.empty((0, 4))
+        df_dp = np.empty((4, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -866,7 +866,7 @@ def test_T31(const):
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
     sol.const = np.array([const])
-    sol = algo.solve(sol)
+    sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -878,7 +878,7 @@ def test_T32(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1], [-X[3]/const[0], X[2]/const[0], X[1]/const[0], -X[0]/const[0]]])
-        df_dp = np.empty((0, 4))
+        df_dp = np.empty((4, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -894,7 +894,7 @@ def test_T32(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)
+        sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -906,7 +906,7 @@ def test_T33(const):
 
     def odejac(X, u, p, const):
         df_dy = np.array([[0, 1, 0, 0, 0, 0], [X[3]/const[0], -X[2]/const[0], -X[1]/const[0], X[0]/const[0], 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1], [-X[1]/const[0], -X[0]/const[0], -X[5]/const[0], 0, 0, -X[2]/const[0]]])
-        df_dp = np.empty((0, 6))
+        df_dp = np.empty((6, 0))
         return df_dy, df_dp
 
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
@@ -918,7 +918,7 @@ def test_T33(const):
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-1, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]])
     sol.const = np.array([const])
-    sol = algo.solve(sol)
+    sol = algo.solve(sol)['sol']
 
     assert sol.converged
 
@@ -940,7 +940,7 @@ def test_R2(const):
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
@@ -965,7 +965,7 @@ def test_R8(const):
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
@@ -990,7 +990,7 @@ def test_R18(const):
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)
+    sol = algo.solve(solinit)['sol']
 
     e1 = np.exp(-sol.t / sol.const[0])
     e2 = -1 / (sol.const[0] * np.exp(sol.t / sol.const[0]))
@@ -1013,7 +1013,7 @@ def test_spbvp_1():
     solinit.t = np.linspace(0, 4, 4)
     solinit.y = np.array([[0, 1], [0, 1], [0, 1], [0, 1]])
     solinit.const = np.array([])
-    out = algo.solve(solinit)
+    out = algo.solve(solinit)['sol']
     assert out.y[0][0] < tol
     assert out.y[0][1] - 2.06641646 < tol
     assert out.y[-1][0] + 2 < tol
@@ -1041,7 +1041,7 @@ def test_spbvp_1():
 #     solinit.dynamical_parameters = np.array([np.pi, 15])
 #     solinit.const = np.array([])
 #
-#     out = algo.solve(solinit)
+#     out = algo.solve(solinit)['sol']
 #     assert abs(out.y[-1][2] - np.pi) < tol
 #     assert abs(out.y[0][0] - 1) < tol
 #     assert abs(out.y[0][1]) < tol
@@ -1066,5 +1066,5 @@ def test_spbvp_3():
     solinit.y = np.array([[0], [0], [0], [0]])
     solinit.dynamical_parameters = np.array([1])
     solinit.const = np.array([])
-    out = algo.solve(solinit)
+    out = algo.solve(solinit)['sol']
     assert abs(out.dynamical_parameters - 2) < tol

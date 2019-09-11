@@ -5,7 +5,7 @@ import numpy as np
 from math import isclose
 from ._shooting import *
 
-from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm
+from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm, BVPResult
 from beluga.ivpsol import Propagator, Trajectory, reconstruct
 from scipy.sparse import coo_matrix, csc_matrix
 from scipy.sparse.linalg import splu
@@ -279,8 +279,11 @@ class Shooting(BaseAlgorithm):
 
             if self.derivative_function_jac is not None:
                 _df_dy, _df_dp = self.derivative_function_jac(xx, [], p, const)
-                Z = np.zeros((n_odes, n_params - _df_dp.shape[0]))
-                ff = np.hstack((_df_dy, _df_dp.T, Z))
+                if n_odes > 1 and len(_df_dp.shape) == 1:
+                    _df_dp = np.array([_df_dp]).T
+
+                Z = np.zeros((n_odes, n_params - _df_dp.shape[1]))
+                ff = np.hstack((_df_dy, _df_dp, Z))
             else:
                 ff = np.empty((n_odes, n_odes+n_params))
 
@@ -611,9 +614,9 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
                 if is_sparse:
-                    logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
+                    logging.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
                 else:
-                    logging.debug('Step {}: Residual = {}; Jacobian condition = {}'.format(n_iter, err, np.linalg.cond(jac)))
+                    logging.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac)))
         elif self.algorithm.lower() == 'npnlp':
             from npnlp import minimize as mini
             opt = mini(cost, x_init, method='sqp', tol=self.tolerance,
@@ -639,16 +642,16 @@ class Shooting(BaseAlgorithm):
         gamma_set = _gamma_maker(pick_deriv, pick_quad, gamma_set, parameter_guess, sol, prop, pool, n_quads)
 
         if n_iter > self.max_iterations:
-            logging.warning('Max iterations exceeded.')
+            message = 'Max iterations exceeded.'
 
         if err > self.max_error:
-            raise RuntimeError('Error exceeded max_error')
+            message = 'Error exceeded max_error.'
 
         if err < self.tolerance and converged:
             if n_iter == -1:
-                logging.debug("Converged in an unknown number of iterations.")
+                message = "Converged in an unknown number of iterations."
             else:
-                logging.debug("Converged in " + str(n_iter) + " iterations.")
+                message = "Converged in " + str(n_iter) + " iterations."
 
         # Stitch the arcs together to make a single trajectory, removing the boundary points inbetween each arc
         t_out = gamma_set[0].t
@@ -670,4 +673,7 @@ class Shooting(BaseAlgorithm):
         sol.dynamical_parameters = parameter_guess[:k]
         sol.nondynamical_parameters = parameter_guess[k:]
         sol.converged = converged
-        return sol
+
+        out = BVPResult(sol=sol, success=converged, message=message,
+                        niter=n_iter)
+        return out

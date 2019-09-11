@@ -75,7 +75,7 @@ git_people = list(OrderedDict.fromkeys(git_people))
 
 try:
     git_people.remove('jsDelivr Bot <contact@jsdelivr.com>')
-    git_people.insert(5, '*Kshitij Mall')
+    git_people.insert(5, '*Kshitij Mall <horizonkind@gmail.com>')
 except AssertionError as message:
     print(red(message))
     sys.exit(1)

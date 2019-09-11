@@ -3,12 +3,12 @@ from scipy.integrate import solve_ivp, simps
 import scipy.interpolate
 import copy
 
-from beluga.ivpsol import RKMK, Flow
-from beluga.liepack.domain.hspaces import HManifold
-from beluga.liepack.domain.liegroups import RN
-from beluga.liepack.domain.liealgebras import rn
-from beluga.liepack import exp
-from beluga.liepack.field import VectorField
+from liepack.flow import RKMK, Flow
+from liepack.domain.hspaces import HManifold
+from liepack.domain.liegroups import RN
+from liepack.domain.liealgebras import rn
+from liepack import exp
+from liepack.field import VectorField
 
 
 class Algorithm(object):
@@ -85,8 +85,15 @@ class Propagator(Algorithm):
         y0 = np.array(y0, dtype=np.float64)
 
         if self.program == 'scipy':
-            int_sol = solve_ivp(lambda t, y: eom_func(y, *args), [tspan[0], tspan[-1]], y0,
-                                rtol=self.reltol, atol=self.abstol, max_step=self.maxstep)
+            if self.variable_step is True:
+                int_sol = solve_ivp(lambda t, y: eom_func(y, *args), [tspan[0], tspan[-1]], y0,
+                                    rtol=self.reltol, atol=self.abstol, max_step=self.maxstep, method=self.stepper)
+            else:
+                T = np.arange(tspan[0], tspan[-1], self.maxstep)
+                if T[-1] != tspan[-1]:
+                    T = np.hstack((T, tspan[-1]))
+                int_sol = solve_ivp(lambda t, y: eom_func(y, *args), [tspan[0], tspan[-1]], y0,
+                                    rtol=self.reltol, atol=self.abstol, method=self.stepper, t_eval=T)
             gamma = Trajectory(int_sol.t, int_sol.y.T)
 
         elif self.program == 'lie':
@@ -99,7 +106,7 @@ class Propagator(Algorithm):
 
             def M2g(t, y):
                 vec = y[:-1, -1]
-                out = eom_func(t, vec, *args)
+                out = eom_func(vec, *args)
                 g = rn(dim+1)
                 g.set_vector(out)
                 return g

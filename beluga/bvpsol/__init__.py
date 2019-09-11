@@ -1,4 +1,4 @@
-from .BaseAlgorithm import BaseAlgorithm
+from .BaseAlgorithm import BaseAlgorithm, BVPResult
 from .Shooting import Shooting
 from .Collocation import Collocation
 from .Pseudospectral import Pseudospectral
