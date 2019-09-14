@@ -504,6 +504,33 @@ def epstrig_path(constraint, lower, upper, activator):
     return -activator*(sympy.cos(constraint))
 
 
+def is_symplectic(form):
+    r"""
+    Checks whether or not a given form is symplectic.
+
+    :param form: A form.
+    :return: Boolean representing if a form is symplectic or not.
+    """
+    if len(form.shape) != 2:
+        return False
+
+    if (form.shape[0] % 2 != 0) or (form.shape[0] != form.shape[1]):
+        return False
+
+    out = True
+    for ii in range(form.shape[0]):
+        for jj in range(form.shape[1]):
+            if ii == jj:
+                if form[ii, jj] != 0:
+                    out = False
+
+            if ii != jj:
+                if form[ii, jj] != -form[jj, ii]:
+                    out = False
+
+    return out
+
+
 def utm_path(constraint, lower, upper, activator):
     r"""
     Creates an interior penalty-type term to enforce path constraints.

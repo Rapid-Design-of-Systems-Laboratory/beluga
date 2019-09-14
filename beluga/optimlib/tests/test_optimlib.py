@@ -91,6 +91,16 @@ def test_exterior_derivative():
     assert df[1, 1] == 0
 
 
+def test_make_standard_symplectic_form():
+    basis = [Symbol('x'), Symbol('y')]
+    omega = make_standard_symplectic_form([basis[0]], [basis[1]])
+
+    assert len(omega.shape) == 2
+    assert omega.shape[0] == omega.shape[1] == 2
+    assert abs(omega[0,1]) == 1
+    assert abs(omega[1,0]) == 1
+
+
 def test_init_workspace():
     class emptyobj(object):
         def __new__(cls):
@@ -121,6 +131,21 @@ def test_init_workspace():
 
     assert isinstance(ws, dict)
     assert ws['problem_name'] == 'test_problem'
+
+
+def test_is_symplectic():
+    basis = [Symbol('x'), Symbol('y')]
+    make_standard_symplectic_form([basis[0]], [basis[1]])
+
+    omega = make_standard_symplectic_form([basis[0]], [basis[1]])
+    assert is_symplectic(omega)
+
+    omega[0,0] = 1
+    assert not is_symplectic(omega)
+
+    omega = make_standard_symplectic_form([basis[0]], [basis[1]])
+    omega[0,1] = -omega[0,1]
+    assert not is_symplectic(omega)
 
 
 # def test_make_augmented_cost():

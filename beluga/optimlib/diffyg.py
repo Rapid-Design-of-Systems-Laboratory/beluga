@@ -210,13 +210,15 @@ def ocp_to_bvp(ocp, **kwargs):
             omega_new[int(2*n + ii - 1), independent_index] = dae_rates[ii]
 
         for ii, lU in enumerate(lamU):
-            dae_bc += [lU]
+            bc_initial += [lU]
 
         omega = omega_new
 
         dae_units = controls_units
         controls = []
         control_law = []
+        # breakpoint()
+        bc_terminal += dae_bc
         num_dae = len(dae_states)
     elif control_method == 'numerical':
         dae_states = []
@@ -240,6 +242,8 @@ def ocp_to_bvp(ocp, **kwargs):
     # Scale the differential structure by time.
     omega = omega/tf
     # hamiltonian = hamiltonian*tf
+    if not is_symplectic(omega):
+        logging.warning('Hamiltonian BVP improperly formed!')
 
     X_H = make_hamiltonian_vector_field(hamiltonian, omega, states + costates, derivative_fn)
 
@@ -250,7 +254,7 @@ def ocp_to_bvp(ocp, **kwargs):
     if analytical_jacobian:
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')
-
+        raise NotImplementedError('Bug in ICRM for analytical jacobians')
         df_dy = [[0 for f in X_H] for s in states + costates]
         for ii, f in enumerate(X_H):
             for jj, s in enumerate(states + costates):
@@ -260,9 +264,34 @@ def ocp_to_bvp(ocp, **kwargs):
         for ii, f in enumerate(X_H):
             for jj, s in enumerate(dynamical_parameters):
                 df_dp[jj][ii] = str(derivative_fn(f, s))
+
+        dbc_dya = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_initial):
+            for jj, s in enumerate(states + costates + dae_states):
+                dbc_dya[ii][jj] = str(derivative_fn(f, s))
+
+        dbc_dyb = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_terminal):
+            for jj, s in enumerate(states + costates + dae_states):
+                dbc_dyb[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
+
+        dbc_dp_a = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_initial):
+            for jj, s in enumerate(dynamical_parameters + nondynamical_parameters):
+                dbc_dp_a[ii][jj] = str(derivative_fn(f, s))
+
+        dbc_dp_b = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
+        for ii, f in enumerate(bc_terminal):
+            for jj, s in enumerate(dynamical_parameters + nondynamical_parameters):
+                dbc_dp_b[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
+
     else:
         df_dy = None
         df_dp = None
+        dbc_dya = None
+        dbc_dyb = None
+        dbc_dp_a = None
+        dbc_dp_b = None
 
     out = {'method': 'brysonho',
            'problem_name': problem_name,
@@ -298,11 +327,11 @@ def ocp_to_bvp(ocp, **kwargs):
            'num_states': len(states + costates),
            'dHdu': [str(x) for x in dHdu],
            'bc_initial': [str(_) for _ in bc_initial],
-           'bc_terminal': [str(_) for _ in bc_terminal + dae_bc],
-           'bc_initial_jac': None,
-           'bc_terminal_jac': None,
-           'bc_initial_parameter_jac': None,
-           'bc_terminal_parameter_jac': None,
+           'bc_terminal': [str(_) for _ in bc_terminal],
+           'bc_initial_jac': dbc_dya,
+           'bc_terminal_jac': dbc_dyb,
+           'bc_initial_parameter_jac': dbc_dp_a,
+           'bc_terminal_parameter_jac': dbc_dp_b,
            'control_options': control_law,
            'num_controls': len(controls)}
 
