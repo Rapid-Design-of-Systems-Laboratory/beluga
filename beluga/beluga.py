@@ -13,10 +13,10 @@ import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
-from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
-from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
+from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
+from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
 
@@ -143,7 +143,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             s.compute_scaling(sol_guess)
             sol_guess = s.scale(sol_guess)
 
-        sol = bvp_algo.solve(sol_guess, pool=pool)
+        opt = bvp_algo.solve(sol_guess, pool=pool)
+        sol = opt['sol']
 
         if autoscale:
             sol = s.unscale(sol)
