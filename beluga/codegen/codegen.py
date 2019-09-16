@@ -110,7 +110,6 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
     u_args = [*states, *parameters, *constants]
     control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
 
-
     hamiltonian_fn = make_sympy_fn(ham_args, ham)
     num_options = len(control_opts)
     num_states = len(states)
@@ -495,7 +494,7 @@ def make_jit_fn(args, fn_expr):
         jit_fn = numba.jit(nopython=True)(f)
         in_rand = np.random.rand(len(args))
         jit_fn(*in_rand)
-    except:
+    except numba.errors.InternalError:
         logging.warning(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
         jit_fn = f
 
