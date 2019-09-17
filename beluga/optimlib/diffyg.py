@@ -1,4 +1,3 @@
-
 import copy
 from .optimlib import *
 from beluga.utils import sympify
@@ -148,9 +147,6 @@ def ocp_to_bvp(ocp, **kwargs):
     hamiltonian, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
 
-    costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
-
-
     omega = make_standard_symplectic_form(states, costates)
     X_H = make_hamiltonian_vector_field(hamiltonian, omega, states + costates, derivative_fn)
     n = len(states)
@@ -192,6 +188,7 @@ def ocp_to_bvp(ocp, **kwargs):
                                                                                derivative_fn)
 
         lamU = make_costate_names(dae_states)
+        ndae = len(dae_states)
         lamU_units = [cost_units/unit for unit in controls_units]
         states += dae_states
         costates += lamU
@@ -200,20 +197,19 @@ def ocp_to_bvp(ocp, **kwargs):
 
         n = len(states)
         omega_new = make_standard_symplectic_form(states, costates)
-        n0 = independent_index
 
         # Add (du - u' dt) ^ (dlamU - 0 dt) to omega
         for ii, u in enumerate(dae_rates):
-            omega_new[int(n + ii - 1), int(2*n + ii - 1)] = 1
-            omega_new[int(2*n + ii - 1), int(n + ii - 1)] = -1
-            omega_new[independent_index, int(2*n + ii - 1)] = -dae_rates[ii]
-            omega_new[int(2*n + ii - 1), independent_index] = dae_rates[ii]
+            # breakpoint()
+            omega_new[int(n - ndae + ii), int(2*n - ndae + ii)] = 1
+            omega_new[int(2*n - ndae + ii), int(n - ndae + ii)] = -1
+            omega_new[independent_index, int(2*n - ndae + ii)] = -dae_rates[ii]
+            omega_new[int(2*n - ndae + ii), independent_index] = dae_rates[ii]
 
         for ii, lU in enumerate(lamU):
             bc_initial += [lU]
 
         omega = omega_new
-
         dae_units = controls_units
         controls = []
         control_law = []
@@ -254,16 +250,16 @@ def ocp_to_bvp(ocp, **kwargs):
     if analytical_jacobian:
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')
-        raise NotImplementedError('Bug in ICRM for analytical jacobians')
-        df_dy = [[0 for f in X_H] for s in states + costates]
+
+        df_dy = [['0' for f in X_H] for s in states + costates]
         for ii, f in enumerate(X_H):
             for jj, s in enumerate(states + costates):
                 df_dy[ii][jj] = str(derivative_fn(f, s))
 
-        df_dp = [[0 for f in X_H] for s in dynamical_parameters]
+        df_dp = [['0' for s in dynamical_parameters] for f in X_H]
         for ii, f in enumerate(X_H):
             for jj, s in enumerate(dynamical_parameters):
-                df_dp[jj][ii] = str(derivative_fn(f, s))
+                df_dp[ii][jj] = str(derivative_fn(f, s))
 
         dbc_dya = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_initial):

@@ -17,6 +17,8 @@ def ocp_to_bvp(ocp, **kwargs):
     :return: bvp, map, map_inverse
     """
 
+    logging.warning('\'diffyg_deprecated\' method is deprecated and will be removed in a later version, use \'indirect\'.')
+
     ws = init_workspace(ocp)
     problem_name = ws['problem_name']
     independent_variable = ws['independent_var']

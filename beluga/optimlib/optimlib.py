@@ -7,7 +7,6 @@ from beluga.utils import sympify
 import sympy
 from sympy import Symbol, zoo
 import functools as ft
-import itertools as it
 import re
 
 
@@ -367,8 +366,9 @@ def make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn):
         raise ValueError('omega must be even-dimensional.')
 
     dH = exterior_derivative(hamiltonian, basis, derivative_fn)
-    omega_inverse = omega.tomatrix().inv()
-    X_H = sympy.tensorcontraction(sympy.tensorproduct(dH, omega_inverse), (0, 1))
+    dH = sympy.Matrix(dH)
+    O = omega.tomatrix()
+    X_H = -O.LUsolve(dH)
     return X_H
 
 
