@@ -1,4 +1,10 @@
-"""Unconstrained planar hypersonic trajectory problem."""
+"""
+References
+----------
+.. [1] Vinh, Nguyen X., Adolf Busemann, and Robert D. Culp. "Hypersonic and planetary entry flight mechanics."
+    NASA STI/Recon Technical Report A 81 (1980).
+"""
+
 from math import *
 
 import beluga

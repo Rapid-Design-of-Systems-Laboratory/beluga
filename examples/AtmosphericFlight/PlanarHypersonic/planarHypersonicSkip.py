@@ -1,7 +1,10 @@
-"""Unconstrained planar hypersonic trajectory problem.
-Entry flight-path angle is constrained so the vehicle enters
-the atmosphere fairly steep. It performs a skip maneuver to
-reach it's target."""
+"""
+References
+----------
+.. [1] Vinh, Nguyen X., Adolf Busemann, and Robert D. Culp. "Hypersonic and planetary entry flight mechanics."
+    NASA STI/Recon Technical Report A 81 (1980).
+"""
+
 from math import *
 
 import beluga

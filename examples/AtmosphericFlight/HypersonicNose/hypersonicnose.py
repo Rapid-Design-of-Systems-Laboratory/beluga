@@ -1,3 +1,10 @@
+"""
+References
+----------
+.. [1] Buttazzo, Giuseppe, and Bernhard Kawohl. "On Newton’s problem of minimal resistance."
+    The Mathematical Intelligencer 15.4 (1993): 7-12.
+"""
+
 import beluga
 import logging
 import matplotlib.pyplot as plt
