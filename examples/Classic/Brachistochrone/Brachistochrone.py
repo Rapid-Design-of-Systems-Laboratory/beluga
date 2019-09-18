@@ -3,8 +3,6 @@ import beluga
 import logging
 from math import pi
 
-import matplotlib.pyplot as plt
-
 ocp = beluga.OCP('brachisto')
 
 # Define independent variables
@@ -68,10 +66,3 @@ sol_set = beluga.solve(
     autoscale=True,
     initial_helper=True
 )
-
-sol = sol_set[-1][-1]
-
-plt.figure()
-plt.plot(sol.y[:, 0], sol.y[:, 1])
-plt.grid(True)
-plt.show()

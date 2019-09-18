@@ -1,9 +1,7 @@
 import beluga
 import logging
 
-import matplotlib.pyplot as plt
-
-ocp = beluga.OCP('zermelos_problem')
+ocp = beluga.OCP('ZermelosProblem')
 
 
 def drift_x(x, y):
@@ -85,10 +83,3 @@ sol_set = beluga.solve(
     guess_generator=guess_maker,
     initial_helper=True
 )
-
-sol = sol_set[-1][-1]
-
-plt.figure()
-plt.plot(sol.y[:, 0], sol.y[:, 1])
-plt.grid(True)
-plt.show()

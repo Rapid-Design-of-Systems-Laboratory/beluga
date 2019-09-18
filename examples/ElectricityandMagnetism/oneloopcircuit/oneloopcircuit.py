@@ -8,8 +8,6 @@ References
 import beluga
 import logging
 
-import matplotlib.pyplot as plt
-
 i_0 = 1
 lu = 1
 lq = 1e5
@@ -87,27 +85,3 @@ sol_set_indirect = beluga.solve(
     guess_generator=guess_maker_indirect,
     autoscale=False
 )
-
-sol_indirect = sol_set_indirect[-1][-1]
-
-fig, ax1 = plt.subplots()
-
-color = 'tab:red'
-ax1.set_xlabel('Time [s]')
-ax1.set_ylabel('Current [A]', color=color)
-ax1.plot(sol_indirect.t, sol_indirect.y[:,0], color=color)
-ax1.tick_params(axis='y', labelcolor=color)
-
-ax2 = ax1.twinx()
-
-color = 'tab:blue'
-ax2.set_ylabel('Voltage [volts]', color=color)
-ax2.plot(sol_indirect.t, sol_indirect.u[:,0], color=color)
-ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.const[0]]*2, linestyle='--', color='k')
-ax2.plot([sol_indirect.t[0], sol_indirect.t[-1]], [sol_indirect.const[1]]*2, linestyle='--', color='k', label='Min/Max Voltage')
-ax2.tick_params(axis='y', labelcolor=color)
-
-plt.legend()
-plt.grid(True)
-fig.tight_layout()
-plt.show()
