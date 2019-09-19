@@ -8,7 +8,7 @@ Indirect method of optimization based on Bryson-Ho [1]_.
 
 Controls are handled in one of two ways: ICRM [2]_ [3]_ or PMP.
 
-Path constraints are handled in one of three ways: ICRM [2]_ [3]_, UTM [4]_ [5]_ [6]_ [7]_, or epsilon-trig [4]_ [5]_
+Path constraints are handled in one of two ways: UTM [4]_ [5]_ [6]_ [7]_ or epsilon-trig [4]_ [5]_
 
 Switching conditions are handled using RASHS [8]_.
 
