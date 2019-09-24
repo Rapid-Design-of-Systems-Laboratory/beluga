@@ -140,3 +140,27 @@ def fix_carets(expr):
     import re as _re
     caret = _re.compile('[\\^]')
     return caret.sub('**', expr)
+
+
+def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
+    """Combines positional and keyword arguments
+    Parameters
+    ----------
+    arg_list - list of str
+        List of keys in order of positional arguments
+    args - list of str
+        List of positional arguments
+    kwargs: dict
+        Dictionary of keyword arguments
+    Returns
+    -------
+    A dictionary merging kwargs and args with keys from
+    from args_list
+    Example
+    -------
+    >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
+    {'foo':1, 'bar':2, 'baz': 3}
+    """
+    pos_args = {key: val for (key, val) in zip_longest(arg_list, args, fillvalue=fillvalue)}
+    arg_dict = dict(ChainMap(kwargs, pos_args))
+    return arg_dict

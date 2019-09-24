@@ -16,57 +16,64 @@ def ocp_to_bvp(ocp, **kwargs):
     :param ocp: An OCP.
     :return: bvp, map, map_inverse
     """
-
-    ws = init_workspace(ocp)
-    problem_name = ws['problem_name']
-    independent_variable = ws['independent_var']
-    independent_variable_units = ws['independent_var_units']
-    states = ws['states']
-    states_rates = ws['states_rates']
-    states_units = ws['states_units']
-    controls = ws['controls']
-    controls_units = ws['controls_units']
-    constants = ws['constants']
-    constants_units = ws['constants_units']
-    constants_values = ws['constants_values']
-    constants_of_motion = ws['constants_of_motion']
-    constants_of_motion_values = ws['constants_of_motion_values']
-    constants_of_motion_units = ws['constants_of_motion_units']
-    constraints = ws['constraints']
-    constraints_units = ws['constraints_units']
-    constraints_lower = ws['constraints_lower']
-    constraints_upper = ws['constraints_upper']
-    constraints_activators = ws['constraints_activators']
-    constraints_method = ws['constraints_method']
-    switches = ws['switches']
-    switches_values = ws['switches_values']
-    switches_conditions = ws['switches_conditions']
-    switches_tolerance = ws['switches_tolerance']
-    parameters = ws['parameters']
-    parameters_units = ws['parameters_units']
-    initial_cost = ws['initial_cost']
-    initial_cost_units = ws['initial_cost_units']
-    terminal_cost = ws['terminal_cost']
-    terminal_cost_units = ws['terminal_cost_units']
-    path_cost = ws['path_cost']
-    path_cost_units = ws['path_cost_units']
+    signature = 'Sigma'
+    cat_chain = [ocp]
+    gamma_map_chain = []
+    gamma_map_inverse_chain = []
+    # ws = init_workspace(ocp)
+    # problem_name = ws['problem_name']
+    # independent_variable = ws['independent_var']
+    # independent_variable_units = ws['independent_var_units']
+    # states = ws['states']
+    # states_rates = ws['states_rates']
+    # states_units = ws['states_units']
+    # controls = ws['controls']
+    # controls_units = ws['controls_units']
+    # constants = ws['constants']
+    # constants_units = ws['constants_units']
+    # constants_values = ws['constants_values']
+    # constants_of_motion = ws['constants_of_motion']
+    # constants_of_motion_values = ws['constants_of_motion_values']
+    # constants_of_motion_units = ws['constants_of_motion_units']
+    # constraints = ws['constraints']
+    # constraints_units = ws['constraints_units']
+    # constraints_lower = ws['constraints_lower']
+    # constraints_upper = ws['constraints_upper']
+    # constraints_activators = ws['constraints_activators']
+    # constraints_method = ws['constraints_method']
+    # switches = ws['switches']
+    # switches_values = ws['switches_values']
+    # switches_conditions = ws['switches_conditions']
+    # switches_tolerance = ws['switches_tolerance']
+    # parameters = ws['parameters']
+    # parameters_units = ws['parameters_units']
+    # initial_cost = ws['initial_cost']
+    # initial_cost_units = ws['initial_cost_units']
+    # terminal_cost = ws['terminal_cost']
+    # terminal_cost_units = ws['terminal_cost_units']
+    # path_cost = ws['path_cost']
+    # path_cost_units = ws['path_cost_units']
 
     analytical_jacobian = kwargs.get('analytical_jacobian', False)
     control_method = kwargs.get('control_method', 'pmp').lower()
 
-    if initial_cost != 0:
-        cost_units = initial_cost_units
-    elif terminal_cost != 0:
-        cost_units = terminal_cost_units
-    elif path_cost != 0:
-        cost_units = path_cost_units*independent_variable_units
-    else:
-        raise ValueError('Initial, path, and terminal cost functions are not defined.')
+    # if initial_cost != 0:
+    #     cost_units = initial_cost_units
+    # elif terminal_cost != 0:
+    #     cost_units = terminal_cost_units
+    # elif path_cost != 0:
+    #     cost_units = path_cost_units*independent_variable_units
+    # else:
+    #     raise ValueError('Initial, path, and terminal cost functions are not defined.')
+    independent_var = ocp._properties['independent']['symbol']
+    independent_var_units = ocp._properties['independent']['unit']
 
-    states += [independent_variable]
-    states_units += [independent_variable_units]
-    states_rates += [sympify('1')]
-    independent_index = len(states)-1
+    _ocp, _gam, _gam_inv = F_momentumshift(ocp)
+    signature = 'F_momentumshift . ' + signature
+    cat_chain += [_ocp]
+    gamma_map_chain += [_gam]
+    gamma_map_inverse_chain += [_gam_inv]
+    independent_index = len(_ocp.states()) - 1
 
     """
     Deal with path constraints
@@ -74,13 +81,17 @@ def ocp_to_bvp(ocp, **kwargs):
 
     control_constraint_mapping = dict()
 
-    for ii, c in enumerate(constraints['path']):
-        if constraints_method['path'] is None:
+    while len(_ocp.constraints()['path']) > 0:
+        if _ocp.constraints()['path'][0]['method'] is None:
             raise NotImplementedError
 
-        if constraints_method['path'][ii].lower() == 'utm':
-            path_cost += utm_path(c, constraints_lower['path'][ii], constraints_upper['path'][ii],
-                                  constraints_activators['path'][ii])
+        elif _ocp.constraints()['path'][0]['method'].upper() == 'UTM':
+            _ocp, _gam, _gam_inv = F_UTM(_ocp)
+            signature = 'F_UTM . ' + signature
+            cat_chain += [_ocp]
+            gamma_map_chain += [_gam]
+            gamma_map_inverse_chain += [_gam_inv]
+
         elif constraints_method['path'][ii].lower() == 'epstrig':
             constraint_is_control = False
             for jj, val in enumerate(controls):
@@ -104,67 +115,36 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Deal with staging and switches
     """
-    for ii in range(len(switches)):
-        if isinstance(switches_values[ii], list):
-            true_value = 0
-            for jj in range(len(switches_values[ii])):
-                temp_value = switches_values[ii][jj]
-                for kk in range(len(switches_conditions[ii][jj])):
-                    temp_value *= rash_mult(switches_conditions[ii][jj][kk], switches_tolerance[ii])
-                true_value += temp_value
-            switches_values[ii] = true_value
+    # TODO: compose switches
+    # for ii in range(len(switches)):
+    #     if isinstance(switches_values[ii], list):
+    #         true_value = 0
+    #         for jj in range(len(switches_values[ii])):
+    #             temp_value = switches_values[ii][jj]
+    #             for kk in range(len(switches_conditions[ii][jj])):
+    #                 temp_value *= rash_mult(switches_conditions[ii][jj][kk], switches_tolerance[ii])
+    #             true_value += temp_value
+    #         switches_values[ii] = true_value
 
     """
     Make substitutions with the switches
     """
-    switch_vars, switch_list, derivative_fn = process_quantities(switches, switches_values)
-    for var in switch_vars.keys():
-        initial_cost = initial_cost.subs(Symbol(var), switch_vars[var])
-        path_cost = path_cost.subs(Symbol(var), switch_vars[var])
-        terminal_cost = terminal_cost.subs(Symbol(var), switch_vars[var])
-        for ii in range(len(states_rates)):
-            states_rates[ii] = states_rates[ii].subs(Symbol(var), switch_vars[var])
+    # # TODO: compose switches
+    # switch_vars, switch_list, derivative_fn = process_quantities(switches, switches_values)
+    # for var in switch_vars.keys():
+    #     initial_cost = initial_cost.subs(Symbol(var), switch_vars[var])
+    #     path_cost = path_cost.subs(Symbol(var), switch_vars[var])
+    #     terminal_cost = terminal_cost.subs(Symbol(var), switch_vars[var])
+    #     for ii in range(len(states_rates)):
+    #         states_rates[ii] = states_rates[ii].subs(Symbol(var), switch_vars[var])
 
-    terminal_bcs_to_aug = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
-                           derivative_fn(bc, independent_variable) == 0]
-    terminal_bcs_time = [[bc, units] for bc, units in zip(constraints['terminal'], constraints_units['terminal']) if
-                         derivative_fn(bc, independent_variable) != 0]
+    _bvp, _gam, _gam_inv = Dualize(_ocp, independent_var, independent_var_units)
+    signature = 'D . ' + signature
+    cat_chain += [_bvp]
+    gamma_map_chain += [_gam]
+    gamma_map_inverse_chain += [_gam_inv]
 
-    constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
-    constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
 
-    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
-        make_augmented_cost(initial_cost, cost_units, constraints, constraints_units, location='initial')
-
-    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = \
-        make_augmented_cost(terminal_cost, cost_units, constraints, constraints_units, location='terminal')
-
-    hamiltonian, hamiltonian_units, costates, costates_units = \
-        make_hamiltonian(states, states_rates, states_units, path_cost, cost_units)
-
-    costates_rates = make_costate_rates(hamiltonian, states, costates, derivative_fn)
-    coparameters = make_costate_names(parameters)
-    coparameters_units = [path_cost_units / parameter_units for parameter_units in parameters_units]
-    coparameters_rates = make_costate_rates(hamiltonian, parameters, coparameters, derivative_fn)
-
-    bc_initial = make_boundary_conditions(
-        constraints, states, costates, parameters, coparameters,
-        augmented_initial_cost, derivative_fn, location='initial')
-
-    bc_terminal = make_boundary_conditions(
-        constraints, states, costates, parameters, coparameters,
-        augmented_terminal_cost, derivative_fn, location='terminal')
-
-    constraints['terminal'] += [bc[0] for bc in terminal_bcs_time]
-    bc_terminal += [bc[0] for bc in terminal_bcs_time]
-    constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
-
-    time_bc = make_time_bc(constraints, derivative_fn, hamiltonian, independent_variable)
-
-    if time_bc is not None:
-        bc_terminal += [time_bc]
-
-    dHdu = make_dhdu(hamiltonian, controls, derivative_fn)
     if control_method == 'pmp':
         control_law = make_control_law(dHdu, controls)
         control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
@@ -173,14 +153,12 @@ def ocp_to_bvp(ocp, **kwargs):
         dae_units = []
         num_dae = 0
     elif control_method == 'icrm':
-        dae_states, dae_rates, dae_bc, temp_dgdX, temp_dgdU = make_control_dae(states, costates, states_rates,
-                                                                               costates_rates, controls, dHdu,
-                                                                               derivative_fn)
-        dae_units = controls_units
-        controls = []
-        control_law = []
-        bc_terminal += dae_bc
-        num_dae = len(dae_states)
+        _bvp, _gam, _gam_inv = F_ICRM(_bvp)
+        signature = 'F_ICRM . ' + signature
+        cat_chain += [_bvp]
+        gamma_map_chain += [_gam]
+        gamma_map_inverse_chain += [_gam_inv]
+
     elif control_method == 'numerical':
         dae_states = []
         dae_rates = []
@@ -192,51 +170,49 @@ def ocp_to_bvp(ocp, **kwargs):
 
     # Generate the problem data
     # TODO: We're not handling time well. This is hardcoded.
-
-    tf = sympify('_tf')
     # bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
-    dynamical_parameters = parameters + [tf]
-    dynamical_parameters_units = parameters_units + [independent_variable_units]
-    nondynamical_parameters = initial_lm_params + terminal_lm_params
-    nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
+    # dynamical_parameters = parameters + [tf]
+    # dynamical_parameters_units = parameters_units + [independent_variable_units]
+    # nondynamical_parameters = initial_lm_params + terminal_lm_params
+    # nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
 
-    states_rates = [tf*f for f in states_rates]
-    costates_rates = [tf*f for f in costates_rates]
-    dae_rates = [tf*f for f in dae_rates]
-
+    # states_rates = [tf*f for f in states_rates]
+    # costates_rates = [tf*f for f in costates_rates]
+    # dae_rates = [tf*f for f in dae_rates]
     if analytical_jacobian:
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')
-
-        df_dy = [['0' for f in states_rates + costates_rates + dae_rates] for s in states + costates + dae_states]
+        states = [s['symbol'] for s in _bvp._properties['states']]
+        rates = [s['eom'] for s in _bvp._properties['states']]
+        df_dy = [['0' for f in rates] for s in states]
         for ii, f in enumerate(states_rates + costates_rates + dae_rates):
             for jj, s in enumerate(states + costates + dae_states):
-                df_dy[ii][jj] = str(derivative_fn(f, s))
+                df_dy[ii][jj] = str(total_derivative(f, s))
 
         df_dp = [['0' for s in dynamical_parameters] for f in states_rates + costates_rates + dae_rates]
         for ii, f in enumerate(states_rates + costates_rates + dae_rates):
             for jj, s in enumerate(dynamical_parameters):
-                df_dp[ii][jj] = str(derivative_fn(f, s))
+                df_dp[ii][jj] = str(total_derivative(f, s))
 
         dbc_dya = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_initial):
             for jj, s in enumerate(states + costates + dae_states):
-                dbc_dya[ii][jj] = str(derivative_fn(f, s))
+                dbc_dya[ii][jj] = str(total_derivative(f, s))
 
         dbc_dyb = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_terminal):
             for jj, s in enumerate(states + costates + dae_states):
-                dbc_dyb[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
+                dbc_dyb[ii + len(bc_initial)][jj] = str(total_derivative(f, s))
 
         dbc_dp_a = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_initial):
             for jj, s in enumerate(dynamical_parameters + nondynamical_parameters):
-                dbc_dp_a[ii][jj] = str(derivative_fn(f, s))
+                dbc_dp_a[ii][jj] = str(total_derivative(f, s))
 
         dbc_dp_b = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_terminal):
             for jj, s in enumerate(dynamical_parameters + nondynamical_parameters):
-                dbc_dp_b[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
+                dbc_dp_b[ii + len(bc_initial)][jj] = str(total_derivative(f, s))
 
     else:
         df_dy = None
@@ -246,50 +222,51 @@ def ocp_to_bvp(ocp, **kwargs):
         dbc_dp_a = None
         dbc_dp_b = None
 
+    logging.info('Problem formulation: Lambda := ' + signature)
+
+    dHdu = make_dhdu(_bvp._properties['constants_of_motion'][0]['function'], _bvp._properties.get('controls', []), total_derivative)
+
     out = {'method': 'brysonho',
-           'problem_name': problem_name,
+           'problem_name': _ocp.name,
            'control_method': control_method,
-           'consts': [str(k) for k in constants],
+           'consts': [str(k['symbol']) for k in ocp.constants()],
            'initial_cost': None,
            'initial_cost_units': None,
            'path_cost': None,
            'path_cost_units': None,
            'terminal_cost': None,
            'terminal_cost_units': None,
-           'states': [str(x) for x in it.chain(states, costates, dae_states)],
-           'states_rates':
-               [str(rate) for rate in states_rates] +
-               [str(rate) for rate in costates_rates] +
-               [str(rate) for rate in dae_rates],
-           'states_units': [str(x) for x in states_units + costates_units + dae_units],
+           'states': [str(x['symbol']) for x in _bvp._properties['states']],
+           'states_rates': [str(x['eom']) for x in _bvp._properties['states']],
+           'states_units': [str(x['unit']) for x in _bvp._properties['states']],
            'states_jac': [df_dy, df_dp],
-           'quads': [str(x) for x in coparameters],
-           'quads_rates': [str(tf * x) for x in coparameters_rates],
-           'quads_units': [str(x) for x in coparameters_units],
+           'quads': [str(x['symbol']) for x in _bvp.quads()],
+           'quads_rates': [str(x['eom']) for x in _bvp.quads()], # TODO: Maybe multiply this by tf?
+           'quads_units': [str(x['unit']) for x in _bvp.quads()],
            'path_constraints': [],
            'path_constraints_units': [],
-           'constants': [str(c) for c in constants],
-           'constants_units': [str(c) for c in constants_units],
-           'constants_values': [float(c) for c in constants_values],
-           'constants_of_motion': [str(c) for c in constants_of_motion],
-           'dynamical_parameters': [str(c) for c in dynamical_parameters],
-           'dynamical_parameters_units': [str(c) for c in dynamical_parameters_units],
-           'nondynamical_parameters': [str(c) for c in nondynamical_parameters],
-           'nondynamical_parameters_units': [str(c) for c in nondynamical_parameters_units],
-           'control_list': [str(x) for x in it.chain(controls)],
-           'controls': [str(u) for u in controls],
-           'hamiltonian': str(hamiltonian),
-           'hamiltonian_units': str(hamiltonian_units),
-           'num_states': len(states + costates),
+           'constants': [str(c['symbol']) for c in _ocp.constants()],
+           'constants_units': [str(c['unit']) for c in _ocp.constants()],
+           'constants_values': [float(c['value']) for c in _ocp.constants()],
+           'constants_of_motion': [str(c['function']) for c in ocp.constants_of_motion()],
+           'dynamical_parameters': [str(c['symbol']) for c in _bvp._properties['parameters']],
+           'dynamical_parameters_units': [str(c['unit']) for c in _bvp._properties['parameters']],
+           'nondynamical_parameters': [str(c['symbol']) for c in _bvp._properties['nd_parameters']],
+           'nondynamical_parameters_units': [str(c['unit']) for c in _bvp._properties['nd_parameters']],
+           'control_list': [str(x['symbol']) for x in _bvp._properties.get('controls', dict())],
+           'controls': [str(u['symbol']) for u in _bvp._properties.get('controls', dict())],
+           'hamiltonian': str(_bvp._properties['constants_of_motion'][0]['function']),
+           'hamiltonian_units': str(_bvp._properties['constants_of_motion'][0]['unit']),
+           'num_states': len(_bvp._properties['states']),
            'dHdu': [str(x) for x in dHdu],
-           'bc_initial': [str(_) for _ in bc_initial],
-           'bc_terminal': [str(_) for _ in bc_terminal],
+           'bc_initial': [str(x['function']) for x in _bvp._properties['bc_initial']],
+           'bc_terminal': [str(x['function']) for x in _bvp._properties['bc_terminal']],
            'bc_initial_jac': dbc_dya,
            'bc_terminal_jac': dbc_dyb,
            'bc_initial_parameter_jac': dbc_dp_a,
            'bc_terminal_parameter_jac': dbc_dp_b,
-           'control_options': control_law,
-           'num_controls': len(controls)}
+           'control_options': [],
+           'num_controls': len(_bvp._properties.get('controls', dict()))}
 
     def guess_map(sol, _compute_control=None):
         if _compute_control is None:
@@ -349,6 +326,18 @@ def ocp_to_bvp(ocp, **kwargs):
             sol.u[:, ctrl] = (upper - lower) * (np.sin(sol.u[:, ctrl]) + 1)/2 + lower
 
         return sol
+
+    def guess_map(gamma, _compute_control=None, map_chain=gamma_map_chain):
+        gamma = copy.deepcopy(gamma)
+        for morphism in map_chain:
+            gamma = morphism(gamma)
+        return gamma
+
+    def guess_map_inverse(gamma, _compute_control=None, map_chain=gamma_map_inverse_chain):
+        gamma = copy.deepcopy(gamma)
+        for morphism in reversed(map_chain):
+            gamma = morphism(gamma)
+        return gamma
 
     return out, guess_map, guess_map_inverse
 

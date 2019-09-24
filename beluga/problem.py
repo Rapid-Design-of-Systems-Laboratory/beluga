@@ -6,15 +6,17 @@ import re
 from functools import partialmethod
 from collections import namedtuple, ChainMap
 from itertools import zip_longest
+from sympy import Expr, Symbol
+from beluga.utils import sympify, _combine_args_kwargs
 
 from .scaling import Scaling
 import time
 from beluga.ivpsol import Propagator
-
+from beluga.optimlib import BVP
 Cost = namedtuple('Cost', ['expr', 'unit'])
 
 
-class OCP(object):
+class OCP(BVP):
     """
     Class containing information for an optimal control problem.
 
@@ -59,6 +61,9 @@ class OCP(object):
 
         self._systems = {'default': {}}  # Dynamic system definitions
         self._properties = {}  # Problem properties
+        self.initial_cost('0', '1')
+        self.path_cost('0', '1')
+        self.terminal_cost('0', '1')
         self._constraints = ConstraintList()
 
         self._scaling = Scaling()
@@ -66,7 +71,12 @@ class OCP(object):
         self.continuation = None
 
     def __repr__(self):
-        return self.name + ' OCP'
+        if self._properties.keys():
+            m = max(map(len, list(self._properties.keys()))) + 1
+            return '\n'.join([k.rjust(m) + ': ' + repr(v)
+                              for k, v in sorted(self._properties.items())])
+        else:
+            return self.__class__.__name__ + "()"
 
     # Alias for returning cost function by type
     def get_cost(self, cost_type):
@@ -91,6 +101,58 @@ class OCP(object):
         """
         self._properties[cost_type+'_cost'] = {'expr': expr, 'unit': unit}
 
+    def independent(self, symbol, unit):
+        if not isinstance(symbol, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = {'symbol': Symbol(symbol), 'unit': sympify(unit)}
+        self._properties['independent'] = temp
+        return self
+
+    def parameter(self, symbol, unit, noquad=False):
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+        if not isinstance(noquad, bool):
+            raise TypeError
+
+        temp = self._properties.get('parameters', [])
+        temp.append({'symbol': symbol, 'unit': unit, 'noquad': noquad})
+        self._properties['parameters'] = temp
+        return self
+
+    def control(self, symbol, unit):
+        if not isinstance(symbol, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = self._properties.get('controls', [])
+        temp.append({'symbol': Symbol(symbol), 'unit': sympify(unit)})
+        self._properties['controls'] = temp
+        return self
+
+    def constant(self, symbol, value, unit):
+        if not isinstance(symbol, str):
+            raise ValueError
+        if not (isinstance(value, int) or isinstance(value, float)):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = self._properties.get('constants', [])
+        temp.append({'symbol': Symbol(symbol), 'value': value, 'unit': sympify(unit)})
+        self._properties['constants'] = temp
+        return self
+
     def set_property(self, *args, property_name, property_args, **kwargs):
         """
         Adds a property of the optimal control problem
@@ -113,21 +175,83 @@ class OCP(object):
         """
         return self._properties.get(property_name, [])
 
-    # TODO: Write documentation for these aliases
-    state = partialmethod(set_property, property_name='states', property_args=('name', 'eom', 'unit'))
-    control = partialmethod(set_property, property_name='controls', property_args=('name', 'unit'))
-    constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
-    constant_of_motion = partialmethod(set_property, property_name='constants_of_motion',
-                                       property_args=('name', 'function', 'unit'))
-    switch = partialmethod(set_property, property_name='switches', property_args=('name', 'value', 'conditions', 'tolerance'))
+    def initial_cost(self, function, unit):
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = {'function': sympify(function), 'unit': sympify(unit)}
+        self._properties['initial_cost'] = temp
+        return self
+
+    def path_cost(self, function, unit):
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = {'function': sympify(function), 'unit': sympify(unit)}
+        self._properties['path_cost'] = temp
+        return self
+
+    def terminal_cost(self, function, unit):
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = {'function': sympify(function), 'unit': sympify(unit)}
+        self._properties['terminal_cost'] = temp
+        return self
+
+    def constant_of_motion(self, symbol, function, unit):
+        if not isinstance(symbol, str):
+            raise ValueError
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+        raise NotImplementedError
+        temp = self._properties.get('constants_of_motion', [])
+        temp.append({'symbol': Symbol(symbol), 'eom': sympify(function), 'unit': sympify(unit)})
+        self._properties['constants_of_motion'] = temp
+        return self
+
+    def switch(self, symbol, functions, conditions, tolerance):
+        if not isinstance(symbol, str):
+            raise ValueError
+
+        if not isinstance(functions, list):
+            raise ValueError
+        else:
+            for f in functions:
+                if not isinstance(f, str):
+                    raise ValueError
+
+        if not isinstance(conditions, list):
+            raise ValueError
+        else:
+            for l in conditions:
+                pass
+            raise ValueError
+        raise NotImplementedError
+        temp = self._properties.get('switches', [])
+        temp.append({'symbol': Symbol(symbol), 'function': function, 'conditions': conditions, 'tolerance': Symbol(tolerance)})
+        self._properties['switches'] = temp
+        return self
+
+
+    # constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
+    # constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
+    # switch = partialmethod(set_property, property_name='switches', property_args=('name', 'value', 'conditions', 'tolerance'))
     quantity = partialmethod(set_property, property_name='switches', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
-    parameter = partialmethod(set_property, property_name='parameters', property_args=('name', 'unit'))
+    # parameter = partialmethod(set_property, property_name='parameters', property_args=('name', 'unit'))
     custom_function = partialmethod(set_property, property_name='custom_functions',
                                     property_args=('name', 'args', 'handle', 'derivs'))
 
-    states = partialmethod(get_property, property_name='states')
-    controls = partialmethod(get_property, property_name='controls')
+    # controls = partialmethod(get_property, property_name='controls')
     constants = partialmethod(get_property, property_name='constants')
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     switches = partialmethod(get_property, property_name='switches')
@@ -136,17 +260,12 @@ class OCP(object):
     parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
 
-    # TODO: Maybe write as separate function?
-    def independent(self, name, unit):
-        self._properties['independent'] = {'name': name, 'unit': unit}
+    # # TODO: Maybe write as separate function?
+    # def independent(self, name, unit):
+    #     self._properties['independent'] = {'name': name, 'unit': unit}
 
-    # Aliases for defining properties of the problem
-    path_cost = partialmethod(set_cost, cost_type='path')
-    initial_cost = partialmethod(set_cost, cost_type='initial')
-    terminal_cost = partialmethod(set_cost, cost_type='terminal')
-
-    Lagrange = path_cost
-    Mayer = terminal_cost
+    # initial_cost = partialmethod(set_cost, cost_type='initial')
+    # terminal_cost = partialmethod(set_cost, cost_type='terminal')
 
     def constraints(self):
         """
@@ -235,41 +354,51 @@ class ConstraintList(dict):
 
         return self
 
+    def initial(self, function, unit):
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = self.get('initial', [])
+        temp.append({'function': sympify(function), 'unit': sympify(unit)})
+        self['initial'] = temp
+        return self
+
+    def terminal(self, function, unit):
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = self.get('terminal', [])
+        temp.append({'function': sympify(function), 'unit': sympify(unit)})
+        self['terminal'] = temp
+        return self
+
+    def path(self, function, unit, lower, upper, activator, method):
+        if not isinstance(function, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+        if not isinstance(lower, str):
+            raise ValueError
+        if not isinstance(upper, str):
+            raise ValueError
+        if not isinstance(activator, str):
+            raise ValueError
+        if not isinstance(method, str):
+            raise ValueError
+
+        temp = self.get('path', [])
+        temp.append({'function': sympify(function), 'unit': sympify(unit), 'lower':sympify(lower),
+                     'upper': sympify(upper), 'activator': sympify(activator), 'method': method})
+
+        self['path'] = temp
+        return self
+
     # Aliases for defining constraints of different types
     constraint_args = ('expr', 'unit')
-    initial = partialmethod(
-        add_constraint, constraint_type='initial',
-        constraint_args=constraint_args)
-    path = partialmethod(
-        add_constraint, constraint_type='path',
-        constraint_args=constraint_args)
-    terminal = partialmethod(
-        add_constraint, constraint_type='terminal',
-        constraint_args=constraint_args)
-
-
-def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
-    """Combines positional and keyword arguments
-    Parameters
-    ----------
-    arg_list - list of str
-        List of keys in order of positional arguments
-    args - list of str
-        List of positional arguments
-    kwargs: dict
-        Dictionary of keyword arguments
-    Returns
-    -------
-    A dictionary merging kwargs and args with keys from
-    from args_list
-    Example
-    -------
-    >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
-    {'foo':1, 'bar':2, 'baz': 3}
-    """
-    pos_args = {key: val for (key, val) in zip_longest(arg_list, args, fillvalue=fillvalue)}
-    arg_dict = dict(ChainMap(kwargs, pos_args))
-    return arg_dict
 
 
 BVP = namedtuple('BVP', 'deriv_func bc_func compute_control path_constraints')

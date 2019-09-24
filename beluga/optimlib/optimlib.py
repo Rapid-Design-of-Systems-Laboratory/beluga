@@ -3,11 +3,266 @@ Base functions shared by all optimization methods.
 """
 
 
-from beluga.utils import sympify
+from beluga.utils import sympify, _combine_args_kwargs
+import copy
+import numpy as np
 import sympy
-from sympy import Symbol, zoo
+from sympy import Expr, Symbol, zoo
 import functools as ft
 import re
+
+
+class BVP(object):
+    """
+    Class containing information for a Hamiltonian boundary-value problem.
+
+    Valid parameters and their arguments are in the following table.
+
+    +--------------------------------+--------------------------------+------------------------------------------------+
+    | Valid parameters               | arguments                      | datatype                                       |
+    +================================+================================+================================================+
+    | state                          | (name, EOM, unit)              | (string, string, string)                       |
+    +--------------------------------+--------------------------------+------------------------------------------------+
+
+    """
+
+    def __init__(self):
+        self._properties = dict()  # Problem properties
+
+    def __repr__(self):
+        if self._properties.keys():
+            m = max(map(len, list(self._properties.keys()))) + 1
+            return '\n'.join([k.rjust(m) + ': ' + repr(v)
+                              for k, v in sorted(self._properties.items())])
+        else:
+            return self.__class__.__name__ + "()"
+
+    def state(self, symbol, eom, unit):
+        r"""
+
+        :param symbol:
+        :param eom:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(eom, str):
+            eom = sympify(eom)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(eom, Expr):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('states', [])
+        temp.append({'symbol': symbol, 'eom': eom, 'unit': unit})
+        self._properties['states'] = temp
+        return self
+
+    def states(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('states', dict())
+
+    def quad(self, symbol, eom, unit):
+        r"""
+
+        :param symbol:
+        :param eom:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(eom, str):
+            eom = sympify(eom)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(eom, Expr):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('quads', [])
+        temp.append({'symbol': symbol, 'eom': eom, 'unit': unit})
+        self._properties['quads'] = temp
+        return self
+
+    def quads(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('quads', [])
+
+    def constant_of_motion(self, symbol, function, unit):
+        r"""
+
+        :param symbol:
+        :param function:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(function, Expr):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('constants_of_motion', [])
+        temp.append({'symbol': symbol, 'function': function, 'unit': unit})
+        self._properties['constants_of_motion'] = temp
+        return self
+
+    def control(self, symbol, unit):
+        r"""
+
+        :param symbol:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('controls', [])
+        temp.append({'symbol': symbol, 'unit': unit})
+        self._properties['controls'] = temp
+        return self
+
+    def controls(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('controls', dict())
+
+    def bc_initial(self, function):
+        r"""
+
+        :param function:
+        :return:
+        """
+        if isinstance(function, str):
+            function = sympify(function)
+
+        if not isinstance(function, Expr):
+            raise TypeError
+
+        temp = self._properties.get('bc_initial', [])
+        temp.append({'function': function})
+        self._properties['bc_initial'] = temp
+        return self
+
+    def bc_terminal(self, function):
+        r"""
+
+        :param function:
+        :return:
+        """
+        if isinstance(function, str):
+            function = sympify(function)
+
+        if not isinstance(function, Expr):
+            raise TypeError
+
+        temp = self._properties.get('bc_terminal', [])
+        temp.append({'function': function})
+        self._properties['bc_terminal'] = temp
+        return self
+
+    def parameter(self, symbol, unit):
+        r"""
+
+        :param symbol:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('parameters', [])
+        temp.append({'symbol': symbol, 'unit': unit})
+        self._properties['parameters'] = temp
+        return self
+
+    def nd_parameter(self, symbol, unit):
+        r"""
+
+        :param symbol:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('nd_parameters', [])
+        temp.append({'symbol': symbol, 'unit': unit})
+        self._properties['nd_parameters'] = temp
+        return self
+
+    def independent(self, symbol, unit):
+        r"""
+
+        :param symbol:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = {'symbol': symbol, 'unit': unit}
+        self._properties['independent'] = temp
+        return self
+
+
+def Id(x):
+    return x
 
 
 def init_workspace(ocp):
@@ -323,7 +578,7 @@ def make_dhdu(ham, controls, derivative_fn):
 
     dHdu = []
     for ctrl in controls:
-        dHdu.append(derivative_fn(ham, ctrl))
+        dHdu.append(derivative_fn(ham, ctrl['symbol']))
 
     return dHdu
 
@@ -545,6 +800,7 @@ def utm_path(constraint, lower, upper, activator):
         raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
     return activator*(1/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower))) - 1)
 
+
 def rash_mult(condition, tolerance):
     r"""
     Creates a smooth multiplier to model switching conditions.
@@ -554,3 +810,232 @@ def rash_mult(condition, tolerance):
     :return: Term to augment a quantity with.
     """
     return 1/(1+sympy.exp(condition/tolerance))
+
+
+def F_momentumshift(ocp):
+    r"""
+
+    :param ocp:
+    :return:
+    """
+    temp_unit = ocp._properties['independent']['unit']
+    ocp = copy.deepcopy(ocp)
+    _tf = Symbol('_tf')
+    ocp.state(str(ocp._properties['independent']['symbol']), '1', str(ocp._properties['independent']['unit']))
+    ocp.parameter(_tf, ocp._properties['independent']['unit'], noquad=True)
+    ocp.independent('_TAU', '1')
+    for ii in range(len(ocp._properties['states'])):
+        ocp._properties['states'][ii]['eom'] *= _tf
+        ocp._properties['states'][ii]['unit'] *= temp_unit
+
+    def gamma_map(gamma):
+        if len(gamma.dual_t) == 0:
+            gamma.dual_t = np.zeros_like(gamma.t)
+
+        gamma.y = np.column_stack((gamma.y, gamma.t))
+        gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
+        gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
+
+        if len(gamma.dual) == 0:
+            gamma.dual = np.zeros_like(gamma.y)
+
+        gamma.dual = np.column_stack((gamma.dual, gamma.dual_t))
+
+        return gamma
+
+    def gamma_map_inverse(gamma):
+        gamma.t = gamma.y[:, -1]
+        gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
+        gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
+        return gamma
+
+    return ocp, gamma_map, gamma_map_inverse
+
+
+def F_UTM(ocp):
+    r"""
+
+    :param ocp:
+    :return:
+    """
+    ocp = copy.deepcopy(ocp)
+    L_UTM = utm_path(ocp.constraints()['path'][0]['function'], ocp.constraints()['path'][0]['lower'],
+                     ocp.constraints()['path'][0]['upper'], ocp.constraints()['path'][0]['activator'])
+    ocp._properties['path_cost']['function'] += L_UTM
+    del ocp.constraints()['path'][0]
+    gamma_map = Id
+    gamma_map_inverse = Id
+    return ocp, gamma_map, gamma_map_inverse
+
+
+def F_ICRM(bvp):
+    r"""
+
+    :param bvp:
+    :return:
+    """
+
+    n_states = len(bvp._properties['states'])
+    n_controls = len(bvp._properties['controls'])
+
+    dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp._properties['controls'], total_derivative)
+    g = dHdu
+    X = [s['symbol'] for s in bvp._properties['states']]
+    U = [c['symbol'] for c in bvp._properties['controls']]
+    xdot = sympy.Matrix([s['eom'] for s in bvp._properties['states']])
+
+    # Compute Jacobian
+    dgdX = sympy.Matrix([[total_derivative(g_i, x_i) for x_i in X] for g_i in g])
+    dgdU = sympy.Matrix([[total_derivative(g_i, u_i) for u_i in U] for g_i in g])
+
+    udot = dgdU.LUsolve(-dgdX * xdot)  # dgdU * udot + dgdX * xdot = 0
+    if zoo in udot.atoms():
+        raise NotImplementedError('Complex infinity in ICRM control law. Potential bang-bang solution.')
+
+    dae_states = U
+    dae_equations = list(udot)
+    dae_bc = g
+
+    for ii, s in enumerate(dae_states):
+        bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
+
+    for ii, s in enumerate(dae_bc):
+        bvp.bc_terminal(s)
+
+    del bvp._properties['controls']
+
+    def gamma_map(gamma, n=n_states, m=n_controls):
+        gamma = copy.deepcopy(gamma)
+        if len(gamma.dual_u) == 0:
+            gamma.dual_u = np.zeros_like(gamma.u)
+        gamma.y = np.column_stack((gamma.y, gamma.u))
+        gamma.u = np.array([]).reshape((n, 0))
+        return gamma
+
+    def gamma_map_inverse(gamma, n=n_states, m=n_controls):
+        gamma = copy.deepcopy(gamma)
+        gamma.u = gamma.y[:, -m:]
+        gamma.y = np.delete(gamma.y, np.s_[-m:], axis=1)
+        return gamma
+
+    return bvp, gamma_map, gamma_map_inverse
+
+
+def Dualize(ocp, independent_variable, independent_variable_units):
+    r"""
+
+    :param ocp:
+    :return:
+    """
+    ocp = copy.deepcopy(ocp)
+    n_states = len(ocp.states())
+
+    terminal_bcs_to_aug = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
+                           total_derivative(bc['function'], independent_variable) == 0]
+
+    terminal_bcs_time = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
+                         total_derivative(bc['function'], independent_variable) != 0]
+
+    ocp.constraints()['terminal'] = [{'function': bc[0], 'unit':bc[1]} for bc in terminal_bcs_to_aug]
+
+    # TODO: The following can be cleaned up by rewriting `make_augmented_cost`
+    constraints = dict()
+    constraints_units = dict()
+    constraints['initial'] = [b['function'] for b in ocp.constraints()['initial']]
+    constraints_units['initial'] = [b['unit'] for b in ocp.constraints()['initial']]
+    constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
+    constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
+    initial_cost = ocp._properties['initial_cost']['function']
+    initial_cost_unit = ocp._properties['initial_cost']['unit']
+    terminal_cost = ocp._properties['terminal_cost']['function']
+    terminal_cost_unit = ocp._properties['terminal_cost']['unit']
+    path_cost = ocp._properties['path_cost']['function']
+    path_cost_unit = ocp._properties['path_cost']['unit']
+    states = [s['symbol'] for s in ocp.states()]
+    states_rates = [s['eom'] for s in ocp.states()]
+    states_units = [s['unit'] for s in ocp.states()]
+    parameters = [p['symbol'] for p in ocp.parameters()]
+    parameters_units = [p['unit'] for p in ocp.parameters()]
+
+    augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
+        make_augmented_cost(initial_cost, initial_cost_unit, constraints, constraints_units, location='initial')
+
+    augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = \
+        make_augmented_cost(terminal_cost, terminal_cost_unit, constraints, constraints_units, location='terminal')
+
+    hamiltonian_function, hamiltonian_units, costates, costates_units = \
+        make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_unit)
+
+    costates_rates = make_costate_rates(hamiltonian_function, states, costates, total_derivative)
+    coparameters = make_costate_names(parameters)
+    coparameters_rates = make_costate_rates(hamiltonian_function, parameters, coparameters, total_derivative)
+    coparameters_units = [path_cost_unit / parameter_units for parameter_units in parameters_units]
+
+    d = []
+    for ii in range(len(coparameters)):
+        if ocp.parameters()[ii]['noquad'] is True:
+            d += [ii]
+
+    del coparameters[ii]
+    del coparameters_rates[ii]
+    del coparameters_units[ii]
+
+    bc_initial = make_boundary_conditions(
+        constraints, states, costates, parameters, coparameters,
+        augmented_initial_cost, total_derivative, location='initial')
+
+    bc_terminal = make_boundary_conditions(
+        constraints, states, costates, parameters, coparameters,
+        augmented_terminal_cost, total_derivative, location='terminal')
+
+    constraints['terminal'] += [bc[0] for bc in terminal_bcs_time]
+    bc_terminal += [bc[0] for bc in terminal_bcs_time]
+    constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
+
+    time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
+
+    if time_bc is not None:
+        bc_terminal += [time_bc]
+
+    def gamma_map(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.y = np.column_stack((gamma.y, gamma.dual))
+        gamma.dual = np.array([])
+        gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(len(initial_lm_params + terminal_lm_params))))
+        return gamma
+
+    def gamma_map_inverse(gamma, n=n_states):
+        gamma.dual = gamma.y[:, -n:]
+        gamma.y = gamma.y[:, :n]
+        return gamma
+
+    bvp = BVP()
+    for ii, s in enumerate(states + costates):
+        _eom = (states_rates + costates_rates)[ii]
+        _unit = (states_units + costates_units)[ii]
+        bvp.state(s, _eom, _unit)
+
+    bvp.constant_of_motion('hamiltonian', hamiltonian_function, hamiltonian_units)
+
+    for ii, s in enumerate(ocp.controls()):
+        bvp.control(s['symbol'], s['unit'])
+
+    for ii, s in enumerate(bc_initial):
+        bvp.bc_initial(s)
+
+    for ii, s in enumerate(bc_terminal):
+        bvp.bc_terminal(s)
+
+    for ii, s in enumerate(parameters):
+        bvp.parameter(s, parameters_units[ii])
+
+    for ii, s in enumerate(coparameters):
+        bvp.quad(s, coparameters_rates[ii], coparameters_units[ii])
+
+    for ii, s in enumerate(initial_lm_params + terminal_lm_params):
+        _unit = (initial_lm_params_units + terminal_lm_params_units)[ii]
+        bvp.nd_parameter(s, _unit)
+
+    bvp.independent(independent_variable, independent_variable_units)
+
+    return bvp, gamma_map, gamma_map_inverse
