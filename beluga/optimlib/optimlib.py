@@ -894,11 +894,16 @@ def F_momentumshift(ocp):
     _tf = Symbol('_tf')
     ocp.state(str(ocp._properties['independent']['symbol']), '1', str(ocp._properties['independent']['unit']))
     ocp.parameter(_tf, ocp._properties['independent']['unit'], noquad=True)
-    ocp.independent('_TAU', '1')
-    for ii in range(len(ocp._properties['states'])):
-        ocp._properties['states'][ii]['eom'] *= _tf
-        ocp._properties['states'][ii]['unit'] *= temp_unit
 
+    for s in ocp.states():
+        s['eom'] *= _tf
+        s['unit'] *= 1#temp_unit
+
+    ocp.the_path_cost()['function'] *= _tf
+    ocp.the_path_cost()['unit'] *= ocp._properties['independent']['unit']
+
+    ocp.independent('_TAU', '1')
+    # ocp.constraints().terminal('_TAU - 1', '1')
     def gamma_map(gamma, _compute_control=None):
         if len(gamma.dual_t) == 0:
             gamma.dual_t = np.zeros_like(gamma.t)
@@ -937,11 +942,11 @@ def F_RASHS(ocp):
             true_value = 0
             for jj in range(len(q['function'])):
                 temp_value = q['function'][jj]
-                breakpoint()
-                for kk in range(len(switches_conditions[ii][jj])):
-                    temp_value *= rash_mult(switches_conditions[ii][jj][kk], switches_tolerance[ii])
+                for kk in range(len(q['conditions'][jj])):
+                    temp_value *= rash_mult(q['conditions'][jj][kk], q['tolerance'])
                 true_value += temp_value
-            switches_values[ii] = true_value
+
+            q['function'] = true_value
 
     """
     Make substitutions with the switches
@@ -970,7 +975,7 @@ def F_EPSTRIG(ocp):
     """
     ocp = copy.deepcopy(ocp)
 
-    the_constraint = ocp.constraints()['path'][0]
+    the_constraint = ocp.path_constraints()[0]
     f = the_constraint['function']
     lower = the_constraint['lower']
     upper = the_constraint['upper']
@@ -1015,7 +1020,7 @@ def F_EPSTRIG(ocp):
         gamma.u[:, control_index] = (upper - lower) * (np.sin(gamma.u[:, control_index]) + 1) / 2 + lower
         return gamma
 
-    del ocp.constraints()['path'][0]
+    del ocp.path_constraints()[0]
 
     return ocp, gamma_map, gamma_map_inverse
 
@@ -1028,10 +1033,10 @@ def F_UTM(ocp):
     """
     ocp = copy.deepcopy(ocp)
 
-    L_UTM = utm_path(ocp.constraints()['path'][0]['function'], ocp.constraints()['path'][0]['lower'],
-                     ocp.constraints()['path'][0]['upper'], ocp.constraints()['path'][0]['activator'])
+    L_UTM = utm_path(ocp.path_constraints()[0]['function'], ocp.path_constraints()[0]['lower'],
+                     ocp.path_constraints()[0]['upper'], ocp.path_constraints()[0]['activator'])
     ocp._properties['path_cost']['function'] += L_UTM
-    del ocp.constraints()['path'][0]
+    del ocp.path_constraints()[0]
     gamma_map = Id
     gamma_map_inverse = Id
     return ocp, gamma_map, gamma_map_inverse
@@ -1044,6 +1049,8 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     :return:
     """
     ocp = copy.deepcopy(ocp)
+    independent_variable = ocp._properties['independent']['symbol']
+    independent_variable_units = ocp._properties['independent']['unit']
 
     n_states = len(ocp.states())
 
@@ -1074,19 +1081,35 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     parameters = [p['symbol'] for p in ocp.parameters()]
     parameters_units = [p['unit'] for p in ocp.parameters()]
 
+    if initial_cost_unit != path_cost_unit*initial_cost_unit and (initial_cost != 0) and (path_cost != 0):
+        raise Exception('Initial and path cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
+
+    if initial_cost_unit != terminal_cost_unit and (initial_cost != 0) and (terminal_cost != 0):
+        raise Exception('Initial and terminal cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(terminal_cost_unit))
+
+    if terminal_cost_unit != path_cost_unit*initial_cost_unit and (terminal_cost != 0) and (path_cost != 0):
+        raise Exception('Terminal and path cost units mismatch: ' + str(terminal_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
+
+    if initial_cost != 0:
+        cost_unit = initial_cost_unit
+    elif terminal_cost != 0:
+        cost_unit = terminal_cost_unit
+    elif path_cost != 0:
+        cost_unit = path_cost_unit * independent_variable_units
+
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
-        make_augmented_cost(initial_cost, initial_cost_unit, constraints, constraints_units, location='initial')
+        make_augmented_cost(initial_cost, cost_unit, constraints, constraints_units, location='initial')
 
     augmented_terminal_cost, augmented_terminal_cost_units, terminal_lm_params, terminal_lm_params_units = \
-        make_augmented_cost(terminal_cost, terminal_cost_unit, constraints, constraints_units, location='terminal')
+        make_augmented_cost(terminal_cost, cost_unit, constraints, constraints_units, location='terminal')
 
     hamiltonian_function, hamiltonian_units, costates, costates_units = \
-        make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_unit)
+        make_hamiltonian(states, states_rates, states_units, path_cost, cost_unit)
 
     costates_rates = make_costate_rates(hamiltonian_function, states, costates, total_derivative)
     coparameters = make_costate_names(parameters)
     coparameters_rates = make_costate_rates(hamiltonian_function, parameters, coparameters, total_derivative)
-    coparameters_units = [path_cost_unit / parameter_units for parameter_units in parameters_units]
+    coparameters_units = [cost_unit / parameter_units for parameter_units in parameters_units]
 
     d = []
     for ii in range(len(coparameters)):
@@ -1109,7 +1132,8 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     terminal_bc += [bc[0] for bc in terminal_bcs_time]
     constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
 
-    time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
+    # TODO: Figure this time BC nonsense out. Why do I have to divide by the independent units for convergence??
+    time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)/ocp.parameters()[-1]['symbol']
 
     if time_bc is not None:
         terminal_bc += [time_bc]

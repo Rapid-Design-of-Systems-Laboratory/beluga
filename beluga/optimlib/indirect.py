@@ -37,18 +37,18 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Deal with path constraints
     """
-    while len(ocp.constraints()['path']) > 0:
-        if ocp.constraints()['path'][0]['method'] is None:
+    while len(ocp.path_constraints()) > 0:
+        if ocp.path_constraints()[0]['method'] is None:
             raise NotImplementedError
 
-        elif ocp.constraints()['path'][0]['method'].upper() == 'UTM':
+        elif ocp.path_constraints()[0]['method'].upper() == 'UTM':
             ocp, gam, gam_inv = F_UTM(ocp)
             signature = 'F_UTM . ' + signature
             cat_chain += [ocp]
             gamma_map_chain += [gam]
             gamma_map_inverse_chain += [gam_inv]
 
-        elif ocp.constraints()['path'][0]['method'].upper() == 'EPSTRIG':
+        elif ocp.path_constraints()[0]['method'].upper() == 'EPSTRIG':
             ocp, gam, gam_inv = F_EPSTRIG(ocp)
             signature = 'F_EPSTRIG . ' + signature
             cat_chain += [ocp]
@@ -56,7 +56,7 @@ def ocp_to_bvp(ocp, **kwargs):
             gamma_map_inverse_chain += [gam_inv]
 
         else:
-            raise NotImplementedError('Unknown path constraint method \"' + str(ocp.constraints()['path'][0]['method'].upper()) + '\"')
+            raise NotImplementedError('Unknown path constraint method \"' + str(ocp.path_constraints()[0]['method'].upper()) + '\"')
 
     """
     Deal with staging, switches, and their substitutions.
@@ -158,7 +158,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     logging.info('Problem formulation: Lambda := ' + signature)
 
-    dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp._properties.get('controls', []), total_derivative)
+    dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
 
     out = {'method': 'brysonho',
            'problem_name': cat_chain[0].name,
@@ -201,65 +201,6 @@ def ocp_to_bvp(ocp, **kwargs):
            'bc_terminal_parameter_jac': dbc_dp_b,
            'control_options': bvp._control_law,
            'num_controls': len(bvp.controls())}
-
-    def guess_map(sol, _compute_control=None):
-        if _compute_control is None:
-            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
-        sol_out = copy.deepcopy(sol)
-        nodes = len(sol.t)
-
-        if len(sol.dual_t) == 0:
-            sol.dual_t = np.zeros_like(sol.t)
-
-        if num_dae == 0:
-            sol_out.y = np.column_stack((sol.y, sol.t, sol.dual, sol.dual_t))
-        else:
-            sol_out.y = np.column_stack((sol.y, sol.t, sol.dual, sol.dual_t, sol.u))
-
-        sol_out.dual = np.array([])
-        sol_out.dual_t = np.array([])
-        sol_out.dual_u = np.array([])
-        sol_out.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.t[-1] - sol.t[0]))
-        sol_out.nondynamical_parameters = np.ones(len(nondynamical_parameters))
-
-        sol_out.t = sol.t / sol.t[-1]
-        sol_out.u = np.array([]).reshape((nodes, 0))
-        return sol_out
-
-    def guess_map_inverse(sol, _compute_control=None):
-        if _compute_control is None:
-            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
-        sol = copy.deepcopy(sol)
-        sol.t = sol.y[:, independent_index]
-        sol.dual_t = sol.y[:, (independent_index+1)*2-1]
-        if num_dae == 0:
-            sol.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
-            sol.y = np.delete(sol.y, np.s_[independent_index, (independent_index + 1) * 2 - 1], axis=1)
-            sol.dual = sol.y[:, -(len(costates)-1):]
-        else:
-            sol.u = sol.y[:, -num_dae:]
-            sol.y = np.delete(sol.y, np.s_[independent_index, (independent_index + 1) * 2 - 1], axis=1)
-            sol.dual = sol.y[:, -(len(costates)-1)-num_dae:-num_dae]
-
-        sol.y = np.delete(sol.y, np.s_[-(len(costates)-1)-num_dae:], axis=1)
-        sol.dynamical_parameters = np.delete(sol.dynamical_parameters, np.s_[-1:])
-        sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, np.s_[-len(nondynamical_parameters):])
-
-        cmap = dict(zip([str(c) for c in constants], np.arange(0, len(constants))))
-
-        for ele in control_constraint_mapping.keys():
-            ctrl = control_constraint_mapping[ele]
-            lower = str(constraints_lower['path'][ele])
-            upper = str(constraints_upper['path'][ele])
-            for ele2 in cmap.keys():
-                upper = upper.replace(ele2, str(sol.const[cmap[ele2]]))
-                lower = lower.replace(ele2, str(sol.const[cmap[ele2]]))
-
-            upper = eval(upper)
-            lower = eval(lower)
-            sol.u[:, ctrl] = (upper - lower) * (np.sin(sol.u[:, ctrl]) + 1)/2 + lower
-
-        return sol
 
     def guess_map(gamma, _compute_control=None, map_chain=gamma_map_chain):
         gamma = copy.deepcopy(gamma)

@@ -252,25 +252,46 @@ class OCP(BVP):
         :param tolerance:
         :return:
         """
-        if not isinstance(symbol, str):
-            raise ValueError
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
 
         if not isinstance(functions, list):
             raise ValueError
         else:
-            for f in functions:
-                if not isinstance(f, str):
-                    raise ValueError
+            for ii, f in enumerate(functions):
+                if isinstance(f, str):
+                    functions[ii] = sympify(f)
 
         if not isinstance(conditions, list):
             raise ValueError
         else:
-            for l in conditions:
-                pass
+            for ii, l in enumerate(conditions):
+                if not isinstance(l, list):
+                    raise ValueError
+                for jj, l2 in enumerate(l):
+                    if isinstance(l2, str):
+                        conditions[ii][jj] = sympify(l2)
+
+        if isinstance(tolerance, str):
+            tolerance = sympify(tolerance)
+
+        if not isinstance(symbol, Symbol):
             raise ValueError
-        raise NotImplementedError
+
+        for f in functions:
+            if not isinstance(f, Expr):
+                raise ValueError
+
+        for l in conditions:
+            for f in l:
+                if not isinstance(f, Expr):
+                    raise ValueError
+
+        if not isinstance(tolerance, Expr):
+            raise ValueError
+
         temp = self._properties.get('switches', [])
-        temp.append({'symbol': Symbol(symbol), 'function': function, 'conditions': conditions, 'tolerance': Symbol(tolerance)})
+        temp.append({'symbol': symbol, 'function': functions, 'conditions': conditions, 'tolerance': tolerance})
         self._properties['switches'] = temp
         return self
 
@@ -296,6 +317,52 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
+    def path_constraint(self, function, unit, lower, upper, activator, method):
+        r"""
+
+        :param function:
+        :param unit:
+        :param lower:
+        :param upper:
+        :param activator:
+        :param method:
+        :return:
+        """
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+        if isinstance(lower, str):
+            lower = sympify(lower)
+        if isinstance(upper, str):
+            upper = sympify(upper)
+        if isinstance(activator, str):
+            activator = sympify(activator)
+
+        if not isinstance(function, Expr):
+            raise ValueError
+        if not isinstance(unit, Expr):
+            raise ValueError
+        if not isinstance(lower, Expr):
+            raise ValueError
+        if not isinstance(upper, Expr):
+            raise ValueError
+        if not isinstance(activator, Expr):
+            raise ValueError
+        if not isinstance(method, str):
+            raise ValueError
+
+        temp = self._properties.get('path_constraints', [])
+        temp.append({'function': function, 'unit': unit, 'lower': lower, 'upper': upper, 'activator': activator, 'method': method})
+        self._properties['path_constraints'] = temp
+        return self
+
+    def path_constraints(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('path_constraints', [])
 
     # constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
     # constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
@@ -431,26 +498,8 @@ class ConstraintList(dict):
         self['terminal'] = temp
         return self
 
-    def path(self, function, unit, lower, upper, activator, method):
-        if not isinstance(function, str):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-        if not isinstance(lower, str):
-            raise ValueError
-        if not isinstance(upper, str):
-            raise ValueError
-        if not isinstance(activator, str):
-            raise ValueError
-        if not isinstance(method, str):
-            raise ValueError
-
-        temp = self.get('path', [])
-        temp.append({'function': sympify(function), 'unit': sympify(unit), 'lower':sympify(lower),
-                     'upper': sympify(upper), 'activator': sympify(activator), 'method': method})
-
-        self['path'] = temp
-        return self
+    # def path(self, function, unit, lower, upper, activator, method):
+    #
 
     # Aliases for defining constraints of different types
     constraint_args = ('expr', 'unit')
