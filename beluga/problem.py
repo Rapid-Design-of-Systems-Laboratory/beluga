@@ -241,7 +241,7 @@ class OCP(BVP):
         :return:
         """
         temp = {'function': sympify('0'), 'unit': sympify('1')}
-        return self._properties.get('initial_cost', temp)
+        return self._properties.get('terminal_cost', temp)
 
     def switch(self, symbol, functions, conditions, tolerance):
         r"""

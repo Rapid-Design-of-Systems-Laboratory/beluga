@@ -10,6 +10,16 @@ import cloudpickle as pickle
 import beluga
 
 
+def recursive_sub(expr, replace):
+    for _ in range(0, len(replace) + 1):
+        new_expr = expr.subs(replace)
+        if new_expr == expr:
+            return new_expr, True
+        else:
+            expr = new_expr
+    return new_expr, False
+
+
 def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg'):
     assert any([ocp is not None, bvp_solver is not None, sol_set is not None]), 'No data given to save.'
 

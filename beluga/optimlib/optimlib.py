@@ -3,7 +3,7 @@ Base functions shared by all optimization methods.
 """
 
 
-from beluga.utils import sympify, _combine_args_kwargs
+from beluga.utils import sympify, _combine_args_kwargs, recursive_sub
 import copy
 import numpy as np
 import sympy
@@ -951,15 +951,6 @@ def F_RASHS(ocp):
     for q in ocp.switches():
         subber.update({q['symbol']: q['function']})
 
-    def recursive_sub(expr, replace):
-        for _ in range(0, len(replace) + 1):
-            new_expr = expr.subs(replace)
-            if new_expr == expr:
-                return new_expr, True
-            else:
-                expr = new_expr
-        return new_expr, False
-
     ocp.the_initial_cost()['function'], _ = recursive_sub(ocp.the_initial_cost()['function'], subber)
     ocp.the_path_cost()['function'], _ = recursive_sub(ocp.the_path_cost()['function'], subber)
     ocp.the_terminal_cost()['function'], _ = recursive_sub(ocp.the_terminal_cost()['function'], subber)
@@ -988,8 +979,7 @@ def F_EPSTRIG(ocp):
     for jj, u in enumerate(ocp.controls()):
         if the_constraint['function'] == u['symbol']:
             constraint_is_control = True
-            # breakpoint()
-            # control_constraint_mapping.update({ii: jj})
+            control_index = jj
 
     if not constraint_is_control:
         raise NotImplementedError('Epsilon-Trig must be used with pure control-constraints.')
@@ -1010,8 +1000,21 @@ def F_EPSTRIG(ocp):
     for ii in range(len(ocp.states())):
         ocp.states()[ii]['eom'] = ocp.states()[ii]['eom'].subs(subber, simultaneous=True)
 
-    gamma_map = Id
-    gamma_map_inverse = Id
+    def gamma_map(gamma, _compute_control=None):
+        gamma = copy.deepcopy(gamma)
+        return gamma
+
+    def gamma_map_inverse(gamma, _compute_control=None, control_index=control_index, the_constraint=the_constraint, const=ocp.constants()):
+        gamma = copy.deepcopy(gamma)
+        subber = dict()
+        for c in const:
+            subber.update({c['symbol']: c['value']})
+
+        lower, _ = recursive_sub(the_constraint['lower'], subber)
+        upper, _ = recursive_sub(the_constraint['upper'], subber)
+        gamma.u[:, control_index] = (upper - lower) * (np.sin(gamma.u[:, control_index]) + 1) / 2 + lower
+        return gamma
+
     del ocp.constraints()['path'][0]
 
     return ocp, gamma_map, gamma_map_inverse
@@ -1155,7 +1158,7 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     return bvp, gamma_map, gamma_map_inverse
 
 
-def F_PMP(bvp, _compute_control=None):
+def F_PMP(bvp):
     r"""
 
     :param bvp:
@@ -1167,18 +1170,23 @@ def F_PMP(bvp, _compute_control=None):
     control_law = make_control_law(dHdu, [u['symbol'] for u in bvp.controls()])
     bvp._control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
     def gamma_map(gamma, _compute_control=None):
+        gamma = copy.deepcopy(gamma)
         return gamma
 
     def gamma_map_inverse(gamma, _compute_control=None):
-        # for tt in sol.t:
-        #     _u = _compute_control(gamma.y, gamma.u, gamma.dynamical_parameters, gamma.const)
-        #     breakpoint()
+        gamma = copy.deepcopy(gamma)
+
+        u = np.array([_compute_control(gamma.y[0], [], gamma.dynamical_parameters, gamma.const)])
+        for ii in range(len(gamma.t)-1):
+            u = np.vstack((u, _compute_control(gamma.y[ii+1], [], gamma.dynamical_parameters, gamma.const)))
+
+        gamma.u = u
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
 
 
-def F_ICRM(bvp, _compute_control=None):
+def F_ICRM(bvp):
     r"""
 
     :param bvp:
