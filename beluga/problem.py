@@ -4,8 +4,7 @@ import json
 import logging
 import re
 from functools import partialmethod
-from collections import namedtuple, ChainMap
-from itertools import zip_longest
+from collections import namedtuple
 from sympy import Expr, Symbol
 from beluga.utils import sympify, _combine_args_kwargs
 
@@ -176,49 +175,83 @@ class OCP(BVP):
         return self._properties.get(property_name, [])
 
     def initial_cost(self, function, unit):
-        if not isinstance(function, str):
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(function, Expr):
             raise ValueError
-        if not isinstance(unit, str):
+        if not isinstance(unit, Expr):
             raise ValueError
 
         temp = {'function': sympify(function), 'unit': sympify(unit)}
         self._properties['initial_cost'] = temp
         return self
 
+    def the_initial_cost(self):
+        r"""
+
+        :return:
+        """
+        temp = {'function': sympify('0'), 'unit': sympify('1')}
+        return self._properties.get('initial_cost', temp)
+
     def path_cost(self, function, unit):
-        if not isinstance(function, str):
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(function, Expr):
             raise ValueError
-        if not isinstance(unit, str):
+        if not isinstance(unit, Expr):
             raise ValueError
 
-        temp = {'function': sympify(function), 'unit': sympify(unit)}
+        temp = {'function': function, 'unit': unit}
         self._properties['path_cost'] = temp
         return self
 
+    def the_path_cost(self):
+        r"""
+
+        :return:
+        """
+        temp = {'function': sympify('0'), 'unit': sympify('1')}
+        return self._properties.get('path_cost', temp)
+
     def terminal_cost(self, function, unit):
-        if not isinstance(function, str):
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(function, Expr):
             raise ValueError
-        if not isinstance(unit, str):
+        if not isinstance(unit, Expr):
             raise ValueError
 
-        temp = {'function': sympify(function), 'unit': sympify(unit)}
+        temp = {'function': function, 'unit': unit}
         self._properties['terminal_cost'] = temp
         return self
 
-    def constant_of_motion(self, symbol, function, unit):
-        if not isinstance(symbol, str):
-            raise ValueError
-        if not isinstance(function, str):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-        raise NotImplementedError
-        temp = self._properties.get('constants_of_motion', [])
-        temp.append({'symbol': Symbol(symbol), 'eom': sympify(function), 'unit': sympify(unit)})
-        self._properties['constants_of_motion'] = temp
-        return self
+    def the_terminal_cost(self):
+        r"""
+
+        :return:
+        """
+        temp = {'function': sympify('0'), 'unit': sympify('1')}
+        return self._properties.get('initial_cost', temp)
 
     def switch(self, symbol, functions, conditions, tolerance):
+        r"""
+
+        :param symbol:
+        :param functions:
+        :param conditions:
+        :param tolerance:
+        :return:
+        """
         if not isinstance(symbol, str):
             raise ValueError
 
@@ -241,11 +274,33 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
+    def quantity(self, symbol, function):
+        r"""
+
+        :param symbol:
+        :param function:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(function, str):
+            function = sympify(function)
+
+        if not isinstance(symbol, Symbol):
+            raise ValueError
+        if not isinstance(function, Expr):
+            raise ValueError
+
+        temp = self._properties.get('switches', [])
+        temp.append({'symbol': symbol, 'function': function})
+        self._properties['switches'] = temp
+        return self
+
 
     # constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
     # constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
     # switch = partialmethod(set_property, property_name='switches', property_args=('name', 'value', 'conditions', 'tolerance'))
-    quantity = partialmethod(set_property, property_name='switches', property_args=('name', 'value'))
+    # quantity = partialmethod(set_property, property_name='switches', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
     # parameter = partialmethod(set_property, property_name='parameters', property_args=('name', 'unit'))
     custom_function = partialmethod(set_property, property_name='custom_functions',

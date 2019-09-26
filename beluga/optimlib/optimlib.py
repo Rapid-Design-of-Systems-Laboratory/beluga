@@ -10,6 +10,7 @@ import sympy
 from sympy import Expr, Symbol, zoo
 import functools as ft
 import re
+import logging
 
 
 class BVP(object):
@@ -132,6 +133,13 @@ class BVP(object):
         self._properties['constants_of_motion'] = temp
         return self
 
+    def constants_of_motion(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('constants_of_motion', [])
+
     def control(self, symbol, unit):
         r"""
 
@@ -159,9 +167,9 @@ class BVP(object):
 
         :return:
         """
-        return self._properties.get('controls', dict())
+        return self._properties.get('controls', [])
 
-    def bc_initial(self, function):
+    def initial_bc(self, function):
         r"""
 
         :param function:
@@ -173,12 +181,19 @@ class BVP(object):
         if not isinstance(function, Expr):
             raise TypeError
 
-        temp = self._properties.get('bc_initial', [])
+        temp = self._properties.get('initial_bc', [])
         temp.append({'function': function})
-        self._properties['bc_initial'] = temp
+        self._properties['initial_bc'] = temp
         return self
 
-    def bc_terminal(self, function):
+    def initial_bcs(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('initial_bc', [])
+
+    def terminal_bc(self, function):
         r"""
 
         :param function:
@@ -190,10 +205,24 @@ class BVP(object):
         if not isinstance(function, Expr):
             raise TypeError
 
-        temp = self._properties.get('bc_terminal', [])
+        temp = self._properties.get('terminal_bc', [])
         temp.append({'function': function})
-        self._properties['bc_terminal'] = temp
+        self._properties['terminal_bc'] = temp
         return self
+
+    def terminal_bcs(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('terminal_bc', [])
+
+    def all_bcs(self):
+        r"""
+
+        :return:
+        """
+        return self.initial_bcs() + self.terminal_bcs()
 
     def parameter(self, symbol, unit):
         r"""
@@ -217,6 +246,13 @@ class BVP(object):
         self._properties['parameters'] = temp
         return self
 
+    def parameters(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('parameters', [])
+
     def nd_parameter(self, symbol, unit):
         r"""
 
@@ -238,6 +274,20 @@ class BVP(object):
         temp.append({'symbol': symbol, 'unit': unit})
         self._properties['nd_parameters'] = temp
         return self
+
+    def nd_parameters(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('nd_parameters', [])
+
+    def all_parameters(self):
+        r"""
+
+        :return:
+        """
+        return self.parameters() + self.nd_parameters()
 
     def independent(self, symbol, unit):
         r"""
@@ -261,7 +311,7 @@ class BVP(object):
         return self
 
 
-def Id(x):
+def Id(x, _compute_control=None):
     return x
 
 
@@ -538,6 +588,25 @@ def make_control_dae(states, costates, states_rates, costates_rates, controls, d
     yield dae_bc
     yield dgdX
     yield dgdU
+
+
+def make_control_law(dhdu, controls):
+    r"""
+    Solves control equation to get control law.
+
+    .. math::
+        \frac{dH}{d\textbf{u}} = 0
+
+    :param dhdu: The expression for :math:`dH / d\textbf{u}`.
+    :param controls: A list of control variables, :math:`[u_1, u_2, \cdots, u_n]`.
+    :return: Control law options.
+    """
+    var_list = list(controls)
+    logging.debug("Solving dH/du...")
+    ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
+    logging.debug('Control found')
+    control_options = ctrl_sol
+    return control_options
 
 
 def make_costate_names(states):
@@ -818,6 +887,8 @@ def F_momentumshift(ocp):
     :param ocp:
     :return:
     """
+    ocp = copy.deepcopy(ocp)
+
     temp_unit = ocp._properties['independent']['unit']
     ocp = copy.deepcopy(ocp)
     _tf = Symbol('_tf')
@@ -828,7 +899,7 @@ def F_momentumshift(ocp):
         ocp._properties['states'][ii]['eom'] *= _tf
         ocp._properties['states'][ii]['unit'] *= temp_unit
 
-    def gamma_map(gamma):
+    def gamma_map(gamma, _compute_control=None):
         if len(gamma.dual_t) == 0:
             gamma.dual_t = np.zeros_like(gamma.t)
 
@@ -843,11 +914,105 @@ def F_momentumshift(ocp):
 
         return gamma
 
-    def gamma_map_inverse(gamma):
+    def gamma_map_inverse(gamma, _compute_control=None):
         gamma.t = gamma.y[:, -1]
         gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
         gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
         return gamma
+
+    return ocp, gamma_map, gamma_map_inverse
+
+
+def F_RASHS(ocp):
+    r"""
+
+    :param ocp:
+    :return:
+    """
+    ocp = copy.deepcopy(ocp)
+
+    # TODO: compose switches
+    for q in ocp.switches():
+        if isinstance(q['function'], list):
+            true_value = 0
+            for jj in range(len(q['function'])):
+                temp_value = q['function'][jj]
+                breakpoint()
+                for kk in range(len(switches_conditions[ii][jj])):
+                    temp_value *= rash_mult(switches_conditions[ii][jj][kk], switches_tolerance[ii])
+                true_value += temp_value
+            switches_values[ii] = true_value
+
+    """
+    Make substitutions with the switches
+    """
+
+    subber = dict()
+    for q in ocp.switches():
+        subber.update({q['symbol']: q['function']})
+
+    def recursive_sub(expr, replace):
+        for _ in range(0, len(replace) + 1):
+            new_expr = expr.subs(replace)
+            if new_expr == expr:
+                return new_expr, True
+            else:
+                expr = new_expr
+        return new_expr, False
+
+    ocp.the_initial_cost()['function'], _ = recursive_sub(ocp.the_initial_cost()['function'], subber)
+    ocp.the_path_cost()['function'], _ = recursive_sub(ocp.the_path_cost()['function'], subber)
+    ocp.the_terminal_cost()['function'], _ = recursive_sub(ocp.the_terminal_cost()['function'], subber)
+    for s in ocp.states():
+        s['eom'], _ = recursive_sub(s['eom'], subber)
+
+    gamma_map = Id
+    gamma_map_inverse = Id
+    return ocp, gamma_map, gamma_map_inverse
+
+
+def F_EPSTRIG(ocp):
+    r"""
+
+    :param ocp:
+    :return:
+    """
+    ocp = copy.deepcopy(ocp)
+
+    the_constraint = ocp.constraints()['path'][0]
+    f = the_constraint['function']
+    lower = the_constraint['lower']
+    upper = the_constraint['upper']
+    activator = the_constraint['activator']
+    constraint_is_control = False
+    for jj, u in enumerate(ocp.controls()):
+        if the_constraint['function'] == u['symbol']:
+            constraint_is_control = True
+            # breakpoint()
+            # control_constraint_mapping.update({ii: jj})
+
+    if not constraint_is_control:
+        raise NotImplementedError('Epsilon-Trig must be used with pure control-constraints.')
+
+    activator_unit = None
+    for const in ocp.constants():
+        if activator == const['symbol']:
+            activator_unit = const['unit']
+
+    if activator_unit is None:
+        raise Exception('Activator \'' + str(activator) + '\' not found in constants.')
+
+    if ocp.the_path_cost()['unit'] != the_constraint['unit']*activator_unit and ocp.the_path_cost()['function'] != 0:
+        logging.warning('Dimension mismatch in path constraint \'' + str(f) + '\'')
+
+    ocp.the_path_cost()['function'] += epstrig_path(f, lower, upper, activator)
+    subber = dict(zip([f], [(upper - lower) / 2 * sympy.sin(the_constraint['function']) + (upper + lower) / 2]))
+    for ii in range(len(ocp.states())):
+        ocp.states()[ii]['eom'] = ocp.states()[ii]['eom'].subs(subber, simultaneous=True)
+
+    gamma_map = Id
+    gamma_map_inverse = Id
+    del ocp.constraints()['path'][0]
 
     return ocp, gamma_map, gamma_map_inverse
 
@@ -859,6 +1024,7 @@ def F_UTM(ocp):
     :return:
     """
     ocp = copy.deepcopy(ocp)
+
     L_UTM = utm_path(ocp.constraints()['path'][0]['function'], ocp.constraints()['path'][0]['lower'],
                      ocp.constraints()['path'][0]['upper'], ocp.constraints()['path'][0]['activator'])
     ocp._properties['path_cost']['function'] += L_UTM
@@ -868,59 +1034,6 @@ def F_UTM(ocp):
     return ocp, gamma_map, gamma_map_inverse
 
 
-def F_ICRM(bvp):
-    r"""
-
-    :param bvp:
-    :return:
-    """
-
-    n_states = len(bvp._properties['states'])
-    n_controls = len(bvp._properties['controls'])
-
-    dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp._properties['controls'], total_derivative)
-    g = dHdu
-    X = [s['symbol'] for s in bvp._properties['states']]
-    U = [c['symbol'] for c in bvp._properties['controls']]
-    xdot = sympy.Matrix([s['eom'] for s in bvp._properties['states']])
-
-    # Compute Jacobian
-    dgdX = sympy.Matrix([[total_derivative(g_i, x_i) for x_i in X] for g_i in g])
-    dgdU = sympy.Matrix([[total_derivative(g_i, u_i) for u_i in U] for g_i in g])
-
-    udot = dgdU.LUsolve(-dgdX * xdot)  # dgdU * udot + dgdX * xdot = 0
-    if zoo in udot.atoms():
-        raise NotImplementedError('Complex infinity in ICRM control law. Potential bang-bang solution.')
-
-    dae_states = U
-    dae_equations = list(udot)
-    dae_bc = g
-
-    for ii, s in enumerate(dae_states):
-        bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
-
-    for ii, s in enumerate(dae_bc):
-        bvp.bc_terminal(s)
-
-    del bvp._properties['controls']
-
-    def gamma_map(gamma, n=n_states, m=n_controls):
-        gamma = copy.deepcopy(gamma)
-        if len(gamma.dual_u) == 0:
-            gamma.dual_u = np.zeros_like(gamma.u)
-        gamma.y = np.column_stack((gamma.y, gamma.u))
-        gamma.u = np.array([]).reshape((n, 0))
-        return gamma
-
-    def gamma_map_inverse(gamma, n=n_states, m=n_controls):
-        gamma = copy.deepcopy(gamma)
-        gamma.u = gamma.y[:, -m:]
-        gamma.y = np.delete(gamma.y, np.s_[-m:], axis=1)
-        return gamma
-
-    return bvp, gamma_map, gamma_map_inverse
-
-
 def Dualize(ocp, independent_variable, independent_variable_units):
     r"""
 
@@ -928,6 +1041,7 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     :return:
     """
     ocp = copy.deepcopy(ocp)
+
     n_states = len(ocp.states())
 
     terminal_bcs_to_aug = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
@@ -945,12 +1059,12 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     constraints_units['initial'] = [b['unit'] for b in ocp.constraints()['initial']]
     constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
     constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
-    initial_cost = ocp._properties['initial_cost']['function']
-    initial_cost_unit = ocp._properties['initial_cost']['unit']
-    terminal_cost = ocp._properties['terminal_cost']['function']
-    terminal_cost_unit = ocp._properties['terminal_cost']['unit']
-    path_cost = ocp._properties['path_cost']['function']
-    path_cost_unit = ocp._properties['path_cost']['unit']
+    initial_cost = ocp.the_initial_cost()['function']
+    initial_cost_unit = ocp.the_initial_cost()['unit']
+    terminal_cost = ocp.the_terminal_cost()['function']
+    terminal_cost_unit = ocp.the_terminal_cost()['unit']
+    path_cost = ocp.the_path_cost()['function']
+    path_cost_unit = ocp.the_path_cost()['unit']
     states = [s['symbol'] for s in ocp.states()]
     states_rates = [s['eom'] for s in ocp.states()]
     states_units = [s['unit'] for s in ocp.states()]
@@ -980,31 +1094,31 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     del coparameters_rates[ii]
     del coparameters_units[ii]
 
-    bc_initial = make_boundary_conditions(
+    initial_bc = make_boundary_conditions(
         constraints, states, costates, parameters, coparameters,
         augmented_initial_cost, total_derivative, location='initial')
 
-    bc_terminal = make_boundary_conditions(
+    terminal_bc = make_boundary_conditions(
         constraints, states, costates, parameters, coparameters,
         augmented_terminal_cost, total_derivative, location='terminal')
 
     constraints['terminal'] += [bc[0] for bc in terminal_bcs_time]
-    bc_terminal += [bc[0] for bc in terminal_bcs_time]
+    terminal_bc += [bc[0] for bc in terminal_bcs_time]
     constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
 
     time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
 
     if time_bc is not None:
-        bc_terminal += [time_bc]
+        terminal_bc += [time_bc]
 
-    def gamma_map(gamma):
+    def gamma_map(gamma, _compute_control=None):
         gamma = copy.deepcopy(gamma)
         gamma.y = np.column_stack((gamma.y, gamma.dual))
         gamma.dual = np.array([])
         gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(len(initial_lm_params + terminal_lm_params))))
         return gamma
 
-    def gamma_map_inverse(gamma, n=n_states):
+    def gamma_map_inverse(gamma, _compute_control=None, n=n_states):
         gamma.dual = gamma.y[:, -n:]
         gamma.y = gamma.y[:, :n]
         return gamma
@@ -1020,11 +1134,11 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     for ii, s in enumerate(ocp.controls()):
         bvp.control(s['symbol'], s['unit'])
 
-    for ii, s in enumerate(bc_initial):
-        bvp.bc_initial(s)
+    for ii, s in enumerate(initial_bc):
+        bvp.initial_bc(s)
 
-    for ii, s in enumerate(bc_terminal):
-        bvp.bc_terminal(s)
+    for ii, s in enumerate(terminal_bc):
+        bvp.terminal_bc(s)
 
     for ii, s in enumerate(parameters):
         bvp.parameter(s, parameters_units[ii])
@@ -1037,5 +1151,83 @@ def Dualize(ocp, independent_variable, independent_variable_units):
         bvp.nd_parameter(s, _unit)
 
     bvp.independent(independent_variable, independent_variable_units)
+
+    return bvp, gamma_map, gamma_map_inverse
+
+
+def F_PMP(bvp, _compute_control=None):
+    r"""
+
+    :param bvp:
+    :return:
+    """
+    bvp = copy.deepcopy(bvp)
+
+    dHdu = make_dhdu(bvp.constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
+    control_law = make_control_law(dHdu, [u['symbol'] for u in bvp.controls()])
+    bvp._control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
+    def gamma_map(gamma, _compute_control=None):
+        return gamma
+
+    def gamma_map_inverse(gamma, _compute_control=None):
+        # for tt in sol.t:
+        #     _u = _compute_control(gamma.y, gamma.u, gamma.dynamical_parameters, gamma.const)
+        #     breakpoint()
+        return gamma
+
+    return bvp, gamma_map, gamma_map_inverse
+
+
+def F_ICRM(bvp, _compute_control=None):
+    r"""
+
+    :param bvp:
+    :return:
+    """
+    bvp = copy.deepcopy(bvp)
+
+    n_states = len(bvp.states())
+    n_controls = len(bvp.controls())
+
+    dHdu = make_dhdu(bvp.constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
+    g = dHdu
+    X = [s['symbol'] for s in bvp.states()]
+    U = [c['symbol'] for c in bvp.controls()]
+    xdot = sympy.Matrix([s['eom'] for s in bvp._properties['states']])
+
+    # Compute Jacobian
+    dgdX = sympy.Matrix([[total_derivative(g_i, x_i) for x_i in X] for g_i in g])
+    dgdU = sympy.Matrix([[total_derivative(g_i, u_i) for u_i in U] for g_i in g])
+
+    udot = dgdU.LUsolve(-dgdX * xdot)  # dgdU * udot + dgdX * xdot = 0
+    if zoo in udot.atoms():
+        raise NotImplementedError('Complex infinity in ICRM control law. Potential bang-bang solution.')
+
+    dae_states = U
+    dae_equations = list(udot)
+    dae_bc = g
+
+    for ii, s in enumerate(dae_states):
+        bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
+
+    for ii, s in enumerate(dae_bc):
+        bvp.terminal_bc(s)
+
+    del bvp._properties['controls']
+    bvp._control_law = []
+
+    def gamma_map(gamma, _compute_control=None, n=n_states, m=n_controls):
+        gamma = copy.deepcopy(gamma)
+        if len(gamma.dual_u) == 0:
+            gamma.dual_u = np.zeros_like(gamma.u)
+        gamma.y = np.column_stack((gamma.y, gamma.u))
+        gamma.u = np.array([]).reshape((n, 0))
+        return gamma
+
+    def gamma_map_inverse(gamma, _compute_control=None, n=n_states, m=n_controls):
+        gamma = copy.deepcopy(gamma)
+        gamma.u = gamma.y[:, -m:]
+        gamma.y = np.delete(gamma.y, np.s_[-m:], axis=1)
+        return gamma
 
     return bvp, gamma_map, gamma_map_inverse

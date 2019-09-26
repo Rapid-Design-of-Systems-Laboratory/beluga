@@ -1,3 +1,5 @@
+from collections import ChainMap
+from itertools import zip_longest
 import time
 import sympy
 import platform
@@ -6,18 +8,6 @@ from scipy.special import comb
 import signal
 import cloudpickle as pickle
 import beluga
-
-# import os
-# import sys
-# import shutil
-# import tempfile
-# import subprocess
-# import importlib
-# import theano
-# from functools import partial
-# import warnings
-# import numpy as np
-# import sympy as smpy
 
 
 def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg'):
