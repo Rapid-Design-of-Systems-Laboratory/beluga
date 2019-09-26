@@ -35,8 +35,9 @@ ocp.constraints() \
     .initial('y1 - y1_0', '1') \
     .initial('y2 - y2_0', '1') \
     .initial('t', 's') \
-    .path('u + y1/6', '1', lower='path_min', upper='path_max', activator='epsilon1', method='utm') \
-    .terminal('t - t_f', 's') \
+    .terminal('t - t_f', 's')
+
+ocp.path_constraint('u + y1/6', '1', lower='path_min', upper='path_max', activator='epsilon1', method='utm')
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
