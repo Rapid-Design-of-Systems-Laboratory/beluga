@@ -43,7 +43,7 @@ Example:
     beluga /path/to/problem.py
 
   Specify logging and display levels (0 -> all messages including debug messages)
-    beluga -d0 -l0 /path/to/brachisto.py
+    beluga -d0 -l0 /path/to/Brachistochrone.py
 
   Specify output data file
     beluga brachisto --output=brachisto_out.dill

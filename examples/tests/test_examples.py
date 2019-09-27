@@ -1,7 +1,10 @@
+import pytest
+
 tol = 1e-3
+METHODS = ['indirect', 'diffyg']
 
-
-def test_brachistochrone_shooting():
+@pytest.mark.parametrize("method", METHODS)
+def test_brachistochrone_shooting(method):
     from math import pi
     import beluga
 
@@ -52,7 +55,7 @@ def test_brachistochrone_shooting():
         .const('y_f', -10)
 
     cont = beluga.solve(ocp=ocp,
-                        method='indirect',
+                        method=method,
                         optim_options={'control_method': 'icrm'},
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
@@ -88,7 +91,7 @@ def test_brachistochrone_shooting():
     assert abs(d0[1] - df[1]) < tol
 
     cont = beluga.solve(ocp=ocp,
-                        method='indirect',
+                        method=method,
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
                         guess_generator=guess_maker,
@@ -121,7 +124,8 @@ def test_brachistochrone_shooting():
     assert abs(d0[1] - df[1]) < tol
 
 
-def test_brachistochrone_collocation():
+@pytest.mark.parametrize("method", METHODS)
+def test_brachistochrone_collocation(method):
     from math import pi
     import beluga
 
@@ -172,7 +176,7 @@ def test_brachistochrone_collocation():
         .const('y_f', -10)
 
     cont = beluga.solve(ocp=ocp,
-                        method='indirect',
+                        method=method,
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
                         guess_generator=guess_maker,
@@ -209,7 +213,7 @@ def test_brachistochrone_collocation():
     assert abs(d0[1] - df[1]) < tol
 
     cont = beluga.solve(ocp=ocp,
-                        method='indirect',
+                        method=method,
                         optim_options={'control_method': 'icrm'},
                         bvp_algorithm=shooting_solver,
                         steps=continuation_steps,
@@ -245,7 +249,8 @@ def test_brachistochrone_collocation():
     assert abs(d0[1] - df[1]) < tol
 
 
-def test_zermelo_custom_functions():
+@pytest.mark.parametrize("method", METHODS)
+def test_zermelo_custom_functions(method):
     import beluga
 
     ocp = beluga.OCP('zermelos_problem')
@@ -313,7 +318,7 @@ def test_zermelo_custom_functions():
         .const('epsilon', 1)
 
     cont = beluga.solve(ocp=ocp,
-                        method='indirect',
+                        method=method,
                         optim_options={'control_method': 'icrm'},
                         bvp_algorithm=bvp_solver,
                         steps=continuation_steps,
@@ -349,7 +354,8 @@ def test_zermelo_custom_functions():
     # assert abs((yf[4] - yfe[4]) / yfe[4]) < tol
 
 
-def test_planarhypersonic():
+@pytest.mark.parametrize("method", METHODS)
+def test_planarhypersonic(method):
     from math import pi
     import beluga
 
@@ -423,7 +429,7 @@ def test_planarhypersonic():
         .const('rho0', 1.2)
 
     cont = beluga.solve(ocp=ocp,
-                        method='indirect',
+                        method=method,
                         bvp_algorithm=bvp_solver,
                         steps=continuation_steps,
                         guess_generator=guess_maker,

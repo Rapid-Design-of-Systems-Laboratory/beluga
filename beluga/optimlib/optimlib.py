@@ -7,7 +7,6 @@ from beluga.utils import sympify
 import sympy
 from sympy import Symbol, zoo
 import functools as ft
-import itertools as it
 import re
 
 
@@ -367,8 +366,9 @@ def make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn):
         raise ValueError('omega must be even-dimensional.')
 
     dH = exterior_derivative(hamiltonian, basis, derivative_fn)
-    omega_inverse = omega.tomatrix().inv()
-    X_H = sympy.tensorcontraction(sympy.tensorproduct(dH, omega_inverse), (0, 1))
+    dH = sympy.Matrix(dH)
+    O = omega.tomatrix()
+    X_H = -O.LUsolve(dH)
     return X_H
 
 
@@ -502,6 +502,33 @@ def epstrig_path(constraint, lower, upper, activator):
     if lower is None or upper is None:
         raise NotImplementedError('Lower and upper bounds on epsilon-trig-style path constraints MUST be defined.')
     return -activator*(sympy.cos(constraint))
+
+
+def is_symplectic(form):
+    r"""
+    Checks whether or not a given form is symplectic.
+
+    :param form: A form.
+    :return: Boolean representing if a form is symplectic or not.
+    """
+    if len(form.shape) != 2:
+        return False
+
+    if (form.shape[0] % 2 != 0) or (form.shape[0] != form.shape[1]):
+        return False
+
+    out = True
+    for ii in range(form.shape[0]):
+        for jj in range(form.shape[1]):
+            if ii == jj:
+                if form[ii, jj] != 0:
+                    out = False
+
+            if ii != jj:
+                if form[ii, jj] != -form[jj, ii]:
+                    out = False
+
+    return out
 
 
 def utm_path(constraint, lower, upper, activator):

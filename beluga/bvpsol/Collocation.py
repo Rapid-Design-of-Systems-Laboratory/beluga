@@ -2,7 +2,6 @@ from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm, BVPResult
 import numpy as np
 import copy
 from scipy.optimize import minimize
-import logging
 
 
 class Collocation(BaseAlgorithm):

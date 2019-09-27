@@ -1,3 +1,10 @@
+"""
+References
+----------
+.. [1] Buttazzo, Giuseppe, and Bernhard Kawohl. "On Newton’s problem of minimal resistance."
+    The Mathematical Intelligencer 15.4 (1993): 7-12.
+"""
+
 import beluga
 import logging
 import matplotlib.pyplot as plt
@@ -47,41 +54,21 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
-sol_set = beluga.solve(ocp=ocp,
+beluga.solve(ocp=ocp,
              method='indirect',
              optim_options={'control_method': 'icrm'},
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             guess_generator=guess_maker, autoscale=False)
-
-sol_indirect = sol_set[-1][-1]
+             guess_generator=guess_maker,
+             autoscale=False,
+             save='indirect_data.blg')
 
 bvp_solver = beluga.bvp_algorithm('Collocation', num_nodes=60)
 
-sol_set = beluga.solve(ocp=ocp,
+beluga.solve(ocp=ocp,
              method='direct',
              bvp_algorithm=bvp_solver,
              steps=None,
-             guess_generator=guess_maker, autoscale=False)
-
-sol_direct = sol_set[-1][-1]
-
-plt.figure()
-plt.plot(sol_indirect.t, sol_indirect.y[:, 0], color='b', linewidth=2, label='Indirect')
-plt.plot(sol_indirect.t, -sol_indirect.y[:, 0], color='b', linewidth=2)
-plt.plot(sol_direct.t, sol_direct.y[:,0], color='r', label='Direct')
-plt.plot(sol_direct.t, -sol_direct.y[:,0], color='r')
-plt.xlabel('$x$ [m]')
-plt.ylabel('$r$ [m]')
-plt.title('Vehicle Shape')
-plt.legend()
-plt.grid(True)
-
-plt.figure()
-plt.plot(sol_indirect.t, sol_indirect.u[:,0], color='b', label='Indirect')
-plt.plot(sol_direct.t, sol_direct.u[:,0], color='r', label='Direct')
-plt.xlabel('$x$ [m]')
-plt.ylabel('$u$ [m/s]')
-plt.legend()
-plt.grid(True)
-plt.show()
+             guess_generator=guess_maker,
+             autoscale=False,
+             save='direct_data.blg')

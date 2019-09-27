@@ -6,11 +6,8 @@ References
 """
 
 import beluga
-from beluga.bvpsol.Pseudospectral import linter
 import numpy as np
 import logging
-
-import matplotlib.pyplot as plt
 
 ocp_indirect = beluga.OCP('financial_oscillator_indirect')
 ocp_direct = beluga.OCP('financial_oscillator_direct')
@@ -79,7 +76,6 @@ guess_maker_indirect = beluga.guess_generator(
     time_integrate=0.1
 )
 
-
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set_direct = beluga.solve(
@@ -88,7 +84,8 @@ sol_set_direct = beluga.solve(
     bvp_algorithm=bvp_solver_direct,
     steps=None,
     guess_generator=guess_maker_direct,
-    autoscale=False)
+    autoscale=False,
+    save='direct_data.blg')
 
 continuation_steps = beluga.init_continuation()
 
@@ -103,42 +100,5 @@ sol_set_indirect = beluga.solve(
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,
-    autoscale=False
-)
-
-sol_direct = sol_set_direct[-1][-1]
-sol_indirect = sol_set_indirect[-1][-1]
-
-ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
-
-plt.figure()
-plt.plot(sol_direct.t, sol_direct.y[:, 0], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 0], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.y[:, 0], linestyle='-', color='b', label='indirect')
-plt.xlabel('Time [nd]')
-plt.ylabel('$x_1$ [nd]')
-plt.grid(True)
-plt.legend()
-
-plt.figure()
-plt.plot(sol_direct.y[:,0], sol_direct.y[:, 1], linestyle='--', color='r', marker='o')
-plt.plot(linter(sol_direct.t, sol_direct.y[:, 0], ts), linter(sol_direct.t, sol_direct.y[:, 1], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.y[:, 0], sol_indirect.y[:, 1], linestyle='-', color='b', label='indirect')
-plt.title('State-Space')
-plt.xlabel('$x_1$ [nd]')
-plt.ylabel('$x_2$ [nd]')
-plt.grid(True)
-plt.legend()
-
-plt.figure()
-plt.plot([0,1], [2,2], linestyle='--', color='k')
-plt.plot([0,1], [-2,-2], linestyle='--', color='k')
-plt.plot(sol_direct.t, sol_direct.u, linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.u[:, 0], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.u, linestyle='-', color='b', label='indirect')
-plt.title('Control')
-plt.xlabel('Time [nd]')
-plt.ylabel('$u$ [nd]')
-plt.grid(True)
-plt.legend()
-plt.show()
+    autoscale=False,
+    save='indirect_data.blg')

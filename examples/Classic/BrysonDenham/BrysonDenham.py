@@ -2,13 +2,9 @@
 # TODO: Costate estimates seem to be off by a factor of -2. See Issue #143
 
 import beluga
-from beluga.bvpsol.Pseudospectral import linter
-import numpy as np
 import logging
 
-import matplotlib.pyplot as plt
-
-ocp = beluga.OCP('particle')
+ocp = beluga.OCP('BrysonDenham')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -74,7 +70,8 @@ sol_set_direct = beluga.solve(
     bvp_algorithm=bvp_solver_direct,
     steps=None,
     guess_generator=guess_maker_direct,
-    autoscale=False)
+    autoscale=False,
+    save='direct_data.blg')
 
 del ocp.constants()[-1]
 ocp.constant('x_max', 0.3, 'm')
@@ -103,57 +100,5 @@ sol_set_indirect = beluga.solve(
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,
-    autoscale=False
-)
-
-sol_direct = sol_set_direct[-1][-1]
-sol_indirect = sol_set_indirect[-1][-1]
-
-ts = np.linspace(sol_direct.t[0], sol_direct.t[-1], num=200)
-
-plt.figure()
-plt.plot(sol_direct.t, sol_direct.y[:, 0], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 0], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.y[:, 0], linestyle='-', color='b', label='indirect')
-plt.plot([sol_direct.t[0], sol_direct.t[-1]], [sol_direct.const[-1]]*2, linestyle='--', color='k')
-plt.title('Position')
-plt.xlabel('Time [s]')
-plt.legend()
-plt.grid(True)
-
-plt.figure()
-plt.plot(sol_direct.t, sol_direct.y[:, 1], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.y[:, 1], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.y[:, 1], linestyle='-', color='b', label='indirect')
-plt.title('Velocity')
-plt.xlabel('Time [s]')
-plt.legend()
-plt.grid(True)
-
-plt.figure()
-plt.plot(sol_direct.t, sol_direct.u, linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.u[:, 0], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.u, linestyle='-', color='b', label='indirect')
-plt.title('Control')
-plt.xlabel('Time [s]')
-plt.legend()
-plt.grid(True)
-
-plt.figure()
-plt.plot(sol_direct.t, sol_direct.dual[:, 0], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:, 0], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.dual[:, 0], linestyle='-', color='b', label='indirect')
-plt.title('Position Costate')
-plt.xlabel('Time [s]')
-plt.legend()
-plt.grid(True)
-
-plt.figure()
-plt.plot(sol_direct.t, sol_direct.dual[:, 1], linestyle='--', color='r', marker='o')
-plt.plot(ts, linter(sol_direct.t, sol_direct.dual[:, 1], ts), linestyle='-', color='r', label='direct')
-plt.plot(sol_indirect.t, sol_indirect.dual[:, 1], linestyle='-', color='b', label='indirect')
-plt.title('Velocity Costate')
-plt.xlabel('Time [s]')
-plt.legend()
-plt.grid(True)
-plt.show()
+    autoscale=False,
+    save='indirect_data.blg')

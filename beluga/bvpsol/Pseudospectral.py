@@ -1,4 +1,4 @@
-from beluga.bvpsol import BaseAlgorithm
+from beluga.bvpsol import BaseAlgorithm, BVPResult
 import copy
 from npnlp import minimize, kkt_multipliers
 import numba
@@ -196,7 +196,10 @@ class Pseudospectral(BaseAlgorithm):
         sol.t = (tau*(tf-t0) + (tf+t0))/2
         sol.converged = True
 
-        return sol
+        out = BVPResult(sol=sol, success=xopt['success'], message=None,
+                        niter=xopt['nsuperit'])
+
+        return out
 
 
 def _lagrange_to_costates(KKT, num_eoms, nodes, weights):
