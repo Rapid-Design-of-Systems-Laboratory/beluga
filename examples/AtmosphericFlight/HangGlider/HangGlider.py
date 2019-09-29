@@ -50,7 +50,7 @@ ocp.constant('y_f', 900, 'm')
 ocp.constant('vx_f', 13.227, 'm/s')
 ocp.constant('vy_f', -1.287, 'm/s')
 
-ocp.constant('eps', 100, '1')
+ocp.constant('eps', 100, 'm/s')
 
 # Define costs
 ocp.terminal_cost('-x', 'm')
@@ -64,8 +64,9 @@ ocp.constraints() \
     .initial('t', 's') \
     .terminal('y - y_f', 'm') \
     .terminal('vx - vx_f', 'm/s') \
-    .terminal('vy - vy_f', 'm/s') \
-    .path('u', 'rad', lower='CLmin', upper='CLmax', activator='eps', method='epstrig')
+    .terminal('vy - vy_f', 'm/s')
+
+ocp.path_constraint('u', 'rad', lower='CLmin', upper='CLmax', activator='eps', method='epstrig')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 

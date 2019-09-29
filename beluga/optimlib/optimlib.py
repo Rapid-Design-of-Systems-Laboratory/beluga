@@ -310,6 +310,26 @@ class BVP(object):
         self._properties['independent'] = temp
         return self
 
+    def omega(self, omega):
+        r"""
+
+        :param omega:
+        :return:
+        """
+        if not isinstance(omega, sympy.DenseNDimArray):
+            raise ValueError
+
+        self._properties['omega'] = omega
+        return self
+
+    def the_omega(self):
+        r"""
+
+        :return:
+        """
+        temp = self._properties.get('omega', None)
+        return temp
+
 
 def Id(x, _compute_control=None):
     return x
@@ -897,12 +917,12 @@ def F_momentumshift(ocp):
 
     for s in ocp.states():
         s['eom'] *= _tf
-        s['unit'] *= 1#temp_unit
+        s['unit'] *= 1  # temp_unit
 
-    ocp.the_path_cost()['function'] *= _tf
-    ocp.the_path_cost()['unit'] *= ocp._properties['independent']['unit']
+    # ocp.the_path_cost()['function'] *= _tf
+    # ocp.the_path_cost()['unit'] *= 1  # ocp._properties['independent']['unit']
 
-    ocp.independent('_TAU', '1')
+    ocp.independent('_TAU', ocp._properties['independent']['unit'])
     # ocp.constraints().terminal('_TAU - 1', '1')
     def gamma_map(gamma, _compute_control=None):
         if len(gamma.dual_t) == 0:
@@ -975,6 +995,10 @@ def F_EPSTRIG(ocp):
     """
     ocp = copy.deepcopy(ocp)
 
+    set_cost = False
+    if ocp.the_path_cost()['function'] == 0:
+        set_cost = True
+
     the_constraint = ocp.path_constraints()[0]
     f = the_constraint['function']
     lower = the_constraint['lower']
@@ -997,10 +1021,13 @@ def F_EPSTRIG(ocp):
     if activator_unit is None:
         raise Exception('Activator \'' + str(activator) + '\' not found in constants.')
 
-    if ocp.the_path_cost()['unit'] != the_constraint['unit']*activator_unit and ocp.the_path_cost()['function'] != 0:
+    if ocp.the_path_cost()['unit'] != activator_unit and ocp.the_path_cost()['function'] != 0:
         logging.warning('Dimension mismatch in path constraint \'' + str(f) + '\'')
 
     ocp.the_path_cost()['function'] += epstrig_path(f, lower, upper, activator)
+    if set_cost:
+        ocp.the_path_cost()['unit'] = activator_unit
+
     subber = dict(zip([f], [(upper - lower) / 2 * sympy.sin(the_constraint['function']) + (upper + lower) / 2]))
     for ii in range(len(ocp.states())):
         ocp.states()[ii]['eom'] = ocp.states()[ii]['eom'].subs(subber, simultaneous=True)
@@ -1032,17 +1059,33 @@ def F_UTM(ocp):
     :return:
     """
     ocp = copy.deepcopy(ocp)
+    the_constraint = ocp.path_constraints()[0]
+    activator = the_constraint['activator']
+    set_cost = False
+    if ocp.the_path_cost()['function'] == 0:
+        set_cost = True
+
+    activator_unit = None
+    for const in ocp.constants():
+        if activator == const['symbol']:
+            activator_unit = const['unit']
+
+    if activator_unit is None:
+        raise Exception('Activator \'' + str(activator) + '\' not found in constants.')
 
     L_UTM = utm_path(ocp.path_constraints()[0]['function'], ocp.path_constraints()[0]['lower'],
                      ocp.path_constraints()[0]['upper'], ocp.path_constraints()[0]['activator'])
-    ocp._properties['path_cost']['function'] += L_UTM
+    ocp.the_path_cost()['function'] += L_UTM
+    if set_cost:
+        ocp.the_path_cost()['unit'] = activator_unit
+
     del ocp.path_constraints()[0]
     gamma_map = Id
     gamma_map_inverse = Id
     return ocp, gamma_map, gamma_map_inverse
 
 
-def Dualize(ocp, independent_variable, independent_variable_units):
+def Dualize(ocp, method='indirect'):
     r"""
 
     :param ocp:
@@ -1087,7 +1130,7 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     if initial_cost_unit != terminal_cost_unit and (initial_cost != 0) and (terminal_cost != 0):
         raise Exception('Initial and terminal cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(terminal_cost_unit))
 
-    if terminal_cost_unit != path_cost_unit*initial_cost_unit and (terminal_cost != 0) and (path_cost != 0):
+    if terminal_cost_unit != path_cost_unit*independent_variable_units and (terminal_cost != 0) and (path_cost != 0):
         raise Exception('Terminal and path cost units mismatch: ' + str(terminal_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
 
     if initial_cost != 0:
@@ -1106,10 +1149,26 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     hamiltonian_function, hamiltonian_units, costates, costates_units = \
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_unit)
 
-    costates_rates = make_costate_rates(hamiltonian_function, states, costates, total_derivative)
+    bvp = BVP()
+
+    if method == 'indirect':
+        costates_rates = make_costate_rates(hamiltonian_function, states, costates, total_derivative)
+    elif method == 'diffyg':
+        omega = make_standard_symplectic_form(states, costates)
+        ocp.omega(omega)
+        X_H = make_hamiltonian_vector_field(hamiltonian_function, omega, states + costates, total_derivative)
+        n = len(states)
+        costates_rates = X_H[-n:]
+        bvp.omega(omega)
+
+    for ii, s in enumerate(states + costates):
+        _eom = (states_rates + costates_rates)[ii]
+        _unit = (states_units + costates_units)[ii]
+        bvp.state(s, _eom, _unit)
+
     coparameters = make_costate_names(parameters)
-    coparameters_rates = make_costate_rates(hamiltonian_function, parameters, coparameters, total_derivative)
     coparameters_units = [cost_unit / parameter_units for parameter_units in parameters_units]
+    coparameters_rates = make_costate_rates(hamiltonian_function, parameters, coparameters, total_derivative)
 
     d = []
     for ii in range(len(coparameters)):
@@ -1133,28 +1192,11 @@ def Dualize(ocp, independent_variable, independent_variable_units):
     constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
 
     # TODO: Figure this time BC nonsense out. Why do I have to divide by the independent units for convergence??
-    time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)/ocp.parameters()[-1]['symbol']
+    # time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)/ocp.parameters()[-1]['symbol']
+    time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
 
     if time_bc is not None:
         terminal_bc += [time_bc]
-
-    def gamma_map(gamma, _compute_control=None):
-        gamma = copy.deepcopy(gamma)
-        gamma.y = np.column_stack((gamma.y, gamma.dual))
-        gamma.dual = np.array([])
-        gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(len(initial_lm_params + terminal_lm_params))))
-        return gamma
-
-    def gamma_map_inverse(gamma, _compute_control=None, n=n_states):
-        gamma.dual = gamma.y[:, -n:]
-        gamma.y = gamma.y[:, :n]
-        return gamma
-
-    bvp = BVP()
-    for ii, s in enumerate(states + costates):
-        _eom = (states_rates + costates_rates)[ii]
-        _unit = (states_units + costates_units)[ii]
-        bvp.state(s, _eom, _unit)
 
     bvp.constant_of_motion('hamiltonian', hamiltonian_function, hamiltonian_units)
 
@@ -1178,6 +1220,18 @@ def Dualize(ocp, independent_variable, independent_variable_units):
         bvp.nd_parameter(s, _unit)
 
     bvp.independent(independent_variable, independent_variable_units)
+
+    def gamma_map(gamma, _compute_control=None):
+        gamma = copy.deepcopy(gamma)
+        gamma.y = np.column_stack((gamma.y, gamma.dual))
+        gamma.dual = np.array([])
+        gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(len(initial_lm_params + terminal_lm_params))))
+        return gamma
+
+    def gamma_map_inverse(gamma, _compute_control=None, n=n_states):
+        gamma.dual = gamma.y[:, -n:]
+        gamma.y = gamma.y[:, :n]
+        return gamma
 
     return bvp, gamma_map, gamma_map_inverse
 
@@ -1210,7 +1264,7 @@ def F_PMP(bvp):
     return bvp, gamma_map, gamma_map_inverse
 
 
-def F_ICRM(bvp):
+def F_ICRM(bvp, method='indirect'):
     r"""
 
     :param bvp:
@@ -1238,9 +1292,45 @@ def F_ICRM(bvp):
     dae_states = U
     dae_equations = list(udot)
     dae_bc = g
+    n_dae = len(dae_states)
 
-    for ii, s in enumerate(dae_states):
-        bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
+    if method == 'indirect':
+        for ii, s in enumerate(dae_states):
+            bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
+
+    elif method == 'diffyg':
+        cost_unit = bvp.constants_of_motion()[0]['unit']
+        controls_unit = [u['unit'] for u in bvp.controls()]
+        lamU = make_costate_names(dae_states)
+        lamU_units = [cost_unit / unit for unit in controls_unit]
+        omega = bvp.the_omega()
+        _u = []
+        _lamu = []
+        for ii in range(len(dae_states)):
+            _u += [{'symbol': dae_states[ii], 'eom': dae_equations[ii], 'unit': bvp.controls()[ii]['unit']}]
+            _lamu += [{'symbol': lamU[ii], 'eom': '0', 'unit': lamU_units[ii]}]
+
+        bvp._properties['states'] = bvp.states()[:int(n_states/2)] + _u + bvp.states()[-int(n_states/2):] + _lamu
+        n = len(bvp.states())
+        omega_new = make_standard_symplectic_form(bvp.states()[:int(n/2)], bvp.states()[-int(n/2):])
+        independent_index = int(n_states/2) - 1
+        nhalf = int(len(bvp.states())/2)
+        # Add (du - u' dt) ^ (dlamU - 0 dt) to omega
+        for ii, u in enumerate(dae_equations):
+            omega_new[int(nhalf - n_dae + ii), int(2 * nhalf - n_dae + ii)] = 1
+            omega_new[int(2 * nhalf - n_dae + ii), int(nhalf - n_dae + ii)] = -1
+            omega_new[independent_index, int(2 * nhalf - n_dae + ii)] = -dae_equations[ii]
+            omega_new[int(2 * nhalf - n_dae + ii), independent_index] = dae_equations[ii]
+
+        bvp.omega(omega_new)
+        basis = [x['symbol'] for x in bvp.states()]
+        X_H = make_hamiltonian_vector_field(bvp.constants_of_motion()[0]['function'], bvp.the_omega(), basis, total_derivative)
+
+        for ii, s in enumerate(bvp.states()):
+            s['eom'] = X_H[ii]
+
+        for ii, lU in enumerate(lamU):
+            bvp.initial_bc(lU)
 
     for ii, s in enumerate(dae_bc):
         bvp.terminal_bc(s)
@@ -1248,15 +1338,19 @@ def F_ICRM(bvp):
     del bvp._properties['controls']
     bvp._control_law = []
 
-    def gamma_map(gamma, _compute_control=None, n=n_states, m=n_controls):
+    def gamma_map(gamma, _compute_control=None, n=n_states, m=n_controls, method=method):
         gamma = copy.deepcopy(gamma)
         if len(gamma.dual_u) == 0:
             gamma.dual_u = np.zeros_like(gamma.u)
-        gamma.y = np.column_stack((gamma.y, gamma.u))
+
+        if method == 'indirect':
+            gamma.y = np.column_stack((gamma.y, gamma.u))
+        elif method == 'diffyg':
+            gamma.y = np.column_stack((gamma.y[:,:int(n/2)], gamma.u, gamma.y[:,-int(n/2):], gamma.dual_u))
         gamma.u = np.array([]).reshape((n, 0))
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None, n=n_states, m=n_controls):
+    def gamma_map_inverse(gamma, _compute_control=None, n=n_states, m=n_controls, method=method):
         gamma = copy.deepcopy(gamma)
         gamma.u = gamma.y[:, -m:]
         gamma.y = np.delete(gamma.y, np.s_[-m:], axis=1)

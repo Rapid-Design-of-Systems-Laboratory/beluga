@@ -101,12 +101,22 @@ class OCP(BVP):
         self._properties[cost_type+'_cost'] = {'expr': expr, 'unit': unit}
 
     def independent(self, symbol, unit):
-        if not isinstance(symbol, str):
+        r"""
+
+        :param symbol:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+        if not isinstance(symbol, Symbol):
             raise ValueError
-        if not isinstance(unit, str):
+        if not isinstance(unit, Expr):
             raise ValueError
 
-        temp = {'symbol': Symbol(symbol), 'unit': sympify(unit)}
+        temp = {'symbol': symbol, 'unit': unit}
         self._properties['independent'] = temp
         return self
 

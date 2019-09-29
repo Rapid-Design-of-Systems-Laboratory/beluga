@@ -24,15 +24,14 @@ def ocp_to_bvp(ocp, **kwargs):
     analytical_jacobian = kwargs.get('analytical_jacobian', False)
     control_method = kwargs.get('control_method', 'pmp').lower()
 
-    independent_var = ocp._properties['independent']['symbol']
-    independent_var_units = ocp._properties['independent']['unit']
-
+    """
+    Make time a state.
+    """
     ocp, gam, gam_inv = F_momentumshift(ocp)
     signature = 'F_momentumshift . ' + signature
     cat_chain += [ocp]
     gamma_map_chain += [gam]
     gamma_map_inverse_chain += [gam_inv]
-    independent_index = len(ocp.states()) - 1
 
     """
     Deal with path constraints
@@ -71,7 +70,7 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Dualize the problem.
     """
-    bvp, gam, gam_inv = Dualize(ocp, independent_var, independent_var_units)
+    bvp, gam, gam_inv = Dualize(ocp, method='indirect')
     signature = 'D . ' + signature
     cat_chain += [bvp]
     gamma_map_chain += [gam]
@@ -88,7 +87,7 @@ def ocp_to_bvp(ocp, **kwargs):
         gamma_map_inverse_chain += [gam_inv]
 
     elif control_method.upper() == 'ICRM':
-        bvp, gam, gam_inv = F_ICRM(bvp)
+        bvp, gam, gam_inv = F_ICRM(bvp, method='indirect')
         signature = 'F_ICRM . ' + signature
         cat_chain += [bvp]
         gamma_map_chain += [gam]

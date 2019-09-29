@@ -40,9 +40,10 @@ ocp.constraints() \
     .initial('x1 - x1_0', '1') \
     .initial('x2 - x2_0', '1') \
     .initial('t', 's') \
-    .path('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='epstrig') \
     .terminal('x1 - x1_f', '1')   \
     .terminal('x2 - x2_f', '1')
+
+ocp.path_constraint('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='epstrig')
 
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
