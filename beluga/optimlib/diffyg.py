@@ -240,8 +240,8 @@ def ocp_to_bvp(ocp, **kwargs):
     # hamiltonian = hamiltonian*tf
     if not is_symplectic(omega):
         logging.warning('Hamiltonian BVP improperly formed!')
-
-    X_H = make_hamiltonian_vector_field(hamiltonian, omega, states + costates, derivative_fn)
+    basis = states + costates
+    X_H = make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn)
 
     """
     Dualization complete
@@ -251,7 +251,7 @@ def ocp_to_bvp(ocp, **kwargs):
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')
 
-        df_dy = [['0' for f in X_H] for s in states + costates]
+        df_dy = [['0' for f in X_H] for s in basis]
         for ii, f in enumerate(X_H):
             for jj, s in enumerate(states + costates):
                 df_dy[ii][jj] = str(derivative_fn(f, s))
@@ -261,14 +261,14 @@ def ocp_to_bvp(ocp, **kwargs):
             for jj, s in enumerate(dynamical_parameters):
                 df_dp[ii][jj] = str(derivative_fn(f, s))
 
-        dbc_dya = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
+        dbc_dya = [['0' for s in basis] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_initial):
-            for jj, s in enumerate(states + costates + dae_states):
+            for jj, s in enumerate(basis):
                 dbc_dya[ii][jj] = str(derivative_fn(f, s))
 
-        dbc_dyb = [['0' for s in states + costates + dae_states] for f in bc_initial + bc_terminal]
+        dbc_dyb = [['0' for s in basis] for f in bc_initial + bc_terminal]
         for ii, f in enumerate(bc_terminal):
-            for jj, s in enumerate(states + costates + dae_states):
+            for jj, s in enumerate(basis):
                 dbc_dyb[ii + len(bc_initial)][jj] = str(derivative_fn(f, s))
 
         dbc_dp_a = [['0' for s in dynamical_parameters + nondynamical_parameters] for f in bc_initial + bc_terminal]
