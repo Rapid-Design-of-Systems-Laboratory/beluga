@@ -45,8 +45,8 @@ bvp_solver = beluga.bvp_algorithm('spbvp')
 guess_maker = beluga.guess_generator('auto',
                                      start=[20, -2.5],          # Starting values for states in order
                                      costate_guess = -0.1,
-                                     control_guess=[2],
-                                     use_control_guess=False)
+                                     control_guess=[0],
+                                     use_control_guess=True)
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 

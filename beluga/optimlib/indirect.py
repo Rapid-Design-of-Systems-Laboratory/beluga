@@ -16,7 +16,7 @@ def ocp_to_bvp(ocp, **kwargs):
     :param ocp: An OCP.
     :return: bvp, map, map_inverse
     """
-    signature = 'Sigma'
+    signature = 'Id'
     cat_chain = [ocp]
     gamma_map_chain = []
     gamma_map_inverse_chain = []
@@ -155,7 +155,7 @@ def ocp_to_bvp(ocp, **kwargs):
         dbc_dp_a = None
         dbc_dp_b = None
 
-    logging.info('Problem formulation: Lambda := ' + signature)
+    logging.info('Problem formulation: Lambda := (' + signature + ')(Sigma)')
 
     dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
 

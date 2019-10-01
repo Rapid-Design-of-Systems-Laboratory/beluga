@@ -224,11 +224,12 @@ class BVP(object):
         """
         return self.initial_bcs() + self.terminal_bcs()
 
-    def parameter(self, symbol, unit):
+    def parameter(self, symbol, unit, noquad=False):
         r"""
 
         :param symbol:
         :param unit:
+        :param noquad:
         :return:
         """
         if isinstance(symbol, str):
@@ -240,9 +241,11 @@ class BVP(object):
             raise TypeError
         if not isinstance(unit, Expr):
             raise TypeError
+        if not isinstance(noquad, bool):
+            raise TypeError
 
         temp = self._properties.get('parameters', [])
-        temp.append({'symbol': symbol, 'unit': unit})
+        temp.append({'symbol': symbol, 'unit': unit, 'noquad': noquad})
         self._properties['parameters'] = temp
         return self
 
@@ -348,25 +351,27 @@ def init_workspace(ocp):
 
     workspace = dict()
     workspace['problem_name'] = ocp.name
-    workspace['independent_var'] = Symbol(ocp._properties['independent']['name'])
-    workspace['independent_var_units'] = sympify(ocp._properties['independent']['unit'])
-    workspace['states'] = [Symbol(s['name']) for s in ocp.states()]
-    workspace['states_rates'] = [sympify(s['eom']) for s in ocp.states()]
-    workspace['states_units'] = [sympify(s['unit']) for s in ocp.states()]
-    workspace['controls'] = [Symbol(u['name']) for u in ocp.controls()]
-    workspace['controls_units'] = [sympify(u['unit']) for u in ocp.controls()]
-    workspace['constants'] = [Symbol(k['name']) for k in ocp.constants()]
+    workspace['independent_var'] = ocp._properties['independent']['symbol']
+    workspace['independent_var_units'] = ocp._properties['independent']['unit']
+    workspace['states'] = [s['symbol'] for s in ocp.states()]
+    workspace['states_rates'] = [s['eom'] for s in ocp.states()]
+    workspace['states_units'] = [s['unit'] for s in ocp.states()]
+    workspace['controls'] = [u['symbol'] for u in ocp.controls()]
+    workspace['controls_units'] = [u['unit'] for u in ocp.controls()]
+    workspace['constants'] = [k['symbol'] for k in ocp.constants()]
     workspace['constants_values'] = [k['value'] for k in ocp.constants()]
-    workspace['constants_units'] = [sympify(k['unit']) for k in ocp.constants()]
-    workspace['constants_of_motion'] = [Symbol(k['name']) for k in ocp.constants_of_motion()]
-    workspace['constants_of_motion_values'] = [sympify(k['function']) for k in ocp.constants_of_motion()]
-    workspace['constants_of_motion_units'] = [sympify(k['unit']) for k in ocp.constants_of_motion()]
-    workspace['symmetries'] = [sympify(k['function']) for k in ocp.symmetries()]
-    workspace['parameters'] = [sympify(k['name']) for k in ocp.parameters()]
-    workspace['parameters_units'] = [sympify(k['unit']) for k in ocp.parameters()]
+    workspace['constants_units'] = [k['unit'] for k in ocp.constants()]
+    workspace['constants_of_motion'] = [k['name'] for k in ocp.constants_of_motion()]
+    workspace['constants_of_motion_values'] = [k['function'] for k in ocp.constants_of_motion()]
+    workspace['constants_of_motion_units'] = [k['unit'] for k in ocp.constants_of_motion()]
+    workspace['symmetries'] = [k['function'] for k in ocp.symmetries()]
+    workspace['parameters'] = [k['name'] for k in ocp.parameters()]
+    workspace['parameters_units'] = [k['unit'] for k in ocp.parameters()]
 
     constraints = ocp.constraints()
-    workspace['constraints'] = {c_type: [sympify(c_obj['expr']) for c_obj in c_list]
+    constraints['path'] = ocp.path_constraints()
+
+    workspace['constraints'] = {c_type: [sympify(c_obj['function']) for c_obj in c_list]
                                 for c_type, c_list in constraints.items()}
 
     workspace['constraints_units'] = {c_type: [sympify(c_obj['unit']) for c_obj in c_list]
@@ -398,7 +403,7 @@ def init_workspace(ocp):
         workspace['constraints_lower']['path'] = []
         workspace['constraints_upper']['path'] = []
 
-    workspace['path_constraints'] = [sympify(c_obj['expr']) for c_obj in constraints.get('path', [])]
+    workspace['path_constraints'] = [sympify(c_obj['function']) for c_obj in constraints.get('path', [])]
     workspace['switches'] = []
     workspace['switches_values'] = []
     workspace['switches_conditions'] = []
@@ -419,12 +424,12 @@ def init_workspace(ocp):
             workspace['switches_conditions'] += [None]
             workspace['switches_tolerance'] += [None]
 
-    workspace['initial_cost'] = sympify(ocp.get_cost('initial')['expr'])
-    workspace['initial_cost_units'] = sympify(ocp.get_cost('initial')['unit'])
-    workspace['terminal_cost'] = sympify(ocp.get_cost('terminal')['expr'])
-    workspace['terminal_cost_units'] = sympify(ocp.get_cost('terminal')['unit'])
-    workspace['path_cost'] = sympify(ocp.get_cost('path')['expr'])
-    workspace['path_cost_units'] = sympify(ocp.get_cost('path')['unit'])
+    workspace['initial_cost'] = ocp.get_cost('initial')['function']
+    workspace['initial_cost_units'] = ocp.get_cost('initial')['unit']
+    workspace['terminal_cost'] = ocp.get_cost('terminal')['function']
+    workspace['terminal_cost_units'] = ocp.get_cost('terminal')['unit']
+    workspace['path_cost'] = ocp.get_cost('path')['function']
+    workspace['path_cost_units'] = ocp.get_cost('path')['unit']
     return workspace
 
 
@@ -919,7 +924,7 @@ def F_momentumshift(ocp):
         s['eom'] *= _tf
         s['unit'] *= 1  # temp_unit
 
-    # ocp.the_path_cost()['function'] *= _tf
+    ocp.the_path_cost()['function'] *= _tf
     # ocp.the_path_cost()['unit'] *= 1  # ocp._properties['independent']['unit']
 
     ocp.independent('_TAU', ocp._properties['independent']['unit'])
@@ -1175,9 +1180,9 @@ def Dualize(ocp, method='indirect'):
         if ocp.parameters()[ii]['noquad'] is True:
             d += [ii]
 
-    del coparameters[ii]
-    del coparameters_rates[ii]
-    del coparameters_units[ii]
+    coparameters = [p for ii, p in enumerate(coparameters) if ii not in d]
+    coparameters_rates = [p for ii, p in enumerate(coparameters_rates) if ii not in d]
+    coparameters_units = [p for ii, p in enumerate(coparameters_units) if ii not in d]
 
     initial_bc = make_boundary_conditions(
         constraints, states, costates, parameters, coparameters,
@@ -1191,9 +1196,9 @@ def Dualize(ocp, method='indirect'):
     terminal_bc += [bc[0] for bc in terminal_bcs_time]
     constraints_units['terminal'] += [bc[1] for bc in terminal_bcs_time]
 
-    # TODO: Figure this time BC nonsense out. Why do I have to divide by the independent units for convergence??
-    # time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)/ocp.parameters()[-1]['symbol']
+    # TODO: Hardcoded handling of time bc. I should fix this sometime.
     time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
+    time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol'])
 
     if time_bc is not None:
         terminal_bc += [time_bc]

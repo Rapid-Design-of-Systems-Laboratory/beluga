@@ -120,24 +120,6 @@ class OCP(BVP):
         self._properties['independent'] = temp
         return self
 
-    def parameter(self, symbol, unit, noquad=False):
-        if isinstance(symbol, str):
-            symbol = Symbol(symbol)
-        if isinstance(unit, str):
-            unit = sympify(unit)
-
-        if not isinstance(symbol, Symbol):
-            raise TypeError
-        if not isinstance(unit, Expr):
-            raise TypeError
-        if not isinstance(noquad, bool):
-            raise TypeError
-
-        temp = self._properties.get('parameters', [])
-        temp.append({'symbol': symbol, 'unit': unit, 'noquad': noquad})
-        self._properties['parameters'] = temp
-        return self
-
     def control(self, symbol, unit):
         if not isinstance(symbol, str):
             raise ValueError

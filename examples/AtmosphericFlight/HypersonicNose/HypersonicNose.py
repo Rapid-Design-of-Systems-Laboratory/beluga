@@ -31,9 +31,10 @@ ocp.path_cost('4*r*u**3/(1+u**2)', 'm')
 ocp.constraints() \
     .initial('r - r_0', 'm') \
     .initial('l - 0', 'm') \
-    .path('u', 'm/s', lower='-5', upper='5', method='utm', activator='eps1') \
     .terminal('r', 'm') \
     .terminal('l - 2', 'm')
+
+ocp.path_constraint('u', 'm/s', lower='-5', upper='5', method='utm', activator='eps1')
 
 ocp.scale(m='x', rad=1)
 
@@ -48,7 +49,7 @@ continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10, 'log') \
-                .const('eps1', 1e-1)
+                .const('eps1', 2e-1)
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
@@ -56,7 +57,7 @@ bvp_solver = beluga.bvp_algorithm('spbvp')
 
 beluga.solve(ocp=ocp,
              method='indirect',
-             optim_options={'control_method': 'icrm'},
+             optim_options={'control_method': 'icrm', 'analytical_jacobian': True},
              bvp_algorithm=bvp_solver,
              steps=continuation_steps,
              guess_generator=guess_maker,
