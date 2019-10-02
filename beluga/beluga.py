@@ -78,12 +78,13 @@ def ocp2bvp(ocp, **kwargs):
 
     method = kwargs.get('method', 'indirect').lower()
     optim_options = kwargs.get('optim_options', dict())
+    optim_options.update({'method': method})
 
     logging.debug("Computing the necessary conditions of optimality")
-    if method == 'indirect' or method == 'traditional' or method == 'brysonho':
+    if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
         bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
-    elif method == 'diffyg':
-        bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp, **optim_options)
+    # elif method == 'diffyg':
+    #     bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp, **optim_options)
     elif method == 'diffyg_deprecated':
         bvp_raw, _map, _map_inverse = DIFFYG_DEP_ocp_to_bvp(ocp, **optim_options)
     elif method == 'direct':

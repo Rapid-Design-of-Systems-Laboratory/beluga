@@ -23,6 +23,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     analytical_jacobian = kwargs.get('analytical_jacobian', False)
     control_method = kwargs.get('control_method', 'pmp').lower()
+    method = kwargs.get('method', 'indirect').lower()
 
     """
     Make time a state.
@@ -70,7 +71,7 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Dualize the problem.
     """
-    bvp, gam, gam_inv = Dualize(ocp, method='indirect')
+    bvp, gam, gam_inv = Dualize(ocp, method=method)
     signature = 'D . ' + signature
     cat_chain += [bvp]
     gamma_map_chain += [gam]
@@ -87,13 +88,14 @@ def ocp_to_bvp(ocp, **kwargs):
         gamma_map_inverse_chain += [gam_inv]
 
     elif control_method.upper() == 'ICRM':
-        bvp, gam, gam_inv = F_ICRM(bvp, method='indirect')
+        bvp, gam, gam_inv = F_ICRM(bvp, method=method)
         signature = 'F_ICRM . ' + signature
         cat_chain += [bvp]
         gamma_map_chain += [gam]
         gamma_map_inverse_chain += [gam_inv]
 
     elif control_method.upper() == 'NUMERICAL':
+        raise NotImplementedError
         dae_states = []
         dae_rates = []
         dae_units = []
@@ -102,17 +104,6 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise NotImplementedError('Unknown control method \"' + control_method + '\"')
 
-    # Generate the problem data
-    # TODO: We're not handling time well. This is hardcoded.
-    # bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
-    # dynamical_parameters = parameters + [tf]
-    # dynamical_parameters_units = parameters_units + [independent_variable_units]
-    # nondynamical_parameters = initial_lm_params + terminal_lm_params
-    # nondynamical_parameters_units = initial_lm_params_units + terminal_lm_params_units
-
-    # states_rates = [tf*f for f in states_rates]
-    # costates_rates = [tf*f for f in costates_rates]
-    # dae_rates = [tf*f for f in dae_rates]
     if analytical_jacobian:
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')

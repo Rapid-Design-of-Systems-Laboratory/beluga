@@ -361,7 +361,7 @@ def init_workspace(ocp):
     workspace['constants'] = [k['symbol'] for k in ocp.constants()]
     workspace['constants_values'] = [k['value'] for k in ocp.constants()]
     workspace['constants_units'] = [k['unit'] for k in ocp.constants()]
-    workspace['constants_of_motion'] = [k['name'] for k in ocp.constants_of_motion()]
+    workspace['constants_of_motion'] = [k['symbol'] for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_values'] = [k['function'] for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_units'] = [k['unit'] for k in ocp.constants_of_motion()]
     workspace['symmetries'] = [k['function'] for k in ocp.symmetries()]
@@ -946,7 +946,9 @@ def F_momentumshift(ocp):
 
     def gamma_map_inverse(gamma, _compute_control=None):
         gamma.t = gamma.y[:, -1]
+        gamma.dual_t = gamma.dual[:, -1]
         gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
+        gamma.dual = np.delete(gamma.dual, np.s_[-1:], axis=1)
         gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
         return gamma
 
@@ -1226,16 +1228,18 @@ def Dualize(ocp, method='indirect'):
 
     bvp.independent(independent_variable, independent_variable_units)
 
-    def gamma_map(gamma, _compute_control=None):
+    def gamma_map(gamma, _compute_control=None, ndp=len(initial_lm_params + terminal_lm_params)):
         gamma = copy.deepcopy(gamma)
         gamma.y = np.column_stack((gamma.y, gamma.dual))
         gamma.dual = np.array([])
-        gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(len(initial_lm_params + terminal_lm_params))))
+        gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(ndp)))
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None, n=n_states):
+    def gamma_map_inverse(gamma, _compute_control=None, n=n_states, ndp=len(initial_lm_params + terminal_lm_params)):
+        gamma = copy.deepcopy(gamma)
         gamma.dual = gamma.y[:, -n:]
         gamma.y = gamma.y[:, :n]
+        gamma.nondynamical_parameters = gamma.nondynamical_parameters[:-ndp]
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
@@ -1252,6 +1256,7 @@ def F_PMP(bvp):
     dHdu = make_dhdu(bvp.constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
     control_law = make_control_law(dHdu, [u['symbol'] for u in bvp.controls()])
     bvp._control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
+
     def gamma_map(gamma, _compute_control=None):
         gamma = copy.deepcopy(gamma)
         return gamma
@@ -1300,8 +1305,14 @@ def F_ICRM(bvp, method='indirect'):
     n_dae = len(dae_states)
 
     if method == 'indirect':
+        states_old = bvp.states()
+        n = int(len(states_old)/2)
+        states_new = states_old[:n]
         for ii, s in enumerate(dae_states):
-            bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
+            states_new.append({'symbol': s, 'eom': dae_equations[ii], 'unit': bvp._properties['controls'][ii]['unit']})
+            # bvp.state(s, dae_equations[ii], bvp._properties['controls'][ii]['unit'])
+        states_new += states_old[-n:]
+        bvp._properties['states'] = states_new
 
     elif method == 'diffyg':
         cost_unit = bvp.constants_of_motion()[0]['unit']
@@ -1349,16 +1360,25 @@ def F_ICRM(bvp, method='indirect'):
             gamma.dual_u = np.zeros_like(gamma.u)
 
         if method == 'indirect':
-            gamma.y = np.column_stack((gamma.y, gamma.u))
+            gamma.y = np.column_stack((gamma.y[:, :int(n / 2)], gamma.u, gamma.y[:, -int(n / 2):]))
         elif method == 'diffyg':
-            gamma.y = np.column_stack((gamma.y[:,:int(n/2)], gamma.u, gamma.y[:,-int(n/2):], gamma.dual_u))
+            gamma.y = np.column_stack((gamma.y[:, :int(n / 2)], gamma.u, gamma.y[:, -int(n / 2):], gamma.dual_u))
         gamma.u = np.array([]).reshape((n, 0))
         return gamma
 
     def gamma_map_inverse(gamma, _compute_control=None, n=n_states, m=n_controls, method=method):
         gamma = copy.deepcopy(gamma)
-        gamma.u = gamma.y[:, -m:]
-        gamma.y = np.delete(gamma.y, np.s_[-m:], axis=1)
+        if method == 'indirect':
+            y1h = gamma.y[:, :int(n / 2)]
+            gamma.u = gamma.y[:, int(n / 2):int(n / 2)+m]
+            y2h = gamma.y[:, int(n/2)+m:n+m]
+            gamma.y = np.hstack((y1h, y2h))
+        elif method == 'diffyg':
+            y1h = gamma.y[:, :int(n / 2)]
+            gamma.u = gamma.y[:, int(n / 2):int(n / 2) + m]
+            y2h = gamma.y[:, int(n / 2) + m:n + m]
+            gamma.dual_u = gamma.y[:, -m:]
+            gamma.y = np.hstack((y1h, y2h))
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
