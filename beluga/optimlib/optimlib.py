@@ -860,6 +860,9 @@ def is_symplectic(form):
     :param form: A form.
     :return: Boolean representing if a form is symplectic or not.
     """
+    if form is None:
+        return False
+
     if len(form.shape) != 2:
         return False
 
@@ -1200,7 +1203,8 @@ def Dualize(ocp, method='indirect'):
 
     # TODO: Hardcoded handling of time bc. I should fix this sometime.
     time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
-    time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol'])
+    if method.lower() == 'diffyg':
+        time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol']) + 1
 
     if time_bc is not None:
         terminal_bc += [time_bc]
@@ -1335,8 +1339,8 @@ def F_ICRM(bvp, method='indirect'):
         for ii, u in enumerate(dae_equations):
             omega_new[int(nhalf - n_dae + ii), int(2 * nhalf - n_dae + ii)] = 1
             omega_new[int(2 * nhalf - n_dae + ii), int(nhalf - n_dae + ii)] = -1
-            omega_new[independent_index, int(2 * nhalf - n_dae + ii)] = -dae_equations[ii]
-            omega_new[int(2 * nhalf - n_dae + ii), independent_index] = dae_equations[ii]
+            omega_new[independent_index, int(2 * nhalf - n_dae + ii)] = -dae_equations[ii]/bvp.parameters()[0]['symbol']
+            omega_new[int(2 * nhalf - n_dae + ii), independent_index] = dae_equations[ii]/bvp.parameters()[0]['symbol']
 
         bvp.omega(omega_new)
         basis = [x['symbol'] for x in bvp.states()]

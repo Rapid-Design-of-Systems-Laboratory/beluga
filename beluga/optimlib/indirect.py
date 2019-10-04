@@ -16,7 +16,7 @@ def ocp_to_bvp(ocp, **kwargs):
     :param ocp: An OCP.
     :return: bvp, map, map_inverse
     """
-    signature = 'Id'
+    signature = []
     cat_chain = [ocp]
     gamma_map_chain = []
     gamma_map_inverse_chain = []
@@ -29,7 +29,7 @@ def ocp_to_bvp(ocp, **kwargs):
     Make time a state.
     """
     ocp, gam, gam_inv = F_momentumshift(ocp)
-    signature = 'F_momentumshift . ' + signature
+    signature += ['F_momentumshift']
     cat_chain += [ocp]
     gamma_map_chain += [gam]
     gamma_map_inverse_chain += [gam_inv]
@@ -43,14 +43,14 @@ def ocp_to_bvp(ocp, **kwargs):
 
         elif ocp.path_constraints()[0]['method'].upper() == 'UTM':
             ocp, gam, gam_inv = F_UTM(ocp)
-            signature = 'F_UTM . ' + signature
+            signature += ['F_UTM']
             cat_chain += [ocp]
             gamma_map_chain += [gam]
             gamma_map_inverse_chain += [gam_inv]
 
         elif ocp.path_constraints()[0]['method'].upper() == 'EPSTRIG':
             ocp, gam, gam_inv = F_EPSTRIG(ocp)
-            signature = 'F_EPSTRIG . ' + signature
+            signature += ['F_EPSTRIG']
             cat_chain += [ocp]
             gamma_map_chain += [gam]
             gamma_map_inverse_chain += [gam_inv]
@@ -63,7 +63,7 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     if len(ocp.switches()) > 0:
         ocp, gam, gam_inv = F_RASHS(ocp)
-        signature = 'F_RASHS . ' + signature
+        signature += ['F_RASHS']
         cat_chain += [ocp]
         gamma_map_chain += [gam]
         gamma_map_inverse_chain += [gam_inv]
@@ -72,7 +72,7 @@ def ocp_to_bvp(ocp, **kwargs):
     Dualize the problem.
     """
     bvp, gam, gam_inv = Dualize(ocp, method=method)
-    signature = 'D . ' + signature
+    signature += ['D_' + method]
     cat_chain += [bvp]
     gamma_map_chain += [gam]
     gamma_map_inverse_chain += [gam_inv]
@@ -82,14 +82,17 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     if control_method.upper() == 'PMP':
         bvp, gam, gam_inv = F_PMP(bvp)
-        signature = 'F_PMP . ' + signature
+        signature += ['F_PMP']
         cat_chain += [bvp]
         gamma_map_chain += [gam]
         gamma_map_inverse_chain += [gam_inv]
 
     elif control_method.upper() == 'ICRM':
         bvp, gam, gam_inv = F_ICRM(bvp, method=method)
-        signature = 'F_ICRM . ' + signature
+        if method.lower() == 'diffyg':
+            signature += ['F_SymplecticICRM']
+        else:
+            signature += ['F_ICRM']
         cat_chain += [bvp]
         gamma_map_chain += [gam]
         gamma_map_inverse_chain += [gam_inv]
@@ -146,7 +149,10 @@ def ocp_to_bvp(ocp, **kwargs):
         dbc_dp_a = None
         dbc_dp_b = None
 
-    logging.info('Problem formulation: Lambda := (' + signature + ')(Sigma)')
+    logging.debug('Problem formulation: Lambda := (' + ' . '.join(reversed(signature)) + ')(Sigma)')
+
+    if not is_symplectic(bvp.the_omega()):
+        logging.warning('BVP is not symplectic.')
 
     dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
 
