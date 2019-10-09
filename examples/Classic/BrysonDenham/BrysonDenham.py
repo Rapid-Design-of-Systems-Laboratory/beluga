@@ -22,7 +22,7 @@ ocp.constant('x_f', 0, 'm')
 ocp.constant('v_0', 1, 'm')
 ocp.constant('v_f', -1, 'm')
 ocp.constant('epsilon1', 10, 'rad**2')
-ocp.constant('x_max', 0.1, 'm')
+ocp.constant('x_max', 0.3, 'm')
 
 # Define costs
 ocp.path_cost('u**2', 'rad**2')
@@ -40,17 +40,7 @@ ocp.path_constraint('x', 'm', lower='-x_max', upper='x_max', activator='epsilon1
 
 ocp.scale(m='x', s='x/v', kg=1, rad=1, nd=1)
 
-bvp_solver_direct = beluga.bvp_algorithm('Pseudospectral', number_of_nodes=20)
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
-
-guess_maker_direct = beluga.guess_generator(
-    'ones',
-    start=[0, 0],
-    costate_guess=0,
-    control_guess=[0],
-    use_control_guess=True,
-    time_integrate=0.1
-)
 
 guess_maker_indirect = beluga.guess_generator(
     'auto',
@@ -64,18 +54,6 @@ guess_maker_indirect = beluga.guess_generator(
 
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
-
-sol_set_direct = beluga.solve(
-    ocp=ocp,
-    method='direct',
-    bvp_algorithm=bvp_solver_direct,
-    steps=None,
-    guess_generator=guess_maker_direct,
-    autoscale=False,
-    save='direct_data.blg')
-
-del ocp.constants()[-1]
-ocp.constant('x_max', 0.3, 'm')
 
 continuation_steps = beluga.init_continuation()
 

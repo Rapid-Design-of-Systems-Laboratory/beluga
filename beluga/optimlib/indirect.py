@@ -107,6 +107,15 @@ def ocp_to_bvp(ocp, **kwargs):
     else:
         raise NotImplementedError('Unknown control method \"' + control_method + '\"')
 
+    """
+    Scale the EOMs to final time.
+    """
+    bvp, gam, gam_inv = F_scaletime(bvp)
+    signature += ['F_momentumshift']
+    cat_chain += [bvp]
+    gamma_map_chain += [gam]
+    gamma_map_inverse_chain += [gam_inv]
+
     if analytical_jacobian:
         if control_method == 'pmp':
             raise NotImplementedError('Analytical Jacobian calculation is not implemented for PMP control method.')

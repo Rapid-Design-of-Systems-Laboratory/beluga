@@ -917,17 +917,15 @@ def F_momentumshift(ocp):
     """
     ocp = copy.deepcopy(ocp)
 
-    temp_unit = ocp._properties['independent']['unit']
-    ocp = copy.deepcopy(ocp)
-    _tf = Symbol('_tf')
+    # _tf = Symbol('_tf')
     ocp.state(str(ocp._properties['independent']['symbol']), '1', str(ocp._properties['independent']['unit']))
-    ocp.parameter(_tf, ocp._properties['independent']['unit'], noquad=True)
+    # ocp.parameter(_tf, ocp._properties['independent']['unit'], noquad=True)
 
-    for s in ocp.states():
-        s['eom'] *= _tf
-        s['unit'] *= 1  # temp_unit
+    # for s in ocp.states():
+    #     s['eom'] *= _tf
+    #     s['unit'] *= 1  # temp_unit
 
-    ocp.the_path_cost()['function'] *= _tf
+    # ocp.the_path_cost()['function'] *= _tf
     # ocp.the_path_cost()['unit'] *= 1  # ocp._properties['independent']['unit']
 
     ocp.independent('_TAU', ocp._properties['independent']['unit'])
@@ -937,8 +935,8 @@ def F_momentumshift(ocp):
             gamma.dual_t = np.zeros_like(gamma.t)
 
         gamma.y = np.column_stack((gamma.y, gamma.t))
-        gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
-        gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
+        # gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
+        # gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
 
         if len(gamma.dual) == 0:
             gamma.dual = np.zeros_like(gamma.y)
@@ -952,11 +950,41 @@ def F_momentumshift(ocp):
         gamma.dual_t = gamma.dual[:, -1]
         gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
         gamma.dual = np.delete(gamma.dual, np.s_[-1:], axis=1)
-        gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
+        # gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
         return gamma
 
     return ocp, gamma_map, gamma_map_inverse
 
+
+def F_scaletime(bvp):
+    r"""
+
+    :param bvp:
+    :return:
+    """
+    bvp = copy.deepcopy(bvp)
+
+    _tf = Symbol('_tf')
+    bvp.parameter(_tf, bvp._properties['independent']['unit'], noquad=True)
+
+    for s in bvp.states():
+        s['eom'] *= _tf
+
+    bvp.independent('_TAU', bvp._properties['independent']['unit'])
+
+    def gamma_map(gamma, _compute_control=None):
+        gamma = copy.deepcopy(gamma)
+        gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
+        gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
+        return gamma
+
+    def gamma_map_inverse(gamma, _compute_control=None):
+        gamma = copy.deepcopy(gamma)
+        gamma.t = gamma.t * gamma.dynamical_parameters[-1]
+        gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
+        return gamma
+
+    return bvp, gamma_map, gamma_map_inverse
 
 def F_RASHS(ocp):
     r"""
@@ -1203,9 +1231,10 @@ def Dualize(ocp, method='indirect'):
 
     # TODO: Hardcoded handling of time bc. I should fix this sometime.
     time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
+
     # if method.lower() == 'diffyg':
     # breakpoint()
-    time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol']) + 1
+    # time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol']) + 1
 
     if time_bc is not None:
         terminal_bc += [time_bc]
@@ -1269,9 +1298,9 @@ def F_PMP(bvp):
     def gamma_map_inverse(gamma, _compute_control=None):
         gamma = copy.deepcopy(gamma)
 
-        u = np.array([_compute_control(gamma.y[0], [], gamma.dynamical_parameters, gamma.const)])
+        u = np.array([_compute_control(gamma.y[0], [], np.hstack((gamma.dynamical_parameters, gamma.t[-1])), gamma.const)])
         for ii in range(len(gamma.t)-1):
-            u = np.vstack((u, _compute_control(gamma.y[ii+1], [], gamma.dynamical_parameters, gamma.const)))
+            u = np.vstack((u, _compute_control(gamma.y[ii+1], [], np.hstack((gamma.dynamical_parameters, gamma.t[-1])), gamma.const)))
 
         gamma.u = u
         return gamma
@@ -1340,8 +1369,8 @@ def F_ICRM(bvp, method='indirect'):
         for ii, u in enumerate(dae_equations):
             omega_new[int(nhalf - n_dae + ii), int(2 * nhalf - n_dae + ii)] = 1
             omega_new[int(2 * nhalf - n_dae + ii), int(nhalf - n_dae + ii)] = -1
-            omega_new[independent_index, int(2 * nhalf - n_dae + ii)] = -dae_equations[ii]/bvp.parameters()[0]['symbol']
-            omega_new[int(2 * nhalf - n_dae + ii), independent_index] = dae_equations[ii]/bvp.parameters()[0]['symbol']
+            omega_new[independent_index, int(2 * nhalf - n_dae + ii)] = -dae_equations[ii]
+            omega_new[int(2 * nhalf - n_dae + ii), independent_index] = dae_equations[ii]
 
         bvp.omega(omega_new)
         basis = [x['symbol'] for x in bvp.states()]

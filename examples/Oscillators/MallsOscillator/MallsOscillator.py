@@ -57,7 +57,7 @@ guess_maker_indirect = beluga.guess_generator(
     time_integrate=0.5
 )
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 continuation_steps = beluga.init_continuation()
 
@@ -69,7 +69,7 @@ continuation_steps.add_step('bisection') \
     .const('x2_f', 0)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5, 'log') \
+                .num_cases(10, 'log') \
                 .const('epsilon1', 5e-1)
 
 continuation_steps.add_step('bisection') \
@@ -78,7 +78,7 @@ continuation_steps.add_step('bisection') \
 
 sol_set = beluga.solve(
     ocp=ocp,
-    method='diffyg',
+    method='indirect',
     optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
