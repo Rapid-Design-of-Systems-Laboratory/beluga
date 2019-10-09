@@ -11,7 +11,7 @@ from math import pi, sqrt
 ocp = beluga.OCP('goddard')
 
 # Define independent variables
-ocp.independent('t', 's')
+ocp.independent('t', '1')
 
 # Define quantities used in the problem
 ocp.quantity('drag', '1 * d_c * v**2 * exp(-h_c * (h - h_0) / h_0)')
@@ -75,10 +75,10 @@ ocp.constraints() \
     .initial('v - v_0', '1') \
     .initial('m - m_0', '1') \
     .initial('t', 's') \
-    .path('thrust', '1', lower='T_min', upper='T_max', activator='eps', method='epstrig') \
     .terminal('v - v_f', '1') \
     .terminal('m - m_f', '1')
 
+ocp.path_constraint('thrust', '1', lower='T_min', upper='T_max', activator='eps', method='epstrig')
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 

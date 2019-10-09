@@ -4,41 +4,42 @@ import logging
 ocp = beluga.OCP('Rayleigh')
 
 # Define independent variables
-ocp.independent('t', 's')
+ocp.independent('t', '1')
 
 # Define equations of motion
-ocp.state('y1', 'y2', '1') \
-   .state('y2', '-y1 + y2*(gam - p*y2**2) + m*u', '1')
+ocp.state('y1', 'y2', 'm') \
+   .state('y2', '-y1 + y2*(gam - p*y2**2) + m*u', 'm')
 
 # Define controls
-ocp.control('u', '1')
+ocp.control('u', 'm')
 
 # Define constants
 ocp.constant('gam', 1.4, '1')
-ocp.constant('p', 0.14, '1')
+ocp.constant('p', 0.14, '1/m**2')
 ocp.constant('m', 4, '1')
-ocp.constant('y1_0', -5, '1')
-ocp.constant('y2_0', -5, '1')
-ocp.constant('y1_f', 0, '1')
-ocp.constant('y2_f', 0, '1')
-ocp.constant('t_f', 4.5, 's')
+ocp.constant('y1_0', -5, 'm')
+ocp.constant('y2_0', -5, 'm')
+ocp.constant('y1_f', 0, 'm')
+ocp.constant('y2_f', 0, 'm')
+ocp.constant('t_f', 4.5, '1')
 
-ocp.constant('epsilon1', 1e4, '1')
-ocp.constant('path_min', -10, '1')
-ocp.constant('path_max', 10, '1')
+ocp.constant('epsilon1', 1e3, 'm**2')
+ocp.constant('path_min', -10, 'm')
+ocp.constant('path_max', 10, 'm')
 
 # Define costs
-ocp.path_cost('(u**2 + y1**2)', '1')
+ocp.path_cost('(u**2 + y1**2)', 'm**2')
 
 # Define constraints
 ocp.constraints() \
-    .initial('y1 - y1_0', '1') \
-    .initial('y2 - y2_0', '1') \
-    .initial('t', 's') \
-    .path('u + y1/6', '1', lower='path_min', upper='path_max', activator='epsilon1', method='utm') \
-    .terminal('t - t_f', 's') \
+    .initial('y1 - y1_0', 'm') \
+    .initial('y2 - y2_0', 'm') \
+    .initial('t', '1') \
+    .terminal('t - t_f', '1')
 
-ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
+ocp.path_constraint('u + y1/6', 'm', lower='path_min', upper='path_max', activator='epsilon1', method='utm')
+
+ocp.scale(m='y1')
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
@@ -53,13 +54,13 @@ guess_maker = beluga.guess_generator(
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-                .num_cases(30) \
+                .num_cases(5) \
                 .const('y1_f', 0) \
                 .const('y2_f', 0) \
                 .const('t_f', 4.5)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(40) \
+                .num_cases(10) \
                 .const('path_min', -1) \
                 .const('path_max', 0)
 
@@ -76,6 +77,5 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=False,
     initial_helper=True
 )

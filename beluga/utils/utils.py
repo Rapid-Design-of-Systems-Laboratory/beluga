@@ -1,3 +1,5 @@
+from collections import ChainMap
+from itertools import zip_longest
 import time
 import sympy
 import platform
@@ -7,17 +9,15 @@ import signal
 import cloudpickle as pickle
 import beluga
 
-# import os
-# import sys
-# import shutil
-# import tempfile
-# import subprocess
-# import importlib
-# import theano
-# from functools import partial
-# import warnings
-# import numpy as np
-# import sympy as smpy
+
+def recursive_sub(expr, replace):
+    for _ in range(0, len(replace) + 1):
+        new_expr = expr.subs(replace)
+        if new_expr == expr:
+            return new_expr, True
+        else:
+            expr = new_expr
+    return new_expr, False
 
 
 def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg'):
@@ -140,3 +140,27 @@ def fix_carets(expr):
     import re as _re
     caret = _re.compile('[\\^]')
     return caret.sub('**', expr)
+
+
+def _combine_args_kwargs(arg_list, args, kwargs, fillvalue=''):
+    """Combines positional and keyword arguments
+    Parameters
+    ----------
+    arg_list - list of str
+        List of keys in order of positional arguments
+    args - list of str
+        List of positional arguments
+    kwargs: dict
+        Dictionary of keyword arguments
+    Returns
+    -------
+    A dictionary merging kwargs and args with keys from
+    from args_list
+    Example
+    -------
+    >>> _combine_args_kwargs(['foo','bar'],[1,2],{'baz':3})
+    {'foo':1, 'bar':2, 'baz': 3}
+    """
+    pos_args = {key: val for (key, val) in zip_longest(arg_list, args, fillvalue=fillvalue)}
+    arg_dict = dict(ChainMap(kwargs, pos_args))
+    return arg_dict
