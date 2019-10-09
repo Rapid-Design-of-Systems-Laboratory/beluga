@@ -1203,8 +1203,9 @@ def Dualize(ocp, method='indirect'):
 
     # TODO: Hardcoded handling of time bc. I should fix this sometime.
     time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
-    if method.lower() == 'diffyg':
-        time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol']) + 1
+    # if method.lower() == 'diffyg':
+    # breakpoint()
+    time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol']) + 1
 
     if time_bc is not None:
         terminal_bc += [time_bc]

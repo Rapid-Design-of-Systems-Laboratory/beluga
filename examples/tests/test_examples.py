@@ -4,7 +4,7 @@ import os
 
 AscentVehicles = [r'BFR', r'GoddardRocket', r'Titan-II-SSTO']
 AtmosphericFlight = [r'HangGlider', r'HypersonicNose', r'SpaceShuttle']
-Classic = [r'Brachistochrone', r'BrysonDenham', r'Moonlander', r'ZermelosProblem']
+Classic = [r'Brachistochrone', r'BrysonDenham', r'MoonLander', r'ZermelosProblem']
 ElectricityandMagnetism = [r'OneLoopCircuit']
 Oscillators = [r'FinancialOscillator', r'MallsOscillator', r'Rayleigh']
 
@@ -45,7 +45,7 @@ def test_Classic(file):
 @pytest.mark.parametrize("file", ElectricityandMagnetism)
 def test_ElectricityandMagnetism(file):
     fpath = os.path.dirname(__file__)
-    path = os.path.realpath(fpath + r'/../../examples/ElectricityandMagnetism/' + file + '/' + file + '.py')
+    path = os.path.realpath(fpath + r'/../../examples/ElectricityAndMagnetism/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
 
