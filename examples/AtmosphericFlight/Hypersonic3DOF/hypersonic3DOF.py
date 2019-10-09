@@ -9,8 +9,7 @@ from math import pi
 import beluga
 import logging
 
-# Rename this and/or move to optim package?
-ocp = beluga.OCP('hypersonic3DOF')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

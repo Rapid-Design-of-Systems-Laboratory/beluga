@@ -11,7 +11,6 @@ import copy
 
 def ocp_to_bvp(ocp, **kwargs):
     ws = init_workspace(ocp)
-    problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
     independent_variable_units = ws['independent_var_units']
     states = ws['states']
@@ -81,7 +80,6 @@ def ocp_to_bvp(ocp, **kwargs):
             path_constraints_units += [constraints_units['path'][ii]]
 
     out = {'method': 'direct',
-           'problem_name': problem_name,
            'control_method': '',
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'initial_cost': str(initial_cost),

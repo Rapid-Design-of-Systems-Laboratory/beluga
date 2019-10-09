@@ -4,7 +4,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP('BrysonDenham')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

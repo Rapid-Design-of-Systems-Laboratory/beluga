@@ -23,7 +23,7 @@ bfr_massflow1 = -615.8468*7
 Step 1
 """
 
-ocp = beluga.OCP('BFR')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

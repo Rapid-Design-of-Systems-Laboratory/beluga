@@ -11,7 +11,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP('oscillator')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

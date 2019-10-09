@@ -8,7 +8,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP('HangGlider')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

@@ -350,17 +350,16 @@ def init_workspace(ocp):
     """
 
     workspace = dict()
-    workspace['problem_name'] = ocp.name
-    workspace['independent_var'] = ocp._properties['independent']['symbol']
-    workspace['independent_var_units'] = ocp._properties['independent']['unit']
+    workspace['independent_var'] = ocp.get_independent()['symbol']
+    workspace['independent_var_units'] = ocp.get_independent()['unit']
     workspace['states'] = [s['symbol'] for s in ocp.states()]
     workspace['states_rates'] = [s['eom'] for s in ocp.states()]
     workspace['states_units'] = [s['unit'] for s in ocp.states()]
-    workspace['controls'] = [u['symbol'] for u in ocp.controls()]
-    workspace['controls_units'] = [u['unit'] for u in ocp.controls()]
-    workspace['constants'] = [k['symbol'] for k in ocp.constants()]
-    workspace['constants_values'] = [k['value'] for k in ocp.constants()]
-    workspace['constants_units'] = [k['unit'] for k in ocp.constants()]
+    workspace['controls'] = [u['symbol'] for u in ocp.get_controls()]
+    workspace['controls_units'] = [u['unit'] for u in ocp.get_controls()]
+    workspace['constants'] = [k['symbol'] for k in ocp.get_constants()]
+    workspace['constants_values'] = [k['value'] for k in ocp.get_constants()]
+    workspace['constants_units'] = [k['unit'] for k in ocp.get_constants()]
     workspace['constants_of_motion'] = [k['symbol'] for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_values'] = [k['function'] for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_units'] = [k['unit'] for k in ocp.constants_of_motion()]
@@ -369,7 +368,7 @@ def init_workspace(ocp):
     workspace['parameters_units'] = [k['unit'] for k in ocp.parameters()]
 
     constraints = ocp.constraints()
-    constraints['path'] = ocp.path_constraints()
+    constraints['path'] = ocp.get_path_constraints()
 
     workspace['constraints'] = {c_type: [sympify(c_obj['function']) for c_obj in c_list]
                                 for c_type, c_list in constraints.items()}
@@ -408,7 +407,7 @@ def init_workspace(ocp):
     workspace['switches_values'] = []
     workspace['switches_conditions'] = []
     workspace['switches_tolerance'] = []
-    for q in ocp.switches():
+    for q in ocp.get_switches():
         workspace['switches'] += [sympify(q['name'])]
         if isinstance(q['value'], list):
             workspace['switches_values'] += [[sympify(v) for v in q['value']]]
@@ -424,12 +423,26 @@ def init_workspace(ocp):
             workspace['switches_conditions'] += [None]
             workspace['switches_tolerance'] += [None]
 
-    workspace['initial_cost'] = ocp.get_cost('initial')['function']
-    workspace['initial_cost_units'] = ocp.get_cost('initial')['unit']
-    workspace['terminal_cost'] = ocp.get_cost('terminal')['function']
-    workspace['terminal_cost_units'] = ocp.get_cost('terminal')['unit']
-    workspace['path_cost'] = ocp.get_cost('path')['function']
-    workspace['path_cost_units'] = ocp.get_cost('path')['unit']
+    if ocp.get_initial_cost() is not None:
+        workspace['initial_cost'] = ocp.get_initial_cost()['function']
+        workspace['initial_cost_units'] = ocp.get_initial_cost()['unit']
+    else:
+        workspace['initial_cost'] = 0
+        workspace['initial_cost_units'] = 1
+
+    if ocp.get_path_cost() is not None:
+        workspace['path_cost'] = ocp.get_path_cost()['function']
+        workspace['path_cost_units'] = ocp.get_path_cost()['unit']
+    else:
+        workspace['path_cost'] = 0
+        workspace['path_cost_units'] = 1
+
+    if ocp.get_terminal_cost() is not None:
+        workspace['terminal_cost'] = ocp.get_terminal_cost()['function']
+        workspace['terminal_cost_units'] = ocp.get_terminal_cost()['unit']
+    else:
+        workspace['terminal_cost'] = 0
+        workspace['terminal_cost_units'] = 1
     return workspace
 
 
@@ -500,6 +513,8 @@ def make_augmented_cost(cost, cost_units, constraints, constraints_units, locati
     """
 
     lagrange_mult, lagrange_mult_units = make_augmented_params(constraints, constraints_units, cost_units, location)
+    if cost is None:
+        cost = 0
     aug_cost_expr = cost + sum(nu * c for (nu, c) in zip(lagrange_mult, constraints[location]))
     return aug_cost_expr, cost_units, lagrange_mult, lagrange_mult_units
 
@@ -677,7 +692,7 @@ def make_dhdu(ham, controls, derivative_fn):
     return dHdu
 
 
-def make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_units):
+def make_hamiltonian(states, states_rates, states_units, path_cost, cost_units):
     r"""
     Creates a Hamiltonian function.
 
@@ -685,15 +700,17 @@ def make_hamiltonian(states, states_rates, states_units, path_cost, path_cost_un
     :param states_rates: A list of rates of change for the state variables :math:`\dot{x} = f'.
     :param states_units: A list of units for each state variable.
     :param path_cost: The path cost to be minimized.
-    :param path_cost_units: The units on the path cost.
+    :param cost_units: The units of the cost.
     :return: A Hamiltonian function, :math:`H`.
     :return: A list of costate rates, :math:`\dot{\lambda}_x`
     :return: A list of units for each costate variable.
     """
     costates = make_costate_names(states)
-    costates_units = [path_cost_units / state_units for state_units in states_units]
+    costates_units = [cost_units / state_units for state_units in states_units]
+    if path_cost is None:
+        path_cost = 0
     hamiltonian = path_cost + sum([rate*lam for rate, lam in zip(states_rates, costates)])
-    hamiltonian_units = path_cost_units
+    hamiltonian_units = cost_units
 
     return hamiltonian, hamiltonian_units, costates, costates_units
 
@@ -995,7 +1012,7 @@ def F_RASHS(ocp):
     ocp = copy.deepcopy(ocp)
 
     # TODO: compose switches
-    for q in ocp.switches():
+    for q in ocp.get_switches():
         if isinstance(q['function'], list):
             true_value = 0
             for jj in range(len(q['function'])):
@@ -1011,12 +1028,18 @@ def F_RASHS(ocp):
     """
 
     subber = dict()
-    for q in ocp.switches():
+    for q in ocp.get_switches():
         subber.update({q['symbol']: q['function']})
 
-    ocp.the_initial_cost()['function'], _ = recursive_sub(ocp.the_initial_cost()['function'], subber)
-    ocp.the_path_cost()['function'], _ = recursive_sub(ocp.the_path_cost()['function'], subber)
-    ocp.the_terminal_cost()['function'], _ = recursive_sub(ocp.the_terminal_cost()['function'], subber)
+    if ocp.get_initial_cost() is not None:
+        ocp.get_initial_cost()['function'], _ = recursive_sub(ocp.get_initial_cost()['function'], subber)
+
+    if ocp.get_path_cost() is not None:
+        ocp.get_path_cost()['function'], _ = recursive_sub(ocp.get_path_cost()['function'], subber)
+
+    if ocp.get_terminal_cost() is not None:
+        ocp.get_terminal_cost()['function'], _ = recursive_sub(ocp.get_terminal_cost()['function'], subber)
+
     for s in ocp.states():
         s['eom'], _ = recursive_sub(s['eom'], subber)
 
@@ -1033,11 +1056,8 @@ def F_EPSTRIG(ocp):
     """
     ocp = copy.deepcopy(ocp)
 
-    set_cost = False
-    if ocp.the_path_cost()['function'] == 0:
-        set_cost = True
-
-    the_constraint = ocp.path_constraints()[0]
+    path_cost = ocp.get_path_cost()
+    the_constraint = ocp.get_path_constraints()[0]
     f = the_constraint['function']
     lower = the_constraint['lower']
     upper = the_constraint['upper']
@@ -1052,19 +1072,19 @@ def F_EPSTRIG(ocp):
         raise NotImplementedError('Epsilon-Trig must be used with pure control-constraints.')
 
     activator_unit = None
-    for const in ocp.constants():
+    for const in ocp.get_constants():
         if activator == const['symbol']:
             activator_unit = const['unit']
 
     if activator_unit is None:
         raise Exception('Activator \'' + str(activator) + '\' not found in constants.')
 
-    if ocp.the_path_cost()['unit'] != activator_unit and ocp.the_path_cost()['function'] != 0:
-        logging.warning('Dimension mismatch in path constraint \'' + str(f) + '\'')
-
-    ocp.the_path_cost()['function'] += epstrig_path(f, lower, upper, activator)
-    if set_cost:
-        ocp.the_path_cost()['unit'] = activator_unit
+    if path_cost is not None:
+        if ocp.get_path_cost()['unit'] != activator_unit and ocp.get_path_cost()['function'] != 0:
+            logging.warning('Dimension mismatch in path constraint \'' + str(f) + '\'')
+        ocp.get_path_cost()['function'] += epstrig_path(f, lower, upper, activator)
+    else:
+        ocp.path_cost(epstrig_path(f, lower, upper, activator), activator_unit)
 
     subber = dict(zip([f], [(upper - lower) / 2 * sympy.sin(the_constraint['function']) + (upper + lower) / 2]))
     for ii in range(len(ocp.states())):
@@ -1074,7 +1094,7 @@ def F_EPSTRIG(ocp):
         gamma = copy.deepcopy(gamma)
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None, control_index=control_index, the_constraint=the_constraint, const=ocp.constants()):
+    def gamma_map_inverse(gamma, _compute_control=None, control_index=control_index, the_constraint=the_constraint, const=ocp.get_constants()):
         gamma = copy.deepcopy(gamma)
         subber = dict()
         for c in const:
@@ -1085,7 +1105,7 @@ def F_EPSTRIG(ocp):
         gamma.u[:, control_index] = (upper - lower) * (np.sin(gamma.u[:, control_index]) + 1) / 2 + lower
         return gamma
 
-    del ocp.path_constraints()[0]
+    del ocp.get_path_constraints()[0]
 
     return ocp, gamma_map, gamma_map_inverse
 
@@ -1097,27 +1117,27 @@ def F_UTM(ocp):
     :return:
     """
     ocp = copy.deepcopy(ocp)
-    the_constraint = ocp.path_constraints()[0]
+    the_constraint = ocp.get_path_constraints()[0]
     activator = the_constraint['activator']
-    set_cost = False
-    if ocp.the_path_cost()['function'] == 0:
-        set_cost = True
+    path_cost = ocp.get_path_cost()
 
     activator_unit = None
-    for const in ocp.constants():
+    for const in ocp.get_constants():
         if activator == const['symbol']:
             activator_unit = const['unit']
 
     if activator_unit is None:
         raise Exception('Activator \'' + str(activator) + '\' not found in constants.')
 
-    L_UTM = utm_path(ocp.path_constraints()[0]['function'], ocp.path_constraints()[0]['lower'],
-                     ocp.path_constraints()[0]['upper'], ocp.path_constraints()[0]['activator'])
-    ocp.the_path_cost()['function'] += L_UTM
-    if set_cost:
-        ocp.the_path_cost()['unit'] = activator_unit
+    L_UTM = utm_path(the_constraint['function'], the_constraint['lower'],
+                     the_constraint['upper'], the_constraint['activator'])
 
-    del ocp.path_constraints()[0]
+    if path_cost is None:
+        ocp.path_cost(L_UTM, activator_unit)
+    else:
+        ocp.get_path_cost()['function'] += L_UTM
+
+    del ocp.get_path_constraints()[0]
     gamma_map = Id
     gamma_map_inverse = Id
     return ocp, gamma_map, gamma_map_inverse
@@ -1150,33 +1170,48 @@ def Dualize(ocp, method='indirect'):
     constraints_units['initial'] = [b['unit'] for b in ocp.constraints()['initial']]
     constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
     constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
-    initial_cost = ocp.the_initial_cost()['function']
-    initial_cost_unit = ocp.the_initial_cost()['unit']
-    terminal_cost = ocp.the_terminal_cost()['function']
-    terminal_cost_unit = ocp.the_terminal_cost()['unit']
-    path_cost = ocp.the_path_cost()['function']
-    path_cost_unit = ocp.the_path_cost()['unit']
+
+    if ocp.get_initial_cost() is not None:
+        initial_cost = ocp.get_initial_cost()['function']
+        initial_cost_unit = ocp.get_initial_cost()['unit']
+    else:
+        initial_cost = None
+
+    if ocp.get_path_cost() is not None:
+        path_cost = ocp.get_path_cost()['function']
+        path_cost_unit = ocp.get_path_cost()['unit']
+    else:
+        path_cost = None
+
+    if ocp.get_terminal_cost() is not None:
+        terminal_cost = ocp.get_terminal_cost()['function']
+        terminal_cost_unit = ocp.get_terminal_cost()['unit']
+    else:
+        terminal_cost = None
+
     states = [s['symbol'] for s in ocp.states()]
     states_rates = [s['eom'] for s in ocp.states()]
     states_units = [s['unit'] for s in ocp.states()]
     parameters = [p['symbol'] for p in ocp.parameters()]
     parameters_units = [p['unit'] for p in ocp.parameters()]
 
-    if initial_cost_unit != path_cost_unit*initial_cost_unit and (initial_cost != 0) and (path_cost != 0):
+    if (initial_cost != None) and (path_cost != None) and initial_cost_unit != path_cost_unit*initial_cost_unit and (initial_cost != 0) and (path_cost != 0):
         raise Exception('Initial and path cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
 
-    if initial_cost_unit != terminal_cost_unit and (initial_cost != 0) and (terminal_cost != 0):
+    if (initial_cost != None) and (terminal_cost != None) and initial_cost_unit != terminal_cost_unit and (initial_cost != 0) and (terminal_cost != 0):
         raise Exception('Initial and terminal cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(terminal_cost_unit))
 
-    if terminal_cost_unit != path_cost_unit*independent_variable_units and (terminal_cost != 0) and (path_cost != 0):
+    if (terminal_cost != None) and (path_cost != None) and terminal_cost_unit != path_cost_unit*independent_variable_units and (terminal_cost != 0) and (path_cost != 0):
         raise Exception('Terminal and path cost units mismatch: ' + str(terminal_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
 
-    if initial_cost != 0:
+    if initial_cost is not None:
         cost_unit = initial_cost_unit
-    elif terminal_cost != 0:
+    elif terminal_cost is not None:
         cost_unit = terminal_cost_unit
-    elif path_cost != 0:
+    elif path_cost is not None:
         cost_unit = path_cost_unit * independent_variable_units
+    else:
+        raise ValueError('A cost function was not defined.')
 
     augmented_initial_cost, augmented_initial_cost_units, initial_lm_params, initial_lm_params_units = \
         make_augmented_cost(initial_cost, cost_unit, constraints, constraints_units, location='initial')

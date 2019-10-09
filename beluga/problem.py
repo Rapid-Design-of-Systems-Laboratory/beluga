@@ -17,52 +17,26 @@ Cost = namedtuple('Cost', ['expr', 'unit'])
 
 class OCP(BVP):
     """
-    Class containing information for an optimal control problem.
+    Class defining an optimal control problem.
 
-    Valid parameters and their arguments are in the following table.
+    Examples
+    ========
 
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | Valid parameters               | arguments                      | datatype                                       |
-    +================================+================================+================================================+
-    | state                          | (name, EOM, unit)              | (string, string, string)                       |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | control                        | (name, unit)                   | (string, string)                               |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | constant                       | (name, value, unit)            | (string, float, string)                        |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | constant_of_motion             | (name, function, unit)         | (string, string, string)                       |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | quantity                       | (name, value)                  | (string, string)                               |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | custom_function                | (name, args, function, derivs) | (string, list, function handle, list)          |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | symmetry                       | (function)                     | (string)                                       |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | parameter                      | (function, unit)               | (string, string)                               |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | path_cost                      | (function, unit)               | (string, string)                               |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | initial_cost                   | (function, unit)               | (string, string)                               |
-    +--------------------------------+--------------------------------+------------------------------------------------+
-    | terminal_cost                  | (function, unit)               | (string, string)                               |
-    +--------------------------------+--------------------------------+------------------------------------------------+
+    >>> from beluga.problem import OCP
+    >>> sigma = OCP()
 
     """
 
-    def __init__(self, name=''):
+    def __init__(self):
         """Initializes problem object.
         Parameters
         ----------
         name - str
             Unique name for the problem
         """
-        self.name = self._format_name(name)
 
         self._systems = {'default': {}}  # Dynamic system definitions
         self._properties = {}  # Problem properties
-        self.initial_cost('0', '1')
-        self.path_cost('0', '1')
-        self.terminal_cost('0', '1')
         self._constraints = ConstraintList()
 
         self._scaling = Scaling()
@@ -77,35 +51,238 @@ class OCP(BVP):
         else:
             return self.__class__.__name__ + "()"
 
-    # Alias for returning cost function by type
-    def get_cost(self, cost_type):
-        """Retrieves the cost function for the problem.
-        Parameters
-        ----------
-        cost_type - str
-            Type of cost function - path, initial or terminal
-        """
-        return self._properties.get(cost_type + '_cost', {'expr': '0', 'unit': '0'})
+    def constant(self, symbol, value, unit):
+        r"""Defines a constant value.
 
-    def set_cost(self, expr, unit, cost_type):
-        """Sets cost function for problem.
-        Parameters
-        ----------
-        expr - str
-            Expression for cost function
-        unit - str
-            Unit of cost function
-        cost_type - str
-            Type of cost function - path, initial or terminal
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.constant('m', 100, 'kg')
+        constants: [{'symbol': m, 'value': 100, 'unit': kg}]
+
+        .. seealso::
+            get_constants
         """
-        self._properties[cost_type+'_cost'] = {'expr': expr, 'unit': unit}
+
+        if not isinstance(symbol, str):
+            raise ValueError
+        if not (isinstance(value, int) or isinstance(value, float)):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = self._properties.get('constants', [])
+        temp.append({'symbol': Symbol(symbol), 'value': value, 'unit': sympify(unit)})
+        self._properties['constants'] = temp
+        return self
+
+    def control(self, symbol, unit):
+        r"""Defines a control variable.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.control('u', 'rad')
+        controls: [{'symbol': u, 'unit': rad}]
+
+        .. seealso::
+            get_controls
+        """
+        if not isinstance(symbol, str):
+            raise ValueError
+        if not isinstance(unit, str):
+            raise ValueError
+
+        temp = self._properties.get('controls', [])
+        temp.append({'symbol': Symbol(symbol), 'unit': sympify(unit)})
+        self._properties['controls'] = temp
+        return self
+
+    def get_constants(self):
+        r"""Returns a list of the constant values.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.constant('m', 100, 'kg')
+        constants: [{'symbol': m, 'value': 100, 'unit': kg}]
+        >>> sigma.get_constants()
+        [{'symbol': m, 'value': 100, 'unit': kg}]
+
+        .. seealso::
+            constant
+        """
+        temp = self._properties.get('constants', [])
+        return temp
+
+    def get_controls(self):
+        r"""Returns a list of the control variables.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.control('u', 'rad')
+        controls: [{'symbol': u, 'unit': rad}]
+        >>> sigma.get_controls()
+        [{'symbol': u, 'unit': rad}]
+
+        .. seealso::
+            control
+        """
+        temp = self._properties.get('controls', [])
+        return temp
+
+    def get_independent(self):
+        r"""Gets the independent variable.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.independent('t', 's')
+        independent: {'symbol': t, 'unit': s}
+        >>> sigma.get_independent()
+        {'symbol': t, 'unit': s}
+
+        .. seealso::
+            independent
+        """
+        temp = self._properties.get('independent', None)
+        return temp
+
+    def get_initial_cost(self):
+        r"""Gets the initial cost of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.initial_cost('x^2', 'm^2')
+        initial_cost: {'function': x**2, 'unit': m**2}
+        >>> sigma.get_initial_cost()
+        {'function': x**2, 'unit': m**2}
+
+        .. seealso::
+            initial_cost, terminal_cost, get_initial_cost
+        """
+        return self._properties.get('initial_cost', None)
+
+    def get_path_constraints(self):
+        r"""Gets the path constraints for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.path_constraint('x^2', 'm^2', lower='x_min', upper='x_max', activator='eps', method='utm')
+        path_constraints: [{'function': x**2, 'unit': m**2, 'lower': x_min, 'upper': x_max, 'activator': eps, 'method': 'utm'}]
+        >>> sigma.get_path_constraints()
+        [{'function': x**2, 'unit': m**2, 'lower': x_min, 'upper': x_max, 'activator': eps, 'method': 'utm'}]
+
+        .. seealso::
+            path_constraints
+
+        """
+        return self._properties.get('path_constraints', [])
+
+    def get_path_cost(self):
+        r"""Gets the path cost of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.path_cost('x^2', 'm^2')
+        path_cost: {'function': x**2, 'unit': m**2}
+        >>> sigma.get_path_cost()
+        {'function': x**2, 'unit': m**2}
+
+        .. seealso::
+            path_cost, get_initial_cost, get_terminal_cost
+        """
+        return self._properties.get('path_cost', None)
+
+    def get_quantities(self):
+        r"""Gets the quantities for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.quantity('m', 'x^2+y')
+        switches: [{'symbol': m, 'function': x**2 + y}]
+        >>> sigma.get_quantities()
+        [{'symbol': m, 'function': x**2 + y}]
+
+        .. seealso::
+            quantity, get_switches
+        """
+        temp = self._properties.get('switches', [])
+        return temp
+
+    def get_switches(self):
+        r"""Gets the switches for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.switch('mass_flow', ['m0', 'm1'], [['m_0f - x'], ['x - m_0f']], 'eps')
+        switches: [{'symbol': mass_flow, 'function': [m0, m1], 'conditions': [[m_0f - x], [-m_0f + x]], 'tolerance': eps}]
+        >>> sigma.get_switches()
+        [{'symbol': mass_flow, 'function': [m0, m1], 'conditions': [[m_0f - x], [-m_0f + x]], 'tolerance': eps}]
+
+        .. seealso::
+            switch, get_quantities
+        """
+        temp = self._properties.get('switches', [])
+        return temp
+
+    def get_terminal_cost(self):
+        r"""Gets the terminal cost of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.terminal_cost('x^2', 'm^2')
+        terminal_cost: {'function': x**2, 'unit': m**2}
+        >>> sigma.get_terminal_cost()
+        {'function': x**2, 'unit': m**2}
+
+        .. seealso::
+            terminal_cost, get_initial_cost, get_path_cost
+        """
+        return self._properties.get('terminal_cost', None)
 
     def independent(self, symbol, unit):
-        r"""
+        r"""Sets the independent variable.
 
-        :param symbol:
-        :param unit:
-        :return:
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.independent('t', 's')
+        independent: {'symbol': t, 'unit': s}
+
+        .. seealso::
+            get_independent
         """
         if isinstance(symbol, str):
             symbol = Symbol(symbol)
@@ -120,53 +297,20 @@ class OCP(BVP):
         self._properties['independent'] = temp
         return self
 
-    def control(self, symbol, unit):
-        if not isinstance(symbol, str):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-
-        temp = self._properties.get('controls', [])
-        temp.append({'symbol': Symbol(symbol), 'unit': sympify(unit)})
-        self._properties['controls'] = temp
-        return self
-
-    def constant(self, symbol, value, unit):
-        if not isinstance(symbol, str):
-            raise ValueError
-        if not (isinstance(value, int) or isinstance(value, float)):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-
-        temp = self._properties.get('constants', [])
-        temp.append({'symbol': Symbol(symbol), 'value': value, 'unit': sympify(unit)})
-        self._properties['constants'] = temp
-        return self
-
-    def set_property(self, *args, property_name, property_args, **kwargs):
-        """
-        Adds a property of the optimal control problem
-        Parameters
-        ----------
-        args
-        property_name
-        property_args
-        kwargs
-        Returns a reference to self for chaining purposes
-        """
-        prop = self._properties.get(property_name, [])
-        prop.append(_combine_args_kwargs(property_args, args, kwargs))
-        self._properties[property_name] = prop
-        return self
-
-    def get_property(self, property_name):
-        """
-        Returns the property specified by the name
-        """
-        return self._properties.get(property_name, [])
-
     def initial_cost(self, function, unit):
+        r"""Sets the initial cost of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.initial_cost('x^2', 'm^2')
+        initial_cost: {'function': x**2, 'unit': m**2}
+
+        .. seealso::
+            path_cost, terminal_cost, get_initial_cost
+        """
         if isinstance(function, str):
             function = sympify(function)
         if isinstance(unit, str):
@@ -181,15 +325,64 @@ class OCP(BVP):
         self._properties['initial_cost'] = temp
         return self
 
-    def the_initial_cost(self):
-        r"""
+    def path_constraint(self, function, unit, lower, upper, activator, method):
+        r"""Defines a path constraint for the OCP.
 
-        :return:
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.path_constraint('x^2', 'm^2', lower='x_min', upper='x_max', activator='eps', method='utm')
+        path_constraints: [{'function': x**2, 'unit': m**2, 'lower': x_min, 'upper': x_max, 'activator': eps, 'method': 'utm'}]
+
+        .. seealso::
+            get_path_constraints
+
         """
-        temp = {'function': sympify('0'), 'unit': sympify('1')}
-        return self._properties.get('initial_cost', temp)
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+        if isinstance(lower, str):
+            lower = sympify(lower)
+        if isinstance(upper, str):
+            upper = sympify(upper)
+        if isinstance(activator, str):
+            activator = sympify(activator)
+
+        if not isinstance(function, Expr):
+            raise ValueError
+        if not isinstance(unit, Expr):
+            raise ValueError
+        if not isinstance(lower, Expr):
+            raise ValueError
+        if not isinstance(upper, Expr):
+            raise ValueError
+        if not isinstance(activator, Expr):
+            raise ValueError
+        if not isinstance(method, str):
+            raise ValueError
+
+        temp = self._properties.get('path_constraints', [])
+        temp.append({'function': function, 'unit': unit, 'lower': lower, 'upper': upper, 'activator': activator, 'method': method})
+        self._properties['path_constraints'] = temp
+        return self
 
     def path_cost(self, function, unit):
+        r"""Sets the path cost of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.path_cost('x^2', 'm^2')
+        path_cost: {'function': x**2, 'unit': m**2}
+
+        .. seealso::
+            initial_cost, terminal_cost, get_path_cost
+        """
         if isinstance(function, str):
             function = sympify(function)
         if isinstance(unit, str):
@@ -204,45 +397,19 @@ class OCP(BVP):
         self._properties['path_cost'] = temp
         return self
 
-    def the_path_cost(self):
-        r"""
-
-        :return:
-        """
-        temp = {'function': sympify('0'), 'unit': sympify('1')}
-        return self._properties.get('path_cost', temp)
-
-    def terminal_cost(self, function, unit):
-        if isinstance(function, str):
-            function = sympify(function)
-        if isinstance(unit, str):
-            unit = sympify(unit)
-
-        if not isinstance(function, Expr):
-            raise ValueError
-        if not isinstance(unit, Expr):
-            raise ValueError
-
-        temp = {'function': function, 'unit': unit}
-        self._properties['terminal_cost'] = temp
-        return self
-
-    def the_terminal_cost(self):
-        r"""
-
-        :return:
-        """
-        temp = {'function': sympify('0'), 'unit': sympify('1')}
-        return self._properties.get('terminal_cost', temp)
-
     def switch(self, symbol, functions, conditions, tolerance):
-        r"""
+        r"""Defines a switch for the OCP.
 
-        :param symbol:
-        :param functions:
-        :param conditions:
-        :param tolerance:
-        :return:
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.switch('mass_flow', ['m0', 'm1'], [['m_0f - x'], ['x - m_0f']], 'eps')
+        switches: [{'symbol': mass_flow, 'function': [m0, m1], 'conditions': [[m_0f - x], [-m_0f + x]], 'tolerance': eps}]
+
+        .. seealso::
+            quantity, get_switches
         """
         if isinstance(symbol, str):
             symbol = Symbol(symbol)
@@ -287,6 +454,78 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
+    def terminal_cost(self, function, unit):
+        r"""Sets the terminal cost of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.terminal_cost('x^2', 'm^2')
+        terminal_cost: {'function': x**2, 'unit': m**2}
+
+        .. seealso::
+            initial_cost, path_cost, get_terminal_cost
+        """
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(function, Expr):
+            raise ValueError
+        if not isinstance(unit, Expr):
+            raise ValueError
+
+        temp = {'function': function, 'unit': unit}
+        self._properties['terminal_cost'] = temp
+        return self
+
+    def get_cost(self, cost_type):
+        """Retrieves the cost function for the problem.
+        Parameters
+        ----------
+        cost_type - str
+            Type of cost function - path, initial or terminal
+        """
+        return self._properties.get(cost_type + '_cost', {'expr': '0', 'unit': '0'})
+
+    def get_property(self, property_name):
+        """
+        Returns the property specified by the name
+        """
+        return self._properties.get(property_name, [])
+
+    def set_cost(self, expr, unit, cost_type):
+        """Sets cost function for problem.
+        Parameters
+        ----------
+        expr - str
+            Expression for cost function
+        unit - str
+            Unit of cost function
+        cost_type - str
+            Type of cost function - path, initial or terminal
+        """
+        self._properties[cost_type+'_cost'] = {'expr': expr, 'unit': unit}
+
+    def set_property(self, *args, property_name, property_args, **kwargs):
+        """
+        Adds a property of the optimal control problem
+        Parameters
+        ----------
+        args
+        property_name
+        property_args
+        kwargs
+        Returns a reference to self for chaining purposes
+        """
+        prop = self._properties.get(property_name, [])
+        prop.append(_combine_args_kwargs(property_args, args, kwargs))
+        self._properties[property_name] = prop
+        return self
+
     def quantity(self, symbol, function):
         r"""
 
@@ -309,77 +548,14 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
-    def path_constraint(self, function, unit, lower, upper, activator, method):
-        r"""
-
-        :param function:
-        :param unit:
-        :param lower:
-        :param upper:
-        :param activator:
-        :param method:
-        :return:
-        """
-        if isinstance(function, str):
-            function = sympify(function)
-        if isinstance(unit, str):
-            unit = sympify(unit)
-        if isinstance(lower, str):
-            lower = sympify(lower)
-        if isinstance(upper, str):
-            upper = sympify(upper)
-        if isinstance(activator, str):
-            activator = sympify(activator)
-
-        if not isinstance(function, Expr):
-            raise ValueError
-        if not isinstance(unit, Expr):
-            raise ValueError
-        if not isinstance(lower, Expr):
-            raise ValueError
-        if not isinstance(upper, Expr):
-            raise ValueError
-        if not isinstance(activator, Expr):
-            raise ValueError
-        if not isinstance(method, str):
-            raise ValueError
-
-        temp = self._properties.get('path_constraints', [])
-        temp.append({'function': function, 'unit': unit, 'lower': lower, 'upper': upper, 'activator': activator, 'method': method})
-        self._properties['path_constraints'] = temp
-        return self
-
-    def path_constraints(self):
-        r"""
-
-        :return:
-        """
-        return self._properties.get('path_constraints', [])
-
-    # constant = partialmethod(set_property, property_name='constants', property_args=('name', 'value', 'unit'))
-    # constant_of_motion = partialmethod(set_property, property_name='constants_of_motion', property_args=('name', 'function', 'unit'))
-    # switch = partialmethod(set_property, property_name='switches', property_args=('name', 'value', 'conditions', 'tolerance'))
-    # quantity = partialmethod(set_property, property_name='switches', property_args=('name', 'value'))
     symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
-    # parameter = partialmethod(set_property, property_name='parameters', property_args=('name', 'unit'))
     custom_function = partialmethod(set_property, property_name='custom_functions',
                                     property_args=('name', 'args', 'handle', 'derivs'))
 
-    # controls = partialmethod(get_property, property_name='controls')
-    constants = partialmethod(get_property, property_name='constants')
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
-    switches = partialmethod(get_property, property_name='switches')
-    quantities = switches
     symmetries = partialmethod(get_property, property_name='symmetries')
     parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
-
-    # # TODO: Maybe write as separate function?
-    # def independent(self, name, unit):
-    #     self._properties['independent'] = {'name': name, 'unit': unit}
-
-    # initial_cost = partialmethod(set_cost, cost_type='initial')
-    # terminal_cost = partialmethod(set_cost, cost_type='terminal')
 
     def constraints(self):
         """
@@ -402,28 +578,6 @@ class OCP(BVP):
                     'properties': self._properties,
                     'constraints': self._constraints,
                     'continuation': str(self.continuation)})
-
-    @staticmethod
-    def _format_name(name):
-        """Validates that the name is in the right format
-            Only alphabets, numbers and underscores allowed
-            Should not start with a number or underscore
-            Required for the in-memory compilation of code to work
-        """
-
-        if re.match(r'[a-zA-Z]\w+', name):
-            return name
-        else:
-            raise ValueError("""Invalid problem name specified.
-            Only alphabets, numbers and underscores allowed
-            Should start with an alphabet""")
-
-    def as_json(self):
-        """Converts the problem definition into a pure dictionary."""
-        output = self._properties
-        output['problem_name'] = self.name
-        output['constraints'] = self._constraints
-        return json.dumps(output)
 
 
 class ConstraintList(dict):

@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP('Rayleigh')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', '1')

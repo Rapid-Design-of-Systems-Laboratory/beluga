@@ -43,14 +43,3 @@ Base Class Reference
 .. autofunction:: reconstruct
 
 .. autofunction:: integrate_quads
-
-.. autoclass:: Flow
-    :members: __new__, __call__
-
-.. autoclass:: TimeStepper
-
-.. autoclass:: RKMK
-    :members: __new__, __call__
-
-.. autoclass:: Method
-    :members: __new__

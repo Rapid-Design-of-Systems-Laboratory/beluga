@@ -8,7 +8,7 @@ import beluga
 import logging
 from math import pi, sqrt
 
-ocp = beluga.OCP('goddard')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', '1')

@@ -19,9 +19,7 @@ Contents
    modules/codegen.rst
    modules/continuation.rst
    modules/ivpsol/ivpsol.rst
-   modules/liepack/liepack.rst
    modules/optimlib/optimlib.rst
-
 
 Indices and tables
 ==================

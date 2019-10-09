@@ -3,7 +3,7 @@ import beluga
 import logging
 from math import pi
 
-ocp = beluga.OCP('brachisto')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

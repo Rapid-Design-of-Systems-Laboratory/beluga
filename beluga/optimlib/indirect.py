@@ -37,18 +37,18 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Deal with path constraints
     """
-    while len(ocp.path_constraints()) > 0:
-        if ocp.path_constraints()[0]['method'] is None:
+    while len(ocp.get_path_constraints()) > 0:
+        if ocp.get_path_constraints()[0]['method'] is None:
             raise NotImplementedError
 
-        elif ocp.path_constraints()[0]['method'].upper() == 'UTM':
+        elif ocp.get_path_constraints()[0]['method'].upper() == 'UTM':
             ocp, gam, gam_inv = F_UTM(ocp)
             signature += ['F_UTM']
             cat_chain += [ocp]
             gamma_map_chain += [gam]
             gamma_map_inverse_chain += [gam_inv]
 
-        elif ocp.path_constraints()[0]['method'].upper() == 'EPSTRIG':
+        elif ocp.get_path_constraints()[0]['method'].upper() == 'EPSTRIG':
             ocp, gam, gam_inv = F_EPSTRIG(ocp)
             signature += ['F_EPSTRIG']
             cat_chain += [ocp]
@@ -61,7 +61,7 @@ def ocp_to_bvp(ocp, **kwargs):
     """
     Deal with staging, switches, and their substitutions.
     """
-    if len(ocp.switches()) > 0:
+    if len(ocp.get_switches()) > 0:
         ocp, gam, gam_inv = F_RASHS(ocp)
         signature += ['F_RASHS']
         cat_chain += [ocp]
@@ -166,9 +166,8 @@ def ocp_to_bvp(ocp, **kwargs):
     dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
 
     out = {'method': 'brysonho',
-           'problem_name': cat_chain[0].name,
            'control_method': control_method,
-           'consts': [str(k['symbol']) for k in ocp.constants()],
+           'consts': [str(k['symbol']) for k in ocp.get_constants()],
            'initial_cost': None,
            'initial_cost_units': None,
            'path_cost': None,
@@ -184,9 +183,9 @@ def ocp_to_bvp(ocp, **kwargs):
            'quads_units': [str(x['unit']) for x in bvp.quads()],
            'path_constraints': [],
            'path_constraints_units': [],
-           'constants': [str(c['symbol']) for c in ocp.constants()],
-           'constants_units': [str(c['unit']) for c in ocp.constants()],
-           'constants_values': [float(c['value']) for c in ocp.constants()],
+           'constants': [str(c['symbol']) for c in ocp.get_constants()],
+           'constants_units': [str(c['unit']) for c in ocp.get_constants()],
+           'constants_values': [float(c['value']) for c in ocp.get_constants()],
            'constants_of_motion': [str(c['function']) for c in ocp.constants_of_motion()],
            'dynamical_parameters': [str(c['symbol']) for c in bvp.parameters()],
            'dynamical_parameters_units': [str(c['unit']) for c in bvp.parameters()],

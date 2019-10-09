@@ -9,7 +9,7 @@ import beluga
 import logging
 import matplotlib.pyplot as plt
 
-ocp = beluga.OCP('hypersonic_nose')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('l', 'm')
