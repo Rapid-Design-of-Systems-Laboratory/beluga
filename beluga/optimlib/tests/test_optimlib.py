@@ -147,6 +147,45 @@ def test_is_symplectic():
     assert not is_symplectic(omega)
 
 
+def test_ocp_units():
+    from beluga.problem import OCP
+    sigma = OCP()
+
+    sigma.independent('t', 's')
+    sigma.initial_cost('x', 'm')
+    sigma.path_cost('x', 'm/s')
+    sigma.terminal_cost('x', 'm')
+    assert check_ocp_units(sigma)
+
+    sigma.independent('t', '1')
+    sigma.initial_cost('x', 'm')
+    sigma.path_cost('x', 'm/s')
+    sigma.terminal_cost('x', 'm')
+    with pytest.raises(Exception):
+        check_ocp_units(sigma)
+
+    sigma.independent('t', 's')
+    sigma.initial_cost('x', 'm/s')
+    sigma.path_cost('x', 'm/s')
+    sigma.terminal_cost('x', 'm')
+    with pytest.raises(Exception):
+        check_ocp_units(sigma)
+
+    sigma.independent('t', 's')
+    sigma.initial_cost('x', 'm')
+    sigma.path_cost('x', 'm')
+    sigma.terminal_cost('x', 'm')
+    with pytest.raises(Exception):
+        check_ocp_units(sigma)
+
+    sigma.independent('t', 's')
+    sigma.initial_cost('x', 'm')
+    sigma.path_cost('x', 'm/s')
+    sigma.terminal_cost('x', 'm/s')
+    with pytest.raises(Exception):
+        check_ocp_units(sigma)
+
+
 # def test_make_augmented_cost():
 #     cost = SymVar({'expr': '1', 'unit': 'nd'}, sym_key='expr')
 #     constraints = dict()
