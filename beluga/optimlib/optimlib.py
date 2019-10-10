@@ -334,6 +334,32 @@ class BVP(object):
         return temp
 
 
+def check_ocp_units(ocp):
+    r"""
+
+    :param ocp:
+    :return:
+    """
+    independent = ocp.get_independent()
+    initial = ocp.get_initial_cost()
+    path = ocp.get_path_cost()
+    terminal = ocp.get_terminal_cost()
+
+    if (initial != None) and (path != None) and initial['unit'] != path['unit'] * independent['unit']:
+        raise Exception('Initial and integrated path cost units mismatch: ' + str(initial['unit']) + ' =/= ' + str(
+            path['unit'] * independent['unit']))
+
+    if (initial != None) and (terminal != None) and initial['unit'] != terminal['unit']:
+        raise Exception(
+            'Initial and terminal cost units mismatch: ' + str(initial['unit']) + ' =/= ' + str(terminal['unit']))
+
+    if (terminal != None) and (path != None) and terminal['unit'] != path['unit'] * independent['unit']:
+        raise Exception('Terminal and integrated path cost units mismatch: ' + str(terminal['unit']) + ' =/= ' + str(
+            path['unit'] * independent['unit']))
+
+    return True
+
+
 def Id(x, _compute_control=None):
     return x
 
@@ -1150,6 +1176,8 @@ def Dualize(ocp, method='indirect'):
     :return:
     """
     ocp = copy.deepcopy(ocp)
+    check_ocp_units(ocp)
+
     independent_variable = ocp._properties['independent']['symbol']
     independent_variable_units = ocp._properties['independent']['unit']
 
@@ -1194,15 +1222,6 @@ def Dualize(ocp, method='indirect'):
     states_units = [s['unit'] for s in ocp.states()]
     parameters = [p['symbol'] for p in ocp.parameters()]
     parameters_units = [p['unit'] for p in ocp.parameters()]
-
-    if (initial_cost != None) and (path_cost != None) and initial_cost_unit != path_cost_unit*initial_cost_unit and (initial_cost != 0) and (path_cost != 0):
-        raise Exception('Initial and path cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
-
-    if (initial_cost != None) and (terminal_cost != None) and initial_cost_unit != terminal_cost_unit and (initial_cost != 0) and (terminal_cost != 0):
-        raise Exception('Initial and terminal cost units mismatch: ' + str(initial_cost_unit) + ' =/= ' + str(terminal_cost_unit))
-
-    if (terminal_cost != None) and (path_cost != None) and terminal_cost_unit != path_cost_unit*independent_variable_units and (terminal_cost != 0) and (path_cost != 0):
-        raise Exception('Terminal and path cost units mismatch: ' + str(terminal_cost_unit) + ' =/= ' + str(path_cost_unit * independent_variable_units))
 
     if initial_cost is not None:
         cost_unit = initial_cost_unit
