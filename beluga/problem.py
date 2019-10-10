@@ -51,33 +51,6 @@ class OCP(BVP):
         else:
             return self.__class__.__name__ + "()"
 
-    def constant(self, symbol, value, unit):
-        r"""Defines a constant value.
-
-        Examples
-        ========
-
-        >>> from beluga.problem import OCP
-        >>> sigma = OCP()
-        >>> sigma.constant('m', 100, 'kg')
-        constants: [{'symbol': m, 'value': 100, 'unit': kg}]
-
-        .. seealso::
-            get_constants
-        """
-
-        if not isinstance(symbol, str):
-            raise ValueError
-        if not (isinstance(value, int) or isinstance(value, float)):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-
-        temp = self._properties.get('constants', [])
-        temp.append({'symbol': Symbol(symbol), 'value': value, 'unit': sympify(unit)})
-        self._properties['constants'] = temp
-        return self
-
     def control(self, symbol, unit):
         r"""Defines a control variable.
 
@@ -101,25 +74,6 @@ class OCP(BVP):
         temp.append({'symbol': Symbol(symbol), 'unit': sympify(unit)})
         self._properties['controls'] = temp
         return self
-
-    def get_constants(self):
-        r"""Returns a list of the constant values.
-
-        Examples
-        ========
-
-        >>> from beluga.problem import OCP
-        >>> sigma = OCP()
-        >>> sigma.constant('m', 100, 'kg')
-        constants: [{'symbol': m, 'value': 100, 'unit': kg}]
-        >>> sigma.get_constants()
-        [{'symbol': m, 'value': 100, 'unit': kg}]
-
-        .. seealso::
-            constant
-        """
-        temp = self._properties.get('constants', [])
-        return temp
 
     def get_controls(self):
         r"""Returns a list of the control variables.
@@ -250,25 +204,6 @@ class OCP(BVP):
             switch, get_quantities
         """
         temp = self._properties.get('switches', [])
-        return temp
-
-    def get_symmetries(self):
-        r"""Gets the symmetries of the OCP.
-
-        Examples
-        ========
-
-        >>> from beluga.problem import OCP
-        >>> sigma = OCP()
-        >>> sigma.symmetry(['1', '0'])
-        symmetries: [{'field': [1, 0]}]
-        >>> sigma.get_symmetries()
-        [{'field': [1, 0]}]
-
-        .. seealso::
-            symmetry
-        """
-        temp = self._properties.get('symmetries', [])
         return temp
 
     def get_terminal_cost(self):
@@ -471,32 +406,6 @@ class OCP(BVP):
         temp = self._properties.get('switches', [])
         temp.append({'symbol': symbol, 'function': functions, 'conditions': conditions, 'tolerance': tolerance})
         self._properties['switches'] = temp
-        return self
-
-    def symmetry(self, field):
-        r"""Defines a symmetry of the OCP.
-
-        Examples
-        ========
-
-        >>> from beluga.problem import OCP
-        >>> sigma = OCP()
-        >>> sigma.symmetry(['1', '0'])
-        symmetries: [{'field': [1, 0]}]
-
-        .. seealso::
-            get_symmetries
-        """
-        if not isinstance(field, list):
-            raise ValueError
-
-        for ii, l in enumerate(field):
-            if isinstance(l, str):
-                field[ii] = sympify(l)
-
-        temp = self._properties.get('symmetries', [])
-        temp.append({'field': field})
-        self._properties['symmetries'] = temp
         return self
 
     def terminal_cost(self, function, unit):

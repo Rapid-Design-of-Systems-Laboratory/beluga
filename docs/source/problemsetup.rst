@@ -46,5 +46,5 @@ Base Class Reference
 --------------------
 
 .. autoclass:: beluga.OCP
-    :members: constant, control, get_constants, get_controls, get_independent, get_initial_cost, get_path_constraints, get_path_cost, get_quantities, get_switches, get_terminal_cost, independent, initial_cost, path_constraint, path_cost, terminal_cost
+    :members: control, get_controls, get_independent, get_initial_cost, get_path_constraints, get_path_cost, get_quantities, get_switches, get_terminal_cost, independent, initial_cost, path_constraint, path_cost, terminal_cost
     :noindex:
