@@ -6,6 +6,8 @@ from autograd import grad
 from autograd import numpy as np
 from scipy.optimize import fsolve, minimize
 
+import cloudpickle
+
 # The following import statements *look* unused, but is in fact used by the code compiler. This enables users to use
 # various basic math functions like `cos` and `atan`. Do not delete.
 import math
@@ -156,7 +158,8 @@ def make_control_and_ham_fn(control_opts, states, parameters, constants, control
             # opt2 = minimize(lambda _u: loss2(X, _u, p, C), x0=[1]*num_controls)
             return opt
     else:
-        raise NotImplementedError('Control method \'' + control_method + '\' does not have an associated codegen method.')
+        raise NotImplementedError('Control method \'' + control_method +
+                                  '\' does not have an associated codegen method.')
 
     return compute_control_fn, hamiltonian_fn
 
@@ -535,6 +538,10 @@ def preprocess(problem_data):
     :param problem_data: Problem data from optimlib.
     :return: A BVP.
     """
+
+    with open('bvp_raw_2.beluga', 'wb') as file:
+        cloudpickle.dump(problem_data, file)
+
     # Register custom functions as global functions
     custom_functions = problem_data['custom_functions']
     for ii, f in enumerate(custom_functions):
