@@ -16,7 +16,6 @@ modules = ['beluga.bvpsol',
            'beluga.codegen',
            'beluga.continuation',
            'beluga.ivpsol',
-           'beluga.ivpsol.integrators',
            'beluga.optimlib',
            'beluga.utils']
 
