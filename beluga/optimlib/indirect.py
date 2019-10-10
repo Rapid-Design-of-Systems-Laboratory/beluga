@@ -24,6 +24,7 @@ def ocp_to_bvp(ocp, **kwargs):
     analytical_jacobian = kwargs.get('analytical_jacobian', False)
     control_method = kwargs.get('control_method', 'pmp').lower()
     method = kwargs.get('method', 'indirect').lower()
+    reduction = kwargs.get('reduction', False)
 
     """
     Make time a state.
@@ -111,10 +112,20 @@ def ocp_to_bvp(ocp, **kwargs):
     Scale the EOMs to final time.
     """
     bvp, gam, gam_inv = F_scaletime(bvp)
-    signature += ['F_momentumshift']
+    signature += ['F_scaletime']
     cat_chain += [bvp]
     gamma_map_chain += [gam]
     gamma_map_inverse_chain += [gam_inv]
+
+    if is_symplectic(bvp.the_omega()) and reduction:
+        while len(bvp.get_constants_of_motion()) > 1:
+            bvp, gam, gam_inv = F_MF(bvp)
+            signature += ['F_MF']
+            cat_chain += [bvp]
+            gamma_map_chain += [gam]
+            gamma_map_inverse_chain += [gam_inv]
+    elif not is_symplectic(bvp.the_omega()):
+        logging.warning('BVP is not symplectic. Skipping reduction.')
 
     if analytical_jacobian:
         if control_method == 'pmp':
@@ -160,9 +171,6 @@ def ocp_to_bvp(ocp, **kwargs):
 
     logging.debug('Problem formulation: Lambda := (' + ' . '.join(reversed(signature)) + ')(Sigma)')
 
-    if not is_symplectic(bvp.the_omega()):
-        logging.warning('BVP is not symplectic.')
-
     dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
 
     out = {'method': 'brysonho',
@@ -183,10 +191,10 @@ def ocp_to_bvp(ocp, **kwargs):
            'quads_units': [str(x['unit']) for x in bvp.quads()],
            'path_constraints': [],
            'path_constraints_units': [],
-           'constants': [str(c['symbol']) for c in ocp.get_constants()],
-           'constants_units': [str(c['unit']) for c in ocp.get_constants()],
-           'constants_values': [float(c['value']) for c in ocp.get_constants()],
-           'constants_of_motion': [str(c['function']) for c in ocp.constants_of_motion()],
+           'constants': [str(c['symbol']) for c in bvp.get_constants()],
+           'constants_units': [str(c['unit']) for c in bvp.get_constants()],
+           'constants_values': [float(c['value']) for c in bvp.get_constants()],
+           'constants_of_motion': [str(c['function']) for c in bvp.get_constants_of_motion()],
            'dynamical_parameters': [str(c['symbol']) for c in bvp.parameters()],
            'dynamical_parameters_units': [str(c['unit']) for c in bvp.parameters()],
            'nondynamical_parameters': [str(c['symbol']) for c in bvp.nd_parameters()],
@@ -206,16 +214,16 @@ def ocp_to_bvp(ocp, **kwargs):
            'control_options': bvp._control_law,
            'num_controls': len(bvp.controls())}
 
-    def guess_map(gamma, _compute_control=None, map_chain=gamma_map_chain):
+    def guess_map(gamma, map_chain=gamma_map_chain):
         gamma = copy.deepcopy(gamma)
         for morphism in map_chain:
             gamma = morphism(gamma)
         return gamma
 
-    def guess_map_inverse(gamma, _compute_control=None, map_chain=gamma_map_inverse_chain):
+    def guess_map_inverse(gamma, map_chain=gamma_map_inverse_chain):
         gamma = copy.deepcopy(gamma)
         for morphism in reversed(map_chain):
-            gamma = morphism(gamma, _compute_control=_compute_control)
+            gamma = morphism(gamma)
         return gamma
 
     return out, guess_map, guess_map_inverse

@@ -120,9 +120,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'control_options': None,
            'num_controls': len(controls)}
 
-    def guess_map(sol, _compute_control=None):
-        if _compute_control is None:
-            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+    def guess_map(sol):
         # Append time as a state
         sol = copy.deepcopy(sol)
         sol.y = np.column_stack((sol.y, sol.t))
@@ -130,9 +128,7 @@ def ocp_to_bvp(ocp, **kwargs):
         sol.t = sol.t / sol.t[-1]
         return sol
 
-    def guess_map_inverse(sol, _compute_control=None):
-        if _compute_control is None:
-            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+    def guess_map_inverse(sol):
         sol = copy.deepcopy(sol)
         sol.t = sol.y[:, -1]
         sol.y = np.delete(sol.y, np.s_[-1], axis=1)

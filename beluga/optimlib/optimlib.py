@@ -38,6 +38,65 @@ class BVP(object):
         else:
             return self.__class__.__name__ + "()"
 
+    def constant(self, symbol, value, unit):
+        r"""Defines a constant value.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.constant('m', 100, 'kg')
+        constants: [{'symbol': m, 'value': 100, 'unit': kg}]
+
+        .. seealso::
+            get_constants
+        """
+
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise ValueError
+        if not (isinstance(value, int) or isinstance(value, float)):
+            raise ValueError
+        if not isinstance(unit, Expr):
+            raise ValueError
+
+        temp = self._properties.get('constants', [])
+        temp.append({'symbol': symbol, 'value': value, 'unit': unit})
+        self._properties['constants'] = temp
+        return self
+
+    def constant_of_motion(self, symbol, function, unit):
+        r"""
+
+        :param symbol:
+        :param function:
+        :param unit:
+        :return:
+        """
+        if isinstance(symbol, str):
+            symbol = Symbol(symbol)
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+
+        if not isinstance(symbol, Symbol):
+            raise TypeError
+        if not isinstance(function, Expr):
+            raise TypeError
+        if not isinstance(unit, Expr):
+            raise TypeError
+
+        temp = self._properties.get('constants_of_motion', [])
+        temp.append({'symbol': symbol, 'function': function, 'unit': unit})
+        self._properties['constants_of_motion'] = temp
+        return self
+
     def state(self, symbol, eom, unit):
         r"""
 
@@ -72,6 +131,77 @@ class BVP(object):
         """
         return self._properties.get('states', dict())
 
+    def symmetry(self, field):
+        r"""Defines a symmetry of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.symmetry(['1', '0'])
+        symmetries: [{'field': [1, 0]}]
+
+        .. seealso::
+            get_symmetries
+        """
+        if not isinstance(field, list):
+            raise ValueError
+
+        for ii, l in enumerate(field):
+            if isinstance(l, str):
+                field[ii] = sympify(l)
+
+        temp = self._properties.get('symmetries', [])
+        temp.append({'field': field})
+        self._properties['symmetries'] = temp
+        return self
+
+    def get_constants(self):
+        r"""Returns a list of the constant values.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.constant('m', 100, 'kg')
+        constants: [{'symbol': m, 'value': 100, 'unit': kg}]
+        >>> sigma.get_constants()
+        [{'symbol': m, 'value': 100, 'unit': kg}]
+
+        .. seealso::
+            constant
+        """
+        temp = self._properties.get('constants', [])
+        return temp
+
+    def get_constants_of_motion(self):
+        r"""
+
+        :return:
+        """
+        return self._properties.get('constants_of_motion', [])
+
+    def get_symmetries(self):
+        r"""Gets the symmetries of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.symmetry(['1', '0'])
+        symmetries: [{'field': [1, 0]}]
+        >>> sigma.get_symmetries()
+        [{'field': [1, 0]}]
+
+        .. seealso::
+            symmetry
+        """
+        temp = self._properties.get('symmetries', [])
+        return temp
+
     def quad(self, symbol, eom, unit):
         r"""
 
@@ -105,40 +235,6 @@ class BVP(object):
         :return:
         """
         return self._properties.get('quads', [])
-
-    def constant_of_motion(self, symbol, function, unit):
-        r"""
-
-        :param symbol:
-        :param function:
-        :param unit:
-        :return:
-        """
-        if isinstance(symbol, str):
-            symbol = Symbol(symbol)
-        if isinstance(function, str):
-            function = sympify(function)
-        if isinstance(unit, str):
-            unit = sympify(unit)
-
-        if not isinstance(symbol, Symbol):
-            raise TypeError
-        if not isinstance(function, Expr):
-            raise TypeError
-        if not isinstance(unit, Expr):
-            raise TypeError
-
-        temp = self._properties.get('constants_of_motion', [])
-        temp.append({'symbol': symbol, 'function': function, 'unit': unit})
-        self._properties['constants_of_motion'] = temp
-        return self
-
-    def constants_of_motion(self):
-        r"""
-
-        :return:
-        """
-        return self._properties.get('constants_of_motion', [])
 
     def control(self, symbol, unit):
         r"""
@@ -360,7 +456,7 @@ def check_ocp_units(ocp):
     return True
 
 
-def Id(x, _compute_control=None):
+def Id(x):
     return x
 
 
@@ -389,7 +485,7 @@ def init_workspace(ocp):
     workspace['constants_of_motion'] = [k['symbol'] for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_values'] = [k['function'] for k in ocp.constants_of_motion()]
     workspace['constants_of_motion_units'] = [k['unit'] for k in ocp.constants_of_motion()]
-    workspace['symmetries'] = [k['function'] for k in ocp.symmetries()]
+    workspace['symmetries'] = [k['function'] for k in ocp.get_symmetries()]
     workspace['parameters'] = [k['name'] for k in ocp.parameters()]
     workspace['parameters_units'] = [k['unit'] for k in ocp.parameters()]
 
@@ -952,6 +1048,34 @@ def rash_mult(condition, tolerance):
     return 1/(1+sympy.exp(condition/tolerance))
 
 
+def noether(bvp, quantity):
+    r"""
+
+    :param bvp:
+    :param quantity:
+    :return:
+    """
+    if not is_symplectic(bvp.the_omega()):
+        raise ValueError('Can\'t use Noether\'. System does not appear to be symplectic.')
+
+    if 'field' in quantity.keys():
+        is_symmetry = True
+    else:
+        is_symmetry = False
+
+    if is_symmetry:
+        unit = 0
+        O = bvp.the_omega().tomatrix()
+        X = sympy.Matrix(quantity['field'])
+        omegaX = O.LUsolve(X)
+        gstar = 0
+        for jj, state in enumerate(bvp.states()):
+            gstar += sympy.integrate(omegaX[jj], state['symbol'])
+            unit += omegaX[jj]*bvp.states()[jj]['unit']
+
+        return gstar, unit
+
+
 def F_momentumshift(ocp):
     r"""
 
@@ -959,21 +1083,22 @@ def F_momentumshift(ocp):
     :return:
     """
     ocp = copy.deepcopy(ocp)
-
-    # _tf = Symbol('_tf')
+    independent = ocp.get_independent()
     ocp.state(str(ocp._properties['independent']['symbol']), '1', str(ocp._properties['independent']['unit']))
-    # ocp.parameter(_tf, ocp._properties['independent']['unit'], noquad=True)
-
-    # for s in ocp.states():
-    #     s['eom'] *= _tf
-    #     s['unit'] *= 1  # temp_unit
-
-    # ocp.the_path_cost()['function'] *= _tf
-    # ocp.the_path_cost()['unit'] *= 1  # ocp._properties['independent']['unit']
-
     ocp.independent('_TAU', ocp._properties['independent']['unit'])
-    # ocp.constraints().terminal('_TAU - 1', '1')
-    def gamma_map(gamma, _compute_control=None):
+
+    for ii, s in enumerate(ocp.get_symmetries()):
+        ocp.get_symmetries()[ii]['field'].append(sympify('0'))
+
+    independent_symmetry = True
+    for ii, s in enumerate(ocp.states()):
+        if total_derivative(s['eom'], independent['symbol']) != 0:
+            independent_symmetry = False
+
+    if independent_symmetry:
+        ocp.symmetry(['0']*(len(ocp.states())-1) + ['1'])
+
+    def gamma_map(gamma):
         if len(gamma.dual_t) == 0:
             gamma.dual_t = np.zeros_like(gamma.t)
 
@@ -988,7 +1113,7 @@ def F_momentumshift(ocp):
 
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None):
+    def gamma_map_inverse(gamma):
         gamma.t = gamma.y[:, -1]
         gamma.dual_t = gamma.dual[:, -1]
         gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
@@ -1015,19 +1140,20 @@ def F_scaletime(bvp):
 
     bvp.independent('_TAU', bvp._properties['independent']['unit'])
 
-    def gamma_map(gamma, _compute_control=None):
+    def gamma_map(gamma):
         gamma = copy.deepcopy(gamma)
         gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
         gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None):
+    def gamma_map_inverse(gamma):
         gamma = copy.deepcopy(gamma)
         gamma.t = gamma.t * gamma.dynamical_parameters[-1]
         gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
+
 
 def F_RASHS(ocp):
     r"""
@@ -1116,11 +1242,11 @@ def F_EPSTRIG(ocp):
     for ii in range(len(ocp.states())):
         ocp.states()[ii]['eom'] = ocp.states()[ii]['eom'].subs(subber, simultaneous=True)
 
-    def gamma_map(gamma, _compute_control=None):
+    def gamma_map(gamma):
         gamma = copy.deepcopy(gamma)
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None, control_index=control_index, the_constraint=the_constraint, const=ocp.get_constants()):
+    def gamma_map_inverse(gamma, control_index=control_index, the_constraint=the_constraint, const=ocp.get_constants()):
         gamma = copy.deepcopy(gamma)
         subber = dict()
         for c in const:
@@ -1242,12 +1368,18 @@ def Dualize(ocp, method='indirect'):
         make_hamiltonian(states, states_rates, states_units, path_cost, cost_unit)
 
     bvp = BVP()
+    for ii, c in enumerate(ocp.get_constants()):
+        bvp.constant(c['symbol'], c['value'], c['unit'])
+
+    for ii, s in enumerate(ocp.get_symmetries()):
+        bvp.symmetry(s['field'] + [sympify('0') for _ in costates])
+
+    bvp.constant_of_motion('hamiltonian', hamiltonian_function, hamiltonian_units)
 
     if method == 'indirect':
         costates_rates = make_costate_rates(hamiltonian_function, states, costates, total_derivative)
     elif method == 'diffyg':
         omega = make_standard_symplectic_form(states, costates)
-        ocp.omega(omega)
         X_H = make_hamiltonian_vector_field(hamiltonian_function, omega, states + costates, total_derivative)
         n = len(states)
         costates_rates = X_H[-n:]
@@ -1257,6 +1389,12 @@ def Dualize(ocp, method='indirect'):
         _eom = (states_rates + costates_rates)[ii]
         _unit = (states_units + costates_units)[ii]
         bvp.state(s, _eom, _unit)
+
+    if method == 'diffyg':
+        # Evaluate integral(omega^-1(X,.))
+        for ii, s in enumerate(bvp.get_symmetries()):
+            gstar, unit = noether(bvp, s)
+            bvp.constant_of_motion('_c' + str(ii), gstar, unit)
 
     coparameters = make_costate_names(parameters)
     coparameters_units = [cost_unit / parameter_units for parameter_units in parameters_units]
@@ -1286,14 +1424,8 @@ def Dualize(ocp, method='indirect'):
     # TODO: Hardcoded handling of time bc. I should fix this sometime.
     time_bc = make_time_bc(constraints, total_derivative, hamiltonian_function, independent_variable)
 
-    # if method.lower() == 'diffyg':
-    # breakpoint()
-    # time_bc = total_derivative(time_bc, ocp.parameters()[-1]['symbol']) + 1
-
     if time_bc is not None:
         terminal_bc += [time_bc]
-
-    bvp.constant_of_motion('hamiltonian', hamiltonian_function, hamiltonian_units)
 
     for ii, s in enumerate(ocp.controls()):
         bvp.control(s['symbol'], s['unit'])
@@ -1316,14 +1448,14 @@ def Dualize(ocp, method='indirect'):
 
     bvp.independent(independent_variable, independent_variable_units)
 
-    def gamma_map(gamma, _compute_control=None, ndp=len(initial_lm_params + terminal_lm_params)):
+    def gamma_map(gamma, ndp=len(initial_lm_params + terminal_lm_params)):
         gamma = copy.deepcopy(gamma)
         gamma.y = np.column_stack((gamma.y, gamma.dual))
         gamma.dual = np.array([])
         gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(ndp)))
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None, n=n_states, ndp=len(initial_lm_params + terminal_lm_params)):
+    def gamma_map_inverse(gamma, n=n_states, ndp=len(initial_lm_params + terminal_lm_params)):
         gamma = copy.deepcopy(gamma)
         gamma.dual = gamma.y[:, -n:]
         gamma.y = gamma.y[:, :n]
@@ -1341,22 +1473,16 @@ def F_PMP(bvp):
     """
     bvp = copy.deepcopy(bvp)
 
-    dHdu = make_dhdu(bvp.constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
+    dHdu = make_dhdu(bvp.get_constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
     control_law = make_control_law(dHdu, [u['symbol'] for u in bvp.controls()])
     bvp._control_law = [{str(u): str(law[u]) for u in law.keys()} for law in control_law]
 
-    def gamma_map(gamma, _compute_control=None):
+    def gamma_map(gamma):
         gamma = copy.deepcopy(gamma)
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None):
+    def gamma_map_inverse(gamma):
         gamma = copy.deepcopy(gamma)
-
-        u = np.array([_compute_control(gamma.y[0], [], np.hstack((gamma.dynamical_parameters, gamma.t[-1])), gamma.const)])
-        for ii in range(len(gamma.t)-1):
-            u = np.vstack((u, _compute_control(gamma.y[ii+1], [], np.hstack((gamma.dynamical_parameters, gamma.t[-1])), gamma.const)))
-
-        gamma.u = u
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
@@ -1373,7 +1499,7 @@ def F_ICRM(bvp, method='indirect'):
     n_states = len(bvp.states())
     n_controls = len(bvp.controls())
 
-    dHdu = make_dhdu(bvp.constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
+    dHdu = make_dhdu(bvp.get_constants_of_motion()[0]['function'], bvp.controls(), total_derivative)
     g = dHdu
     X = [s['symbol'] for s in bvp.states()]
     U = [c['symbol'] for c in bvp.controls()]
@@ -1403,7 +1529,7 @@ def F_ICRM(bvp, method='indirect'):
         bvp._properties['states'] = states_new
 
     elif method == 'diffyg':
-        cost_unit = bvp.constants_of_motion()[0]['unit']
+        cost_unit = bvp.get_constants_of_motion()[0]['unit']
         controls_unit = [u['unit'] for u in bvp.controls()]
         lamU = make_costate_names(dae_states)
         lamU_units = [cost_unit / unit for unit in controls_unit]
@@ -1428,7 +1554,7 @@ def F_ICRM(bvp, method='indirect'):
 
         bvp.omega(omega_new)
         basis = [x['symbol'] for x in bvp.states()]
-        X_H = make_hamiltonian_vector_field(bvp.constants_of_motion()[0]['function'], bvp.the_omega(), basis, total_derivative)
+        X_H = make_hamiltonian_vector_field(bvp.get_constants_of_motion()[0]['function'], bvp.the_omega(), basis, total_derivative)
 
         for ii, s in enumerate(bvp.states()):
             s['eom'] = X_H[ii]
@@ -1442,7 +1568,7 @@ def F_ICRM(bvp, method='indirect'):
     del bvp._properties['controls']
     bvp._control_law = []
 
-    def gamma_map(gamma, _compute_control=None, n=n_states, m=n_controls, method=method):
+    def gamma_map(gamma, n=n_states, m=n_controls, method=method):
         gamma = copy.deepcopy(gamma)
         if len(gamma.dual_u) == 0:
             gamma.dual_u = np.zeros_like(gamma.u)
@@ -1454,7 +1580,7 @@ def F_ICRM(bvp, method='indirect'):
         gamma.u = np.array([]).reshape((n, 0))
         return gamma
 
-    def gamma_map_inverse(gamma, _compute_control=None, n=n_states, m=n_controls, method=method):
+    def gamma_map_inverse(gamma, n=n_states, m=n_controls, method=method):
         gamma = copy.deepcopy(gamma)
         if method == 'indirect':
             y1h = gamma.y[:, :int(n / 2)]
@@ -1467,6 +1593,59 @@ def F_ICRM(bvp, method='indirect'):
             y2h = gamma.y[:, int(n / 2) + m:n + m]
             gamma.dual_u = gamma.y[:, -m:]
             gamma.y = np.hstack((y1h, y2h))
+        return gamma
+
+    return bvp, gamma_map, gamma_map_inverse
+
+
+def F_MF(bvp):
+    r"""
+
+    :param bvp:
+    :return:
+    """
+    bvp = copy.deepcopy(bvp)
+
+    com = bvp.get_constants_of_motion()[1]
+    solve_for = sympy.solve(com['function'] - com['symbol'], com['function'].atoms(), dict=True, simplify=False)
+
+    if len(solve_for) > 1:
+        raise ValueError
+
+    for parameter in solve_for[0].keys():
+        for ii, s in enumerate(bvp.states()):
+            if s['symbol'] == parameter:
+                parameter_index = ii
+                bvp.parameter(com['symbol'], com['unit'])
+
+    for ii, s in enumerate(bvp.states()):
+        s['eom'], _ = recursive_sub(s['eom'], solve_for[0])
+
+    for ii, s in enumerate(bvp.all_bcs()):
+        s['function'], _ = recursive_sub(s['function'], solve_for[0])
+
+    for ii, law in enumerate(bvp._control_law):
+        for jj, symbol in enumerate(law.keys()):
+            bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for[0])
+            bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
+
+    bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for[0])
+    del bvp.states()[parameter_index]
+    del bvp.get_constants_of_motion()[1]
+
+    def gamma_map(gamma, parameter_index=parameter_index):
+        gamma = copy.deepcopy(gamma)
+        cval = gamma.y[0, parameter_index]
+        gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, cval))
+        gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
+        return gamma
+
+    def gamma_map_inverse(gamma, parameter_index=parameter_index):
+        gamma = copy.deepcopy(gamma)
+        cval = gamma.dynamical_parameters[-1]
+        state = np.ones_like(gamma.t)*cval
+        gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))
+        gamma.dynamical_parameters = gamma.dynamical_parameters[:-1]
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
