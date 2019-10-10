@@ -252,6 +252,25 @@ class OCP(BVP):
         temp = self._properties.get('switches', [])
         return temp
 
+    def get_symmetries(self):
+        r"""Gets the symmetries of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.symmetry(['1', '0'])
+        symmetries: [{'field': [1, 0]}]
+        >>> sigma.get_symmetries()
+        [{'field': [1, 0]}]
+
+        .. seealso::
+            symmetry
+        """
+        temp = self._properties.get('symmetries', [])
+        return temp
+
     def get_terminal_cost(self):
         r"""Gets the terminal cost of the OCP.
 
@@ -454,6 +473,32 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
+    def symmetry(self, field):
+        r"""Defines a symmetry of the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.symmetry(['1', '0'])
+        symmetries: [{'field': [1, 0]}]
+
+        .. seealso::
+            get_symmetries
+        """
+        if not isinstance(field, list):
+            raise ValueError
+
+        for ii, l in enumerate(field):
+            if isinstance(l, str):
+                field[ii] = sympify(l)
+
+        temp = self._properties.get('symmetries', [])
+        temp.append({'field': field})
+        self._properties['symmetries'] = temp
+        return self
+
     def terminal_cost(self, function, unit):
         r"""Sets the terminal cost of the OCP.
 
@@ -548,12 +593,10 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
-    symmetry = partialmethod(set_property, property_name='symmetries', property_args=('function',))
     custom_function = partialmethod(set_property, property_name='custom_functions',
                                     property_args=('name', 'args', 'handle', 'derivs'))
 
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
-    symmetries = partialmethod(get_property, property_name='symmetries')
     parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
 
@@ -574,8 +617,7 @@ class OCP(BVP):
         """
         Returns a string representation of the object
         """
-        return str({'name': self.name,
-                    'properties': self._properties,
+        return str({'properties': self._properties,
                     'constraints': self._constraints,
                     'continuation': str(self.continuation)})
 

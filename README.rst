@@ -12,6 +12,8 @@ beluga
 
 .. _contributing: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga/blob/master/CONTRIBUTING.md
 
+.. |figures| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga@master/figures.png
+
 +---------------+-----------------+----------------+------------+
 | Linux         | Windows         | Documentation_ | Coverage   |
 +===============+=================+================+============+
@@ -30,9 +32,6 @@ beluga
 .. |coverage| image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga@master/coverage.svg
     :target: https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
 
-Installation
-============
-
 +------------+
 | PyPI_      |
 +============+
@@ -41,6 +40,25 @@ Installation
 
 .. |pypi| image:: https://badge.fury.io/py/beluga.svg
     :target: https://pypi.org/project/beluga/
+
+Examples
+--------
+
+|figures|
+
+Features
+--------
+
+* High quality resolution of singular arcs.
+* Phaseless construction.
+* Discontinuous function modeling.
+* Hamiltonian "indirect" methods and definition of co-states.
+* Hermite-Simpson Collocation and Multiple Shooting methods.
+* Automated scaling.
+* Lots of examples and open-source.
+
+Installation
+============
 
 Installation using pip
 ----------------------
