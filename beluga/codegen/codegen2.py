@@ -7,6 +7,7 @@ from sympy.utilities.lambdify import lambdastr
 from scipy.optimize import fsolve
 
 from beluga.utils import sympify
+from collections.abc import Iterable
 
 from autograd import grad
 # from autograd import numpy as np
@@ -53,13 +54,13 @@ class SymBVP:
         self.path_cost = sympify(problem_data['path_cost'])
         self.terminal_cost = sympify(problem_data['terminal_cost'])
 
-        self.df_dy = Matrix(sympify(problem_data['states_jac'][0]))
-        self.df_dp = Matrix(sympify(problem_data['states_jac'][1]))
+        self.df_dy = sympify(problem_data['states_jac'][0])
+        self.df_dp = sympify(problem_data['states_jac'][1])
 
-        self.dbc_0_dy = Matrix(sympify(problem_data['bc_initial_jac']))
-        self.dbc_f_dy = Matrix(sympify(problem_data['bc_terminal_jac']))
-        self.dbc_0_dp = Matrix(sympify(problem_data['bc_initial_parameter_jac']))
-        self.dbc_f_dp = Matrix(sympify(problem_data['bc_terminal_parameter_jac']))
+        self.dbc_0_dy = sympify(problem_data['bc_initial_jac'])
+        self.dbc_f_dy = sympify(problem_data['bc_terminal_jac'])
+        self.dbc_0_dp = sympify(problem_data['bc_initial_parameter_jac'])
+        self.dbc_f_dp = sympify(problem_data['bc_terminal_parameter_jac'])
 
         control_options = problem_data['control_options']
         self.algebraic_control_options = \
@@ -76,7 +77,7 @@ class SymBVP:
 class BVP(object):
     def __init__(self):
         self.deriv_func = None  #
-        self.deriv_jac_func = None
+        self.deriv_jac_func = None  #
         self.quad_func = None  #
         self.bc_func = None  #
         self.bc_func_jac = None  #
@@ -107,20 +108,12 @@ def compile_bvp(sym_bvp):
     func_bvp = BVP()
 
     func_bvp.name = sym_bvp.name
-
     compile_deriv_func(sym_bvp, func_bvp)
-
     compile_deriv_jac_func(sym_bvp, func_bvp)
-
     compile_cost_func(sym_bvp, func_bvp)
-
     compile_constraint_func(sym_bvp, func_bvp)
-
     compile_bc_func(sym_bvp, func_bvp)
-
     compile_bc_jac_func(sym_bvp, func_bvp)
-
-    # breakpoint()
 
     return func_bvp
 
@@ -281,7 +274,9 @@ def compile_deriv_jac_func(sym_bvp, func_bvp):
         df_dp = lambdify_([sym_bvp.x, sym_bvp.p_d, sym_bvp.k], sym_bvp.df_dp)
 
         def deriv_func_jac(x, p_d, k):
-            return df_dy(x, p_d, k), df_dp(x, p_d, k)
+            df_dy_out = df_dy(x, p_d, k)
+            df_dp_out = df_dp(x, p_d, k)
+            return df_dy_out, df_dp_out
 
     else:
 
@@ -297,10 +292,11 @@ def compile_deriv_jac_func(sym_bvp, func_bvp):
 
 def lambdify_(args, sym_func):
 
-    mods = ['math', 'numpy']
+    mods = ['numpy']
 
     # print(lambdastr(args, sym_func))
-    lam_func = lambdify(args, sym_func, mods)
+    tup_func = tuplefy(sym_func)
+    lam_func = lambdify(args, tup_func, mods)
     jit_func = jit_function(lam_func, len(args), func_name=repr(sym_func))
 
     return jit_func
@@ -310,12 +306,21 @@ def jit_function(func, num_args, func_name=None):
     try:
         arg_types = tuple([float64[:] for _ in range(num_args)])
         jit_func = njit(arg_types)(func)
+        # logging.debug('Successfully Compiled: {}'.format(func_name))
         return jit_func
 
     except numba.errors.NumbaError as e:
         # logging.debug(e)
-        logging.debug('Cannot jit compile function: {}'.format(func_name))
+        logging.debug('Cannot Compile Function: {}'.format(func_name))
         return func
+
+
+def tuplefy(iter_var):
+
+    if isinstance(iter_var, Iterable):
+        iter_var = tuple([tuplefy(item) for item in iter_var])
+
+    return iter_var
 
 
 # preprocess(raw_bvp)
