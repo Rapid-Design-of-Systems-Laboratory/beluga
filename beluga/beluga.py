@@ -90,8 +90,8 @@ def ocp2bvp(ocp, **kwargs):
         raise NotImplementedError
 
     bvp_raw['custom_functions'] = ocp.custom_functions()
-    bvp = preprocess(bvp_raw)
-    bvp.raw = bvp_raw
+    s_bvp = SymBVP(bvp_raw)
+    bvp = FuncBVP(s_bvp)
     ocp._scaling.initialize(bvp.raw)
     bvp.raw['scaling'] = ocp._scaling
 

@@ -10,19 +10,17 @@ def lambdify_(args, sym_func):
 
     mods = ['numpy']
 
-    # print(lambdastr(args, sym_func))
     tup_func = tuplefy(sym_func)
     lam_func = lambdify(args, tup_func, mods)
-    jit_func = jit_function(lam_func, len(args), func_name=repr(sym_func))
+    jit_func = jit_compile_func(lam_func, len(args), func_name=repr(sym_func))
 
     return jit_func
 
 
-def jit_function(func, num_args, func_name=None):
+def jit_compile_func(func, num_args, func_name=None):
     try:
         arg_types = tuple([float64[:] for _ in range(num_args)])
         jit_func = njit(arg_types)(func)
-        # logging.debug('Successfully Compiled: {}'.format(func_name))
         return jit_func
 
     except errors.NumbaError as e:
@@ -92,7 +90,7 @@ class FuncBVP(object):
         self.raw = sym_bvp.raw
 
         self.ham_func = lambdify_([sym_bvp.x, sym_bvp.p_d, sym_bvp.k], sym_bvp.ham)
-        self.compute_control = self.compute_control()
+        self.compute_control = self.compile_control()
 
         self.compute_x_dot, self.deriv_func, self.quad_func = self.compile_deriv_func()
         self.deriv_jac_func = self.compile_deriv_jac_func()
@@ -138,7 +136,7 @@ class FuncBVP(object):
 
                 return u
 
-        control_function = jit_function(calc_u, 3, func_name='control_function')
+        control_function = jit_compile_func(calc_u, 3, func_name='control_function')
 
         return control_function
 
@@ -170,8 +168,8 @@ class FuncBVP(object):
                 u = calc_u(x, p_d, k)
                 return np.array(calc_q_dot(x, u, p_d, k))
     
-        deriv_func = jit_function(deriv_func, 3, func_name='deriv_func')
-        quad_func = jit_function(quad_func, 3, func_name='quad_func')
+        deriv_func = jit_compile_func(deriv_func, 3, func_name='deriv_func')
+        quad_func = jit_compile_func(quad_func, 3, func_name='quad_func')
         
         return calc_x_dot, deriv_func, quad_func
 
@@ -198,7 +196,7 @@ class FuncBVP(object):
                 u = calc_u(x, p_d, k)
                 return df_dy(x, u, p_d, k), df_dp(x, u, p_d, k)
 
-        deriv_func_jac = jit_function(deriv_func_jac, 3, func_name='deriv_func_jac')
+        deriv_func_jac = jit_compile_func(deriv_func_jac, 3, func_name='deriv_func_jac')
         
         return deriv_func_jac
 
@@ -265,6 +263,6 @@ class FuncBVP(object):
                 return dbc_0_dy(x_0, u_0, p_d, k), dbc_f_dy(x_f, u_f, p_d, k), dbc_0_dp(x_0, u_0, p_d, k), \
                     dbc_f_dp(x_f, u_f, p_d, k)
     
-        bc_func_jac = jit_function(bc_func_jac, 4, func_name='bc_func_jac')
+        bc_func_jac = jit_compile_func(bc_func_jac, 4, func_name='bc_func_jac')
         
         return bc_func_jac

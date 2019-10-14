@@ -3,7 +3,7 @@ from sympy.diffgeom import Patch, CoordSystem, Differential, covariant_order, We
 import copy
 import logging
 from beluga.ivpsol import Trajectory
-from beluga.codegen import make_jit_fn
+from beluga.codegen import jit_compile_func as make_jit_fn
 import numpy as np
 import itertools as it
 from .optimlib import *
