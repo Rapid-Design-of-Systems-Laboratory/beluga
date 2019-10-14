@@ -1,18 +1,9 @@
 import logging
-import numba
-from numba import njit, float64, gdb_init
-import sympy
-from sympy import Matrix, lambdify, Array
-from sympy.utilities.lambdify import lambdastr
-from scipy.optimize import fsolve
-
-from beluga.utils import sympify
-from collections.abc import Iterable
-
-from autograd import grad
-# from autograd import numpy as np
-from scipy.optimize import fsolve, minimize
 import numpy as np
+from numba import njit, float64, errors
+from sympy import lambdify, sympify
+# from beluga.utils import sympify
+from collections.abc import Iterable
 
 import cloudpickle
 
@@ -20,13 +11,6 @@ filename = 'moon.beluga'
 
 with open(filename, 'rb') as file:
     raw_bvp = cloudpickle.load(file)
-
-# x_test = np.array([0, 0, 0, 0.5, -.6, -.4, 1, 0])
-# u_test = np.array([0.1])
-# p_d_test = np.array([10.2])
-# p_n_test = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
-# k_test = np.array([-9.81, 1, 1])
-# q_test = np.array([])
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -74,20 +58,21 @@ class SymBVP:
         return '{}_SymbolicBVP'.format(self.name)
 
 
-class BVP(object):
+class FuncBVP(object):
     def __init__(self):
-        self.deriv_func = None  #
-        self.deriv_jac_func = None  #
-        self.quad_func = None  #
-        self.bc_func = None  #
-        self.bc_func_jac = None  #
-        self.compute_control = None  #
-        self.initial_cost = None  #
-        self.path_cost = None  #
-        self.terminal_cost = None  #
-        self.ineq_constraints = None  #
+        self.deriv_func = None
+        self.deriv_jac_func = None
+        self.quad_func = None
+        self.bc_func = None
+        self.bc_func_jac = None
+        self.compute_control = None
+        self.initial_cost = None
+        self.path_cost = None
+        self.terminal_cost = None
+        self.ineq_constraints = None
+        self.ham_func = None
+
         self.raw = dict()
-        self.ham_func = None  #
 
         self.name = None
 
@@ -105,9 +90,9 @@ def preprocess(problem_data):
 
 def compile_bvp(sym_bvp):
 
-    func_bvp = BVP()
+    func_bvp = FuncBVP()  #
 
-    func_bvp.name = sym_bvp.name
+    func_bvp.name = sym_bvp.name  #
     compile_deriv_func(sym_bvp, func_bvp)
     compile_deriv_jac_func(sym_bvp, func_bvp)
     compile_cost_func(sym_bvp, func_bvp)
@@ -309,7 +294,7 @@ def jit_function(func, num_args, func_name=None):
         # logging.debug('Successfully Compiled: {}'.format(func_name))
         return jit_func
 
-    except numba.errors.NumbaError as e:
+    except errors.NumbaError as e:
         # logging.debug(e)
         logging.debug('Cannot Compile Function: {}'.format(func_name))
         return func
