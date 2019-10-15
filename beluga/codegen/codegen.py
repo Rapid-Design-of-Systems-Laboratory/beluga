@@ -28,6 +28,10 @@ def jit_compile_func(func, num_args, func_name=None):
         logging.debug('Cannot Compile Function: {}'.format(func_name))
         return func
 
+    except TypeError as e:
+        logging.debug('Cannot Compile Function: {} (probably NoneType)'.format(func_name))
+        return None
+
 
 def tuplefy(iter_var):
 
@@ -90,7 +94,7 @@ class FuncBVP(object):
         self.name = sym_bvp.name
         self.raw = sym_bvp.raw
 
-        self.ham_func = lambdify_([sym_bvp.x, sym_bvp.p_d, sym_bvp.k], sym_bvp.ham)
+        self.ham_func = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.ham)
         self.compute_control = self.compile_control()
 
         self.compute_x_dot, self.deriv_func, self.quad_func = self.compile_deriv_func()
@@ -180,8 +184,10 @@ class FuncBVP(object):
 
         calc_u = self.compute_control
 
-        if len(self.sym_bvp.u) == 0:
+        if any([item is None for item in [self.sym_bvp.df_dy, self.sym_bvp.df_dp]]):
+            deriv_func_jac = None
 
+        elif len(self.sym_bvp.u) == 0:
             df_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dy)
             df_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dp)
 
@@ -189,7 +195,6 @@ class FuncBVP(object):
                 return np.array(df_dy(x, p_d, k)), np.array(df_dp(x, p_d, k))
 
         else:
-
             df_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dy)
             df_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dp)
 
@@ -235,8 +240,12 @@ class FuncBVP(object):
     def compile_bc_jac_func(self):
     
         calc_u = self.compute_control
+
+        if any([item is None for item in
+                [self.sym_bvp.dbc_0_dy, self.sym_bvp.dbc_f_dy, self.sym_bvp.dbc_0_dp, self.sym_bvp.dbc_f_dp]]):
+            bc_func_jac = None
     
-        if len(self.sym_bvp.u) == 0:
+        elif len(self.sym_bvp.u) == 0:
     
             dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_0_dy)
             dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_f_dy)
