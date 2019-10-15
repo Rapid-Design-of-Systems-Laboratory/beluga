@@ -1048,6 +1048,25 @@ def rash_mult(condition, tolerance):
     return 1/(1+sympy.exp(condition/tolerance))
 
 
+def pb(f, g, bvp):
+    r"""
+
+    :param f:
+    :param g:
+    :param bvp:
+    :return:
+    """
+    if f is None and g is not None:
+        O = bvp.the_omega().tomatrix()
+        h = sympy.MutableDenseNDimArray([0]*O.shape[0])
+        for ii, s in enumerate(bvp.states()):
+            for jj, t in enumerate(bvp.states()):
+                h[ii] += O[ii,jj]*total_derivative(g['function'], t['symbol'])
+
+        return h
+    raise NotImplementedError
+
+
 def noether(bvp, quantity):
     r"""
 
@@ -1074,6 +1093,16 @@ def noether(bvp, quantity):
             unit += omegaX[jj]*bvp.states()[jj]['unit']
 
         return gstar, unit
+
+    if not is_symmetry:
+        g = pb(None, quantity, bvp)
+        nonz = np.nonzero(g)
+        if len(nonz) == 1:
+            unit = bvp.states()[nonz[0][0]]['unit']
+        else:
+            raise NotImplementedError
+
+        return g, unit
 
 
 def F_momentumshift(ocp):
@@ -1613,6 +1642,8 @@ def F_MF(bvp):
         raise ValueError
 
     for parameter in solve_for[0].keys():
+        the_symmetry, symmetry_unit = noether(bvp, com)
+        symmetry_index = np.nonzero(the_symmetry)[0][0]
         for ii, s in enumerate(bvp.states()):
             if s['symbol'] == parameter:
                 parameter_index = ii
@@ -1630,21 +1661,59 @@ def F_MF(bvp):
             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
 
     bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for[0])
-    del bvp.states()[parameter_index]
+    symmetry_symbol = bvp.states()[symmetry_index]['symbol']
+    symmetry_eom = bvp.states()[symmetry_index]['eom']
+    symmetry_unit = bvp.states()[symmetry_index]['unit']
+    bvp.quad(symmetry_symbol, symmetry_eom, symmetry_unit)
+
+    O = bvp.the_omega().tomatrix()
+    if parameter_index > symmetry_index:
+        del bvp.states()[parameter_index]
+        del bvp.states()[symmetry_index]
+        O.row_del(parameter_index)
+        O.col_del(parameter_index)
+        O.row_del(symmetry_index)
+        O.col_del(symmetry_index)
+    else:
+        del bvp.states()[symmetry_index]
+        del bvp.states()[parameter_index]
+        O.row_del(symmetry_index)
+        O.col_del(symmetry_index)
+        O.row_del(parameter_index)
+        O.col_del(parameter_index)
+
+    bvp.omega(sympy.MutableDenseNDimArray(O))
+
     del bvp.get_constants_of_motion()[1]
 
-    def gamma_map(gamma, parameter_index=parameter_index):
+    def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index):
         gamma = copy.deepcopy(gamma)
         cval = gamma.y[0, parameter_index]
+        qval = gamma.y[:, symmetry_index]
         gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, cval))
-        gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
+        if parameter_index > symmetry_index:
+            gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
+            gamma.y = np.delete(gamma.y, np.s_[symmetry_index], axis=1)
+        else:
+            gamma.y = np.delete(gamma.y, np.s_[symmetry_index], axis=1)
+            gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
+
+        gamma.q = np.column_stack((gamma.q, qval))
         return gamma
 
-    def gamma_map_inverse(gamma, parameter_index=parameter_index):
+    def gamma_map_inverse(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index):
         gamma = copy.deepcopy(gamma)
         cval = gamma.dynamical_parameters[-1]
         state = np.ones_like(gamma.t)*cval
-        gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))
+        qval = gamma.q[:,-1]
+        if parameter_index > symmetry_index:
+            gamma.y = np.column_stack((gamma.y[:, :symmetry_index], qval, gamma.y[:, symmetry_index:]))
+            gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))
+        else:
+            gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))
+            gamma.y = np.column_stack((gamma.y[:, :symmetry_index], qval, gamma.y[:, symmetry_index:]))
+
+        gamma.q = np.delete(gamma.q, np.s_[-1], axis=1)
         gamma.dynamical_parameters = gamma.dynamical_parameters[:-1]
         return gamma
 

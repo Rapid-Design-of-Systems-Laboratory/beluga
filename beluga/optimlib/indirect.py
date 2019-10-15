@@ -124,7 +124,7 @@ def ocp_to_bvp(ocp, **kwargs):
             cat_chain += [bvp]
             gamma_map_chain += [gam]
             gamma_map_inverse_chain += [gam_inv]
-    elif not is_symplectic(bvp.the_omega()):
+    elif (not is_symplectic(bvp.the_omega())) and reduction:
         logging.warning('BVP is not symplectic. Skipping reduction.')
 
     if analytical_jacobian:
