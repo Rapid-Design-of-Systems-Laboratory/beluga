@@ -322,7 +322,7 @@ def ocp_to_bvp(ocp, **kwargs):
         sol.t = sol.y[:, independent_index]
         sol.dual_t = sol.y[:, (independent_index+1)*2-1]
         if num_dae == 0:
-            sol.u = np.vstack([_compute_control(yi, None, sol.dynamical_parameters, sol.const) for yi in sol.y])
+            sol.u = np.vstack([_compute_control(yi, sol.dynamical_parameters, sol.const) for yi in sol.y])
             sol.y = np.delete(sol.y, np.s_[independent_index, (independent_index + 1) * 2 - 1], axis=1)
             sol.dual = sol.y[:, -(len(costates)-1):]
         else:
