@@ -4,6 +4,7 @@ from ._bvp import *
 import numpy as np
 import copy
 
+
 class spbvp(BaseAlgorithm):
     r"""
     Reduced dimensional sparse collocation for solving boundary value problems.
@@ -43,13 +44,14 @@ class spbvp(BaseAlgorithm):
 
         def _fun(t, y, params=np.array([]), const=solinit.const):
             y = y.T
-            o1 = np.vstack([self.derivative_function(yi[:nstates], [], params, const) for yi in y])
-            o2 = np.vstack([self.quadrature_function(yi[:nstates], [], params, const) for yi in y])
+            o1 = np.vstack([self.derivative_function(yi[:nstates], np.array([]), params[:ndyn], const) for yi in y])
+            o2 = np.vstack([self.quadrature_function(yi[:nstates], np.array([]), params[:ndyn], const) for yi in y])
             return np.hstack((o1, o2)).T
 
+        # TODO: The way parameters are used is inconsitent
         def _bc(ya, yb, params=np.array([]), const=solinit.const):
-            return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], [], yb[:nstates],
-                                                   yb[nstates:nstates+nquads], [], params[:ndyn],
+            return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], np.array(()), yb[:nstates],
+                                                   yb[nstates:nstates+nquads], np.array(()), params[:ndyn],
                                                    params[ndyn:ndyn+nnondyn], const)
 
         if self.derivative_function_jac is not None:
@@ -59,7 +61,7 @@ class spbvp(BaseAlgorithm):
                 df_dp = np.zeros((y[0].size, ndyn+nnondyn, t.size))
 
                 for ii, yi in enumerate(y):
-                    df_dy[:, :, ii], _df_dp = self.derivative_function_jac(yi, [], params, const)
+                    df_dy[:, :, ii], _df_dp = self.derivative_function_jac(yi, np.array([]), params[:ndyn], const)
                     if nstates > 1 and len(_df_dp.shape) == 1:
                         _df_dp = np.array([_df_dp]).T
 
@@ -74,7 +76,7 @@ class spbvp(BaseAlgorithm):
 
         if self.boundarycondition_function_jac is not None:
             def _bc_jac(ya, yb, params=np.array([]), const=solinit.const):
-                dbc_dya, dbc_dyb, dbc_dp = self.boundarycondition_function_jac(ya, yb, [], params, const)
+                dbc_dya, dbc_dyb, dbc_dp = self.boundarycondition_function_jac(ya, yb, np.array([]), params, const)
                 return dbc_dya, dbc_dyb, dbc_dp
         else:
             _bc_jac = None

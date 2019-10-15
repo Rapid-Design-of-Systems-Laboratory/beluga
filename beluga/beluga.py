@@ -194,15 +194,15 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                     qa = sol.q[0,:]
                     qb = sol.q[-1,:]
                 else:
-                    qa = []
-                    qb = []
+                    qa = np.array([])
+                    qb = np.array([])
 
                 if sol.u.size > 0:
                     ua = sol.u[0,:]
                     ub = sol.u[-1,:]
                 else:
-                    ua = []
-                    ub = []
+                    ua = np.array([])
+                    ub = np.array([])
 
                 dp = sol.dynamical_parameters
                 ndp = sol.nondynamical_parameters

@@ -50,6 +50,7 @@ class SymBVP:
         self.k = sympify(problem_data['constants'])
         self.q = sympify(problem_data['quads'])
         self.p_n = sympify(problem_data['nondynamical_parameters'])
+        self.p = self.p_d + self.p_n  # TODO: The parameter usage is inconsistent. Should clean-up down the line
 
         self.x_dot = sympify(problem_data['states_rates'])
         self.q_dot = sympify(problem_data['quads_rates'])
@@ -141,16 +142,18 @@ class FuncBVP(object):
         return control_function
 
     def compile_deriv_func(self):
+
+        # TODO control u is expected to feed into functions, look into changing
     
         if len(self.sym_bvp.u) == 0:
     
             calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.x_dot)
             calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.q_dot)
     
-            def deriv_func(x, p_d, k):
+            def deriv_func(x, _, p_d, k):
                 return np.array(calc_x_dot(x, p_d, k))
     
-            def quad_func(x, p_d, k):
+            def quad_func(x, _, p_d, k):
                 return np.array(calc_q_dot(x, p_d, k))
     
         else:    
@@ -160,16 +163,16 @@ class FuncBVP(object):
                                    self.sym_bvp.q_dot)
             calc_u = self.compute_control
     
-            def deriv_func(x, p_d, k):
+            def deriv_func(x, _, p_d, k):
                 u = calc_u(x, p_d, k)
                 return np.array(calc_x_dot(x, u, p_d, k))
     
-            def quad_func(x, p_d, k):
+            def quad_func(x, _, p_d, k):
                 u = calc_u(x, p_d, k)
                 return np.array(calc_q_dot(x, u, p_d, k))
     
-        deriv_func = jit_compile_func(deriv_func, 3, func_name='deriv_func')
-        quad_func = jit_compile_func(quad_func, 3, func_name='quad_func')
+        deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
+        quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
         
         return calc_x_dot, deriv_func, quad_func
 
@@ -182,21 +185,19 @@ class FuncBVP(object):
             df_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dy)
             df_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dp)
 
-            def deriv_func_jac(x, p_d, k):
-                df_dy_out = df_dy(x, p_d, k)
-                df_dp_out = df_dp(x, p_d, k)
-                return df_dy_out, df_dp_out
+            def deriv_func_jac(x, _, p_d, k):
+                return np.array(df_dy(x, p_d, k)), np.array(df_dp(x, p_d, k))
 
         else:
 
             df_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dy)
             df_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dp)
 
-            def deriv_func_jac(x, p_d, k):
+            def deriv_func_jac(x, _, p_d, k):
                 u = calc_u(x, p_d, k)
-                return df_dy(x, u, p_d, k), df_dp(x, u, p_d, k)
+                return np.array(df_dy(x, u, p_d, k)), np.array(df_dp(x, u, p_d, k))
 
-        deriv_func_jac = jit_compile_func(deriv_func_jac, 3, func_name='deriv_func_jac')
+        deriv_func_jac = jit_compile_func(deriv_func_jac, 4, func_name='deriv_func_jac')
         
         return deriv_func_jac
 
@@ -208,7 +209,7 @@ class FuncBVP(object):
             bc_f_func = lambdify_([self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
                                   self.sym_bvp.bc_f)
     
-            def bc_func(x_0, q_0, x_f, q_f, p_d, p_n, k):
+            def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
                 bc_0 = bc_0_func(x_0, q_0, p_d, p_n, k)
                 bc_f = bc_f_func(x_f, q_f, p_d, p_n, k)
                 return np.concatenate((bc_0, bc_f))
@@ -221,7 +222,7 @@ class FuncBVP(object):
                 [self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
                 self.sym_bvp.bc_f)
     
-            def bc_func(x_0, q_0, x_f, q_f, p_d, p_n, k):
+            def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
                 u_0 = self.compute_control(x_0, p_d, k)
                 u_f = self.compute_control(x_f, p_d, k)
                 
@@ -229,7 +230,7 @@ class FuncBVP(object):
                 bc_f = bc_f_func(x_f, q_f, u_f, p_d, p_n, k)
                 return np.concatenate((bc_0, bc_f))
     
-        return bc_func
+        return jit_compile_func(bc_func, 9, func_name='bc_func')
 
     def compile_bc_jac_func(self):
     
@@ -237,32 +238,37 @@ class FuncBVP(object):
     
         if len(self.sym_bvp.u) == 0:
     
-            dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.dbc_0_dy)
-            dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.dbc_f_dy)
-            dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.dbc_0_dp)
-            dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.dbc_f_dp)
-    
-            def bc_func_jac(x_0, x_f, p_d, k):
-                return dbc_0_dy(x_0, p_d, k), dbc_f_dy(x_f, p_d, k), dbc_0_dp(x_0, p_d, k), dbc_f_dp(x_f, p_d, k)
+            dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_0_dy)
+            dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_f_dy)
+            dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_0_dp)
+            dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_f_dp)
+
+            # TODO: Expects u argument, is this needed
+            def bc_func_jac(x_0, x_f, _, p, k):
+                return np.array(dbc_0_dy(x_0, p, k)), np.array(dbc_f_dy(x_f, p, k)),\
+                    (np.array(dbc_0_dp(x_0, p, k)) + np.array(dbc_f_dp(x_f, p, k)))
     
         else:
     
-            dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
+            dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
                                  self.sym_bvp.dbc_0_dy)
-            dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
+            dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
                                  self.sym_bvp.dbc_f_dy)
-            dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
+            dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
                                  self.sym_bvp.dbc_0_dp)
-            dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
+            dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
                                  self.sym_bvp.dbc_f_dp)
+
+            num_p_d = len(self.sym_bvp.p_d)
     
-            def bc_func_jac(x_0, x_f, p_d, k):
+            def bc_func_jac(x_0, x_f, _, p, k):
+                p_d = p[:num_p_d]
                 u_0 = calc_u(x_0, p_d, k)
                 u_f = calc_u(x_f, p_d, k)
     
-                return dbc_0_dy(x_0, u_0, p_d, k), dbc_f_dy(x_f, u_f, p_d, k), dbc_0_dp(x_0, u_0, p_d, k), \
-                    dbc_f_dp(x_f, u_f, p_d, k)
+                return np.array(dbc_0_dy(x_0, u_0, p, k)), np.array(dbc_f_dy(x_f, u_f, p, k)),\
+                    (np.array(dbc_0_dp(x_0, u_0, p, k)) + np.array(dbc_f_dp(x_f, u_f, p, k)))
     
-        bc_func_jac = jit_compile_func(bc_func_jac, 4, func_name='bc_func_jac')
+        bc_func_jac = jit_compile_func(bc_func_jac, 5, func_name='bc_func_jac')
         
         return bc_func_jac
