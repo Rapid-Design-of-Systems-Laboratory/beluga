@@ -1634,37 +1634,67 @@ def F_MF(bvp):
     :return:
     """
     bvp = copy.deepcopy(bvp)
+    hamiltonian = bvp.get_constants_of_motion()[0]['function']
+    O = bvp.the_omega()
+    X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
 
     com = bvp.get_constants_of_motion()[1]
-    solve_for = sympy.solve(com['function'] - com['symbol'], com['function'].atoms(), dict=True, simplify=False)
+    solve_for_p = sympy.solve(com['function'] - com['symbol'], com['function'].atoms(), dict=True, simplify=False)
 
-    if len(solve_for) > 1:
+    if len(solve_for_p) > 1:
         raise ValueError
 
-    for parameter in solve_for[0].keys():
+    for parameter in solve_for_p[0].keys():
         the_symmetry, symmetry_unit = noether(bvp, com)
-        symmetry_index = np.nonzero(the_symmetry)[0][0]
         for ii, s in enumerate(bvp.states()):
             if s['symbol'] == parameter:
                 parameter_index = ii
                 bvp.parameter(com['symbol'], com['unit'])
 
+    symmetry_index = parameter_index - int(len(bvp.states())/2)
+
+    # Derive the quad
+    # Evaluate int(pdq) = int(PdQ)
+    n = len(bvp.quads())
+    symmetry_symbol = Symbol('_q' + str(n))
+    _lhs = com['function']/com['symbol']*the_symmetry
+    lhs = 0
     for ii, s in enumerate(bvp.states()):
-        s['eom'], _ = recursive_sub(s['eom'], solve_for[0])
+        lhs += sympy.integrate(_lhs[ii], s['symbol'])
+
+    lhs, _ = recursive_sub(lhs, solve_for_p[0])
+    solve_for_q = sympy.solve(lhs - symmetry_symbol, bvp.states()[symmetry_index]['symbol'], dict=True, simplify=False)
+
+    # Evaluate X_H(pi(., c)), pi = O^sharp
+    O = bvp.the_omega().tomatrix()
+    rvec = np.array([0]*len(bvp.states()))
+    for ii, s1 in enumerate(bvp.states()):
+        for jj, s2 in enumerate(bvp.states()):
+            rvec[ii] += O[ii,jj]*total_derivative(com['function'], s2['symbol'])
+    symmetry_eom = X_H.dot(rvec)
+
+    # TODO: Figure out how to find units of the quads. This is only works in some specialized cases.
+    symmetry_unit = bvp.states()[symmetry_index]['unit']
+
+    bvp.quad(symmetry_symbol, symmetry_eom, symmetry_unit)
+
+    for ii, s in enumerate(bvp.states()):
+        s['eom'], _ = recursive_sub(s['eom'], solve_for_p[0])
+        s['eom'], _ = recursive_sub(s['eom'], solve_for_q[0])
 
     for ii, s in enumerate(bvp.all_bcs()):
-        s['function'], _ = recursive_sub(s['function'], solve_for[0])
+        s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
+        s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
 
     for ii, law in enumerate(bvp._control_law):
         for jj, symbol in enumerate(law.keys()):
-            bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for[0])
+            bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_p[0])
+            bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
+            bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_q[0])
             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
 
-    bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for[0])
-    symmetry_symbol = bvp.states()[symmetry_index]['symbol']
-    symmetry_eom = bvp.states()[symmetry_index]['eom']
-    symmetry_unit = bvp.states()[symmetry_index]['unit']
-    bvp.quad(symmetry_symbol, symmetry_eom, symmetry_unit)
+    bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for_p[0])
+    bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for_q[0])
 
     O = bvp.the_omega().tomatrix()
     if parameter_index > symmetry_index:
