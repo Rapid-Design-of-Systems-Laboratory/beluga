@@ -75,11 +75,14 @@ class SymBVP:
         self.dbc_0_dp = sympify(problem_data['bc_initial_parameter_jac'])
         self.dbc_f_dp = sympify(problem_data['bc_terminal_parameter_jac'])
 
-        control_options = problem_data['control_options']
-        self.algebraic_control_options = \
-            [[sympify(option[str(u_i)]) for u_i in self.u] for option in control_options]
-
         self.path_constraints = problem_data['path_constraints']
+
+        control_options = problem_data['control_options']
+        if control_options is None:
+            self.algebraic_control_options = []
+        else:
+            self.algebraic_control_options = \
+                [[sympify(option[str(u_i)]) for u_i in self.u] for option in control_options]
 
         self.name = problem_data['problem_name']
 
@@ -128,7 +131,6 @@ class FuncBVP(object):
 
         else:
             def calc_u(x, p_d, k):
-
                 u = np.array(compiled_options[0](x, p_d, k))
                 ham = ham_func(x, u, p_d, k)
 
