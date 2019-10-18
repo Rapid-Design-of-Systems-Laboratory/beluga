@@ -115,7 +115,7 @@ continuation_steps.add_step('bisection').num_cases(41) \
 continuation_steps.add_step('bisection').num_cases(41) \
     .const('phi_f', 2*pi/180)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
 
 sol_set = beluga.solve(
     ocp=ocp,
