@@ -4,6 +4,7 @@ Base functions shared by all optimization methods.
 
 
 from beluga.utils import sympify, _combine_args_kwargs, recursive_sub
+from beluga.codegen import make_jit_fn
 import copy
 import numpy as np
 import sympy
@@ -131,7 +132,7 @@ class BVP(object):
         """
         return self._properties.get('states', dict())
 
-    def symmetry(self, field):
+    def symmetry(self, field, unit, remove=None):
         r"""Defines a symmetry of the OCP.
 
         Examples
@@ -151,9 +152,18 @@ class BVP(object):
         for ii, l in enumerate(field):
             if isinstance(l, str):
                 field[ii] = sympify(l)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+        if isinstance(remove, str):
+            remove = Symbol(remove)
+
+        if not isinstance(unit, Expr):
+            raise ValueError
+        if not isinstance(remove, Symbol) and remove is not None:
+            raise ValueError
 
         temp = self._properties.get('symmetries', [])
-        temp.append({'field': field})
+        temp.append({'field': field, 'unit': unit, 'remove': remove})
         self._properties['symmetries'] = temp
         return self
 
@@ -1090,7 +1100,8 @@ def noether(bvp, quantity):
         gstar = 0
         for jj, state in enumerate(bvp.states()):
             gstar += sympy.integrate(omegaX[jj], state['symbol'])
-            unit += omegaX[jj]*bvp.states()[jj]['unit']
+
+        unit = bvp.get_constants_of_motion()[0]['unit']/quantity['unit']
 
         return gstar, unit
 
@@ -1125,7 +1136,7 @@ def F_momentumshift(ocp):
             independent_symmetry = False
 
     if independent_symmetry:
-        ocp.symmetry(['0']*(len(ocp.states())-1) + ['1'])
+        ocp.symmetry(['0']*(len(ocp.states())-1) + ['1'], independent['unit'])
 
     def gamma_map(gamma):
         if len(gamma.dual_t) == 0:
@@ -1166,6 +1177,13 @@ def F_scaletime(bvp):
 
     for s in bvp.states():
         s['eom'] *= _tf
+
+    for s in bvp.quads():
+        s['eom'] *= _tf
+
+    # O = bvp.the_omega()
+    # if O is not None:
+    #     bvp.omega(O/_tf)
 
     bvp.independent('_TAU', bvp._properties['independent']['unit'])
 
@@ -1401,7 +1419,7 @@ def Dualize(ocp, method='indirect'):
         bvp.constant(c['symbol'], c['value'], c['unit'])
 
     for ii, s in enumerate(ocp.get_symmetries()):
-        bvp.symmetry(s['field'] + [sympify('0') for _ in costates])
+        bvp.symmetry(s['field'] + [sympify('0') for _ in costates], s['unit'], s['remove'])
 
     bvp.constant_of_motion('hamiltonian', hamiltonian_function, hamiltonian_units)
 
@@ -1639,13 +1657,26 @@ def F_MF(bvp):
     X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
 
     com = bvp.get_constants_of_motion()[1]
-    solve_for_p = sympy.solve(com['function'] - com['symbol'], com['function'].atoms(), dict=True, simplify=False)
+
+    states = [str(s['symbol']) for s in bvp.states()]
+    parameters = [str(s['symbol']) for s in bvp.parameters()]
+    constants = [str(s['symbol']) for s in bvp.get_constants()]
+    fn_p = make_jit_fn(states + parameters + constants, str(com['function']))
+
+    atoms = com['function'].atoms()
+    atoms2 = set()
+    for a in atoms:
+        if isinstance(a, Symbol):
+            atoms2.add(a)
+
+    solve_for_p = sympy.solve(com['function'] - com['symbol'], atoms2, dict=True, simplify=False)
 
     if len(solve_for_p) > 1:
         raise ValueError
 
     for parameter in solve_for_p[0].keys():
         the_symmetry, symmetry_unit = noether(bvp, com)
+        replace_p = parameter
         for ii, s in enumerate(bvp.states()):
             if s['symbol'] == parameter:
                 parameter_index = ii
@@ -1663,15 +1694,26 @@ def F_MF(bvp):
         lhs += sympy.integrate(_lhs[ii], s['symbol'])
 
     lhs, _ = recursive_sub(lhs, solve_for_p[0])
-    solve_for_q = sympy.solve(lhs - symmetry_symbol, bvp.states()[symmetry_index]['symbol'], dict=True, simplify=False)
+
+    states = [str(s['symbol']) for s in bvp.states()]
+    parameters = [str(s['symbol']) for s in bvp.parameters()]
+    constants = [str(s['symbol']) for s in bvp.get_constants()]
+    the_p = [str(com['symbol'])]
+    fn_q = make_jit_fn(states + parameters + constants, str(lhs))
+
+    replace_q = bvp.states()[symmetry_index]['symbol']
+    solve_for_q = sympy.solve(lhs - symmetry_symbol, replace_q, dict=True, simplify=False)
 
     # Evaluate X_H(pi(., c)), pi = O^sharp
     O = bvp.the_omega().tomatrix()
-    rvec = np.array([0]*len(bvp.states()))
+    rvec = sympy.Matrix(([0]*len(bvp.states())))
     for ii, s1 in enumerate(bvp.states()):
         for jj, s2 in enumerate(bvp.states()):
             rvec[ii] += O[ii,jj]*total_derivative(com['function'], s2['symbol'])
-    symmetry_eom = X_H.dot(rvec)
+
+    symmetry_eom = 0
+    for ii, s in enumerate(bvp.states()):
+        symmetry_eom += s['eom']*rvec[ii]
 
     # TODO: Figure out how to find units of the quads. This is only works in some specialized cases.
     symmetry_unit = bvp.states()[symmetry_index]['unit']
@@ -1716,11 +1758,25 @@ def F_MF(bvp):
 
     del bvp.get_constants_of_motion()[1]
 
-    def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index):
+    states = [str(s['symbol']) for s in bvp.states()]
+    quads = [str(s['symbol']) for s in bvp.quads()]
+    parameters = [str(s['symbol']) for s in bvp.parameters()]
+    constants = [str(s['symbol']) for s in bvp.get_constants()]
+    fn_q_inv = make_jit_fn(states + quads + parameters + constants, str(solve_for_q[0][replace_q]))
+
+    states = [str(s['symbol']) for s in bvp.states()]
+    parameters = [str(s['symbol']) for s in bvp.parameters()]
+    constants = [str(s['symbol']) for s in bvp.get_constants()]
+    fn_p_inv = make_jit_fn(states + parameters + constants, str(solve_for_p[0][replace_p]))
+
+    def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q=fn_q, fn_p=fn_p):
         gamma = copy.deepcopy(gamma)
-        cval = gamma.y[0, parameter_index]
-        qval = gamma.y[:, symmetry_index]
+        cval = fn_p(*gamma.y[0], *gamma.dynamical_parameters, *gamma.const)
+        qval = np.ones_like(gamma.t)
         gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, cval))
+        for ii, t in enumerate(gamma.t):
+            qval[ii] = fn_q(*gamma.y[ii], *gamma.dynamical_parameters, *gamma.const)
+
         if parameter_index > symmetry_index:
             gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
             gamma.y = np.delete(gamma.y, np.s_[symmetry_index], axis=1)
@@ -1731,11 +1787,18 @@ def F_MF(bvp):
         gamma.q = np.column_stack((gamma.q, qval))
         return gamma
 
-    def gamma_map_inverse(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index):
+    def gamma_map_inverse(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q_inv=fn_q_inv, fn_p_inv=fn_p_inv):
         gamma = copy.deepcopy(gamma)
+        qinv = np.ones_like(gamma.t)
+        pinv = np.ones_like(gamma.t)
+        for ii, t in enumerate(gamma.t):
+            qinv[ii] = fn_q_inv(*gamma.y[ii], *gamma.q[ii], *gamma.dynamical_parameters, *gamma.const)
+            pinv[ii] = fn_p_inv(*gamma.y[ii], *gamma.dynamical_parameters, *gamma.const)
+        # breakpoint()
         cval = gamma.dynamical_parameters[-1]
         state = np.ones_like(gamma.t)*cval
-        qval = gamma.q[:,-1]
+        state = pinv
+        qval = qinv
         if parameter_index > symmetry_index:
             gamma.y = np.column_stack((gamma.y[:, :symmetry_index], qval, gamma.y[:, symmetry_index:]))
             gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))

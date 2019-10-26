@@ -316,10 +316,17 @@ def solve(**kwargs):
 
     solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
 
-    state_names = bvp.raw['states']
+    sol_temp = copy.deepcopy(solinit)
 
-    initial_states = solinit.y[0, :]
-    terminal_states = solinit.y[-1, :]
+    u = np.array([bvp.compute_control(sol_temp.y[0], [], sol_temp.dynamical_parameters, sol_temp.const)])
+    for ii in range(len(sol_temp.t) - 1):
+        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], [], sol_temp.dynamical_parameters, sol_temp.const)))
+    sol_temp.u = u
+    state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
+    traj = ocp_map_inverse(sol_temp)
+
+    initial_states = np.hstack((traj.y[0, :], traj.t[0]))
+    terminal_states = np.hstack((traj.y[-1, :], traj.t[-1]))
 
     initial_bc = dict(zip(state_names, initial_states))
     terminal_bc = dict(zip(state_names, terminal_states))
