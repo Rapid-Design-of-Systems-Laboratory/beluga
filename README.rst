@@ -53,6 +53,7 @@ Features
 * Phaseless construction.
 * Discontinuous function modeling.
 * Hamiltonian "indirect" methods and definition of co-states.
+* Automated Noether's theorem and symplectic reduction.
 * Hermite-Simpson Collocation and Multiple Shooting methods.
 * Automated scaling.
 * Lots of examples and open-source.
