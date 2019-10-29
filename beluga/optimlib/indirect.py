@@ -119,7 +119,7 @@ def ocp_to_bvp(ocp, **kwargs):
 
     if is_symplectic(bvp.the_omega()) and reduction:
         while len(bvp.get_constants_of_motion()) > 1:
-            bvp, gam, gam_inv = F_MF(bvp)
+            bvp, gam, gam_inv = F_MF(bvp, 1)
             signature += ['F_MF']
             cat_chain += [bvp]
             gamma_map_chain += [gam]
