@@ -1654,7 +1654,7 @@ def F_MF(bvp):
     bvp = copy.deepcopy(bvp)
     hamiltonian = bvp.get_constants_of_motion()[0]['function']
     O = bvp.the_omega()
-    X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
+    # X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
 
     com = bvp.get_constants_of_motion()[1]
 
@@ -1666,10 +1666,12 @@ def F_MF(bvp):
     atoms = com['function'].atoms()
     atoms2 = set()
     for a in atoms:
-        if isinstance(a, Symbol):
+        if isinstance(a, Symbol) and (a not in {s['symbol'] for s in bvp.parameters() + bvp.get_constants()}):
             atoms2.add(a)
 
-    solve_for_p = sympy.solve(com['function'] - com['symbol'], atoms2, dict=True, simplify=False)
+    atoms = atoms2
+
+    solve_for_p = sympy.solve(com['function'] - com['symbol'], atoms, dict=True, simplify=False)
 
     if len(solve_for_p) > 1:
         raise ValueError
@@ -1735,8 +1737,10 @@ def F_MF(bvp):
             bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_q[0])
             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
 
-    bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for_p[0])
-    bvp.get_constants_of_motion()[0]['function'], _ = recursive_sub(bvp.get_constants_of_motion()[0]['function'], solve_for_q[0])
+    for ii, s in enumerate(bvp.get_constants_of_motion()):
+        if ii != 1:
+            s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
+            s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
 
     O = bvp.the_omega().tomatrix()
     if parameter_index > symmetry_index:
