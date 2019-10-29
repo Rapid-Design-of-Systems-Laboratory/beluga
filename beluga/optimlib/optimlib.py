@@ -1645,18 +1645,18 @@ def F_ICRM(bvp, method='indirect'):
     return bvp, gamma_map, gamma_map_inverse
 
 
-def F_MF(bvp):
+def F_MF(bvp, com_index):
     r"""
 
     :param bvp:
     :return:
     """
     bvp = copy.deepcopy(bvp)
-    hamiltonian = bvp.get_constants_of_motion()[0]['function']
-    O = bvp.the_omega()
+    # hamiltonian = bvp.get_constants_of_motion()[0]['function']
+    # O = bvp.the_omega()
     # X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
 
-    com = bvp.get_constants_of_motion()[1]
+    com = bvp.get_constants_of_motion()[com_index]
 
     states = [str(s['symbol']) for s in bvp.states()]
     parameters = [str(s['symbol']) for s in bvp.parameters()]
@@ -1738,7 +1738,7 @@ def F_MF(bvp):
             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
 
     for ii, s in enumerate(bvp.get_constants_of_motion()):
-        if ii != 1:
+        if ii != com_index:
             s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
             s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
 
@@ -1760,7 +1760,7 @@ def F_MF(bvp):
 
     bvp.omega(sympy.MutableDenseNDimArray(O))
 
-    del bvp.get_constants_of_motion()[1]
+    del bvp.get_constants_of_motion()[com_index]
 
     states = [str(s['symbol']) for s in bvp.states()]
     quads = [str(s['symbol']) for s in bvp.quads()]
