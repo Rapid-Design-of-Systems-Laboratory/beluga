@@ -8,7 +8,7 @@ from collections.abc import Iterable
 
 def lambdify_(args, sym_func):
 
-    mods = ['numpy']
+    mods = ['numpy', 'math']
 
     tup_func = tuplefy(sym_func)
     lam_func = lambdify(args, tup_func, mods)
@@ -24,7 +24,7 @@ def jit_compile_func(func, num_args, func_name=None):
         return jit_func
 
     except errors.NumbaError as e:
-        # logging.debug(e)
+        logging.debug(e)
         logging.debug('Cannot Compile Function: {}'.format(func_name))
         return func
 
@@ -118,28 +118,33 @@ class FuncBVP(object):
 
         sym_bvp = self.sym_bvp
 
-        compiled_options = tuple([lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], option)
-                                  for option in sym_bvp.algebraic_control_options])
+        num_options = len(sym_bvp.algebraic_control_options)
 
-        ham_func = self.ham_func
+        if num_options == 1:
 
-        if len(compiled_options) == 1:
-            compiled_option = compiled_options[0]
+            compiled_option = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
+                                        sym_bvp.algebraic_control_options[0])
 
             def calc_u(x, p_d, k):
                 return np.array(compiled_option(x, p_d, k))
 
         else:
+            compiled_options = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
+                                         sym_bvp.algebraic_control_options)
+
+            ham_func = self.ham_func
+
             def calc_u(x, p_d, k):
-                u = np.array(compiled_options[0](x, p_d, k))
-                ham = ham_func(x, u, p_d, k)
 
-                for option in compiled_options[1:]:
-                    u_i = np.array(option(x, p_d, k))
-                    ham_i = ham_func(x, u_i, p_d, k)
+                u_set = np.array(compiled_options(x, p_d, k))
 
+                u = u_set[0, :]
+                ham = ham_func(x, u_set[0, :], p_d, k)
+
+                for n in range(1, num_options):
+                    ham_i = ham_func(x, u_set[n, :], p_d, k)
                     if ham_i < ham:
-                        u = u_i
+                        u = u_set[n, :]
 
                 return u
 
@@ -217,8 +222,8 @@ class FuncBVP(object):
                                   self.sym_bvp.bc_f)
     
             def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
-                bc_0 = bc_0_func(x_0, q_0, p_d, p_n, k)
-                bc_f = bc_f_func(x_f, q_f, p_d, p_n, k)
+                bc_0 = np.array(bc_0_func(x_0, q_0, p_d, p_n, k))
+                bc_f = np.array(bc_f_func(x_f, q_f, p_d, p_n, k))
                 return np.concatenate((bc_0, bc_f))
     
         else:
@@ -228,13 +233,15 @@ class FuncBVP(object):
             bc_f_func = lambdify_(
                 [self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
                 self.sym_bvp.bc_f)
+
+            compute_control = self.compute_control
     
             def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
-                u_0 = self.compute_control(x_0, p_d, k)
-                u_f = self.compute_control(x_f, p_d, k)
+                u_0 = compute_control(x_0, p_d, k)
+                u_f = compute_control(x_f, p_d, k)
                 
-                bc_0 = bc_0_func(x_0, q_0, u_0, p_d, p_n, k)
-                bc_f = bc_f_func(x_f, q_f, u_f, p_d, p_n, k)
+                bc_0 = np.array(bc_0_func(x_0, q_0, u_0, p_d, p_n, k))
+                bc_f = np.array(bc_f_func(x_f, q_f, u_f, p_d, p_n, k))
                 return np.concatenate((bc_0, bc_f))
     
         return jit_compile_func(bc_func, 9, func_name='bc_func')
@@ -254,7 +261,7 @@ class FuncBVP(object):
             dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_0_dp)
             dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_f_dp)
 
-            # TODO: Expects u argument, is this needed
+            # TODO: Expects u argument, is this needed?
             def bc_func_jac(x_0, x_f, _, p, k):
                 return np.array(dbc_0_dy(x_0, p, k)), np.array(dbc_f_dy(x_f, p, k)),\
                     (np.array(dbc_0_dp(x_0, p, k)) + np.array(dbc_f_dp(x_f, p, k)))
