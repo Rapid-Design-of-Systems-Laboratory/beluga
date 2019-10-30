@@ -77,3 +77,19 @@ Base Class Reference
 .. autofunction:: utm_path
 
 .. autofunction:: rash_mult
+
+.. autofunction:: F_momentumshift
+
+.. autofunction:: F_scaletime
+
+.. autofunction:: F_RASHS
+
+.. autofunction:: F_EPSTRIG
+
+.. autofunction:: F_UTM
+
+.. autofunction:: Dualize
+
+.. autofunction:: F_PMP
+
+.. autofunction:: F_ICRM

@@ -11,7 +11,6 @@ import copy
 
 def ocp_to_bvp(ocp, **kwargs):
     ws = init_workspace(ocp)
-    problem_name = ws['problem_name']
     independent_variable = ws['independent_var']
     independent_variable_units = ws['independent_var_units']
     states = ws['states']
@@ -81,7 +80,6 @@ def ocp_to_bvp(ocp, **kwargs):
             path_constraints_units += [constraints_units['path'][ii]]
 
     out = {'method': 'direct',
-           'problem_name': problem_name,
            'control_method': '',
            'aux_list': [{'type': 'const', 'vars': [str(k) for k in constants]}],
            'initial_cost': str(initial_cost),
@@ -122,9 +120,7 @@ def ocp_to_bvp(ocp, **kwargs):
            'control_options': None,
            'num_controls': len(controls)}
 
-    def guess_map(sol, _compute_control=None):
-        if _compute_control is None:
-            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+    def guess_map(sol):
         # Append time as a state
         sol = copy.deepcopy(sol)
         sol.y = np.column_stack((sol.y, sol.t))
@@ -132,9 +128,7 @@ def ocp_to_bvp(ocp, **kwargs):
         sol.t = sol.t / sol.t[-1]
         return sol
 
-    def guess_map_inverse(sol, _compute_control=None):
-        if _compute_control is None:
-            raise ValueError('Guess mapper not properly set up. Bind the control law to keyword \'_compute_control\'')
+    def guess_map_inverse(sol):
         sol = copy.deepcopy(sol)
         sol.t = sol.y[:, -1]
         sol.y = np.delete(sol.y, np.s_[-1], axis=1)

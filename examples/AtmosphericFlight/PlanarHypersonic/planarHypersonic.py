@@ -10,7 +10,7 @@ from math import *
 import beluga
 import logging
 
-ocp = beluga.OCP('planarHypersonic')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

@@ -1,9 +1,7 @@
 import beluga
 import logging
-import matplotlib.pyplot as plt
-import numpy as np
 
-ocp = beluga.OCP('Titan-II-SSTO')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')

@@ -21,8 +21,6 @@ Base Class Reference
 
 .. autofunction:: make_bc_func
 
-.. autofunction:: make_functions
-
 .. autofunction:: make_jit_fn
 
 .. autofunction:: make_sympy_fn

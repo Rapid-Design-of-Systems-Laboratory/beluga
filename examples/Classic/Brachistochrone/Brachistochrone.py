@@ -3,7 +3,7 @@ import beluga
 import logging
 from math import pi
 
-ocp = beluga.OCP('brachisto')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -13,8 +13,8 @@ ocp.state('x', 'v*cos(theta)', 'm') \
    .state('y', 'v*sin(theta)', 'm') \
    .state('v', 'g*sin(theta)', 'm/s')
 
-ocp.constant_of_motion('c1', 'lamX', 's/m')
-ocp.constant_of_motion('c2', 'lamY', 's/m')
+ocp.symmetry(['1', '0', '0'], 'm')
+ocp.symmetry(['0', '1', '0'], 'm')
 
 # Define controls
 ocp.control('theta', 'rad')
@@ -38,7 +38,7 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP')
+bvp_solver = beluga.bvp_algorithm('Shooting')
 
 guess_maker = beluga.guess_generator(
     'auto',
@@ -59,10 +59,11 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
-    method='indirect',
+    method='diffyg',
+    optim_options={'reduction': True},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=True,
+    autoscale=False,
     initial_helper=True
 )

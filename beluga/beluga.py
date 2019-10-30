@@ -15,7 +15,6 @@ from beluga.ivpsol import Trajectory
 from beluga.utils import save
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
-from beluga.optimlib.diffyg import ocp_to_bvp as DIFFYG_ocp_to_bvp
 from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
@@ -78,12 +77,11 @@ def ocp2bvp(ocp, **kwargs):
 
     method = kwargs.get('method', 'indirect').lower()
     optim_options = kwargs.get('optim_options', dict())
+    optim_options.update({'method': method})
 
     logging.debug("Computing the necessary conditions of optimality")
-    if method == 'indirect' or method == 'traditional' or method == 'brysonho':
+    if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
         bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
-    elif method == 'diffyg':
-        bvp_raw, _map, _map_inverse = DIFFYG_ocp_to_bvp(ocp, **optim_options)
     elif method == 'diffyg_deprecated':
         bvp_raw, _map, _map_inverse = DIFFYG_DEP_ocp_to_bvp(ocp, **optim_options)
     elif method == 'direct':
@@ -98,10 +96,10 @@ def ocp2bvp(ocp, **kwargs):
     bvp.raw['scaling'] = ocp._scaling
 
     def ocp_map(sol):
-        return _map(sol, _compute_control=bvp.compute_control)
+        return _map(sol)
 
     def ocp_map_inverse(sol):
-        return _map_inverse(sol, _compute_control=bvp.compute_control)
+        return _map_inverse(sol)
 
     return bvp, ocp_map, ocp_map_inverse
 
@@ -318,10 +316,17 @@ def solve(**kwargs):
 
     solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
 
-    state_names = bvp.raw['states']
+    sol_temp = copy.deepcopy(solinit)
 
-    initial_states = solinit.y[0, :]
-    terminal_states = solinit.y[-1, :]
+    u = np.array([bvp.compute_control(sol_temp.y[0], [], sol_temp.dynamical_parameters, sol_temp.const)])
+    for ii in range(len(sol_temp.t) - 1):
+        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], [], sol_temp.dynamical_parameters, sol_temp.const)))
+    sol_temp.u = u
+    state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
+    traj = ocp_map_inverse(sol_temp)
+
+    initial_states = np.hstack((traj.y[0, :], traj.t[0]))
+    terminal_states = np.hstack((traj.y[-1, :], traj.t[-1]))
 
     initial_bc = dict(zip(state_names, initial_states))
     terminal_bc = dict(zip(state_names, terminal_states))
@@ -365,6 +370,10 @@ def solve(**kwargs):
 
     for cont_num, continuation_set in enumerate(out):
         for sol_num, sol in enumerate(continuation_set):
+            u = np.array([bvp.compute_control(sol.y[0], [], sol.dynamical_parameters, sol.const)])
+            for ii in range(len(sol.t) - 1):
+                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], [], sol.dynamical_parameters, sol.const)))
+            sol.u = u
             out[cont_num][sol_num] = ocp_map_inverse(sol)
 
     if pool is not None:

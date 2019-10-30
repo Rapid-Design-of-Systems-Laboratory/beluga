@@ -1,13 +1,11 @@
-from beluga.bvpsol.Pseudospectral import linter
 from beluga.utils import load
 import matplotlib.pyplot as plt
-import numpy as np
 
 data = load('data.blg')
 
 sol_set = data['solutions']
+traj = sol_set[-1][-1]
 continuation = sol_set[-1]
-ind = 0
 L = len(continuation)
 
 plt.figure()
@@ -23,6 +21,8 @@ plt.figure()
 for ind, sol in enumerate(continuation):
     plt.plot(sol.t, sol.u[:, 0], linestyle='-', color=(1*(ind/L), 0, 1*(L-ind)/L))
 
+plt.plot([traj.t[0], traj.t[-1]], [1, 1], color='k', linestyle='--')
+plt.plot([traj.t[0], traj.t[-1]], [-1, -1], color='k', linestyle='--')
 plt.title('Control History Plot')
 plt.xlabel('Time [s]')
 plt.ylabel('Control, $u$')

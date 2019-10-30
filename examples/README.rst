@@ -6,7 +6,7 @@
 .. _`Hypersonic Nose Cone`: AtmosphericFlight/HypersonicNose
 .. _`Mall's Oscillator`: Oscillators/MallsOscillator
 .. _`Moon Lander`: Classic/MoonLander
-.. _`One-Loop Circuit`: ElectricityandMagnetism/oneloopcircuit
+.. _`One-Loop Circuit`: ElectricityAndMagnetism/OneLoopCircuit
 .. _`Rayleigh Oscillator`: Oscillators/Rayleigh
 .. _`Space Shuttle`: AtmosphericFlight/SpaceShuttle
 .. _`Zermelo's Problem`: Classic/ZermelosProblem

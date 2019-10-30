@@ -1,472 +1,56 @@
 import pytest
+import subprocess
+import os
 
-tol = 1e-3
-METHODS = ['indirect', 'diffyg']
+AscentVehicles = [r'BFR', r'GoddardRocket', r'Titan-II-SSTO']
+AtmosphericFlight = [r'HangGlider', r'HypersonicNose', r'SpaceShuttle']
+Classic = [r'Brachistochrone', r'BrysonDenham', r'MoonLander', r'ZermelosProblem']
+ElectricityAndMagnetism = [r'OneLoopCircuit']
+Oscillators = [r'FinancialOscillator', r'MallsOscillator', r'Rayleigh']
 
-@pytest.mark.parametrize("method", METHODS)
-def test_brachistochrone_shooting(method):
-    from math import pi
-    import beluga
 
-    from beluga.ivpsol import Trajectory
+@pytest.mark.parametrize("file", AscentVehicles)
+def test_AscentVehicles(file):
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/AscentVehicles/' + file + '/' + file + '.py')
+    assert subprocess.call(['python', path]) == 0
 
-    ocp = beluga.OCP('brachisto')
 
-    # Define independent variables
-    ocp.independent('t', 's')
+def test_AstrodynamicsHT():
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/Astrodynamics/OrbitRaising/HighThrust.py')
+    assert subprocess.call(['python', path]) == 0
 
-    # Define equations of motion
-    ocp.state('x', 'v*cos(theta)', 'm') \
-        .state('y', 'v*sin(theta)', 'm') \
-        .state('v', 'g*sin(theta)', 'm/s')
 
-    # Define controls
-    ocp.control('theta', 'rad')
+def test_AstrodynamicsLT():
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/Astrodynamics/OrbitRaising/LowThrust.py')
+    assert subprocess.call(['python', path]) == 0
 
-    # Define constants
-    ocp.constant('g', -9.81, 'm/s^2')
-    ocp.constant('x_f', 0, 'm')
-    ocp.constant('y_f', 0, 'm')
 
-    # Define costs
-    ocp.path_cost('1', '1')
+@pytest.mark.parametrize("file", AtmosphericFlight)
+def test_AtmosphericFlight(file):
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/AtmosphericFlight/' + file + '/' + file + '.py')
+    assert subprocess.call(['python', path]) == 0
 
-    # Define constraints
-    ocp.constraints() \
-        .initial('x', 'm') \
-        .initial('y', 'm') \
-        .initial('v', 'm/s') \
-        .initial('t', 's') \
-        .terminal('x-x_f', 'm') \
-        .terminal('y-y_f', 'm')
 
-    ocp.scale(m='y', s='y/v', kg=1, rad=1)
+@pytest.mark.parametrize("file", Classic)
+def test_Classic(file):
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/Classic/' + file + '/' + file + '.py')
+    assert subprocess.call(['python', path]) == 0
 
-    shooting_solver = beluga.bvp_algorithm('Shooting')
 
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.1,
-                                         control_guess=[-pi/2], use_control_guess=True)
+@pytest.mark.parametrize("file", ElectricityAndMagnetism)
+def test_ElectricityAndMagnetism(file):
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/ElectricityAndMagnetism/' + file + '/' + file + '.py')
+    assert subprocess.call(['python', path]) == 0
 
-    continuation_steps = beluga.init_continuation()
 
-    continuation_steps.add_step('bisection') \
-        .num_cases(21) \
-        .const('x_f', 10) \
-        .const('y_f', -10)
-
-    cont = beluga.solve(ocp=ocp,
-                        method=method,
-                        optim_options={'control_method': 'icrm'},
-                        bvp_algorithm=shooting_solver,
-                        steps=continuation_steps,
-                        guess_generator=guess_maker,
-                        initial_helper=True)
-
-    sol = cont[-1][-1]
-    assert isinstance(sol, Trajectory)
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 3
-    assert sol.dual.shape[1] == 3
-    assert sol.u.shape[1] == 1
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-    d0 = sol.dual[0]
-    df = sol.dual[-1]
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(d0[0] + 0.0667) < tol
-    assert abs(d0[1] - 0.0255) < tol
-    assert abs(d0[2] + 0.1019) < tol
-    assert abs(sol.t[-1] - 1.8433) < tol
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(df[0] + 0.0667) < tol
-    assert abs(df[1] - 0.0255) < tol
-    assert abs(df[2] - 0) < tol
-    assert abs(d0[0] - df[0]) < tol
-    assert abs(d0[1] - df[1]) < tol
-
-    cont = beluga.solve(ocp=ocp,
-                        method=method,
-                        bvp_algorithm=shooting_solver,
-                        steps=continuation_steps,
-                        guess_generator=guess_maker,
-                        initial_helper=True)
-    sol = cont[-1][-1]
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-    d0 = sol.dual[0]
-    df = sol.dual[-1]
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 3
-    assert sol.dual.shape[1] == 3
-    assert sol.u.shape[1] == 1
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(d0[0] + 0.0667) < tol
-    assert abs(d0[1] - 0.0255) < tol
-    assert abs(d0[2] + 0.1019) < tol
-    assert abs(sol.t[-1] - 1.8433) < tol
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(df[0] + 0.0667) < tol
-    assert abs(df[1] - 0.0255) < tol
-    assert abs(df[2] - 0) < tol
-    assert abs(d0[0] - df[0]) < tol
-    assert abs(d0[1] - df[1]) < tol
-
-
-@pytest.mark.parametrize("method", METHODS)
-def test_brachistochrone_collocation(method):
-    from math import pi
-    import beluga
-
-    from beluga.ivpsol import Trajectory
-
-    ocp = beluga.OCP('brachisto')
-
-    # Define independent variables
-    ocp.independent('t', 's')
-
-    # Define equations of motion
-    ocp.state('x', 'v*cos(theta)', 'm') \
-        .state('y', 'v*sin(theta)', 'm') \
-        .state('v', 'g*sin(theta)', 'm/s')
-
-    # Define controls
-    ocp.control('theta', 'rad')
-
-    # Define constants
-    ocp.constant('g', -9.81, 'm/s^2')
-    ocp.constant('x_f', 0, 'm')
-    ocp.constant('y_f', 0, 'm')
-
-    # Define costs
-    ocp.path_cost('1', '1')
-
-    # Define constraints
-    ocp.constraints() \
-        .initial('x', 'm') \
-        .initial('y', 'm') \
-        .initial('v', 'm/s') \
-        .initial('t', 's') \
-        .terminal('x-x_f', 'm') \
-        .terminal('y-y_f', 'm')
-
-    ocp.scale(m='y', s='y/v', kg=1, rad=1)
-
-    shooting_solver = beluga.bvp_algorithm('Collocation')
-
-    guess_maker = beluga.guess_generator('auto', start=[0, 0, 0], direction='forward', costate_guess=-0.25,
-                                         control_guess=[-pi/2], use_control_guess=True)
-
-    continuation_steps = beluga.init_continuation()
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(21) \
-        .const('x_f', 10) \
-        .const('y_f', -10)
-
-    cont = beluga.solve(ocp=ocp,
-                        method=method,
-                        bvp_algorithm=shooting_solver,
-                        steps=continuation_steps,
-                        guess_generator=guess_maker,
-                        initial_helper=True)
-
-    sol = cont[-1][-1]
-
-    assert isinstance(sol, Trajectory)
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 3
-    assert sol.dual.shape[1] == 3
-    assert sol.u.shape[1] == 1
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-    d0 = sol.dual[0]
-    df = sol.dual[-1]
-
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(d0[0] + 0.0667) < tol
-    assert abs(d0[1] - 0.0255) < tol
-    assert abs(d0[2] + 0.1019) < tol
-    assert abs(sol.t[-1] - 1.8433) < tol
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(df[0] + 0.0667) < tol
-    assert abs(df[1] - 0.0255) < tol
-    assert abs(df[2] - 0) < tol
-    assert abs(d0[0] - df[0]) < tol
-    assert abs(d0[1] - df[1]) < tol
-
-    cont = beluga.solve(ocp=ocp,
-                        method=method,
-                        optim_options={'control_method': 'icrm'},
-                        bvp_algorithm=shooting_solver,
-                        steps=continuation_steps,
-                        guess_generator=guess_maker,
-                        initial_helper=True)
-
-    sol = cont[-1][-1]
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-    d0 = sol.dual[0]
-    df = sol.dual[-1]
-
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 3
-    assert sol.dual.shape[1] == 3
-    assert sol.u.shape[1] == 1
-    assert abs(y0[0] - 0) < tol
-    assert abs(y0[1] - 0) < tol
-    assert abs(y0[2] - 0) < tol
-    assert abs(d0[0] + 0.0667) < tol
-    assert abs(d0[1] - 0.0255) < tol
-    assert abs(d0[2] + 0.1019) < tol
-    assert abs(sol.t[-1] - 1.8433) < tol
-    assert abs(yf[0] - 10) < tol
-    assert abs(yf[1] + 10) < tol
-    assert abs(yf[2] - 14.0071) < tol
-    assert abs(df[0] + 0.0667) < tol
-    assert abs(df[1] - 0.0255) < tol
-    assert abs(df[2] - 0) < tol
-    assert abs(d0[0] - df[0]) < tol
-    assert abs(d0[1] - df[1]) < tol
-
-
-@pytest.mark.parametrize("method", METHODS)
-def test_zermelo_custom_functions(method):
-    import beluga
-
-    ocp = beluga.OCP('zermelos_problem')
-
-    def drift_x(x, y):
-        return 0.0
-
-    def drift_y(x, y):
-        return ((x - 5) ** 4 - 625) / 625
-
-    ocp.custom_function('drift_x', ['x', 'y'], drift_x)
-    ocp.custom_function('drift_y', ['x', 'y'], drift_y)
-
-    # Define independent variables
-    ocp.independent('t', 's')
-
-    # Define equations of motion
-    ocp.state('x', 'V*cos(theta) + epsilon*drift_x(x,y)', 'm') \
-        .state('y', 'V*sin(theta) + epsilon*drift_y(x,y)', 'm')
-
-    # Define controls
-    ocp.control('theta', 'rad')
-
-    # Define constants
-    ocp.constant('V', 10, 'm/s')
-    ocp.constant('epsilon', 0.001, '1')
-    ocp.constant('x_f', 0, 'm')
-    ocp.constant('y_f', 0, 'm')
-
-    # Define costs
-    ocp.path_cost('1', '1')
-
-    # Define constraints
-    ocp.constraints() \
-        .initial('x', 'm') \
-        .initial('y', 'm') \
-        .initial('t', 's') \
-        .terminal('x-x_f', 'm') \
-        .terminal('y-y_f', 'm')
-
-    ocp.scale(m='x', s='x/V', rad=1)
-
-    bvp_solver = beluga.bvp_algorithm('Shooting',
-                                      derivative_method='fd',
-                                      tolerance=1e-4, max_error=100, max_iterations=100)
-
-    guess_maker = beluga.guess_generator('auto',
-                                         start=[0, 0],
-                                         control_guess=[0],
-                                         use_control_guess=True,
-                                         direction='forward')
-
-    continuation_steps = beluga.init_continuation()
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(10) \
-        .const('x_f', 10)
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(10) \
-        .const('y_f', 10)
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(10) \
-        .const('epsilon', 1)
-
-    cont = beluga.solve(ocp=ocp,
-                        method=method,
-                        optim_options={'control_method': 'icrm'},
-                        bvp_algorithm=bvp_solver,
-                        steps=continuation_steps,
-                        guess_generator=guess_maker,
-                        initial_helper=True)
-
-    sol = cont[-1][-1]
-
-    from beluga.ivpsol import Trajectory
-    assert isinstance(sol, Trajectory)
-
-    # y0 = sol.y[0]
-    # yf = sol.y[-1]
-    #
-    # y0e = [0, 0, -0.01731532, -0.04692043, 1.21726471]
-    # yfe = [10, 10, -0.11575671, -0.14536181, 0.8982941]
-    # tfe = 1.8663477145692409
-    #
-    # assert sol.t.shape[0] == sol.y.shape[0]
-    # assert sol.t.shape[0] == sol.u.shape[0]
-    # assert sol.y.shape[1] == 5
-    # assert sol.u.shape[1] == 1
-    # assert abs((y0[0] - y0e[0])) < tol
-    # assert abs((y0[1] - y0e[1])) < tol
-    # assert abs((y0[2] - y0e[2]) / y0e[2]) < tol
-    # assert abs((y0[3] - y0e[3]) / y0e[3]) < tol
-    # assert abs((y0[4] - y0e[4]) / y0e[4]) < tol
-    # assert abs((sol.t[-1] - tfe) / tfe) < tol
-    # assert abs((yf[0] - yfe[0])) < tol
-    # assert abs((yf[1] - yfe[1]) / yfe[1]) < tol
-    # assert abs((yf[2] - yfe[2]) / yfe[2]) < tol
-    # assert abs((yf[3] - yfe[3]) / yfe[3]) < tol
-    # assert abs((yf[4] - yfe[4]) / yfe[4]) < tol
-
-
-@pytest.mark.parametrize("method", METHODS)
-def test_planarhypersonic(method):
-    from math import pi
-    import beluga
-
-    ocp = beluga.OCP('planarHypersonic')
-
-    # Define independent variables
-    ocp.independent('t', 's')
-
-    # Define equations of motion
-    ocp.state('h', 'v*sin(gam)', 'm') \
-        .state('theta', 'v*cos(gam)/r', 'rad') \
-        .state('v', '-D/mass - mu*sin(gam)/r**2', 'm/s') \
-        .state('gam', 'L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)', 'rad')
-
-    # Define quantities used in the problem
-    ocp.quantity('rho', 'rho0*exp(-h/H)')
-    ocp.quantity('Cl', '(1.5658*alfa + -0.0000)')
-    ocp.quantity('Cd', '(1.6537*alfa^2 + 0.0612)')
-    ocp.quantity('D', '0.5*rho*v^2*Cd*Aref')
-    ocp.quantity('L', '0.5*rho*v^2*Cl*Aref')
-    ocp.quantity('r', 're+h')
-
-    # Define controls
-    ocp.control('alfa', 'rad')
-
-    # Define constants
-    ocp.constant('mu', 3.986e5 * 1e9, 'm^3/s^2')  # Gravitational parameter, m^3/s^2
-    ocp.constant('rho0', 0.0001 * 1.2, 'kg/m^3')  # Sea-level atmospheric density, kg/m^3
-    ocp.constant('H', 7500, 'm')  # Scale height for atmosphere of Earth, m
-
-    ocp.constant('mass', 750 / 2.2046226, 'kg')  # Mass of vehicle, kg
-    ocp.constant('re', 6378000, 'm')  # Radius of planet, m
-    ocp.constant('Aref', pi * (24 * .0254 / 2) ** 2, 'm^2')  # Reference area of vehicle, m^2
-    ocp.constant('h_0', 80000, 'm')
-    ocp.constant('v_0', 4000, 'm/s')
-    ocp.constant('h_f', 80000, 'm')
-    ocp.constant('theta_f', 0, 'rad')
-
-    # Define costs
-    ocp.terminal_cost('-v^2', 'm^2/s^2')
-
-    # Define constraints
-    ocp.constraints() \
-        .initial('h-h_0', 'm') \
-        .initial('theta', 'rad') \
-        .initial('v-v_0', 'm/s') \
-        .initial('t', 's') \
-        .terminal('h-h_f', 'm') \
-        .terminal('theta-theta_f', 'rad')
-
-    ocp.scale(m='h', s='h/v', kg='mass', rad=1)
-
-    bvp_solver = beluga.bvp_algorithm('Shooting', algorithm='SLSQP', tolerance=1e-6)
-
-    guess_maker = beluga.guess_generator('auto', start=[80000, 0, 4000, -90 * pi / 180], direction='forward',
-                                         costate_guess=-0.1)
-
-    continuation_steps = beluga.init_continuation()
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(11) \
-        .const('h_f', 0) \
-        .const('theta_f', 0.01 * pi / 180)
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(11) \
-        .const('theta_f', 5.0 * pi / 180)
-
-    continuation_steps.add_step('bisection') \
-        .num_cases(11) \
-        .const('rho0', 1.2)
-
-    cont = beluga.solve(ocp=ocp,
-                        method=method,
-                        bvp_algorithm=bvp_solver,
-                        steps=continuation_steps,
-                        guess_generator=guess_maker,
-                        initial_helper=True)
-
-    sol = cont[-1][-1]
-
-    y0 = sol.y[0]
-    yf = sol.y[-1]
-    d0 = sol.dual[0]
-    df = sol.dual[-1]
-
-    y0e = [8.00000000e+04, 0.00000000e+00, 4.00000000e+03, 1.95069984e-02]
-    yfe = [5.23214346e-04, 8.72664626e-02, 2.69147623e+03, -9.38246813e-01]
-    d0e = [-1.68249327e+01, 1.21634197e+06, -2.83598229e+03, -6.15819100e-17]
-    dfe = [5.46455659e+02, 1.21634197e+06, -5.38295257e+03, 1.67911185e-01]
-    tfe = 144.5678
-
-    assert sol.t.shape[0] == sol.y.shape[0]
-    assert sol.t.shape[0] == sol.u.shape[0]
-    assert sol.y.shape[1] == 4
-    assert sol.dual.shape[1] == 4
-    assert sol.u.shape[1] == 1
-    assert abs((y0[0] - y0e[0]) / y0e[0]) < tol
-    assert abs((y0[1] - y0e[1])) < tol
-    assert abs((y0[2] - y0e[2]) / y0e[2]) < tol
-    assert abs((y0[3] - y0e[3]) / y0e[3]) < tol
-    assert abs((d0[0] - d0e[0]) / d0e[0]) < tol
-    assert abs((d0[1] - d0e[1]) / d0e[1]) < tol
-    assert abs((d0[2] - d0e[2]) / d0e[2]) < tol
-    assert abs((d0[3] - d0e[3])) < tol
-    assert abs((sol.t[-1] - tfe) / tfe) < tol
-    assert abs((yf[0] - yfe[0])) < tol
-    assert abs((yf[1] - yfe[1]) / yfe[1]) < tol
-    assert abs((yf[2] - yfe[2]) / yfe[2]) < tol
-    assert abs((yf[3] - yfe[3]) / yfe[3]) < tol
-    assert abs((df[0] - dfe[0]) / dfe[0]) < tol
-    assert abs((df[1] - dfe[1]) / dfe[1]) < tol
-    assert abs((df[2] - dfe[2]) / dfe[2]) < tol
-    # assert abs((yf[7] - yfe[7]) / yfe[7]) < tol
+@pytest.mark.parametrize("file", Oscillators)
+def test_Oscillators(file):
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/Oscillators/' + file + '/' + file + '.py')
+    assert subprocess.call(['python', path]) == 0

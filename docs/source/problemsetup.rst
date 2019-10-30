@@ -13,10 +13,12 @@ In optimal control theory, we wish to solve problems of the form
 
 .. math::
     \begin{aligned}
-        \min J &= \int_{t_0}^{t_f} L \circ \gamma \; dt + \Phi \circ \gamma \rvert_{t_0} + \Phi \circ \gamma \rvert_{t_f} \\
+        \min_{\boldsymbol{u}} J &= \int_{t_0}^{t_f} L(t, \boldsymbol{x}, \boldsymbol{u}) \; dt + \eta(\boldsymbol{x}(t_f)) \\
         \text{Subject to:}& \\
-        \mathbf{\dot{x}} &= \mathbf{f}(t, \mathbf{x}, \mathbf{u}) \\
-        0 &= \mathbf{\Psi}(t_0, \mathbf{x}_0, t_f, \mathbf{x}_f)
+        \dot{\boldsymbol{x}} &= \mathbf{f}(t, \boldsymbol{x}, \boldsymbol{u}) \\
+        0 &= \boldsymbol{\phi}(t_0, \boldsymbol{x}(t_0)) \\
+        0 &= \boldsymbol{\xi}(t_f, \boldsymbol{x}(t_f)) \\
+        \boldsymbol{g}_{lower} &\leq \boldsymbol{g}(\boldsymbol{x}, \boldsymbol{u}, t) \leq \boldsymbol{g}_{upper}
     \end{aligned}
 
 Setting up a Problem
@@ -25,7 +27,7 @@ Setting up a Problem
 Initialize a new Optimal Control Problem with
 
 >>> import beluga
->>> ocp = beluga.OCP('my problem name')
+>>> ocp = beluga.OCP()
 <beluga.problem.OCP object at 0x0...>
 
 Define parameters in the Optimal Control Problem with
@@ -34,20 +36,15 @@ Define parameters in the Optimal Control Problem with
 
 for example
 
->>> ocp.independent('t','s')
+>>> ocp.independent('t', 's')
 
-defines the independent variable `t` with units of `s`. Info for available parameters are included in the OCP documentation.
+defines the independent variable :math:`t` with units of :math:`s` representing "seconds". Info for available parameters are included in the OCP documentation.
+
+.. include:: ../../examples/README.rst
+
+Base Class Reference
+--------------------
 
 .. autoclass:: beluga.OCP
+    :members: control, get_controls, get_independent, get_initial_cost, get_path_constraints, get_path_cost, get_quantities, get_switches, get_terminal_cost, independent, initial_cost, path_constraint, path_cost, terminal_cost
     :noindex:
-
-Example Problems
-----------------
-
-.. toctree::
-    :maxdepth: 2
-
-    examples/2-brachistochrone
-    examples/3-zermelo
-    examples/4-planarhypersonic
-    examples/5-hypersonic3dof

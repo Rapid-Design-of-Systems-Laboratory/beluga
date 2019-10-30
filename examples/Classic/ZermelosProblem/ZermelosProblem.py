@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP('ZermelosProblem')
+ocp = beluga.OCP()
 
 
 def drift_x(x, y):

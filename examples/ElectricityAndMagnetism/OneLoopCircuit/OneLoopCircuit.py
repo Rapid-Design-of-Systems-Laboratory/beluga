@@ -12,7 +12,7 @@ i_0 = 1
 lu = 1
 lq = 1e5
 
-ocp = beluga.OCP('oneloop')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -40,9 +40,10 @@ ocp.path_cost('lu*u**2/2 + lq*(i-i_0)**2/2', '1')
 ocp.constraints() \
     .initial('i + i_0', 'a') \
     .initial('t', 's') \
-    .path('u', 'v', lower='u_min', upper='u_max', activator='eps1', method='utm') \
     .terminal('i - i_0', 'a') \
     .terminal('t-1', 's')
+
+ocp.path_constraint('u', 'v', lower='u_min', upper='u_max', activator='eps1', method='utm')
 
 ocp.scale(a='i', v='u_max', s='1', H='L', o='L')
 

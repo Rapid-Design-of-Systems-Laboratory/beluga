@@ -8,7 +8,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP('HangGlider')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -50,7 +50,7 @@ ocp.constant('y_f', 900, 'm')
 ocp.constant('vx_f', 13.227, 'm/s')
 ocp.constant('vy_f', -1.287, 'm/s')
 
-ocp.constant('eps', 100, '1')
+ocp.constant('eps', 2.5e2, 'm/s')
 
 # Define costs
 ocp.terminal_cost('-x', 'm')
@@ -64,8 +64,9 @@ ocp.constraints() \
     .initial('t', 's') \
     .terminal('y - y_f', 'm') \
     .terminal('vx - vx_f', 'm/s') \
-    .terminal('vy - vy_f', 'm/s') \
-    .path('u', 'rad', lower='CLmin', upper='CLmax', activator='eps', method='epstrig')
+    .terminal('vy - vy_f', 'm/s')
+
+ocp.path_constraint('u', 'rad', lower='CLmin', upper='CLmax', activator='eps', method='utm')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
@@ -98,19 +99,19 @@ continuation_steps.add_step('bisection') \
                 .const('um', 2.5)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5, 'log') \
-                .const('eps', 8)
+                .num_cases(25, 'log') \
+                .const('eps', 5e-2)
 
-continuation_steps.add_step('bisection') \
-                .num_cases(15, 'log') \
-                .const('eps', 4)
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(15, 'log') \
+#                 .const('eps', 1e1)
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method': 'icrm'},
+    optim_options={'control_method': 'icrm', 'analytical_jacobian': False},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,

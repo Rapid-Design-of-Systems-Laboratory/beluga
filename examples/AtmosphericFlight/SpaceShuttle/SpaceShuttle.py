@@ -17,7 +17,7 @@ v_0 = 7802.88
 v_f = 762
 gam_f = -5*np.pi/180
 
-ocp = beluga.OCP('SpaceShuttleMaxCrossrange')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -61,7 +61,7 @@ ocp.constant('cd3', -0.323, '1')
 
 ocp.constant('amax', 20 * pi / 180, 'rad')
 ocp.constant('bmax', 89 * pi / 180, 'rad')
-ocp.constant('eps', 0.00001, 'rad/s')
+ocp.constant('eps', 0.00001, 'rad**2/s')
 
 ocp.constant('h_0', 60000, 'm')
 ocp.constant('phi_0', 0, 'rad')
@@ -88,9 +88,10 @@ ocp.constraints() \
     .initial('gam-gam_0', 'rad') \
     .initial('psi-psi_0', 'rad') \
     .initial('t', 's') \
-    .terminal('h-h_f', 'm') \
-    .path('alpha', 'rad', lower='-amax', upper='amax', activator='eps', method='utm') \
-    .path('bank', 'rad', lower='-bmax', upper='bmax', activator='eps', method='utm')
+    .terminal('h-h_f', 'm')
+
+ocp.path_constraint('alpha', 'rad', lower='-amax', upper='amax', activator='eps', method='utm')
+ocp.path_constraint('bank', 'rad', lower='-bmax', upper='bmax', activator='eps', method='utm')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 

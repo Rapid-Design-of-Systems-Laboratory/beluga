@@ -11,7 +11,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP('oscillator')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -40,9 +40,10 @@ ocp.constraints() \
     .initial('x1 - x1_0', '1') \
     .initial('x2 - x2_0', '1') \
     .initial('t', 's') \
-    .path('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='epstrig') \
     .terminal('x1 - x1_f', '1')   \
     .terminal('x2 - x2_f', '1')
+
+ocp.path_constraint('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='epstrig')
 
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
@@ -68,7 +69,7 @@ continuation_steps.add_step('bisection') \
     .const('x2_f', 0)
 
 continuation_steps.add_step('bisection') \
-                .num_cases(5, 'log') \
+                .num_cases(10, 'log') \
                 .const('epsilon1', 5e-1)
 
 continuation_steps.add_step('bisection') \
