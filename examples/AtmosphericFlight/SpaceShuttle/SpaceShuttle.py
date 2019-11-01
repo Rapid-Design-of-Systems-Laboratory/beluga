@@ -150,5 +150,6 @@ sol_set = beluga.solve(
     steps=continuation_steps,
     guess_generator=guess_maker,
     optim_options={'control_method': 'icrm'},
-    initial_helper=True
+    initial_helper=True,
+    save='space_shuttle.beluga'
 )
