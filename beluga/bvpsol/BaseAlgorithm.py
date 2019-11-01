@@ -72,6 +72,7 @@ class BaseAlgorithm(object):
     def close(self):
         pass
 
+
 class BVPResult(dict):
     """ Represents the BVP solver result.
 
