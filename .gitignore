@@ -92,3 +92,5 @@ personal/
 
 # IDE folder
 .idea/
+
+Scripts/*
