@@ -1,18 +1,11 @@
 import numpy as np
-import csv
-from matplotlib import pyplot as plt
-import sympy
-import copy
 from sympy import Function
 from sympy.core.function import ArgumentIndexError
 from numba import njit, float64, errors
 import logging
-import inspect
-from beluga.codegen.codegen import jit_compile_func
-from sympy.core.function import UndefinedFunction, FunctionClass
-from sympy.utilities.lambdify import lambdify, implemented_function, lambdastr
 
-func_dict = dict()
+import sympy
+import csv
 
 
 class SymTableMeta(Function):
@@ -35,11 +28,13 @@ class SymTableMeta(Function):
 
 
 class SymTable(SymTableMeta):
-    def __new__(cls, table, arg, order=0):
+    def __new__(cls, table, arg, func_dict=None, order=0):
         name = cls.construct_name(str(table), str(arg), order)
-        if not (name in func_dict):
-            func_dict[name] = table.form_eval_function(order)
         obj = type(name, (SymTableMeta,), {})(table, arg)
+        obj.table_func = table.form_eval_function(order)
+        if func_dict is not None:
+            if name not in func_dict:
+                func_dict[name] = obj.table_func
         obj.order = order
         return obj
 
@@ -141,24 +136,19 @@ dens = []
 
 with open('atmo_table.csv') as file:
     data = csv.reader(file)
-    for row in data:
-        alt += [float(row[0])]
-        temp += [float(row[1])]
-        dens += [float(row[2])]
+    for col in data:
+        alt += [float(col[0])]
+        temp += [float(col[1])]
+        dens += [float(col[2])]
 
 alt = np.array(alt)
 temp = np.array(temp)
 dens = np.array(dens)
 
-table_temp = TableSpline1D('temp', alt, temp)
+tenp_table = TableSpline1D('temp', alt, temp)
+dens_table = TableSpline1D('dens', alt, dens)
 
-# x = np.linspace(alt[0], alt[-1] - 1, 10000)
-# y = np.array([table_temp.interp(xi) for xi in x])
-
-table_dens = TableSpline1D('alt', alt, dens)
-# y = np.array([table_dens.interp(xi) for xi in x])
-
-alt = sympy.symbols('alt')
-temp_sym = SymTable(table_temp, alt)
-dens_sym = SymTable(table_dens, alt)
+alt_sym = sympy.symbols('alt')
+temp_sym = SymTable(tenp_table, alt)
+dens_sym = SymTable(dens_table, alt)
 

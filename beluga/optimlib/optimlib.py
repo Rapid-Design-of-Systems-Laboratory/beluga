@@ -579,10 +579,12 @@ def init_workspace(ocp):
 
 
 def exterior_derivative(f, basis, derivative_fn):
+
     r"""
 
     :param f:
     :param basis:
+    :param derivative_fn:
     :return:
     """
 
@@ -892,6 +894,7 @@ def make_standard_symplectic_form(states, costates):
                 omega[ii,jj] = -1
 
     return omega
+
 
 def make_time_bc(constraints, derivative_fn, hamiltonian, independent_var):
     """

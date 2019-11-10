@@ -37,7 +37,7 @@ bvp_test = load_test[0]
 sols = load_test[1]
 
 
-class ReducedShooting:
+class Shooting2:
     def __init__(self, bvp):
 
         self.bvp = bvp
@@ -71,4 +71,4 @@ class ReducedShooting:
             h_p_mat = h * np.eye(self.n_p_d, self.n_p_d)
 
 
-shooter = ReducedShooting(bvp_test)
+shooter = Shooting2(bvp_test)

@@ -504,6 +504,7 @@ class OCP(BVP):
 
     custom_function = partialmethod(set_property, property_name='custom_functions',
                                     property_args=('name', 'args', 'handle', 'derivs'))
+    table = partialmethod(set_property, property_name='tables', property_args=('name', 'type', 'in_data', 'out_data'))
 
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     parameters = partialmethod(get_property, property_name='parameters')
