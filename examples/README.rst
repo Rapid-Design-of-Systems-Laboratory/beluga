@@ -8,6 +8,7 @@
 .. _`Moon Lander`: Classic/MoonLander
 .. _`One-Loop Circuit`: ElectricityAndMagnetism/OneLoopCircuit
 .. _`Rayleigh Oscillator`: Oscillators/Rayleigh
+.. _`Spacecraft Detumbling`: Astrodynamics/Detumble
 .. _`Space Shuttle`: AtmosphericFlight/SpaceShuttle
 .. _`Zermelo's Problem`: Classic/ZermelosProblem
 
@@ -25,6 +26,7 @@ Pure control path-constrained:
 - `Mall's Oscillator`_
 - `Moon Lander`_
 - `One-Loop Circuit`_
+- `Spacecraft Detumbling`_
 - `Space Shuttle`_
 
 Pure state path-constrained:
