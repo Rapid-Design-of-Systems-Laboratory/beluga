@@ -84,7 +84,8 @@ class SymBVP:
             self.algebraic_control_options = \
                 [[sympify(option[str(u_i)]) for u_i in self.u] for option in control_options]
 
-        self.name = problem_data['problem_name']
+        # self.name = problem_data['problem_name']
+        self.name = None
 
     def __repr__(self):
         return '{}_SymbolicBVP'.format(self.name)
@@ -94,7 +95,8 @@ class FuncBVP(object):
     def __init__(self, sym_bvp):
 
         self.sym_bvp = sym_bvp
-        self.name = sym_bvp.name
+        # self.name = sym_bvp.name
+        self.name = None
         self.raw = sym_bvp.raw
 
         self.ham_func = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.ham)

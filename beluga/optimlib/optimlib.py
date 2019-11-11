@@ -4,7 +4,7 @@ Base functions shared by all optimization methods.
 
 
 from beluga.utils import sympify, _combine_args_kwargs, recursive_sub
-from beluga.codegen import make_jit_fn
+from beluga.codegen import jit_compile_func, lambdify_
 import copy
 import numpy as np
 import sympy
@@ -1652,6 +1652,7 @@ def F_MF(bvp, com_index):
     r"""
 
     :param bvp:
+    :param com_index:
     :return:
     """
     bvp = copy.deepcopy(bvp)
@@ -1661,10 +1662,15 @@ def F_MF(bvp, com_index):
 
     com = bvp.get_constants_of_motion()[com_index]
 
-    states = [str(s['symbol']) for s in bvp.states()]
-    parameters = [str(s['symbol']) for s in bvp.parameters()]
-    constants = [str(s['symbol']) for s in bvp.get_constants()]
-    fn_p = make_jit_fn(states + parameters + constants, str(com['function']))
+    # states = [str(s['symbol']) for s in bvp.states()]
+    # parameters = [str(s['symbol']) for s in bvp.parameters()]
+    # constants = [str(s['symbol']) for s in bvp.get_constants()]
+    # fn_p = make_jit_fn(states + parameters + constants, str(com['function']))
+
+    states = [(s['symbol']) for s in bvp.states()]
+    parameters = [(s['symbol']) for s in bvp.parameters()]
+    constants = [(s['symbol']) for s in bvp.get_constants()]
+    fn_p = lambdify_([states, parameters, constants], com['function'])
 
     atoms = com['function'].atoms()
     atoms2 = set()
@@ -1700,11 +1706,17 @@ def F_MF(bvp, com_index):
 
     lhs, _ = recursive_sub(lhs, solve_for_p[0])
 
-    states = [str(s['symbol']) for s in bvp.states()]
-    parameters = [str(s['symbol']) for s in bvp.parameters()]
-    constants = [str(s['symbol']) for s in bvp.get_constants()]
-    the_p = [str(com['symbol'])]
-    fn_q = make_jit_fn(states + parameters + constants, str(lhs))
+    # states = [str(s['symbol']) for s in bvp.states()]
+    # parameters = [str(s['symbol']) for s in bvp.parameters()]
+    # constants = [str(s['symbol']) for s in bvp.get_constants()]
+    # the_p = [str(com['symbol'])]
+    # fn_q = make_jit_fn(states + parameters + constants, str(lhs))
+
+    states = [s['symbol'] for s in bvp.states()]
+    parameters = [s['symbol'] for s in bvp.parameters()]
+    constants = [s['symbol'] for s in bvp.get_constants()]
+    the_p = [com['symbol']]
+    fn_q = lambdify_([states, parameters, constants], lhs)
 
     replace_q = bvp.states()[symmetry_index]['symbol']
     solve_for_q = sympy.solve(lhs - symmetry_symbol, replace_q, dict=True, simplify=False)
@@ -1765,24 +1777,27 @@ def F_MF(bvp, com_index):
 
     del bvp.get_constants_of_motion()[com_index]
 
-    states = [str(s['symbol']) for s in bvp.states()]
-    quads = [str(s['symbol']) for s in bvp.quads()]
-    parameters = [str(s['symbol']) for s in bvp.parameters()]
-    constants = [str(s['symbol']) for s in bvp.get_constants()]
-    fn_q_inv = make_jit_fn(states + quads + parameters + constants, str(solve_for_q[0][replace_q]))
+    # states = [str(s['symbol']) for s in bvp.states()]
+    # quads = [str(s['symbol']) for s in bvp.quads()]
+    # parameters = [str(s['symbol']) for s in bvp.parameters()]
+    # constants = [str(s['symbol']) for s in bvp.get_constants()]
+    # fn_q_inv = make_jit_fn(states + quads + parameters + constants, str(solve_for_q[0][replace_q]))
 
-    states = [str(s['symbol']) for s in bvp.states()]
-    parameters = [str(s['symbol']) for s in bvp.parameters()]
-    constants = [str(s['symbol']) for s in bvp.get_constants()]
-    fn_p_inv = make_jit_fn(states + parameters + constants, str(solve_for_p[0][replace_p]))
+    states = [s['symbol'] for s in bvp.states()]
+    quads = [s['symbol'] for s in bvp.quads()]
+    parameters = [s['symbol'] for s in bvp.parameters()]
+    constants = [s['symbol'] for s in bvp.get_constants()]
+    fn_q_inv = lambdify_([states, quads, parameters, constants], solve_for_q[0][replace_q])
+
+    fn_p_inv = lambdify_([states, parameters, constants], solve_for_p[0][replace_p])
 
     def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q=fn_q, fn_p=fn_p):
         gamma = copy.deepcopy(gamma)
-        cval = fn_p(*gamma.y[0], *gamma.dynamical_parameters, *gamma.const)
+        cval = fn_p(gamma.y[0], gamma.dynamical_parameters, gamma.const)
         qval = np.ones_like(gamma.t)
         gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, cval))
         for ii, t in enumerate(gamma.t):
-            qval[ii] = fn_q(*gamma.y[ii], *gamma.dynamical_parameters, *gamma.const)
+            qval[ii] = fn_q(gamma.y[ii], gamma.dynamical_parameters, gamma.const)
 
         if parameter_index > symmetry_index:
             gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
@@ -1799,8 +1814,8 @@ def F_MF(bvp, com_index):
         qinv = np.ones_like(gamma.t)
         pinv = np.ones_like(gamma.t)
         for ii, t in enumerate(gamma.t):
-            qinv[ii] = fn_q_inv(*gamma.y[ii], *gamma.q[ii], *gamma.dynamical_parameters, *gamma.const)
-            pinv[ii] = fn_p_inv(*gamma.y[ii], *gamma.dynamical_parameters, *gamma.const)
+            qinv[ii] = fn_q_inv(gamma.y[ii], gamma.q[ii], gamma.dynamical_parameters, gamma.const)
+            pinv[ii] = fn_p_inv(gamma.y[ii], gamma.dynamical_parameters, gamma.const)
         # breakpoint()
         cval = gamma.dynamical_parameters[-1]
         state = np.ones_like(gamma.t)*cval

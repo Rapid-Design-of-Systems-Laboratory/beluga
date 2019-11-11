@@ -318,9 +318,9 @@ def solve(**kwargs):
 
     sol_temp = copy.deepcopy(solinit)
 
-    u = np.array([bvp.compute_control(sol_temp.y[0], [], sol_temp.dynamical_parameters, sol_temp.const)])
+    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
     for ii in range(len(sol_temp.t) - 1):
-        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], [], sol_temp.dynamical_parameters, sol_temp.const)))
+        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.dynamical_parameters, sol_temp.const)))
     sol_temp.u = u
     state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
     traj = ocp_map_inverse(sol_temp)
@@ -370,9 +370,9 @@ def solve(**kwargs):
 
     for cont_num, continuation_set in enumerate(out):
         for sol_num, sol in enumerate(continuation_set):
-            u = np.array([bvp.compute_control(sol.y[0], [], sol.dynamical_parameters, sol.const)])
+            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], [], sol.dynamical_parameters, sol.const)))
+                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
             sol.u = u
             out[cont_num][sol_num] = ocp_map_inverse(sol)
 
