@@ -1,25 +1,33 @@
 import logging
 import numpy as np
-from numba import njit, float64, errors
+from numba import njit, float64, complex128, errors
 from sympy import lambdify
 from beluga.utils import sympify
 from collections.abc import Iterable
 
 
-def lambdify_(args, sym_func):
+def lambdify_(args, sym_func, array_inputs=True, complex_numbers=False):
 
     mods = ['numpy', 'math']
 
     tup_func = tuplefy(sym_func)
     lam_func = lambdify(args, tup_func, mods)
-    jit_func = jit_compile_func(lam_func, len(args), func_name=repr(sym_func))
+    jit_func = jit_compile_func(lam_func, len(args),
+                                func_name=repr(sym_func), complex_numbers=complex_numbers, array_inputs=array_inputs)
 
     return jit_func
 
 
-def jit_compile_func(func, num_args, func_name=None):
+def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, array_inputs=True):
     try:
-        arg_types = tuple([float64[:] for _ in range(num_args)])
+        if complex_numbers and array_inputs:
+            arg_types = tuple([complex128[:] for _ in range(num_args)])
+        elif array_inputs:
+            arg_types = tuple([float64[:] for _ in range(num_args)])
+        elif complex_numbers:
+            arg_types = tuple([complex128 for _ in range(num_args)])
+        else:
+            arg_types = tuple([float64 for _ in range(num_args)])
         jit_func = njit(arg_types)(func)
         return jit_func
 
