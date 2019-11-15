@@ -1,14 +1,32 @@
 import numpy as np
+import numba
 from numba import njit, float64, complex128, types, errors
 from numba.unsafe.ndarray import to_fixed_tuple
 import logging
 import inspect
 
 
-def gen_fin_diff(func, arg_idx=0, deriv_order=1, step_size=1e-6, acc_order=1, method='central',
-                 complex_arg=False):
+def gen_fin_diff(func, arg_idx=0, deriv_order=1, step_size=1e-6, acc_order=1, method='central', complex_arg=False):
 
     arg_len = len(inspect.signature(func).parameters)
+
+    if complex_arg:
+        arg_type = complex128
+    else:
+        arg_type = float64
+
+    try:
+        arg_list = [arg_type] * arg_len
+
+        if type(func) is numba.targets.registry.CPUDispatcher:
+            if complex_arg:
+                func.disable_compile(False)
+                func = func.compile(tuple(arg_type))
+        else:
+            func = njit(tuple(arg_list))(func)
+
+    except errors.NumbaError as e:
+        logging.debug(e, 'Cannot jit compile {} to compile numerical derivative'.format(func.__name__))
 
     if arg_idx > arg_len:
         raise SyntaxError('Argument index exceeds number of arguments')
@@ -25,11 +43,6 @@ def gen_fin_diff(func, arg_idx=0, deriv_order=1, step_size=1e-6, acc_order=1, me
         grid_pnts = np.arange(-(num_pnts - 1) / 2, (num_pnts - 1) / 2 + 1)
     else:
         raise NotImplementedError('{} method is not implemented'.format(method))
-
-    if complex_arg:
-        arg_type = complex128
-    else:
-        arg_type = float64
 
     coeff_array = gen_fin_diff_coeff(deriv_order, grid_pnts)[-1]
     non_zero_pnts = np.where(coeff_array)[0]
