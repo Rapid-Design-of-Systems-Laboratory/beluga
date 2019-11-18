@@ -532,17 +532,22 @@ class Shooting(BaseAlgorithm):
             J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
             return J
 
+        def _jacobian_function_wrapper(X):
+            return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
+
         is_sparse = False
-        if n_quads == 0 and self.algorithm.lower() == 'armijo':
-            is_sparse = True
-            def _jacobian_function_wrapper(X):
-                return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
-        elif n_quads == 0:
-            def _jacobian_function_wrapper(X):
-                return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs).toarray()
-        else:
-            def _jacobian_function_wrapper(X):
-                return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
+
+        # is_sparse = False
+        # if n_quads == 0 and self.algorithm.lower() == 'armijo':
+        #     is_sparse = True
+        #     def _jacobian_function_wrapper(X):
+        #         return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
+        # elif n_quads == 0:
+        #     def _jacobian_function_wrapper(X):
+        #         return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs).toarray()
+        # else:
+        #     def _jacobian_function_wrapper(X):
+        #         return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
 
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 

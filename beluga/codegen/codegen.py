@@ -130,7 +130,11 @@ class FuncBVP(object):
 
         num_options = len(sym_bvp.algebraic_control_options)
 
-        if num_options == 1:
+        if num_options == 0:
+            def calc_u(_, __, ___):
+                return None
+
+        elif num_options == 1:
 
             compiled_option = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
                                         sym_bvp.algebraic_control_options[0])

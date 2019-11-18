@@ -4,9 +4,6 @@ from sympy.core.function import ArgumentIndexError
 from numba import njit, float64, errors
 import logging
 
-import sympy
-import csv
-
 
 class SymTableMeta(Function):
     def __new__(cls, table, arg):
@@ -128,27 +125,3 @@ class TableSpline1D(object):
             logging.debug(e)
             logging.debug('Cannot Compile Function Table')
             return interp
-
-
-alt = []
-temp = []
-dens = []
-
-with open('atmo_table.csv') as file:
-    data = csv.reader(file)
-    for col in data:
-        alt += [float(col[0])]
-        temp += [float(col[1])]
-        dens += [float(col[2])]
-
-alt = np.array(alt)
-temp = np.array(temp)
-dens = np.array(dens)
-
-tenp_table = TableSpline1D('temp', alt, temp)
-dens_table = TableSpline1D('dens', alt, dens)
-
-alt_sym = sympy.symbols('alt')
-temp_sym = SymTable(tenp_table, alt)
-dens_sym = SymTable(dens_table, alt)
-
