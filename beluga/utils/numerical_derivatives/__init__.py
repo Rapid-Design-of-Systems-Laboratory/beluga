@@ -1,28 +1,22 @@
 from .finite_diff import gen_fin_diff
-import numpy as np
+from .complex_step import gen_csd
 
 
-def test_func(x):
-    return np.exp(x)/(np.sin(x)**3 + np.cos(x)**3)
+def gen_num_diff(func, order=(1,), method='c_diff', step_size=1e-6):
 
+    step_mult = 10**sum(order)
 
-def gen_num_diff(func, arg_idx, method='c_diff', order=1, step_size=1e-6):
-
-    if order == 0:
-        return func
-
-    if method == 'f_diff':
-        num_diff = gen_fin_diff(func,
-                                arg_idx=arg_idx, deriv_order=order, step_size=step_size / order, method='forward')
+    if max(order) == 0:
+        diff_func = func
+    elif method == 'f_diff':
+        diff_func = gen_fin_diff(func, deriv_order=order, step_size=step_size * step_mult, method='forward')
     elif method == 'b_diff':
-        num_diff = gen_fin_diff(func,
-                                arg_idx=arg_idx, deriv_order=order, step_size=step_size / order, method='backward')
+        diff_func = gen_fin_diff(func, deriv_order=order, step_size=step_size * step_mult, method='backward')
     elif method == 'c_diff':
-        num_diff = gen_fin_diff(func,
-                                arg_idx=arg_idx, deriv_order=order, step_size=step_size / order, method='central')
+        diff_func = gen_fin_diff(func, deriv_order=order, step_size=step_size * step_mult, method='central')
     elif method == 'csd':
-        num_diff = gen_fin_diff(func, arg_idx=arg_idx, deriv_order=order, step_size=step_size / order)
+        diff_func = gen_csd(func, deriv_order=order, step_size=step_size * step_mult)
     else:
         raise NotImplementedError('Differentiation method {} is not implemented.'.format(method))
 
-    return num_diff
+    return diff_func

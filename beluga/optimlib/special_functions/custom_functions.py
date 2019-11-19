@@ -3,8 +3,9 @@ from sympy import Function
 from sympy.core.function import ArgumentIndexError
 from collections.abc import Iterable
 import inspect
-from beluga.utils.numerical_derivatives import gen_num_diff, test_func
-from numba import njit, float64, errors
+from beluga.utils.numerical_derivatives import gen_num_diff
+from beluga.codegen.codegen import jit_compile_func
+from numba import njit, float64, errors, targets
 import logging
 
 
@@ -14,9 +15,14 @@ class CustomFunctionMeta(Function):
         obj.nargs = (len(arg_list),)
         obj.arg_list = arg_list
         obj.order = [0 for _ in arg_list]
-        obj.base_func = base_func
         obj.deriv_list = None
+        obj.func_dict = None
         obj.num_deriv_type = 'c_diff'
+        if type(base_func) is targets.registry.CPUDispatcher:
+            obj.base_func = base_func
+        else:
+            obj.base_func = jit_compile_func(base_func, len(arg_list), array_inputs=False)
+
         return obj
 
     @property
@@ -27,7 +33,7 @@ class CustomFunctionMeta(Function):
         if argindex <= self.nargs[0]:
             order = list(self.order)
             order[argindex - 1] += 1
-            return CustomFunction(self.base_func, self.arg_list, order=tuple(order))
+            return CustomFunction(self.base_func, self.arg_list, order=tuple(order), func_dict=self.func_dict)
         else:
             raise ArgumentIndexError(self, argindex)
 
@@ -46,10 +52,11 @@ class CustomFunction(CustomFunctionMeta):
 
         name = cls.construct_name(base_func.__name__, arg_list, order)
         obj = type(name, (CustomFunctionMeta,), {})(base_func, arg_list)
-        obj.func_ = gen_num_diff(base_func, order=order, method=deriv_method)
-        if func_dict is not None:
-            if name not in func_dict:
-                func_dict[name] = obj.func_
+        obj.eval_func = gen_num_diff(base_func, order=order, method=deriv_method)
+        obj.func_dict = func_dict
+        if obj.func_dict is not None:
+            if name not in obj.func_dict:
+                obj.func_dict[name] = obj.eval_func
         obj.order = order
         return obj
 
@@ -76,12 +83,3 @@ class CustomFunction(CustomFunctionMeta):
 
         return pre + func_name + post
 
-
-def g(x, y, z):
-    return x + y + z
-
-import sympy
-xs, ys, zs = sympy.symbols('x, y, z')
-
-gs = CustomFunction(g, (xs, ys, zs))
-dg = gs.diff(xs).diff(xs).diff(xs)

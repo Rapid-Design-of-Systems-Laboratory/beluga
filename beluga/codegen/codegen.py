@@ -38,7 +38,7 @@ def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, arra
 
     except TypeError as e:
         logging.debug('Cannot Compile Function: {} (probably NoneType)'.format(func_name))
-        return None
+        return func
 
 
 def tuplefy(iter_var):

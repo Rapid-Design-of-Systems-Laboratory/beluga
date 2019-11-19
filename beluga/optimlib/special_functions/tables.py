@@ -29,9 +29,10 @@ class SymTable(SymTableMeta):
         name = cls.construct_name(str(table), str(arg), order)
         obj = type(name, (SymTableMeta,), {})(table, arg)
         obj.table_func = table.form_eval_function(order)
-        if func_dict is not None:
+        obj.func_dict = func_dict
+        if obj.func_dict is not None:
             if name not in func_dict:
-                func_dict[name] = obj.table_func
+                obj.func_dict[name] = obj.table_func
         obj.order = order
         return obj
 
