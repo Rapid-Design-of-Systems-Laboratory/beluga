@@ -5,12 +5,29 @@ from numba import njit, float64, errors
 import logging
 
 
+# TODO Extend to N-dim tables
+class SymTableGenerator(object):
+    def __init__(self, table, func_dict=None, order=None):
+
+        self.table = table
+        self.func_dict = func_dict
+
+        if order is None:
+            self.order = 0
+        else:
+            self.order = order
+
+    def __call__(self, *args):
+        return SymTable(self.table, *args, func_dict=self.func_dict, order=self.order)
+
+
 class SymTableMeta(Function):
-    def __new__(cls, table, arg):
+    def __new__(cls, table, arg, func_dict=None):
         obj = super(SymTableMeta, cls).__new__(cls, arg)
         obj.nargs = (1,)
         obj.order = 0
         obj.table = table
+        obj.func_dict = func_dict
         return obj
 
     @property
@@ -19,7 +36,7 @@ class SymTableMeta(Function):
 
     def fdiff(self, argindex=1):
         if argindex == 1:
-            return SymTable(self.table, self.args[0], order=self.order + 1)
+            return SymTable(self.table, self.args[0], order=self.order + 1, func_dict=self.func_dict)
         else:
             raise ArgumentIndexError(self, argindex)
 
@@ -27,7 +44,7 @@ class SymTableMeta(Function):
 class SymTable(SymTableMeta):
     def __new__(cls, table, arg, func_dict=None, order=0):
         name = cls.construct_name(str(table), str(arg), order)
-        obj = type(name, (SymTableMeta,), {})(table, arg)
+        obj = type(name, (SymTableMeta,), {})(table, arg, func_dict=func_dict)
         obj.table_func = table.form_eval_function(order)
         obj.func_dict = func_dict
         if obj.func_dict is not None:

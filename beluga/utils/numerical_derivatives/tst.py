@@ -16,3 +16,5 @@ x, y, z = sympy.symbols('x, y, z')
 fs = custom_functions.CustomFunction(f, [x, y, z], func_dict=func_dict)
 df = fs.diff(x).diff(y).diff(z)
 
+fg = custom_functions.CustomFunctionGenerator(f)
+
