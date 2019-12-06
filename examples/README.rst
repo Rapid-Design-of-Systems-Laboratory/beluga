@@ -1,4 +1,5 @@
-.. _BFR: AscentVehicles/BFR
+.. _`Aly Chan Totally Singular`: Classic/AlyChan
+.. _`BFR`: AscentVehicles/BFR
 .. _`Bryson-Denham`: Classic/BrysonDenham
 .. _`Financial Oscillator`: Oscillators/FinancialOscillator
 .. _`Goddard Rocket`: AscentVehicles/GoddardRocket
@@ -19,6 +20,7 @@ Examples are organized into folders for various disciplines. For more optimal co
 
 Pure control path-constrained:
 
+- `Aly Chan Totally Singular`_
 - `Financial Oscillator`_
 - `Goddard Rocket`_
 - `Hang Glider`_
@@ -39,7 +41,7 @@ Mixed state-control path-constrained:
 
 Staged vehicles and discontinuous functions:
 
-- BFR_
+- `BFR`_
 
 Custom function implementation:
 
