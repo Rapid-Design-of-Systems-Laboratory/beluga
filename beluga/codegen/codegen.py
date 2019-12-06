@@ -1,590 +1,306 @@
 import logging
-import numba
-import re
-import sympy
-from autograd import grad
-from autograd import numpy as np
-from scipy.optimize import fsolve, minimize
+import numpy as np
+from numba import njit, float64, complex128, errors
+from sympy import lambdify
+from beluga.utils import sympify
+from collections.abc import Iterable
 
-# The following import statements *look* unused, but is in fact used by the code compiler. This enables users to use
-# various basic math functions like `cos` and `atan`. Do not delete.
-import math
-from math import *
 
+def lambdify_(args, sym_func, array_inputs=True, complex_numbers=False):
 
-def make_bvp(problem_data):
-    r"""
-    Main process that generates callable functions from the problem data.
+    mods = ['numpy', 'math']
 
-    :param problem_data: Problem data from optimlib.
-    :returns: (deriv_func, quad_func, bc_func, control_fn, ham_fn, initial_cost, path_cost, terminal_cost,
-     ineq_constraints) - Several functions to define a BVP.
-    """
-    logging.debug('Compiling BVP functions...')
-    unc_control_law = problem_data['control_options']
-    states = problem_data['states']
-    states_rates = problem_data['states_rates']
-    states_jac = problem_data['states_jac']
-    quads = problem_data['quads']
-    quads_rates = problem_data['quads_rates']
-    nondynamical_parameters = problem_data['nondynamical_parameters']
-    dynamical_parameters = problem_data['dynamical_parameters']
-    constants = problem_data['constants']
-    controls = problem_data['controls']
-    initial_cost = problem_data['initial_cost']
-    path_cost = problem_data['path_cost']
-    terminal_cost = problem_data['terminal_cost']
+    tup_func = tuplefy(sym_func)
+    lam_func = lambdify(args, tup_func, mods)
+    jit_func = jit_compile_func(lam_func, len(args),
+                                func_name=repr(sym_func), complex_numbers=complex_numbers, array_inputs=array_inputs)
 
-    dHdu = problem_data['dHdu']
-    control_method = problem_data['control_method']
+    return jit_func
 
-    # states_jac
-    # df_dy = problem_data['states_jac'][0]
-    # df_dp = problem_data['states_jac'][1]
-    # breakpoint()
 
-    path_constraints = problem_data['path_constraints']
-
-    ham = problem_data['hamiltonian']
-    logging.debug('Making unconstrained control')
-    if problem_data['method'] is not 'direct':
-        control_fn, ham_fn = make_control_and_ham_fn(unc_control_law, states, dynamical_parameters,
-                                                     constants, controls, ham, dHdu, control_method)
-
-        def initial_cost(*_, **__):
-            return 0
-
-        def path_cost(*_, **__):
-            return 0
-
-        def terminal_cost(*_, **__):
-            return 0
-    else:
-        def control_fn(X, u, p, C):
-            return u
-        ham_fn = None
-        initial_cost, path_cost, terminal_cost = make_cost_func(initial_cost, path_cost, terminal_cost, states,
-                                                                dynamical_parameters, constants, controls)
-
-    if problem_data['method'] is not 'direct' and len(path_constraints) > 0:
-        raise NotImplementedError('Path constraints not implemented for indirect-type methods.')
-    else:
-        ineq_constraints = make_constraint_func(path_constraints, states, dynamical_parameters, constants, controls)
-
-    deriv_func = make_deriv_func(states_rates, states, dynamical_parameters, constants, controls, control_fn)
-    deriv_jac_func = make_deriv_jac_func(states_jac, states, dynamical_parameters, constants, controls, control_fn)
-    quad_func = make_quad_func(quads_rates, states, quads, dynamical_parameters, constants, controls, control_fn)
-    bc_initial = problem_data['bc_initial']
-    bc_terminal = problem_data['bc_terminal']
-    dbc_dya = problem_data['bc_initial_jac']
-    dbc_dyb = problem_data['bc_terminal_jac']
-    dbc_dp_a = problem_data['bc_initial_parameter_jac']
-    dbc_dp_b = problem_data['bc_terminal_parameter_jac']
-    bc_func = make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters,
-                           constants, controls, control_fn)
-    bc_func_jac = make_bc_jac(dbc_dya, dbc_dyb, dbc_dp_a, dbc_dp_b, states,
-                              dynamical_parameters + nondynamical_parameters, constants, controls, control_fn)
-
-    logging.debug('BVP functions compiled.')
-
-    bvp = BVP(deriv_func, deriv_jac_func, quad_func, bc_func, bc_func_jac, control_fn, initial_cost, path_cost, terminal_cost, ineq_constraints)
-
-    return bvp
-
-
-def make_control_and_ham_fn(control_opts, states, parameters, constants, controls, ham, dHdu, control_method):
-    r"""
-    Makes the control and Hamiltonian functions.
-
-    :param control_opts: Control options.
-    :param states: List of states.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :param ham: The Hamiltonian function.
-    :param dHdu: Derivative of the Hamiltonian with respect to the control variables.
-    :param control_method: The name of the control method.
-    :return: (compute_control_fn, hamiltonian_fn) - Functions that compute the optimal control and the Hamiltonian.
-    """
-    ham_args = [*states, *parameters, *constants, *controls]
-    u_args = [*states, *parameters, *constants]
-    control_opt_mat = [[option.get(u, '0') for u in controls] for option in control_opts]
-
-
-    hamiltonian_fn = make_sympy_fn(ham_args, ham)
-    num_options = len(control_opts)
-    num_states = len(states)
-    num_controls = len(controls)
-    num_params = len(parameters)
-
-    if control_method == 'traditional' or control_method == 'pmp':
-        u_str = '['
-        for ii in range(len(control_opts)):
-            if ii > 0:
-                u_str += ','
-            u_str += '['
-            u_str += ','.join(control_opt_mat[ii])
-            u_str += ']'
-        u_str += ']'
-
-        control_opt_fn = make_jit_fn(u_args, u_str)
-
-        def compute_control_fn(X, u, p, C):
-            p = p[:num_params]
-            u_list = np.asarray(control_opt_fn(*X, *p, *C))
-            # u_list = ucont_wrap(*X, *p, *C)
-            ham_val = np.zeros(num_options)
-
-            for i in range(num_options):
-                ham_val[i] = hamiltonian_fn(*X, *p, *C, *u_list[i])
-
-            return u_list[np.argmin(ham_val)]
-
-    elif control_method == 'icrm':
-        def compute_control_fn(X, u, p, C):
-            return np.array([])
-
-    elif control_method == 'numerical':
-        dHdu_str = '(' + ','.join(dHdu) + ')'
-        dHdu_fn = make_jit_fn(ham_args, dHdu_str)
-
-        def compute_control_fn(X, u, p, C):
-            opt = fsolve(lambda _u: dHdu_fn(*X, *p, *C, *_u), x0=[-1]*num_controls)
-
-            # def loss2(X, _u, p, C):
-            #     return (dHdu_fn(*X, *p, *C, *_u))**2
-
-            # opt2 = minimize(lambda _u: loss2(X, _u, p, C), x0=[1]*num_controls)
-            return opt
-    else:
-        raise NotImplementedError('Control method \'' + control_method + '\' does not have an associated codegen method.')
-
-    return compute_control_fn, hamiltonian_fn
-
-
-def make_cost_func(initial_cost, path_cost, terminal_cost, states, parameters, constants, controls):
-    r"""
-    Makes the cost function.
-
-    :param initial_cost: Initial cost function.
-    :param path_cost: Path cost function.
-    :param terminal_cost: Terminal cost function.
-    :param states: List of states.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :return: (initial_cost, path_cost, terminal_cost) - Functions for the 3 cost functions.
-    """
-    boundary_args = [*states, *parameters, *constants, *controls]
-    path_args = [*states, *parameters, *constants, *controls]
-    initial_fn = make_jit_fn(boundary_args, initial_cost)
-    path_fn = make_jit_fn(path_args, path_cost)
-    terminal_fn = make_jit_fn(boundary_args, terminal_cost)
-
-    def initial_cost(X0, u0, p, C):
-        return initial_fn(*X0, *p, *C, *u0)
-
-    def path_cost(X, u, p, C):
-        return path_fn(*X, *p, *C, *u)
-
-    def terminal_cost(Xf, uf, p, C):
-        return terminal_fn(*Xf, *p, *C, *uf)
-
-    return initial_cost, path_cost, terminal_cost
-
-
-def make_constraint_func(path_constraints, states, parameters, constants, controls):
-    r"""
-    Makes the path constraint functions.
-
-    :param path_constraints: List of path constraints.
-    :param states: List of states.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :return: path_constraints - Function for the path constraints.
-    """
-    path_args = [*states, *parameters, *constants, *controls]
-    path_fn = [make_jit_fn(path_args, f) for f in path_constraints]
-    num_constraints = len(path_constraints)
-
-    def path_constraints(X, u, p, C):
-        constraint_vals = np.zeros(num_constraints)
-        for ii in range(num_constraints):
-            constraint_vals[ii] = path_fn[ii](*X, *p, *C, *u)
-        return constraint_vals
-
-    return path_constraints
-
-
-def make_deriv_func(deriv_list, states, parameters, constants, controls, compute_control):
-    r"""
-    Makes the derivative functions for each state.
-
-    :param deriv_list: A list of derivative functions.
-    :param states: List of states.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :param compute_control: The compute_control function.
-    :return: deriv_func - The derivative function.
-    """
-    ham_args = [*states, *parameters, *constants, *controls]
-    eom_fn = make_jit_fn(ham_args, '(' + ','.join(deriv_list) + ')')
-    num_controls = len(controls)
-    num_params = len(parameters)
-    num_eoms = len(deriv_list)
-
-    if compute_control is not None:
-        def deriv_func(X, u, p, C):
-            p = p[:num_params]
-            u = compute_control(X, u, p, C)
-            eom_vals = eom_fn(*X, *p, *C, *u)
-            return eom_vals
-    else:
-        def deriv_func(X, u, p, C):
-            p = p[:num_params]
-            eom_vals = eom_fn(*X, *p, *C, *u)
-            return eom_vals
-
-    return deriv_func
-
-
-def make_deriv_jac_func(deriv_jac, states, parameters, constants, controls, compute_control):
-    r"""
-    Makes the derivative functions for each state.
-
-    :param deriv_jac: A list of lists of derivative sensitivity functions.
-    :param states: List of states.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :param compute_control: The compute_control function.
-    :return: deriv_func - The derivative function.
-    """
-    if deriv_jac[0] is None:
-        return None
-
-    ham_args = [*states, *parameters, *constants, *controls]
-    df_dy = deriv_jac[0]
-    df_dp = deriv_jac[1]
-
-    df_dy_str = '('
-    for ii, f in enumerate(df_dy):
-        df_dy_str += '('
-        df_dy_str += ','.join(f)
-        df_dy_str += '),'
-    df_dy_str += ')'
-
-    df_dp_str = '('
-    for ii, f in enumerate(df_dp):
-        df_dp_str += '('
-        df_dp_str += ','.join(f)
-        df_dp_str += '),'
-    df_dp_str += ')'
-
-    df_dy_fun = make_jit_fn(ham_args, df_dy_str)
-    df_dp_fun = make_jit_fn(ham_args, df_dp_str)
-
-    num_params = len(parameters)
-
-    if compute_control is not None:
-        def deriv_jac_func(X, u, p, C):
-            p = p[:num_params]
-            u = compute_control(X, u, p, C)
-            df_dy = np.asarray(df_dy_fun(*X, *p, *C, *u))
-            df_dp = np.asarray(df_dp_fun(*X, *p, *C, *u))
-            return df_dy, df_dp
-    else:
-        def deriv_jac_func(X, u, p, C):
-            p = p[:num_params]
-            df_dy = np.asarray(df_dy_fun(*X, *p, *C, *u))
-            df_dp = np.asarray(df_dp_fun(*X, *p, *C, *u))
-            return df_dy, df_dp
-
-    return deriv_jac_func
-
-
-def make_quad_func(quads_rates, states, quads, parameters, constants, controls, compute_control):
-    r"""
-    Makes the derivative functions for each quad.
-
-    :param quads_rates: A list of derivative functions.
-    :param states: List of states.
-    :param quads: List of quads.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :param compute_control: The compute_control function.
-    :return: quad_func - The derivative function.
-    """
-    quads_args = [*states, *parameters, *constants, *controls]
-    quad_fn = [make_sympy_fn(quads_args, eom) for eom in quads_rates]
-
-    num_controls = len(controls)
-    num_params = len(parameters)
-    num_quads = len(quad_fn)
-    if num_quads == 0:
-        def dummy_quad_func(*_, **__):
-            return np.array([])
-        return dummy_quad_func
-
-    def quad_func(X, u, p, C):
-        p = p[:num_params]
-        u = compute_control(X, u, p, C)
-        quad_vals = np.zeros(num_quads)
-        for ii in range(num_quads):
-            quad_vals[ii] = quad_fn[ii](*X, *p, *C, *u)
-
-        return quad_vals
-
-    return quad_func
-
-
-def make_bc_func(bc_initial, bc_terminal, states, quads, dynamical_parameters, nondynamical_parameters, constants,
-                 controls, compute_control):
-    r"""
-    Makes the boundary condition functions.
-
-    :param bc_initial: Initial boundary conditions.
-    :param bc_terminal: Terminal boundary conditions.
-    :param states: List of states.
-    :param quads: List of quads.
-    :param dynamical_parameters: List of dynamical parameters.
-    :param nondynamical_parameters: List of nondynamical parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :param compute_control: The compute_control function.
-    :return: bc_func - The boundary condition function.
-    """
-    ham_args = [*states, *dynamical_parameters, *constants, *controls]
-    u_args = [*states, *dynamical_parameters, *constants]
-    bc_args = [*states, *quads, *dynamical_parameters, *nondynamical_parameters, *constants, *controls]
-    num_states = len(states)
-    num_controls = len(controls)
-    num_dynamical_params = len(dynamical_parameters)
-    num_nondynamical_params = len(nondynamical_parameters)
-    bc = bc_terminal[-1]
-    bc_fn_initial = [make_jit_fn(bc_args, bc) for bc in bc_initial]
-    bc_fn_terminal = [make_jit_fn(bc_args, bc) for bc in bc_terminal]
-    num_bcs_initial = len(bc_fn_initial)
-    num_bcs_terminal = len(bc_fn_terminal)
-    if compute_control is not None:
-        def bc_func_all(X0, q0, u0, Xf, qf, uf, params, ndp, C):
-            bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
-            ii = 0
-            for jj in range(num_bcs_initial):
-                bc_vals[ii] = bc_fn_initial[jj](*X0, *q0, *params, *ndp, *C, *u0)
-                ii += 1
-
-            for jj in range(num_bcs_terminal):
-                bc_vals[ii] = bc_fn_terminal[jj](*Xf, *qf, *params, *ndp, *C, *uf)
-                ii += 1
-
-            return bc_vals
-
-        def bc_func(y0, q0, u0, yf, qf, uf, p, ndp, C):
-            u0 = compute_control(y0, u0, p, C)
-            uf = compute_control(yf, uf, p, C)
-            return bc_func_all(y0, q0, u0, yf, qf, uf, p, ndp, C)
-
-    else:
-        def bc_func(X0, q0, u0, Xf, qf, uf, params, ndp, C):
-            bc_vals = np.zeros(num_bcs_initial + num_bcs_terminal)
-            ii = 0
-            for jj in range(num_bcs_initial):
-                bc_vals[ii] = bc_fn_initial[jj](*X0, *q0, *params, *ndp, *C, *u0)
-                ii += 1
-
-            for jj in range(num_bcs_terminal):
-                bc_vals[ii] = bc_fn_terminal[jj](*Xf, *qf, *params, *ndp, *C, *uf)
-                ii += 1
-
-            return bc_vals
-
-    return bc_func
-
-
-def make_bc_jac(dbc_dya, dbc_dyb, dbc_dp_a, dbc_dp_b, states, parameters, constants, controls, compute_control):
-    r"""
-    Makes the derivative functions for each state.
-    :param dbc_dya: Sensitivities with respect to initial state.
-    :param dbc_dyb: Sensititivies with respect to final state.
-    :param dbc_dp: Sensitivities with respect to parameters.
-    :param states: List of states.
-    :param parameters: List of parameters.
-    :param constants: List of constants.
-    :param controls: List of controls.
-    :param compute_control: The compute_control function.
-    :return: deriv_func - The derivative function.
-    """
-    if dbc_dya is None:
-        return None
-
-    ham_args = [*states, *parameters, *constants, *controls]
-
-    dbc_dya_str = '('
-    for ii, f in enumerate(dbc_dya):
-        dbc_dya_str += '('
-        dbc_dya_str += ','.join(f)
-        dbc_dya_str += '),'
-    dbc_dya_str += ')'
-
-    dbc_dyb_str = '('
-    for ii, f in enumerate(dbc_dyb):
-        dbc_dyb_str += '('
-        dbc_dyb_str += ','.join(f)
-        dbc_dyb_str += '),'
-    dbc_dyb_str += ')'
-
-    dbc_dp_a_str = '('
-    for ii, f in enumerate(dbc_dp_a):
-        dbc_dp_a_str += '('
-        dbc_dp_a_str += ','.join(f)
-        dbc_dp_a_str += '),'
-    dbc_dp_a_str += ')'
-
-    dbc_dp_b_str = '('
-    for ii, f in enumerate(dbc_dp_b):
-        dbc_dp_b_str += '('
-        dbc_dp_b_str += ','.join(f)
-        dbc_dp_b_str += '),'
-    dbc_dp_b_str += ')'
-
-    dbc_dya_fun = make_jit_fn(ham_args, dbc_dya_str)
-    dbc_dyb_fun = make_jit_fn(ham_args, dbc_dyb_str)
-    dbc_dp_a_fun = make_jit_fn(ham_args, dbc_dp_a_str)
-    dbc_dp_b_fun = make_jit_fn(ham_args, dbc_dp_b_str)
-
-    num_params = len(parameters)
-
-    if compute_control is not None:
-        def bc_func_jac(ya, yb, u, p, C):
-            _p = p[:num_params]
-            ua = compute_control(ya, u, p, C)
-            ub = compute_control(yb, u, p, C)
-            dbc_dya = np.asarray(dbc_dya_fun(*ya, *p, *C, *ua))
-            dbc_dyb = np.asarray(dbc_dyb_fun(*yb, *p, *C, *ub))
-            dbc_dp_a = np.asarray(dbc_dp_a_fun(*ya, *p, *C, *u))
-            dbc_dp_b = np.asarray(dbc_dp_b_fun(*ya, *p, *C, *u))
-            return dbc_dya, dbc_dyb, dbc_dp_a + dbc_dp_b
-    else:
-        def bc_func_jac(ya, yb, u, p, C):
-            p = p[:num_params]
-            dbc_dya = np.asarray(dbc_dya_fun(*ya, *p, *C, *u))
-            dbc_dyb = np.asarray(dbc_dyb_fun(*yb, *p, *C, *u))
-            dbc_dp_a = np.asarray(dbc_dp_a_fun(*ya, *p, *C, *u))
-            dbc_dp_b = np.asarray(dbc_dp_b_fun(*ya, *p, *C, *u))
-            return dbc_dya, dbc_dyb, dbc_dp_a + dbc_dp_b
-
-    return bc_func_jac
-
-
-def make_jit_fn(args, fn_expr):
-    r"""
-    JIT compiles a string function to a callable function.
-
-    :param args: Arguments taken by the string function.
-    :param fn_expr: The string function.
-    :return: A callable function.
-    """
-    fn_str = 'lambda ' + ','.join([a for a in args]) + ':' + fn_expr
-
-    f = eval(fn_str)
+def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, array_inputs=True):
     try:
-        jit_fn = numba.jit(nopython=True)(f)
-        in_rand = np.random.rand(len(args))
-        jit_fn(*in_rand)
-    except:
-        logging.warning(fn_str + ' can not be jit compiled. Defaulting to uncompiled evaluation.')
-        jit_fn = f
+        if complex_numbers and array_inputs:
+            arg_types = tuple([complex128[:] for _ in range(num_args)])
+        elif array_inputs:
+            arg_types = tuple([float64[:] for _ in range(num_args)])
+        elif complex_numbers:
+            arg_types = tuple([complex128 for _ in range(num_args)])
+        else:
+            arg_types = tuple([float64 for _ in range(num_args)])
+        jit_func = njit(arg_types)(func)
+        return jit_func
 
-    return jit_fn
+    except errors.NumbaError as e:
+        logging.debug(e)
+        logging.debug('Cannot Compile Function: {}'.format(func_name))
+        return func
 
-
-def make_sympy_fn(args, fn_expr):
-    r"""
-    JIT compiles a sympy function to a callable function.
-
-    :param args: Arguments taken by the SymPy function.
-    :param fn_expr: The SymPy function.
-    :return: A callable function.
-    """
-    if hasattr(fn_expr, 'shape'):
-        output_shape = fn_expr.shape
-    else:
-        output_shape = None
-
-    if output_shape is not None:
-        jit_fns = [make_jit_fn(args, str(expr)) for expr in fn_expr]
-        len_output = len(fn_expr)
-
-        def vector_fn(*_):
-            output = np.zeros(output_shape)
-            for i in numba.prange(len_output):
-                output.flat[i] = jit_fns[i](*args)
-            return output
-        return vector_fn
-    else:
-        return make_jit_fn(args, fn_expr)
+    except TypeError as e:
+        logging.debug('Cannot Compile Function: {} (probably NoneType)'.format(func_name))
+        return func
 
 
-def preprocess(problem_data):
-    r"""
-    Code generation and compilation before running solver.
+def tuplefy(iter_var):
 
-    :param problem_data: Problem data from optimlib.
-    :return: A BVP.
-    """
-    # Register custom functions as global functions
-    custom_functions = problem_data['custom_functions']
-    for ii, f in enumerate(custom_functions):
-        derivs = []
-        for jj, arg in enumerate(f['args']):
-            if len(f['derivs']) == len(f['args']) and f['derivs'][jj] is not None:
-                derivs += [f['derivs'][jj]]
-            else:
-                derivs += [grad(f['handle'], jj)]
-        custom_functions[ii]['derivative'] = derivs
+    if isinstance(iter_var, Iterable):
+        iter_var = tuple([tuplefy(item) for item in iter_var])
 
-    for ii, f in enumerate(custom_functions):
-        globals()[f['name']] = f['handle']
-        for jj, g in enumerate(f['derivative']):
-            globals()[f['name'] + '_d' + f['args'][jj]] = g
-
-    if len(custom_functions) > 0:
-        new_states = []
-        for state_rate in problem_data['states_rates']:
-            s = sympy.sympify(state_rate)
-            derivs = s.atoms(sympy.Derivative)
-            for deriv in derivs:
-                name = re.sub('[\\(\\[].*?[\\)\\]]', '', str(deriv.expr))
-                dx = deriv.args[1]
-                name += '_d' + str(dx[0])
-                df = sympy.Function(name)(*deriv.expr.args)
-                s = s.subs(deriv, df)
-            new_states += [str(s)]
-
-        problem_data['states_rates'] = new_states
-
-    bvp = make_bvp(problem_data)
-
-    return bvp
+    return iter_var
 
 
-class BVP(object):
-    def __init__(self, *args, **__):
-        self.deriv_func = args[0]
-        self.deriv_jac_func = args[1]
-        self.quad_func = args[2]
-        self.bc_func = args[3]
-        self.bc_func_jac = args[4]
-        self.compute_control = args[5]
-        self.initial_cost = args[6]
-        self.path_cost = args[7]
-        self.terminal_cost = args[8]
-        self.ineq_constraints = args[9]
-        self.raw = dict()
+class SymBVP:
+    def __init__(self, problem_data):
+    
+        self.raw = problem_data    
+    
+        # Unpack and sympify problem data
+        # self.t = sympify(problem_data['independent'])
+        self.x = sympify(problem_data['states'])
+        self.u = sympify(problem_data['controls'])
+        self.p_d = sympify(problem_data['dynamical_parameters'])
+        self.k = sympify(problem_data['constants'])
+        self.q = sympify(problem_data['quads'])
+        self.p_n = sympify(problem_data['nondynamical_parameters'])
+        self.p = self.p_d + self.p_n  # TODO: The parameter usage is inconsistent. Should clean-up down the line
+
+        self.x_dot = sympify(problem_data['states_rates'])
+        self.q_dot = sympify(problem_data['quads_rates'])
+        self.ham = sympify(problem_data['hamiltonian'])
+        self.bc_0 = sympify(problem_data['bc_initial'])
+        self.bc_f = sympify(problem_data['bc_terminal'])
+
+        self.dhdu = sympify(problem_data['dHdu'])
+        self.initial_cost = sympify(problem_data['initial_cost'])
+        self.path_cost = sympify(problem_data['path_cost'])
+        self.terminal_cost = sympify(problem_data['terminal_cost'])
+
+        self.df_dy = sympify(problem_data['states_jac'][0])
+        self.df_dp = sympify(problem_data['states_jac'][1])
+
+        self.dbc_0_dy = sympify(problem_data['bc_initial_jac'])
+        self.dbc_f_dy = sympify(problem_data['bc_terminal_jac'])
+        self.dbc_0_dp = sympify(problem_data['bc_initial_parameter_jac'])
+        self.dbc_f_dp = sympify(problem_data['bc_terminal_parameter_jac'])
+
+        self.path_constraints = problem_data['path_constraints']
+
+        control_options = problem_data['control_options']
+        if control_options is None:
+            self.algebraic_control_options = []
+        else:
+            self.algebraic_control_options = \
+                [[sympify(option[str(u_i)]) for u_i in self.u] for option in control_options]
+
+        # self.name = problem_data['problem_name']
+        self.name = None
 
     def __repr__(self):
-        return 'BVP Object'
+        return '{}_SymbolicBVP'.format(self.name)
+
+
+class FuncBVP(object):
+    def __init__(self, sym_bvp):
+
+        self.sym_bvp = sym_bvp
+        # self.name = sym_bvp.name
+        self.name = None
+        self.raw = sym_bvp.raw
+
+        self.ham_func = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.ham)
+        self.compute_control = self.compile_control()
+
+        self.compute_x_dot, self.deriv_func, self.quad_func = self.compile_deriv_func()
+        self.deriv_jac_func = self.compile_deriv_jac_func()
+        
+        self.bc_func = self.compile_bc_func()
+        self.bc_func_jac = self.compile_bc_jac_func()
+
+        self.initial_cost = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.initial_cost)
+        self.path_cost = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.path_cost)
+        self.terminal_cost = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.terminal_cost)
+        self.ineq_constraints = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.path_constraints)
+
+    def __repr__(self):
+        return '{}_FunctionalBVP'.format(self.name)
+
+    def compile_control(self):
+
+        sym_bvp = self.sym_bvp
+
+        num_options = len(sym_bvp.algebraic_control_options)
+
+        if num_options == 0:
+            def calc_u(_, __, ___):
+                return None
+
+        elif num_options == 1:
+
+            compiled_option = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
+                                        sym_bvp.algebraic_control_options[0])
+
+            def calc_u(x, p_d, k):
+                return np.array(compiled_option(x, p_d, k))
+
+        else:
+            compiled_options = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
+                                         sym_bvp.algebraic_control_options)
+
+            ham_func = self.ham_func
+
+            def calc_u(x, p_d, k):
+
+                u_set = np.array(compiled_options(x, p_d, k))
+
+                u = u_set[0, :]
+                ham = ham_func(x, u_set[0, :], p_d, k)
+
+                for n in range(1, num_options):
+                    ham_i = ham_func(x, u_set[n, :], p_d, k)
+                    if ham_i < ham:
+                        u = u_set[n, :]
+
+                return u
+
+        control_function = jit_compile_func(calc_u, 3, func_name='control_function')
+
+        return control_function
+
+    def compile_deriv_func(self):
+
+        # TODO control u is expected to feed into functions, look into changing
+    
+        if len(self.sym_bvp.u) == 0:
+    
+            calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.x_dot)
+            calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.q_dot)
+    
+            def deriv_func(x, _, p_d, k):
+                return np.array(calc_x_dot(x, p_d, k))
+    
+            def quad_func(x, _, p_d, k):
+                return np.array(calc_q_dot(x, p_d, k))
+    
+        else:    
+            calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
+                                   self.sym_bvp.x_dot)
+            calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
+                                   self.sym_bvp.q_dot)
+            calc_u = self.compute_control
+    
+            def deriv_func(x, _, p_d, k):
+                u = calc_u(x, p_d, k)
+                return np.array(calc_x_dot(x, u, p_d, k))
+    
+            def quad_func(x, _, p_d, k):
+                u = calc_u(x, p_d, k)
+                return np.array(calc_q_dot(x, u, p_d, k))
+    
+        deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
+        quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
+        
+        return calc_x_dot, deriv_func, quad_func
+
+    def compile_deriv_jac_func(self):
+
+        calc_u = self.compute_control
+
+        if any([item is None for item in [self.sym_bvp.df_dy, self.sym_bvp.df_dp]]):
+            deriv_func_jac = None
+
+        elif len(self.sym_bvp.u) == 0:
+            df_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dy)
+            df_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dp)
+
+            def deriv_func_jac(x, _, p_d, k):
+                return np.array(df_dy(x, p_d, k)), np.array(df_dp(x, p_d, k))
+
+        else:
+            df_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dy)
+            df_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.df_dp)
+
+            def deriv_func_jac(x, _, p_d, k):
+                u = calc_u(x, p_d, k)
+                return np.array(df_dy(x, u, p_d, k)), np.array(df_dp(x, u, p_d, k))
+
+        deriv_func_jac = jit_compile_func(deriv_func_jac, 4, func_name='deriv_func_jac')
+        
+        return deriv_func_jac
+
+    def compile_bc_func(self):
+    
+        if len(self.sym_bvp.u) == 0:
+            bc_0_func = lambdify_([self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
+                                  self.sym_bvp.bc_0)
+            bc_f_func = lambdify_([self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
+                                  self.sym_bvp.bc_f)
+    
+            def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
+                bc_0 = np.array(bc_0_func(x_0, q_0, p_d, p_n, k))
+                bc_f = np.array(bc_f_func(x_f, q_f, p_d, p_n, k))
+                return np.concatenate((bc_0, bc_f))
+    
+        else:
+            bc_0_func = lambdify_(
+                [self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
+                self.sym_bvp.bc_0)
+            bc_f_func = lambdify_(
+                [self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
+                self.sym_bvp.bc_f)
+
+            compute_control = self.compute_control
+    
+            def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
+                u_0 = compute_control(x_0, p_d, k)
+                u_f = compute_control(x_f, p_d, k)
+                
+                bc_0 = np.array(bc_0_func(x_0, q_0, u_0, p_d, p_n, k))
+                bc_f = np.array(bc_f_func(x_f, q_f, u_f, p_d, p_n, k))
+                return np.concatenate((bc_0, bc_f))
+    
+        return jit_compile_func(bc_func, 9, func_name='bc_func')
+
+    def compile_bc_jac_func(self):
+    
+        calc_u = self.compute_control
+
+        if any([item is None for item in
+                [self.sym_bvp.dbc_0_dy, self.sym_bvp.dbc_f_dy, self.sym_bvp.dbc_0_dp, self.sym_bvp.dbc_f_dp]]):
+            bc_func_jac = None
+    
+        elif len(self.sym_bvp.u) == 0:
+    
+            dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_0_dy)
+            dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_f_dy)
+            dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_0_dp)
+            dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.p, self.sym_bvp.k], self.sym_bvp.dbc_f_dp)
+
+            # TODO: Expects u argument, is this needed?
+            def bc_func_jac(x_0, x_f, _, p, k):
+                return np.array(dbc_0_dy(x_0, p, k)), np.array(dbc_f_dy(x_f, p, k)),\
+                    (np.array(dbc_0_dp(x_0, p, k)) + np.array(dbc_f_dp(x_f, p, k)))
+    
+        else:
+    
+            dbc_0_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
+                                 self.sym_bvp.dbc_0_dy)
+            dbc_f_dy = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
+                                 self.sym_bvp.dbc_f_dy)
+            dbc_0_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
+                                 self.sym_bvp.dbc_0_dp)
+            dbc_f_dp = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p, self.sym_bvp.k],
+                                 self.sym_bvp.dbc_f_dp)
+
+            num_p_d = len(self.sym_bvp.p_d)
+    
+            def bc_func_jac(x_0, x_f, _, p, k):
+                p_d = p[:num_p_d]
+                u_0 = calc_u(x_0, p_d, k)
+                u_f = calc_u(x_f, p_d, k)
+    
+                return np.array(dbc_0_dy(x_0, u_0, p, k)), np.array(dbc_f_dy(x_f, u_f, p, k)),\
+                    (np.array(dbc_0_dp(x_0, u_0, p, k)) + np.array(dbc_f_dp(x_f, u_f, p, k)))
+    
+        bc_func_jac = jit_compile_func(bc_func_jac, 5, func_name='bc_func_jac')
+        
+        return bc_func_jac

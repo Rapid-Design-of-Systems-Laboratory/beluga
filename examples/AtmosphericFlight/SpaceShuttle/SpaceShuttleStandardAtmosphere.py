@@ -10,6 +10,23 @@ from math import *
 import beluga
 import logging
 import numpy as np
+import csv
+
+alt = []
+temp = []
+dens = []
+
+with open('atmo_table.csv') as file:
+    data = csv.reader(file)
+    for col in data:
+        alt += [float(col[0])]
+        temp += [float(col[1])]
+        dens += [float(col[2])]
+
+alt = np.array(alt)
+temp = np.array(temp)
+dens = np.array(dens)
+
 
 h_0 = 79248
 h_f = 24384
@@ -31,13 +48,15 @@ ocp.state('h', 'v*sin(gam)', 'm') \
     .state('psi', 'L*sin(bank)/(mass*cos(gam)*v) + v/r*cos(gam)*sin(psi)*tan(phi)', 'rad')
 
 # Define quantities used in the problem
-ocp.quantity('rho', 'rho0*exp(-h/H)')
+ocp.quantity('rho', 'rho_table(h)')
 ocp.quantity('Cl', 'cl1 * alpha_star + cl0')
 ocp.quantity('Cd', 'cd1 * alpha_star + cd2 * alpha_star**2 + cd0')
 ocp.quantity('D', '0.5*rho*v**2*Cd*aref')
 ocp.quantity('L', '0.5*rho*v**2*Cl*aref')
 ocp.quantity('r', 're+h')
 ocp.quantity('alpha_star', 'alpha*180/pi')
+
+ocp.table('rho_table', 'spline', alt, dens, 'kg/m**3')
 
 # Define controls
 ocp.control('alpha', 'rad')
