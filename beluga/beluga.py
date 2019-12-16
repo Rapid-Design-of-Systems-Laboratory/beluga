@@ -2,8 +2,9 @@ import inspect
 import sys
 import warnings
 import copy
+import logging
 
-from beluga.codegen.codegen import *
+from beluga.codegen import *
 from tqdm import tqdm
 
 import numpy as np
@@ -248,6 +249,8 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
     +------------------------+-----------------+---------------------------------------+
+    | ocp                    | None            | :math:`\\Sigma`                       |
+    +------------------------+-----------------+---------------------------------------+
     | ocp_map                | None            | :math:`\\gamma \rightarrow \\gamma`   |
     +------------------------+-----------------+---------------------------------------+
     | ocp_map_inverse        | None            | :math:`\\gamma \rightarrow \\gamma`   |
@@ -293,12 +296,27 @@ def solve(**kwargs):
     logging.debug('sympy:\t\t' + str(sympy_version))
     logging.debug('\n')
 
+    """
+    Error checking
+    """
     if n_cpus < 1:
         raise ValueError('Number of cpus must be greater than 1.')
     if n_cpus > 1:
         pool = pathos.multiprocessing.Pool(processes=n_cpus)
     else:
         pool = None
+
+    if ocp is None:
+        raise NotImplementedError('\"ocp\" must be defined.')
+    """
+    Main code
+    """
+
+    f_ocp = FuncOCP(ocp)
+    # breakpoint()
+    # s_ocp = SymOCP(ocp)
+    # breakpoint()
+    # bvp = FuncBVP(s_bvp)
 
     logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
@@ -311,6 +329,8 @@ def solve(**kwargs):
     else:
         if ocp_map is None or ocp_map_inverse is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
+
+
 
     solinit = Trajectory()
     solinit.const = np.array(bvp.raw['constants_values'])
@@ -361,15 +381,19 @@ def solve(**kwargs):
                 jj = bvp.raw['constants'].index(bcf + '_f')
                 solinit.const[jj] = terminal_bc[bcf]
 
+    """
+    Main continuation process
+    """
     time0 = time.time()
-
     continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
-
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
 
-    out = postprocess(continuation_set, ocp, bvp, ocp_map_inverse)
+    """
+    Post processing and output
+    """
+    out = postprocess(continuation_set, f_ocp, bvp, ocp_map_inverse)
 
     if pool is not None:
         pool.close()
@@ -390,32 +414,12 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     Post processes the data after the continuation process has run.
 
     :param continuation_set: The set of all continuation processes.
-    :param ocp: The original OCP for the problem.
-    :param bvp: The final compiled BVP that was solved.
+    :param ocp: The compiled OCP.
+    :param bvp: The compiled BVP.
     :param ocp_map_inverse: A mapping converting BVP solutions to OCP solutions.
     :return: Set of trajectories to be returned to the user.
     """
     out = []
-    states = [s['symbol'] for s in ocp.states()]
-    controls = [s['symbol'] for s in ocp.controls()]
-    params = [s['symbol'] for s in ocp.parameters()]
-    inputs = states + controls + params
-
-    # Compile the cost functions from the original OCP
-    if ocp.get_initial_cost() is not None:
-        initial_compiled = lambdify_([inputs], ocp.get_initial_cost()['function'])
-    else:
-        initial_compiled = lambdify_([inputs], sympify('0'))
-
-    if ocp.get_path_cost() is not None:
-        path_compiled = lambdify_([inputs], ocp.get_path_cost()['function'])
-    else:
-        path_compiled = lambdify_([inputs], sympify('0'))
-
-    if ocp.get_terminal_cost() is not None:
-        terminal_compiled = lambdify_([inputs], ocp.get_terminal_cost()['function'])
-    else:
-        terminal_compiled = lambdify_([inputs], sympify('0'))
 
     # Calculate the control time-history for each trajectory
     for cont_num, continuation_step in enumerate(continuation_set):
@@ -432,11 +436,11 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     # Calculate the cost for each trajectory
     for cont_num, continuation_step in enumerate(out):
         for sol_num, sol in enumerate(continuation_step):
-            c0 = initial_compiled(np.hstack((sol.y[0], sol.u[0], sol.dynamical_parameters)))
-            cf = terminal_compiled(np.hstack((sol.y[-1], sol.u[-1], sol.dynamical_parameters)))
-            cpath = path_compiled(np.hstack((sol.y[0], sol.u[0], sol.dynamical_parameters)))
+            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.dynamical_parameters, sol.const)
+            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.dynamical_parameters, sol.const)
+            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.dynamical_parameters, sol.const)
             for ii in range(len(sol.t) - 1):
-                cpath = np.hstack((cpath, path_compiled(np.hstack((sol.y[ii+1], sol.u[ii+1], sol.dynamical_parameters)))))
+                cpath = np.hstack((cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.dynamical_parameters, sol.const)))
 
             cpath = integrate.simps(cpath, sol.t)
             sol.cost = c0 + cpath + cf
