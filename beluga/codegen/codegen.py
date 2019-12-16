@@ -181,7 +181,7 @@ class FuncBVP(object):
             def quad_func(x, _, p_d, k):
                 return np.array(calc_q_dot(x, p_d, k))
     
-        else:    
+        else:
             calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
                                    self.sym_bvp.x_dot)
             calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
@@ -304,3 +304,54 @@ class FuncBVP(object):
         bc_func_jac = jit_compile_func(bc_func_jac, 5, func_name='bc_func_jac')
         
         return bc_func_jac
+
+
+class FuncOCP(object):
+    def __init__(self, sym_ocp):
+
+        self.sym_ocp = sym_ocp
+        self.name = None
+
+        # Compile the cost functions from the original OCP
+        independent = [sym_ocp.get_independent()['symbol']]
+        states = [s['symbol'] for s in sym_ocp.states()]
+        controls = [s['symbol'] for s in sym_ocp.controls()]
+        params = [s['symbol'] for s in sym_ocp.parameters()]
+        consts = [s['symbol'] for s in sym_ocp.get_constants()]
+
+        if sym_ocp.get_initial_cost() is not None:
+            initial_compiled = lambdify_([independent, states, controls, params, consts],
+                                         sym_ocp.get_initial_cost()['function'])
+        else:
+            initial_compiled = lambdify_([independent, states, controls, params, consts], sympify('0'))
+
+        if sym_ocp.get_path_cost() is not None:
+            path_compiled = lambdify_([independent, states, controls, params, consts],
+                                      sym_ocp.get_path_cost()['function'])
+        else:
+            path_compiled = lambdify_([independent, states, controls, params, consts], sympify('0'))
+
+        if sym_ocp.get_terminal_cost() is not None:
+            terminal_compiled = lambdify_([independent, states, controls, params, consts],
+                                          sym_ocp.get_terminal_cost()['function'])
+        else:
+            terminal_compiled = lambdify_([independent, states, controls, params, consts], sympify('0'))
+
+        self.initial_cost = initial_compiled
+        self.path_cost = path_compiled
+        self.terminal_cost = terminal_compiled
+
+        x_dot = [s['eom'] for s in self.sym_ocp.states()]
+        self.deriv_func = lambdify_([independent, states, controls, params, consts], x_dot)
+
+        bc0 = [s['function'] for s in self.sym_ocp.constraints()['initial']]
+        bcf = [s['function'] for s in self.sym_ocp.constraints()['terminal']]
+
+        self.bc_initial = lambdify_([independent, states, controls, params, consts], bc0)
+        self.bc_terminal = lambdify_([independent, states, controls, params, consts], bcf)
+
+        # TODO: Compile path constraints
+        # TODO: Compile deriv jacobian (not implemented @ symbolic ocp yet)
+
+    def __repr__(self):
+        return '{}_FunctionalOCP'.format(self.name)
