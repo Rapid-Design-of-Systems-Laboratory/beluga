@@ -18,6 +18,7 @@ from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
+import scipy.integrate as integrate
 
 config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
@@ -362,19 +363,13 @@ def solve(**kwargs):
 
     time0 = time.time()
 
-    out = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
 
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
 
-    for cont_num, continuation_set in enumerate(out):
-        for sol_num, sol in enumerate(continuation_set):
-            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
-            for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
-            sol.u = u
-            out[cont_num][sol_num] = ocp_map_inverse(sol)
+    out = postprocess(continuation_set, ocp, bvp, ocp_map_inverse)
 
     if pool is not None:
         pool.close()
@@ -386,5 +381,64 @@ def solve(**kwargs):
             filename = 'data.beluga'
 
         save(ocp=ocp, bvp=bvp, bvp_solver=bvp_algorithm, sol_set=out, filename=filename)
+
+    return out
+
+
+def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
+    """
+    Post processes the data after the continuation process has run.
+
+    :param continuation_set: The set of all continuation processes.
+    :param ocp: The original OCP for the problem.
+    :param bvp: The final compiled BVP that was solved.
+    :param ocp_map_inverse: A mapping converting BVP solutions to OCP solutions.
+    :return: Set of trajectories to be returned to the user.
+    """
+    out = []
+    states = [s['symbol'] for s in ocp.states()]
+    controls = [s['symbol'] for s in ocp.controls()]
+    params = [s['symbol'] for s in ocp.parameters()]
+    inputs = states + controls + params
+
+    # Compile the cost functions from the original OCP
+    if ocp.get_initial_cost() is not None:
+        initial_compiled = lambdify_([inputs], ocp.get_initial_cost()['function'])
+    else:
+        initial_compiled = lambdify_([inputs], sympify('0'))
+
+    if ocp.get_path_cost() is not None:
+        path_compiled = lambdify_([inputs], ocp.get_path_cost()['function'])
+    else:
+        path_compiled = lambdify_([inputs], sympify('0'))
+
+    if ocp.get_terminal_cost() is not None:
+        terminal_compiled = lambdify_([inputs], ocp.get_terminal_cost()['function'])
+    else:
+        terminal_compiled = lambdify_([inputs], sympify('0'))
+
+    # Calculate the control time-history for each trajectory
+    for cont_num, continuation_step in enumerate(continuation_set):
+        tempset = []
+        for sol_num, sol in enumerate(continuation_step):
+            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
+            for ii in range(len(sol.t) - 1):
+                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
+            sol.u = u
+
+            tempset.append(ocp_map_inverse(sol))
+        out.append(tempset)
+
+    # Calculate the cost for each trajectory
+    for cont_num, continuation_step in enumerate(out):
+        for sol_num, sol in enumerate(continuation_step):
+            c0 = initial_compiled(np.hstack((sol.y[0], sol.u[0], sol.dynamical_parameters)))
+            cf = terminal_compiled(np.hstack((sol.y[-1], sol.u[-1], sol.dynamical_parameters)))
+            cpath = path_compiled(np.hstack((sol.y[0], sol.u[0], sol.dynamical_parameters)))
+            for ii in range(len(sol.t) - 1):
+                cpath = np.hstack((cpath, path_compiled(np.hstack((sol.y[ii+1], sol.u[ii+1], sol.dynamical_parameters)))))
+
+            cpath = integrate.simps(cpath, sol.t)
+            sol.cost = c0 + cpath + cf
 
     return out

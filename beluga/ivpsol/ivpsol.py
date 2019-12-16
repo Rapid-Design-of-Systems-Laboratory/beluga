@@ -168,6 +168,7 @@ class Trajectory(object):
         obj.nondynamical_parameters = np.array([])
         obj.const = np.array([])
         obj.converged = False
+        obj.cost = np.nan
 
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
         obj.interpolation_type = interpolation_type
