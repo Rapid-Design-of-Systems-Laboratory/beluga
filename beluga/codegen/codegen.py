@@ -49,65 +49,22 @@ def tuplefy(iter_var):
     return iter_var
 
 
-class SymBVP:
-    def __init__(self, problem_data):
-    
-        self.raw = problem_data    
-    
-        # Unpack and sympify problem data
-        # self.t = sympify(problem_data['independent'])
-        self.x = sympify(problem_data['states'])
-        self.u = sympify(problem_data['controls'])
-        self.p_d = sympify(problem_data['dynamical_parameters'])
-        self.k = sympify(problem_data['constants'])
-        self.q = sympify(problem_data['quads'])
-        self.p_n = sympify(problem_data['nondynamical_parameters'])
-        self.p = self.p_d + self.p_n  # TODO: The parameter usage is inconsistent. Should clean-up down the line
-
-        self.x_dot = sympify(problem_data['states_rates'])
-        self.q_dot = sympify(problem_data['quads_rates'])
-        self.ham = sympify(problem_data['hamiltonian'])
-        self.bc_0 = sympify(problem_data['bc_initial'])
-        self.bc_f = sympify(problem_data['bc_terminal'])
-
-        self.dhdu = sympify(problem_data['dHdu'])
-        self.initial_cost = sympify(problem_data['initial_cost'])
-        self.path_cost = sympify(problem_data['path_cost'])
-        self.terminal_cost = sympify(problem_data['terminal_cost'])
-
-        self.df_dy = sympify(problem_data['states_jac'][0])
-        self.df_dp = sympify(problem_data['states_jac'][1])
-
-        self.dbc_0_dy = sympify(problem_data['bc_initial_jac'])
-        self.dbc_f_dy = sympify(problem_data['bc_terminal_jac'])
-        self.dbc_0_dp = sympify(problem_data['bc_initial_parameter_jac'])
-        self.dbc_f_dp = sympify(problem_data['bc_terminal_parameter_jac'])
-
-        self.path_constraints = problem_data['path_constraints']
-
-        control_options = problem_data['control_options']
-        if control_options is None:
-            self.algebraic_control_options = []
-        else:
-            self.algebraic_control_options = \
-                [[sympify(option[str(u_i)]) for u_i in self.u] for option in control_options]
-
-        # self.name = problem_data['problem_name']
-        self.name = None
-
-    def __repr__(self):
-        return '{}_SymbolicBVP'.format(self.name)
-
-
 class FuncBVP(object):
-    def __init__(self, sym_bvp):
+    def __init__(self, sym_bvp, custom_functions):
 
         self.sym_bvp = sym_bvp
         # self.name = sym_bvp.name
         self.name = None
-        self.raw = sym_bvp.raw
+        self.custom_functions = custom_functions
 
-        self.ham_func = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.ham)
+        x = [s['symbol'] for s in self.sym_bvp.states()]
+        u = [s['symbol'] for s in self.sym_bvp.controls()]
+        p_d = [s['symbol'] for s in self.sym_bvp.parameters()]
+        p_n = [s['symbol'] for s in self.sym_bvp.nd_parameters()]
+        k = [s['symbol'] for s in self.sym_bvp.get_constants()]
+        hamiltonian = self.sym_bvp.get_constants_of_motion()[0]['function']  # TODO: This is hardcoded.
+
+        self.ham_func = lambdify_([x, u, p_d, k], hamiltonian)
         self.compute_control = self.compile_control()
 
         self.compute_x_dot, self.deriv_func, self.quad_func = self.compile_deriv_func()
@@ -116,19 +73,30 @@ class FuncBVP(object):
         self.bc_func = self.compile_bc_func()
         self.bc_func_jac = self.compile_bc_jac_func()
 
-        self.initial_cost = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.initial_cost)
-        self.path_cost = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.path_cost)
-        self.terminal_cost = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.terminal_cost)
-        self.ineq_constraints = lambdify_([sym_bvp.x, sym_bvp.u, sym_bvp.p_d, sym_bvp.k], sym_bvp.path_constraints)
+        self.initial_cost = lambdify_([x, u, p_d, k], None)
+        self.path_cost = lambdify_([x, u, p_d, k], None)
+        self.terminal_cost = lambdify_([x, u, p_d, k], None)
+        self.ineq_constraints = lambdify_([x, u, p_d, k], None)
 
     def __repr__(self):
         return '{}_FunctionalBVP'.format(self.name)
 
     def compile_control(self):
-
         sym_bvp = self.sym_bvp
 
-        num_options = len(sym_bvp.algebraic_control_options)
+        x = [s['symbol'] for s in self.sym_bvp.states()]
+        u = [s['symbol'] for s in self.sym_bvp.controls()]
+        p_d = [s['symbol'] for s in self.sym_bvp.parameters()]
+        p_n = [s['symbol'] for s in self.sym_bvp.nd_parameters()]
+        k = [s['symbol'] for s in self.sym_bvp.get_constants()]
+
+        if len(sym_bvp.controls()) == 0:
+            self.algebraic_control_options = []
+        else:
+            self.algebraic_control_options = \
+                [[sympify(option[str(u_i)]) for u_i in u] for option in sym_bvp._control_law]
+
+        num_options = len(self.algebraic_control_options)
 
         if num_options == 0:
             def calc_u(_, __, ___):
@@ -136,15 +104,13 @@ class FuncBVP(object):
 
         elif num_options == 1:
 
-            compiled_option = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
-                                        sym_bvp.algebraic_control_options[0])
+            compiled_option = lambdify_([x, p_d, k], self.algebraic_control_options[0])
 
             def calc_u(x, p_d, k):
                 return np.array(compiled_option(x, p_d, k))
 
         else:
-            compiled_options = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
-                                         sym_bvp.algebraic_control_options)
+            compiled_options = lambdify_([x, p_d, k], self.algebraic_control_options)
 
             ham_func = self.ham_func
 
@@ -167,13 +133,17 @@ class FuncBVP(object):
         return control_function
 
     def compile_deriv_func(self):
+        x = [s['symbol'] for s in self.sym_bvp.states()]
+        u = [s['symbol'] for s in self.sym_bvp.controls()]
+        p_d = [s['symbol'] for s in self.sym_bvp.parameters()]
+        p_n = [s['symbol'] for s in self.sym_bvp.nd_parameters()]
+        k = [s['symbol'] for s in self.sym_bvp.get_constants()]
+        x_dot = [s['eom'] for s in self.sym_bvp.states()]
+        q_dot = [s['eom'] for s in self.sym_bvp.quads()]
 
-        # TODO control u is expected to feed into functions, look into changing
-    
-        if len(self.sym_bvp.u) == 0:
-    
-            calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.x_dot)
-            calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.q_dot)
+        if len(u) == 0:
+            calc_x_dot = lambdify_([x, p_d, k], x_dot)
+            calc_q_dot = lambdify_([x, p_d, k], q_dot)
     
             def deriv_func(x, _, p_d, k):
                 return np.array(calc_x_dot(x, p_d, k))
@@ -182,10 +152,8 @@ class FuncBVP(object):
                 return np.array(calc_q_dot(x, p_d, k))
     
         else:
-            calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
-                                   self.sym_bvp.x_dot)
-            calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
-                                   self.sym_bvp.q_dot)
+            calc_x_dot = lambdify_([x, u, p_d, k], x_dot)
+            calc_q_dot = lambdify_([x, u, p_d, k], q_dot)
             calc_u = self.compute_control
     
             def deriv_func(x, _, p_d, k):
@@ -202,9 +170,10 @@ class FuncBVP(object):
         return calc_x_dot, deriv_func, quad_func
 
     def compile_deriv_jac_func(self):
-
         calc_u = self.compute_control
 
+        self.sym_bvp.df_dy = None
+        self.sym_bvp.df_dp = None
         if any([item is None for item in [self.sym_bvp.df_dy, self.sym_bvp.df_dp]]):
             deriv_func_jac = None
 
@@ -228,12 +197,19 @@ class FuncBVP(object):
         return deriv_func_jac
 
     def compile_bc_func(self):
-    
-        if len(self.sym_bvp.u) == 0:
-            bc_0_func = lambdify_([self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
-                                  self.sym_bvp.bc_0)
-            bc_f_func = lambdify_([self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
-                                  self.sym_bvp.bc_f)
+        x = [s['symbol'] for s in self.sym_bvp.states()]
+        q = [s['symbol'] for s in self.sym_bvp.quads()]
+        u = [s['symbol'] for s in self.sym_bvp.controls()]
+        p_d = [s['symbol'] for s in self.sym_bvp.parameters()]
+        p_n = [s['symbol'] for s in self.sym_bvp.nd_parameters()]
+        k = [s['symbol'] for s in self.sym_bvp.get_constants()]
+        bc0 = [s['function'] for s in self.sym_bvp.initial_bcs()]
+        bcf = [s['function'] for s in self.sym_bvp.terminal_bcs()]
+        q_dot = [s['eom'] for s in self.sym_bvp.quads()]
+
+        if len(u) == 0:
+            bc_0_func = lambdify_([x, q, p_d, p_n, k], bc0)
+            bc_f_func = lambdify_([x, q, p_d, p_n, k], bcf)
     
             def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
                 bc_0 = np.array(bc_0_func(x_0, q_0, p_d, p_n, k))
@@ -241,12 +217,8 @@ class FuncBVP(object):
                 return np.concatenate((bc_0, bc_f))
     
         else:
-            bc_0_func = lambdify_(
-                [self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
-                self.sym_bvp.bc_0)
-            bc_f_func = lambdify_(
-                [self.sym_bvp.x, self.sym_bvp.q, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.p_n, self.sym_bvp.k],
-                self.sym_bvp.bc_f)
+            bc_0_func = lambdify_([x, q, u, p_d, p_n, k], bc0)
+            bc_f_func = lambdify_([x, q, u, p_d, p_n, k], bcf)
 
             compute_control = self.compute_control
     
@@ -263,6 +235,10 @@ class FuncBVP(object):
     def compile_bc_jac_func(self):
     
         calc_u = self.compute_control
+        self.sym_bvp.dbc_0_dy = None
+        self.sym_bvp.dbc_f_dy = None
+        self.sym_bvp.dbc_0_dp = None
+        self.sym_bvp.dbc_f_dp = None
 
         if any([item is None for item in
                 [self.sym_bvp.dbc_0_dy, self.sym_bvp.dbc_f_dy, self.sym_bvp.dbc_0_dp, self.sym_bvp.dbc_f_dp]]):

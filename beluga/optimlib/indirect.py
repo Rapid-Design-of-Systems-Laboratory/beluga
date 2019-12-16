@@ -171,49 +171,6 @@ def ocp_to_bvp(ocp, **kwargs):
 
     logging.debug('Problem formulation: Lambda := (' + ' . '.join(reversed(signature)) + ')(Sigma)')
 
-    dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
-
-    out = {'method': 'brysonho',
-           'control_method': control_method,
-           'consts': [str(k['symbol']) for k in ocp.get_constants()],
-           'initial_cost': None,
-           'initial_cost_units': None,
-           'path_cost': None,
-           'path_cost_units': None,
-           'terminal_cost': None,
-           'terminal_cost_units': None,
-           'states': [str(x['symbol']) for x in bvp.states()],
-           'states_rates': [str(x['eom']) for x in bvp.states()],
-           'states_units': [str(x['unit']) for x in bvp.states()],
-           'states_jac': [df_dy, df_dp],
-           'quads': [str(x['symbol']) for x in bvp.quads()],
-           'quads_rates': [str(x['eom']) for x in bvp.quads()], # TODO: Maybe multiply this by tf?
-           'quads_units': [str(x['unit']) for x in bvp.quads()],
-           'path_constraints': [],
-           'path_constraints_units': [],
-           'constants': [str(c['symbol']) for c in bvp.get_constants()],
-           'constants_units': [str(c['unit']) for c in bvp.get_constants()],
-           'constants_values': [float(c['value']) for c in bvp.get_constants()],
-           'constants_of_motion': [str(c['function']) for c in bvp.get_constants_of_motion()],
-           'dynamical_parameters': [str(c['symbol']) for c in bvp.parameters()],
-           'dynamical_parameters_units': [str(c['unit']) for c in bvp.parameters()],
-           'nondynamical_parameters': [str(c['symbol']) for c in bvp.nd_parameters()],
-           'nondynamical_parameters_units': [str(c['unit']) for c in bvp.nd_parameters()],
-           'control_list': [str(x['symbol']) for x in bvp.controls()],
-           'controls': [str(u['symbol']) for u in bvp.controls()],
-           'hamiltonian': str(bvp._properties['constants_of_motion'][0]['function']),
-           'hamiltonian_units': str(bvp._properties['constants_of_motion'][0]['unit']),
-           'num_states': len(bvp._properties['states']),
-           'dHdu': [str(x) for x in dHdu],
-           'bc_initial': [str(x['function']) for x in bvp.initial_bcs()],
-           'bc_terminal': [str(x['function']) for x in bvp.terminal_bcs()],
-           'bc_initial_jac': dbc_dya,
-           'bc_terminal_jac': dbc_dyb,
-           'bc_initial_parameter_jac': dbc_dp_a,
-           'bc_terminal_parameter_jac': dbc_dp_b,
-           'control_options': bvp._control_law,
-           'num_controls': len(bvp.controls())}
-
     def guess_map(gamma, map_chain=gamma_map_chain):
         gamma = copy.deepcopy(gamma)
         for morphism in map_chain:
@@ -226,4 +183,4 @@ def ocp_to_bvp(ocp, **kwargs):
             gamma = morphism(gamma)
         return gamma
 
-    return out, guess_map, guess_map_inverse
+    return bvp, guess_map, guess_map_inverse

@@ -56,6 +56,18 @@ def bvp_algorithm(name, **kwargs):
         # Raise exception if the loop completes without finding an algorithm by the given name
         raise ValueError('Algorithm ' + name + ' not found')
 
+def compile_bvp(ocp, s_bvp):
+    """
+    Compiles a BVP with codegen.
+
+    :param s_bvp:
+    :return:
+    """
+    f_bvp = FuncBVP(s_bvp, ocp.custom_functions())
+    ocp._scaling.initialize(s_bvp)
+    scaling = ocp._scaling
+
+    return f_bvp, scaling
 
 def guess_generator(*args, **kwargs):
     """
@@ -83,19 +95,13 @@ def ocp2bvp(ocp, **kwargs):
 
     logging.debug("Computing the necessary conditions of optimality")
     if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
-        bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
+        s_bvp, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
     elif method == 'diffyg_deprecated':
-        bvp_raw, _map, _map_inverse = DIFFYG_DEP_ocp_to_bvp(ocp, **optim_options)
+        s_bvp, _map, _map_inverse = DIFFYG_DEP_ocp_to_bvp(ocp, **optim_options)
     elif method == 'direct':
-        bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp, **optim_options)
+        s_bvp, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp, **optim_options)
     else:
         raise NotImplementedError
-
-    bvp_raw['custom_functions'] = ocp.custom_functions()
-    s_bvp = SymBVP(bvp_raw)
-    bvp = FuncBVP(s_bvp)
-    ocp._scaling.initialize(bvp.raw)
-    bvp.raw['scaling'] = ocp._scaling
 
     def ocp_map(sol):
         return _map(sol)
@@ -103,36 +109,38 @@ def ocp2bvp(ocp, **kwargs):
     def ocp_map_inverse(sol):
         return _map_inverse(sol)
 
-    return bvp, ocp_map, ocp_map_inverse
+    return s_bvp, ocp_map, ocp_map_inverse
 
 
-def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
+def run_continuation_set(bvp_algo, steps, solinit, s_bvp, f_bvp, pool, scaling, autoscale):
     """
     Runs a continuation set for the BVP problem.
 
     :param bvp_algo: BVP algorithm to be used.
     :param steps: The steps in a continuation set.
     :param solinit: Initial guess for the first problem in steps.
-    :param bvp: The compiled boundary-value problem to solve.
+    :param s_bvp: The raw boundary-value problem.
+    :param f_bvp: The compiled boundary-value problem.
     :param pool: A processing pool, if available.
+    :param scaling: Scaling tool.
     :param autoscale: Whether or not scaling is used.
     :return: A set of solutions for the steps.
     """
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
-    s = bvp.raw['scaling']
+    s = scaling
 
     # Load the derivative function into the bvp algorithm
-    bvp_algo.set_derivative_function(bvp.deriv_func)
-    bvp_algo.set_derivative_jacobian(bvp.deriv_jac_func)
-    bvp_algo.set_quadrature_function(bvp.quad_func)
-    bvp_algo.set_boundarycondition_function(bvp.bc_func)
-    bvp_algo.set_boundarycondition_jacobian(bvp.bc_func_jac)
-    bvp_algo.set_initial_cost_function(bvp.initial_cost)
-    bvp_algo.set_path_cost_function(bvp.path_cost)
-    bvp_algo.set_terminal_cost_function(bvp.terminal_cost)
-    bvp_algo.set_inequality_constraint_function(bvp.ineq_constraints)
+    bvp_algo.set_derivative_function(f_bvp.deriv_func)
+    bvp_algo.set_derivative_jacobian(f_bvp.deriv_jac_func)
+    bvp_algo.set_quadrature_function(f_bvp.quad_func)
+    bvp_algo.set_boundarycondition_function(f_bvp.bc_func)
+    bvp_algo.set_boundarycondition_jacobian(f_bvp.bc_func_jac)
+    bvp_algo.set_initial_cost_function(f_bvp.initial_cost)
+    bvp_algo.set_path_cost_function(f_bvp.path_cost)
+    bvp_algo.set_terminal_cost_function(f_bvp.terminal_cost)
+    bvp_algo.set_inequality_constraint_function(f_bvp.ineq_constraints)
 
     sol_guess = solinit
     # sol = None
@@ -163,7 +171,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
-            step.init(sol_guess, bvp)
+            step.init(sol_guess, s_bvp)
             try:
                 log_level = logging.getLogger()._displayLevel
             except:
@@ -323,25 +331,24 @@ def solve(**kwargs):
     if bvp is None:
         bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)
         logging.debug('Resulting BVP problem:')
-        for key in bvp.raw.keys():
-            logging.debug(str(key) + ': ' + str(bvp.raw[key]))
+        logging.debug(str(bvp))
+        f_bvp, scaling = compile_bvp(ocp, bvp)
 
     else:
         if ocp_map is None or ocp_map_inverse is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
-
-
+        f_bvp, scaling = compile_bvp(ocp, bvp)
 
     solinit = Trajectory()
-    solinit.const = np.array(bvp.raw['constants_values'])
+    solinit.const = np.array([s['value'] for s in bvp.get_constants()])
 
-    solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
+    solinit = guess_generator.generate(f_bvp, solinit, ocp_map, ocp_map_inverse)
 
     sol_temp = copy.deepcopy(solinit)
 
-    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
+    u = np.array([f_bvp.compute_control(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
     for ii in range(len(sol_temp.t) - 1):
-        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.dynamical_parameters, sol_temp.const)))
+        u = np.vstack((u, f_bvp.compute_control(sol_temp.y[ii + 1], sol_temp.dynamical_parameters, sol_temp.const)))
     sol_temp.u = u
     state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
     traj = ocp_map_inverse(sol_temp)
@@ -354,38 +361,37 @@ def solve(**kwargs):
 
     if steps is not None and initial_helper:
         for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bc0 + '_0')
+            if bc0 + '_0' in [str(s['symbol']) for s in bvp.get_constants()]:
+                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bc0 + '_0')
                 solinit.const[jj] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bcf + '_f')
+            if bcf + '_f' in [str(s['symbol']) for s in bvp.get_constants()]:
+                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bcf + '_f')
                 solinit.const[jj] = terminal_bc[bcf]
 
-    quad_names = bvp.raw['quads']
+    quad_names = [str(s['symbol']) for s in bvp.quads()]
     n_quads = len(quad_names)
     if n_quads > 0:
         initial_quads = solinit.q[0, :]
         terminal_quads = solinit.q[-1, :]
         initial_bc = dict(zip(quad_names, initial_quads))
         terminal_bc = dict(zip(quad_names, terminal_quads))
-
         for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.const[ii + '_0'] = initial_bc[bc0]
+            if bc0 + '_0' in [str(s['symbol']) for s in bvp.get_constants()]:
+                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bc0 + '_0')
+                solinit.const[ii] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bcf + '_f')
+            if bcf + '_f' in [str(s['symbol']) for s in bvp.get_constants()]:
+                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bcf + '_f')
                 solinit.const[jj] = terminal_bc[bcf]
 
     """
     Main continuation process
     """
     time0 = time.time()
-    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, f_bvp, pool, scaling, autoscale)
     total_time = time.time() - time0
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
@@ -393,7 +399,7 @@ def solve(**kwargs):
     """
     Post processing and output
     """
-    out = postprocess(continuation_set, f_ocp, bvp, ocp_map_inverse)
+    out = postprocess(continuation_set, f_ocp, f_bvp, ocp_map_inverse)
 
     if pool is not None:
         pool.close()

@@ -251,6 +251,7 @@ class BVP(object):
 
         :param symbol:
         :param unit:
+        :param options:
         :return:
         """
         if isinstance(symbol, str):
