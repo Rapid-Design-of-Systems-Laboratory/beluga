@@ -116,8 +116,9 @@ def test_hypersonic3DOF():
         .const('phi_f', 2*pi/180)
 
     continuation_steps.add_step('productspace') \
-        .const('theta_f', (2.6*pi/180, 3.6*pi/180, 10)) \
-        .const('phi_f', (1.85*pi/180, 2.25*pi/180, 5))
+        .num_subdivisions(10) \
+        .const('theta_f', 3.6*pi/180) \
+        .const('phi_f', 2.25*pi/180)
 
     beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
     
