@@ -1,4 +1,5 @@
-.. _BFR: AscentVehicles/BFR
+.. _`Aly Chan Totally Singular`: Classic/AlyChan
+.. _`BFR`: AscentVehicles/BFR
 .. _`Bryson-Denham`: Classic/BrysonDenham
 .. _`Financial Oscillator`: Oscillators/FinancialOscillator
 .. _`Goddard Rocket`: AscentVehicles/GoddardRocket
@@ -8,6 +9,7 @@
 .. _`Moon Lander`: Classic/MoonLander
 .. _`One-Loop Circuit`: ElectricityAndMagnetism/OneLoopCircuit
 .. _`Rayleigh Oscillator`: Oscillators/Rayleigh
+.. _`Spacecraft Detumbling`: Astrodynamics/Detumble
 .. _`Space Shuttle`: AtmosphericFlight/SpaceShuttle
 .. _`Zermelo's Problem`: Classic/ZermelosProblem
 
@@ -18,6 +20,7 @@ Examples are organized into folders for various disciplines. For more optimal co
 
 Pure control path-constrained:
 
+- `Aly Chan Totally Singular`_
 - `Financial Oscillator`_
 - `Goddard Rocket`_
 - `Hang Glider`_
@@ -25,6 +28,7 @@ Pure control path-constrained:
 - `Mall's Oscillator`_
 - `Moon Lander`_
 - `One-Loop Circuit`_
+- `Spacecraft Detumbling`_
 - `Space Shuttle`_
 
 Pure state path-constrained:
@@ -37,7 +41,7 @@ Mixed state-control path-constrained:
 
 Staged vehicles and discontinuous functions:
 
-- BFR_
+- `BFR`_
 
 Custom function implementation:
 

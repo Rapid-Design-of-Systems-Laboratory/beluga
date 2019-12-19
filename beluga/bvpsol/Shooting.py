@@ -125,7 +125,8 @@ class Shooting(BaseAlgorithm):
         return y0, q0, dparams, dnonparams
 
     @staticmethod
-    def _make_gammas(derivative_function, quadrature_function, gamma_set, param_guess, sol, prop, pool, nquads):
+    def _make_gammas(derivative_function, quadrature_function, gamma_set, dyn_param,
+                     sol, prop, pool, nquads):
         n_arcs = len(gamma_set)
         tspan = [None]*n_arcs
         y0g = [None]*n_arcs
@@ -140,7 +141,7 @@ class Shooting(BaseAlgorithm):
 
         def preload(args):
             return prop(derivative_function, quadrature_function, args[0], args[1], args[2], args[3],
-                        param_guess, sol.const)
+                        dyn_param, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -155,7 +156,8 @@ class Shooting(BaseAlgorithm):
         return gamma_set_new
 
     @staticmethod
-    def _make_gammas_parallel(derivative_function, quadrature_function, gamma_set, param_guess, sol, prop, pool, nquads):
+    def _make_gammas_parallel(derivative_function, quadrature_function, gamma_set, dyn_param,
+                              sol, prop, pool, nquads):
         n_arcs = len(gamma_set)
         tspan = [None] * n_arcs
         y0g = [None] * n_arcs
@@ -170,7 +172,7 @@ class Shooting(BaseAlgorithm):
 
         def preload(args):
             return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], args[3],
-                        param_guess, sol.const)
+                        dyn_param, sol.const)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g, u0g))
@@ -255,13 +257,13 @@ class Shooting(BaseAlgorithm):
 
     @staticmethod
     def _bc_func_multiple_shooting(bc_func=None):
-        def _bc_func(gamma_set, param_guess, _, k, *args):
+        def _bc_func(gamma_set, p_d, p_n, _, k, *args):
             t0 = gamma_set[0].t[0]
             y0, q0, u0 = gamma_set[0](t0)
             tf = gamma_set[-1].t[-1]
             yf, qf, uf = gamma_set[-1](tf)
             bc1 = np.asarray([gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
-            bc2 = np.asarray(bc_func(y0, q0, u0, yf, qf, uf, param_guess[:k], param_guess[k:], *args)).flatten()
+            bc2 = np.asarray(bc_func(y0, q0, u0, yf, qf, uf, p_d, p_n, k)).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
         return _bc_func
@@ -328,8 +330,8 @@ class Shooting(BaseAlgorithm):
 
         n = sol.y[0].shape[0]
         k = sol.dynamical_parameters.shape[0]
-        sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.nondynamical_parameters))
-        sol.nondynamical_parameters = np.empty((0,))
+        # sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.nondynamical_parameters))
+        # sol.nondynamical_parameters = np.empty((0,))
 
         fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
             self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
@@ -453,7 +455,7 @@ class Shooting(BaseAlgorithm):
                 g[ii].q = np.vstack((_q0g, _qfg))
                 g[ii].u = np.vstack((_u0g, _ufg))
 
-            gamma_set_new = _gamma_maker(deriv_func, quad_func, g, _params, sol, prop, pool, n_quads)
+            gamma_set_new = _gamma_maker(deriv_func, quad_func, g, _params[:n_dynparams], sol, prop, pool, n_quads)
             for ii in range(len(gamma_set_new)):
                 t_set = gamma_set_new[ii].t
                 temp = gamma_set_new[ii].y
@@ -530,17 +532,22 @@ class Shooting(BaseAlgorithm):
             J = csc_matrix(coo_matrix((values, (i_jac, j_jac))))
             return J
 
+        def _jacobian_function_wrapper(X):
+            return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
+
         is_sparse = False
-        if n_quads == 0 and self.algorithm.lower() == 'armijo':
-            is_sparse = True
-            def _jacobian_function_wrapper(X):
-                return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
-        elif n_quads == 0:
-            def _jacobian_function_wrapper(X):
-                return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs).toarray()
-        else:
-            def _jacobian_function_wrapper(X):
-                return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
+
+        # is_sparse = False
+        # if n_quads == 0 and self.algorithm.lower() == 'armijo':
+        #     is_sparse = True
+        #     def _jacobian_function_wrapper(X):
+        #         return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs)
+        # elif n_quads == 0:
+        #     def _jacobian_function_wrapper(X):
+        #         return _jacobian_function(X, pick_stm, pick_quad_stm, n_odes, n_quads, n_dynparams, self.num_arcs).toarray()
+        # else:
+        #     def _jacobian_function_wrapper(X):
+        #         return approx_jacobian(X, _constraint_function_wrapper, 1e-6)
 
         constraint = {'type': 'eq', 'fun': _constraint_function_wrapper, 'jac': _jacobian_function_wrapper}
 
@@ -670,8 +677,8 @@ class Shooting(BaseAlgorithm):
         sol.q = q_out
         sol.u = u_out
 
-        sol.dynamical_parameters = parameter_guess[:k]
-        sol.nondynamical_parameters = parameter_guess[k:]
+        sol.dynamical_parameters = parameter_guess
+        sol.nondynamical_parameters = nondynamical_parameter_guess
         sol.converged = converged
 
         out = BVPResult(sol=sol, success=converged, message=message,

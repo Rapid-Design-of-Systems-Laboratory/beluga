@@ -2,6 +2,7 @@ import numpy as np
 
 EPS = np.finfo(float).eps
 
+
 def estimate_bc_jac(bc, ya, qa, yb, qb, p, ndp, bc0=None):
     """Estimate derivatives of boundary conditions with forward differences.
 
@@ -21,7 +22,7 @@ def estimate_bc_jac(bc, ya, qa, yb, qb, p, ndp, bc0=None):
     k = p.shape[0]
 
     if bc0 is None:
-        bc0 = bc(ya, yb, p)
+        bc0 = bc(ya, yb, p, ndp,)
 
     dtype = ya.dtype
 
@@ -31,7 +32,7 @@ def estimate_bc_jac(bc, ya, qa, yb, qb, p, ndp, bc0=None):
         ya_new = ya.copy()
         ya_new[i] += h[i]
         hi = ya_new[i] - ya[i]
-        bc_new = bc(ya_new, yb, p)
+        bc_new = bc(ya_new, yb, p, ndp)
         dbc_dya[i] = (bc_new - bc0) / hi
     dbc_dya = dbc_dya.T
 
@@ -86,10 +87,10 @@ def wrap_functions(fun, bc, fun_jac, bc_jac, aux, k, dtype):
         def fun_p(x, y, p):
             return np.asarray(fun(x, y, p), dtype)
 
-        def bc_wrapped(ya, yb, p):
-            _p = p[:k]
-            _ndp = p[k:]
-            return np.asarray(bc(ya, [], [], yb, [], [], _p, _ndp, aux), dtype)
+        empty_array = np.array([])
+
+        def bc_wrapped(ya, yb, p, ndp):
+            return np.asarray(bc(ya, empty_array, empty_array, yb, empty_array, empty_array, p, ndp, aux), dtype)
 
         if fun_jac is not None:
             def fun_jac_p(x, y, p):

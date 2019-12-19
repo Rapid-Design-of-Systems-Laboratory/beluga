@@ -3,8 +3,9 @@ import subprocess
 import os
 
 AscentVehicles = [r'BFR', r'GoddardRocket', r'Titan-II-SSTO']
+Astrodynamics = [r'Detumble']
 AtmosphericFlight = [r'HangGlider', r'HypersonicNose', r'SpaceShuttle']
-Classic = [r'Brachistochrone', r'BrysonDenham', r'MoonLander', r'ZermelosProblem']
+Classic = [r'AlyChan', r'Brachistochrone', r'BrysonDenham', r'MoonLander', r'ZermelosProblem']
 ElectricityAndMagnetism = [r'OneLoopCircuit']
 Oscillators = [r'FinancialOscillator', r'MallsOscillator', r'Rayleigh']
 
@@ -15,6 +16,11 @@ def test_AscentVehicles(file):
     path = os.path.realpath(fpath + r'/../../examples/AscentVehicles/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
+@pytest.mark.parametrize("file", Astrodynamics)
+def test_Astrodynamics(file):
+    fpath = os.path.dirname(__file__)
+    path = os.path.realpath(fpath + r'/../../examples/Astrodynamics/' + file + '/' + file + '.py')
+    assert subprocess.call(['python', path]) == 0
 
 def test_AstrodynamicsHT():
     fpath = os.path.dirname(__file__)

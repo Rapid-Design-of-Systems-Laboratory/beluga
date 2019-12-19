@@ -502,8 +502,8 @@ class OCP(BVP):
         self._properties['switches'] = temp
         return self
 
-    custom_function = partialmethod(set_property, property_name='custom_functions',
-                                    property_args=('name', 'args', 'handle', 'derivs'))
+    def table(self, name, mehtod, in_data, out_data, units):
+        pass
 
     constants_of_motion = partialmethod(get_property, property_name='constants_of_motion')
     parameters = partialmethod(get_property, property_name='parameters')
