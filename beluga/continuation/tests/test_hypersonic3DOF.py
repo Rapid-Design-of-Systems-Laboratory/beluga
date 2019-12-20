@@ -104,23 +104,24 @@ def test_hypersonic3DOF():
     continuation_steps.add_step('bisection').num_cases(21) \
         .const('h_f', 0) \
         .const('theta_f', 6945.9/6378000)
+        # Isn't h_f 0 a no-op?
     
-    continuation_steps.add_step('bisection').num_cases(21) \
-        .const('theta_f', 0.5*pi/180)
+    continuation_steps.add_step('bisection').num_cases(3) \
+        .const('theta_f', 2**-14 * pi/180)
     
-    continuation_steps.add_step('bisection').num_cases(41) \
-        .const('gam_0', 0) \
-        .const('theta_f', 3*pi/180)
+    continuation_steps.add_step('bisection').num_cases(3) \
+        .const('gam_0', -(90-10)*pi/180) \
+        .const('theta_f', 2**-13 * pi/180)
     
-    continuation_steps.add_step('bisection').num_cases(41) \
-        .const('phi_f', 2*pi/180)
+    continuation_steps.add_step('bisection').num_cases(3) \
+        .const('phi_f', 2**-10 * pi/180)
 
     continuation_steps.add_step('productspace') \
-        .num_subdivisions(10) \
-        .const('theta_f', 3.6*pi/180) \
-        .const('phi_f', 2.25*pi/180)
+        .num_subdivisions(6) \
+        .const('theta_f', 2**-10 * pi/180) \
+        .const('phi_f', 2**-6 * pi/180)
 
-    beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+    beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
     
     sol_set = beluga.solve(
         ocp=ocp,

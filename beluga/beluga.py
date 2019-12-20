@@ -158,7 +158,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             logging.debug('Problem failed to converge!\n')
     else:
         for step_idx, step in enumerate(steps):
-            logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+            logging.debug('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
             # logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
             solution_set.append([])
             # Assign solution from last continuation set
