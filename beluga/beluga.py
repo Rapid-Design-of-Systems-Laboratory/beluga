@@ -108,6 +108,38 @@ def ocp2bvp(ocp, **kwargs):
     return bvp, ocp_map, ocp_map_inverse
 
 
+def run_continuation_without_steps(bvp_algo, sol_guess, pool, scaling=None):
+    """
+    Runs a boundary value problem.
+
+    :param bvp_algo: BVP algorithm to be used.
+    :param sol_guess: Initial guess for the boundary value problem.
+    :param pool: A processing pool, if available.
+    :param autoscale: Whether or not scaling is used.
+    :return: A solution for the boundary value problem.
+    """
+    logging.info('Solving OCP...')
+    time0 = time.time()
+    if scaling:
+        scaling.compute_scaling(sol_guess)
+        sol_guess = scaling.scale(sol_guess)
+
+    opt = bvp_algo.solve(sol_guess, pool=pool)
+    sol = opt['sol']
+
+    if scaling:
+        sol = scaling.unscale(sol)
+
+    if sol.converged:
+        elapsed_time = time.time() - time0
+        logging.debug('Problem converged in %0.4f seconds\n' % elapsed_time)
+    else:
+        elapsed_time = time.time() - time0
+        logging.debug('Problem failed to converge!\n')
+
+    return copy.deepcopy(sol)
+
+
 def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
@@ -139,25 +171,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     sol_guess = solinit
     # sol = None
     if steps is None:
-        logging.info('Solving OCP...')
-        time0 = time.time()
-        if autoscale:
-            s.compute_scaling(sol_guess)
-            sol_guess = s.scale(sol_guess)
-
-        opt = bvp_algo.solve(sol_guess, pool=pool)
-        sol = opt['sol']
-
-        if autoscale:
-            sol = s.unscale(sol)
-
-        solution_set = [[copy.deepcopy(sol)]]
-        if sol.converged:
-            elapsed_time = time.time() - time0
-            logging.debug('Problem converged in %0.4f seconds\n' % elapsed_time)
-        else:
-            elapsed_time = time.time() - time0
-            logging.debug('Problem failed to converge!\n')
+        return [[run_continuation_without_steps(bvp_algo, solinit, pool, s)]]
     else:
         for step_idx, step in enumerate(steps):
             logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
