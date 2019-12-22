@@ -140,9 +140,26 @@ def run_continuation_without_steps(bvp_algo, sol_guess, pool, scaling=None):
     return copy.deepcopy(sol)
 
 
-def iteratively_solve_based_on_previous_solution(bvp_algo, step, sol_guess, pool,
-                                                 continuation_progress, L, autoscale=False, scaling=None,
+def iteratively_solve_based_on_previous_solution(bvp_algo: bvpsol.BaseAlgorithm,
+                                                 step: beluga.continuation.continuation.ContinuationStrategy,
+                                                 sol_guess: Trajectory,
+                                                 pool,
+                                                 continuation_progress: tqdm, L: int,
+                                                 autoscale=False, scaling=None,
                                                  ) -> typing.List[Trajectory]:
+    """
+    Runs continuation step for a boundary value problem.
+
+    :param bvp_algo: BVP algorithm to be used.
+    :param step: The continuation step.
+    :param sol_guess: Initial guess (from the previous step).
+    :param pool: A processing pool, if available.
+    :param continuation_progress: Iteration wrapper.
+    :param L: length of the step.
+    :param autoscale: Whether or not scaling is used.
+    :param scaling: The scaling, if used.
+    :return: A set of solutions for the steps.
+    """
     solution_set_for_step = list()
     for sol_guess in continuation_progress:
         continuation_progress.total = len(step)
