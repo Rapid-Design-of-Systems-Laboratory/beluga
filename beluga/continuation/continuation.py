@@ -7,6 +7,9 @@ import itertools
 import functools
 import sys
 
+import beluga.ivpsol.ivpsol
+
+
 
 def gamma_norm(const1, const2):
     norm = sum(abs(const2 - const1))
@@ -79,7 +82,12 @@ class ContinuationStrategy(abc.ABC):
     def __len__(self):
         return self.num_cases()
 
-    def add_gamma(self, gamma):
+    def add_gamma(self, gamma: beluga.ivpsol.ivpsol.Trajectory):
+        """
+        Add a trajectory as a solution and as an initial guess.
+        """
+        if type(gamma) is not beluga.ivpsol.ivpsol.Trajectory:
+            raise ValueError
         self.gammas.append(copy.deepcopy(gamma))
 
     def get_closest_gamma(self, const):
@@ -101,7 +109,7 @@ class ContinuationStrategy(abc.ABC):
         gamma_in.converged = False
         self.gammas = [gamma_in]
 
-    def next(self, ignore_last_step=False):
+    def next(self, ignore_last_step=False) -> beluga.ivpsol.ivpsol.Trajectory:
         if len(self.gammas) is 0:
             raise ValueError('No boundary value problem associated with this object')
 
@@ -125,6 +133,7 @@ class ContinuationStrategy(abc.ABC):
         gamma_guess.const = const0
         self.ctr += 1
         logging.debug('CHOOSE\ttraj #' + str(i) + ' as guess.')
+        assert type(gamma_guess) is beluga.ivpsol.ivpsol.Trajectory
         return gamma_guess
 
     def var_iterator(self):

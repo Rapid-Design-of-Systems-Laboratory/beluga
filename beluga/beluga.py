@@ -3,13 +3,15 @@ import sys
 import warnings
 import copy
 import logging
+import typing
 
-from beluga.codegen import *
+from beluga.codegen import preprocess
 from tqdm import tqdm
 
 import numpy as np
 
 from beluga import problem, helpers
+import beluga.continuation
 import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
