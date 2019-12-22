@@ -155,7 +155,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
-    s = bvp.raw['scaling']
+    scaling = bvp.raw['scaling']
 
     # Load the derivative function into the bvp algorithm
     bvp_algo.set_derivative_function(bvp.deriv_func)
@@ -171,7 +171,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     sol_guess = solinit
     # sol = None
     if steps is None:
-        return [[run_continuation_without_steps(bvp_algo, solinit, pool, s)]]
+        return [[run_continuation_without_steps(bvp_algo, solinit, pool, scaling)]]
     else:
         for step_idx, step in enumerate(steps):
             logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
@@ -197,14 +197,14 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 logging.debug('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
                 time0 = time.time()
                 if autoscale:
-                    s.compute_scaling(sol_guess)
-                    sol_guess = s.scale(sol_guess)
+                    scaling.compute_scaling(sol_guess)
+                    sol_guess = scaling.scale(sol_guess)
 
                 opt = bvp_algo.solve(sol_guess, pool=pool)
                 sol = opt['sol']
 
                 if autoscale:
-                    sol = s.unscale(sol)
+                    sol = scaling.unscale(sol)
 
                 ya = sol.y[0,:]
                 yb = sol.y[-1,:]
