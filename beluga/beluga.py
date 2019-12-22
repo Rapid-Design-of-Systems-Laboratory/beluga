@@ -158,7 +158,7 @@ def iteratively_solve_based_on_previous_solution(bvp_algo: bvpsol.BaseAlgorithm,
     :param L: length of the step.
     :param autoscale: Whether or not scaling is used.
     :param scaling: The scaling, if used.
-    :return: A set of solutions for the steps.
+    :return: A set of solutions for the step.
     """
     solution_set_for_step = list()
     for sol_guess in continuation_progress:
