@@ -237,7 +237,7 @@ def run_continuation_steps(bvp_algo: bvpsol.BaseAlgorithm, steps: typing.List[be
     scaling = bvp.raw['scaling']
     # Loop through all the continuation steps
     for step_idx, step in enumerate(steps):
-        logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+        logging.debug('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
         # logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
         # Assign solution from last continuation set
         step.reset()

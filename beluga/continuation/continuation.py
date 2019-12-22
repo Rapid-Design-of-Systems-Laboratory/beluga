@@ -60,6 +60,9 @@ class ContinuationVariable(object):
         self.value = np.nan
         self.steps = []
 
+    def __str__(self):
+        return self.name + ' -> ' + str(self.target)
+
 
 class ContinuationStrategy(abc.ABC):
     def __init__(self, *args, **kwargs):
@@ -234,7 +237,7 @@ class BisectionStrategy(ManualStrategy):
         self.orig_num_cases = initial_num_cases
 
     def __str__(self):
-        return str(self.vars)
+        return ', '.join(str(continuationVariable) for continuationVariable in self.vars.values())
 
     def next(self, ignore_last_step=False):
         """Generator class to create BVPs for the continuation step iterations
