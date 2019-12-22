@@ -257,8 +257,6 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     :param autoscale: Whether or not scaling is used.
     :return: A set of solutions for the steps.
     """
-    # Loop through all the continuation steps
-    solution_set = []
     # Initialize scaling
     scaling = bvp.raw['scaling']
 
@@ -273,14 +271,10 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     bvp_algo.set_terminal_cost_function(bvp.terminal_cost)
     bvp_algo.set_inequality_constraint_function(bvp.ineq_constraints)
 
-    sol_guess = solinit
-    # sol = None
     if steps is None:
         return [[run_continuation_without_steps(bvp_algo, solinit, pool, scaling)]]
     else:
         return run_continuation_steps(bvp_algo, steps, solinit, bvp, pool, autoscale)
-
-    return solution_set
 
 
 def solve(**kwargs):
