@@ -202,6 +202,49 @@ def iteratively_solve_based_on_previous_solution(bvp_algo, step, sol_guess, pool
     return solution_set_for_step
 
 
+def run_continuation_steps(bvp_algo: bvpsol.BaseAlgorithm, steps: typing.List[beluga.continuation.continuation.ContinuationStrategy],
+                           sol_guess: Trajectory, bvp: FuncBVP, pool, autoscale: bool):
+    """
+    Runs continuation steps for a boundary value problem.
+
+    :param bvp_algo: BVP algorithm to be used.
+    :param steps: The steps in a continuation set.
+    :param sol_guess: Initial guess for the first problem in steps.
+    :param bvp: The compiled boundary-value problem to solve.
+    :param pool: A processing pool, if available.
+    :param autoscale: Whether or not scaling is used.
+    :return: A set of solutions for the steps.
+    """
+    assert type(bvp) is FuncBVP
+    solution_set = []
+    scaling = bvp.raw['scaling']
+    # Loop through all the continuation steps
+    for step_idx, step in enumerate(steps):
+        logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
+        # logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
+        # Assign solution from last continuation set
+        step.reset()
+        step.init(sol_guess, bvp)
+        try:
+            log_level = logging.getLogger()._displayLevel
+        except:
+            log_level = logging.getLogger().getEffectiveLevel()
+
+        # create progress bar
+        L = len(step)
+        # L gets changed inside the functions, which will not propagate out here.
+        # But L never seems to actually get used for anything.
+        continuation_progress = tqdm(step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
+                                     ascii=True, unit='trajectory')
+        if step_idx > 0:
+          assert sol_guess.converged
+        solution_set_for_step = iteratively_solve_based_on_previous_solution(bvp_algo, step, sol_guess, pool,
+                                                                             continuation_progress, L, autoscale, scaling)
+        sol_guess = copy.deepcopy(solution_set_for_step[-1])
+        solution_set.append(solution_set_for_step)
+    return solution_set
+
+
 def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
@@ -235,25 +278,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     if steps is None:
         return [[run_continuation_without_steps(bvp_algo, solinit, pool, scaling)]]
     else:
-        for step_idx, step in enumerate(steps):
-            logging.debug('\nRunning Continuation Step #'+str(step_idx+1)+' : ')
-            # logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
-            solution_set.append([])
-            # Assign solution from last continuation set
-            step.reset()
-            step.init(sol_guess, bvp)
-            try:
-                log_level = logging.getLogger()._displayLevel
-            except:
-                log_level = logging.getLogger().getEffectiveLevel()
-
-            L = len(step)
-            continuation_progress = tqdm(step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
-                                  ascii=True, unit='trajectory')
-            solution_set_for_step = iteratively_solve_based_on_previous_solution(bvp_algo, step, sol_guess, pool,
-                                                                                 continuation_progress, L, autoscale, scaling)
-            sol_guess = copy.deepcopy(solution_set_for_step[-1])
-            solution_set.append(solution_set_for_step)
+        return run_continuation_steps(bvp_algo, steps, solinit, bvp, pool, autoscale)
 
     return solution_set
 
