@@ -1,6 +1,5 @@
-import numpy as np
-from sympy import Function, FunctionClass
-from sympy.core.function import ArgumentIndexError, Application
+from sympy import Function
+from sympy.core.function import ArgumentIndexError
 from collections.abc import Iterable
 import inspect
 from beluga.utils.numerical_derivatives import gen_num_diff
@@ -10,7 +9,8 @@ import logging
 
 
 class CustomFunctionGenerator(object):
-    def __init__(self, base_func, arg_len=None, func_dict=None, deriv_list=None, order=None, num_deriv_type='c_diff'):
+    def __init__(self, base_func, name=None, arg_len=None, func_dict=None, deriv_list=None, order=None,
+                 num_deriv_type='c_diff'):
 
         if arg_len is None:
             self.arg_len = len(inspect.signature(base_func).parameters)
@@ -31,9 +31,17 @@ class CustomFunctionGenerator(object):
         else:
             self.base_func = jit_compile_func(base_func, self.arg_len, array_inputs=False)
 
+        if name is None:
+            self.name = 'Sym(' + self.base_func.__name__ + ')'
+        else:
+            self.name = name
+
     def __call__(self, *args):
         return CustomFunction(self.base_func, args, func_dict=self.func_dict, order=self.order,
                               deriv_method=self.num_deriv_type)
+
+    def __repr__(self):
+        return self.name
 
 
 class CustomFunctionMeta(Function):

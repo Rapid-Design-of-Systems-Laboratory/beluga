@@ -3,12 +3,12 @@ import sys
 import warnings
 import copy
 
-from beluga.codegen.codegen import *
 from tqdm import tqdm
 
 import numpy as np
 
 from beluga import problem, helpers
+from beluga.codegen.codegen import *
 import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
