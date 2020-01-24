@@ -60,7 +60,7 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='diffyg',
-    optim_options={'reduction': False},
+    optim_options={'reduction': True},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,

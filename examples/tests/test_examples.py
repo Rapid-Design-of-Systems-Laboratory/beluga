@@ -4,7 +4,7 @@ import os
 
 AscentVehicles = [r'BFR', r'GoddardRocket', r'Titan-II-SSTO']
 Astrodynamics = [r'Detumble']
-AtmosphericFlight = [r'HangGlider', r'HypersonicNose', r'SpaceShuttle']
+AtmosphericFlight = [r'HangGlider', r'Hypersonic3DOFfamily', r'HypersonicNose', r'SpaceShuttle']
 Classic = [r'AlyChan', r'Brachistochrone', r'BrysonDenham', r'MoonLander', r'ZermelosProblem']
 ElectricityAndMagnetism = [r'OneLoopCircuit']
 Oscillators = [r'FinancialOscillator', r'MallsOscillator', r'Rayleigh']
