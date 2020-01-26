@@ -1,3 +1,4 @@
+import beluga
 from beluga.bvpsol.BaseAlgorithm import BaseAlgorithm, BVPResult
 import numpy as np
 import copy
@@ -141,10 +142,10 @@ class Collocation(BaseAlgorithm):
             self.number_of_quads = sol.q.shape[1]
 
         if sol.dynamical_parameters is None:
-            sol.dynamical_parameters = np.array([], dtype=np.float64)
+            sol.dynamical_parameters = np.array([], dtype=beluga.DTYPE)
 
         if sol.nondynamical_parameters is None:
-            sol.nondynamical_parameters = np.array([], dtype=np.float64)
+            sol.nondynamical_parameters = np.array([], dtype=beluga.DTYPE)
 
         self.number_of_dynamical_params = len(sol.dynamical_parameters)
         self.number_of_nondynamical_params = len(sol.nondynamical_parameters)

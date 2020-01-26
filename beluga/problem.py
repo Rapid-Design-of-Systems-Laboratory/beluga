@@ -10,6 +10,7 @@ from beluga.utils import sympify, _combine_args_kwargs
 
 from .scaling import Scaling
 import time
+import beluga
 from beluga.ivpsol import Propagator
 from beluga.optimlib import BVP
 Cost = namedtuple('Cost', ['expr', 'unit'])
@@ -712,13 +713,13 @@ class GuessGenerator(object):
 
         time0 = time.time()
         prop = Propagator()
-        solinit.t = tspan
-        solinit.y = np.array([x0, x0])
-        solinit.dual = np.array([d0, d0])
-        solinit.q = np.array([q0, q0])
-        solinit.u = np.array([u0, u0])
-        solinit.dynamical_parameters = param_guess
-        solinit.nondynamical_parameters = nondynamical_param_guess
+        solinit.t = np.array(tspan, dtype=beluga.DTYPE)
+        solinit.y = np.array([x0, x0], dtype=beluga.DTYPE)
+        solinit.dual = np.array([d0, d0], dtype=beluga.DTYPE)
+        solinit.q = np.array([q0, q0], dtype=beluga.DTYPE)
+        solinit.u = np.array([u0, u0], dtype=beluga.DTYPE)
+        solinit.dynamical_parameters = np.array(param_guess, dtype=beluga.DTYPE)
+        solinit.nondynamical_parameters = np.array(nondynamical_param_guess, dtype=beluga.DTYPE)
         sol = guess_map(solinit)
         solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
                       sol.dynamical_parameters, sol.const)
@@ -791,12 +792,12 @@ class GuessGenerator(object):
 
         time0 = time.time()
         solinit.t = np.linspace(tspan[0], tspan[-1], num=4)
-        solinit.y = np.array([x0, x0, x0, x0])
-        solinit.dual = np.array([d0, d0, d0, d0])
-        solinit.q = np.array([q0, q0, q0, q0])
-        solinit.u = np.array([u0, u0, u0, u0])
-        solinit.dynamical_parameters = param_guess
-        solinit.nondynamical_parameters = nondynamical_param_guess
+        solinit.y = np.array([x0, x0, x0, x0], dtype=beluga.DTYPE)
+        solinit.dual = np.array([d0, d0, d0, d0], dtype=beluga.DTYPE)
+        solinit.q = np.array([q0, q0, q0, q0], dtype=beluga.DTYPE)
+        solinit.u = np.array([u0, u0, u0, u0], dtype=beluga.DTYPE)
+        solinit.dynamical_parameters = np.array(param_guess, dtype=beluga.DTYPE)
+        solinit.nondynamical_parameters = np.array(nondynamical_param_guess, dtype=beluga.DTYPE)
         sol = guess_map(solinit)
         solout = copy.deepcopy(sol)
         solout.const = sol.const
