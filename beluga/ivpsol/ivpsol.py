@@ -1,3 +1,4 @@
+import beluga
 import numpy as np
 from scipy.integrate import solve_ivp, simps
 import scipy.interpolate
@@ -82,7 +83,7 @@ class Propagator(Algorithm):
         :param kwargs: Unused.
         :return: A full reconstructed trajectory, :math:`\gamma`.
         """
-        y0 = np.array(y0, dtype=np.float64)
+        y0 = np.array(y0, dtype=beluga.DTYPE)
 
         if self.program == 'scipy':
             if self.variable_step is True:
@@ -200,7 +201,7 @@ class Trajectory(object):
         :return: Returns position values :math:`(y, q, u) \in B`
         """
 
-        t = np.array(t, dtype=np.float64)
+        t = np.array(t, dtype=beluga.DTYPE)
         y_val = np.array([])
         q_val = np.array([])
         u_val = np.array([])

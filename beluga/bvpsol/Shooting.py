@@ -1,3 +1,4 @@
+import beluga
 import cloudpickle as pickle
 import copy
 import logging
@@ -318,15 +319,15 @@ class Shooting(BaseAlgorithm):
 
         # Make a copy of sol and format inputs
         sol = copy.deepcopy(solinit)
-        sol.t = np.array(sol.t, dtype=np.float64)
-        sol.y = np.array(sol.y, dtype=np.float64)
+        sol.t = np.array(sol.t, dtype=beluga.DTYPE)
+        sol.y = np.array(sol.y, dtype=beluga.DTYPE)
         if np.issubdtype(sol.y.dtype, np.complexfloating):
             dtype = complex
         else:
             dtype = float
-        sol.q = np.array(sol.q, dtype=np.float64)
-        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
-        sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
+        sol.q = np.array(sol.q, dtype=beluga.DTYPE)
+        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=beluga.DTYPE)
+        sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=beluga.DTYPE)
 
         n = sol.y[0].shape[0]
         k = sol.dynamical_parameters.shape[0]
