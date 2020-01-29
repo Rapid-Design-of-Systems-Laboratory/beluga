@@ -3,7 +3,7 @@ from .beluga import bvp_algorithm, guess_generator, ocp2bvp, run_continuation_se
 from .continuation import ContinuationList as init_continuation
 from .codegen import *
 # from .problem import OCP
-from .problem import OCP
+from .ocp import OCP
 from .scaling import Scaling
 
 import os

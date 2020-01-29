@@ -17,7 +17,7 @@ from beluga.ivpsol import Trajectory
 from beluga.utils import save
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
-from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
+# from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
 import scipy.integrate as integrate

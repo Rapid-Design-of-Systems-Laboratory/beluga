@@ -2,7 +2,7 @@
 Computes the necessary conditions of optimality using Bryson & Ho's method
 """
 
-from .optimlib import init_workspace, process_quantities
+from .optimlib import process_quantities
 from sympy import Symbol, sympify
 import itertools as it
 import numpy as np

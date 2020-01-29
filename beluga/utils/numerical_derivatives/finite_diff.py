@@ -63,9 +63,12 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
     total_deriv_order = sum(deriv_order)
 
     if arg_len == 1:
+        coeffs = tuple(coeff_array[0])
+        steps = tuple(step_array[0])
+
         def fin_diff(arg):
             diff = 0
-            for coeff, h in zip(coeff_array, step_array):
+            for coeff, h in zip(coeffs, steps):
                 diff += coeff * func(arg + h)
             return diff / step_size ** total_deriv_order
 

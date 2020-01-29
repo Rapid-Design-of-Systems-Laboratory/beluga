@@ -3,6 +3,7 @@ import numpy as np
 import logging
 
 ocp = beluga.OCP()
+# ocp = OCP('Test OCP')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -23,17 +24,22 @@ def gravity_model(alt):
 
 
 grav_data_alt = np.array([0, 10, 20])
-grav_data_out = np.array([1.625, 1.725, 1.825])
+grav_data_out = np.array([1.625, 1.625, 1.625])
 
 ocp.quantity('v_dot', 'u + grav')
 ocp.quantity('grav', '-g(h)')
 
 ocp.custom_function('g', gravity_model, 'm/s**2', ['m'])
-# ocp.table('g', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
+# ocp.table('g2', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
+
+# ocp.custom_function('g1', gravity_model, 'm/s**2', ['m'])
+# ocp.table('g2', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
 
 # Define constants
 # ocp.constant('g', 1.625, 'm/s^2')
 ocp.constant('epsilon1', 1, 'm/s**2')
+
+# ocp.switch('g', ['g1', 'g2'], [['h - h0/2'], ['h0/2 - h']], 'stage_tol')
 
 ocp.constant('h_0', 20, 'm')
 ocp.constant('v_0', -2.5, 'm/s')
@@ -42,6 +48,8 @@ ocp.constant('v_f', 0, 'm/s')
 
 ocp.constant('u_lower', -1, 'm/s**2')
 ocp.constant('u_upper', 5, 'm/s**2')
+
+ocp.constant('stage_tol', 0.1, '1')
 
 # Define costs
 ocp.path_cost('u', 'm/s**2')
@@ -56,6 +64,8 @@ ocp.terminal_constraint('v - v_f', 'm/s')
 ocp.path_constraint('u', 'newton', lower='u_lower', upper='u_upper', activator='epsilon1', method='utm')
 
 ocp.scale(m='h', s='h/v')
+
+ocp.dualize()
 
 # bvp_solver = beluga.bvp_algorithm('spbvp')
 #
