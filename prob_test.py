@@ -2,14 +2,16 @@ import beluga
 import numpy as np
 import logging
 
-ocp = beluga.OCP()
+# ocp = beluga.OCP()
 # ocp = OCP('Test OCP')
+ocp = beluga.problib.InputOCP()
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('h', 'v', 'm')
+# ocp.state('v', 'u - g(h)', 'm/s')
 ocp.state('v', 'v_dot', 'm/s')
 
 # Define controls
@@ -64,8 +66,6 @@ ocp.terminal_constraint('v - v_f', 'm/s')
 ocp.path_constraint('u', 'newton', lower='u_lower', upper='u_upper', activator='epsilon1', method='utm')
 
 ocp.scale(m='h', s='h/v')
-
-ocp.dualize()
 
 # bvp_solver = beluga.bvp_algorithm('spbvp')
 #

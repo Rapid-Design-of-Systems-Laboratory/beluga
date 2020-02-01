@@ -1,2 +1,2 @@
-from .tables import *
-from .custom_functions import *
+from .table_lib import *
+from .custom_functions_lib import *

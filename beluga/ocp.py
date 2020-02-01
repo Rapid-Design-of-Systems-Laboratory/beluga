@@ -1,5 +1,5 @@
 from beluga.utils.numerical_derivatives import gen_num_diff
-from beluga.optimlib.special_functions import custom_functions, tables
+from beluga.optimlib.special_functions import custom_functions_lib, table_lib
 from beluga.optimlib.optimlib import *
 from beluga.optimlib.bvp import BVP
 import sympy
@@ -116,20 +116,20 @@ class OCP:
     def custom_function(self, name, func, func_units, arg_units):
         custom_function_info = {'name': name, 'sym': sympy.Symbol(name), 'func': func, 'func_units': func_units,
                                 'arg_units': arg_units,
-                                'sym_func': custom_functions.CustomFunctionGenerator(func, name=name,
-                                                                                     func_dict=self.mod_dict)}
+                                'sym_func': custom_functions_lib.CustomFunctionGenerator(func, name=name,
+                                                                                         func_dict=self.mod_dict)}
         self.custom_function_list.append(custom_function_info)
         self.locals_dict[name] = custom_function_info['sym_func']
         return self
 
     def table(self, name, kind, ret_data, arg_data, ret_units, arg_units):
         if kind.lower() == '1d_spline':
-            table = tables.TableSpline1D(name, arg_data, ret_data)
+            table = table_lib.TableSpline1D(name, arg_data, ret_data)
         else:
             raise NotImplementedError('{} is not a implemented table kind'.format(kind))
 
         table_info = {'name': name, 'sym': sympy.Symbol(name), 'kind': kind, 'ret_data': ret_data, 'arg_data': arg_data,
-                      'ret_units': ret_units, 'arg_units': arg_units, 'sym_table': tables.SymTableGenerator(table)}
+                      'ret_units': ret_units, 'arg_units': arg_units, 'sym_table': table_lib.SymTableGenerator(table)}
         self.table_list.append(table_info)
         self.locals_dict[name] = table_info['sym_table']
         return self
