@@ -2,8 +2,8 @@ import beluga
 import numpy as np
 import logging
 
-# ocp = beluga.OCP()
-# ocp = OCP('Test OCP')
+# prob = beluga.OCP()
+# prob = OCP('Test OCP')
 ocp = beluga.problib.InputOCP()
 
 # Define independent variables
@@ -11,7 +11,7 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('h', 'v', 'm')
-# ocp.state('v', 'u - g(h)', 'm/s')
+# prob.state('v', 'u - g(h)', 'm/s')
 ocp.state('v', 'v_dot', 'm/s')
 
 # Define controls
@@ -32,16 +32,16 @@ ocp.quantity('v_dot', 'u + grav')
 ocp.quantity('grav', '-g(h)')
 
 ocp.custom_function('g', gravity_model, 'm/s**2', ['m'])
-# ocp.table('g2', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
+# prob.table('g2', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
 
-# ocp.custom_function('g1', gravity_model, 'm/s**2', ['m'])
-# ocp.table('g2', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
+# prob.custom_function('g1', gravity_model, 'm/s**2', ['m'])
+# prob.table('g2', '1D_Spline', grav_data_out, grav_data_alt, 'm/s**2', ['m'])
 
 # Define constants
-# ocp.constant('g', 1.625, 'm/s^2')
+# prob.constant('g', 1.625, 'm/s^2')
 ocp.constant('epsilon1', 1, 'm/s**2')
 
-# ocp.switch('g', ['g1', 'g2'], [['h - h0/2'], ['h0/2 - h']], 'stage_tol')
+# prob.switch('g', ['g1', 'g2'], [['h - h0/2'], ['h0/2 - h']], 'stage_tol')
 
 ocp.constant('h_0', 20, 'm')
 ocp.constant('v_0', -2.5, 'm/s')
@@ -93,7 +93,7 @@ ocp.scale(m='h', s='h/v')
 #     .num_cases(30, 'log') \
 #     .const('epsilon1', 1e-5)
 #
-# sol_set = beluga.solve(ocp=ocp,
+# sol_set = beluga.solve(prob=prob,
 #                        method='indirect',
 #                        optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
 #                        bvp_algorithm=bvp_solver,

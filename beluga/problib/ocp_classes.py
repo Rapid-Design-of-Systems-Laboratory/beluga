@@ -1,8 +1,10 @@
-from collections import OrderedDict
-
-import sympy
-
 from .base_classes import BaseProblem, BaseInput, BaseSym, BaseFunc
+from collections import OrderedDict
+from copy import copy
+import sympy
+import numpy as np
+
+from beluga.codegen import jit_compile_func
 
 
 class BaseOCP(BaseProblem):
@@ -14,7 +16,6 @@ class BaseOCP(BaseProblem):
         self.controls = []
         self.constraints = {'initial': [], 'path': [], 'terminal': []}
         self.cost = {'initial': 0., 'path': 0., 'terminal': 0., 'units': None, 'tol': None}
-        self.symmetries = []
 
     def generate_repr_data(self):
         display_dict = OrderedDict()
@@ -29,7 +30,7 @@ class BaseOCP(BaseProblem):
         BaseProblem.copy_problem_data(self, duplicate)
         duplicate.controls = self.copy_list_items(self.controls)
         duplicate.constraints['path'] = self.copy_list_items(self.constraints['path'])
-        duplicate.cost = self.cost
+        duplicate.cost = copy(self.cost)
 
 
 class InputOCP(BaseInput, BaseOCP):
@@ -83,57 +84,6 @@ class InputOCP(BaseInput, BaseOCP):
         if tol is not None:
             self.cost['tol'] = tol
 
-    def symmetry(self, field, units, remove=True):
-        self.symmetries.append({'field': field, 'units': units, 'remove': remove})
-
-        return self
-
-    def sympify_vars(self, sym_prob):
-        BaseInput.sympify_vars(self, sym_prob)
-
-        # Controls
-        for control in sym_prob.controls:
-            self.sympify_name(control)
-
-    @staticmethod
-    def sympify_units(sym_prob):
-        BaseInput.sympify_units(sym_prob)
-
-        # Controls
-        for control in sym_prob.controls:
-            control['units'] = sym_prob.sympify(control['units'])
-
-        # Path Constraints
-        for constraint in sym_prob.constraints['path']:
-            constraint['units'] = sym_prob.sympify(constraint['units'])
-
-        # Cost
-        sym_prob.cost['units'] = sym_prob.sympify(sym_prob.cost['units'])
-
-        # Symmetries
-        for symmetry in sym_prob.symmetries:
-            symmetry['units'] = sym_prob.sympify(symmetry['units'])
-
-    @staticmethod
-    def sympify_exprs(sym_prob):
-        BaseInput.sympify_exprs(sym_prob)
-
-        # Path Constraints
-        for constraint in sym_prob.constraints['path']:
-            constraint['expr'] = sym_prob.sympify(constraint['expr'])
-            constraint['lower'] = sym_prob.sympify(constraint['lower'])
-            constraint['upper'] = sym_prob.sympify(constraint['upper'])
-            constraint['activator'] = sym_prob.sympify(constraint['activator'])
-
-        # Cost
-        sym_prob.cost['initial'] = sym_prob.sympify(sym_prob.cost['initial'])
-        sym_prob.cost['path'] = sym_prob.sympify(sym_prob.cost['path'])
-        sym_prob.cost['terminal'] = sym_prob.sympify(sym_prob.cost['terminal'])
-
-        # Symmetries
-        for symmetry in sym_prob.symmetries:
-            symmetry['field'] = sym_prob.sympify(symmetry['field'])
-
     def sympify_problem(self, sym_prob=None):
 
         if sym_prob is None:
@@ -149,6 +99,73 @@ class SymOCP(BaseOCP, BaseSym):
         BaseSym.__init__(self, name=name)
         self.problem_type = 'SymOCP'
 
+    def sympify_vars(self):
+        BaseSym.sympify_vars(self)
 
+        # Controls
+        for control in self.controls:
+            self.sympify_name(control)
+
+    def sympify_units(self):
+        BaseSym.sympify_units(self)
+
+        # Controls
+        for control in self.controls:
+            control['units'] = self.sympify(control['units'])
+
+        # Path Constraints
+        for constraint in self.constraints['path']:
+            constraint['units'] = self.sympify(constraint['units'])
+
+        # Cost
+        self.cost['units'] = self.sympify(self.cost['units'])
+
+    def sympify_exprs(self):
+        BaseSym.sympify_exprs(self)
+
+        # Path Constraints
+        for constraint in self.constraints['path']:
+            constraint['expr'] = self.sympify(constraint['expr'])
+            constraint['lower'] = self.sympify(constraint['lower'])
+            constraint['upper'] = self.sympify(constraint['upper'])
+            constraint['activator'] = self.sympify(constraint['activator'])
+
+        # Cost
+        self.cost['initial'] = self.sympify(self.cost['initial'])
+        self.cost['path'] = self.sympify(self.cost['path'])
+        self.cost['terminal'] = self.sympify(self.cost['terminal'])
+
+    def eps_trig(self):
+        pass
+
+    def utm(self):
+        pass
+
+    def dualize(self):
+        pass
+
+
+# TODO Finish fleshing out this class
 class FuncOCP(BaseOCP, BaseFunc):
-    pass
+    def __init__(self):
+        BaseOCP.__init__(self)
+        BaseFunc.__init__(self)
+
+        self._control_syms = []
+
+    def make_sym_lists_for_args(self):
+        BaseFunc.make_sym_lists_for_args(self)
+        self._control_syms = self.list_syms(self.controls)
+        return self
+
+    def compile_deriv_func(self):
+        deriv_func = self.lambdify([self._state_syms, self._control_syms, self._parameter_syms, self._constant_syms],
+                                   np.array(self._state_eom_vec))
+        quad_func = self.lambdify([self._state_syms, self._control_syms, self._parameter_syms, self._constant_syms],
+                                  np.array(self._quad_eom_vec))
+
+        self.deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
+        self.compute_f = self.deriv_func
+        self.quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
+
+        return self

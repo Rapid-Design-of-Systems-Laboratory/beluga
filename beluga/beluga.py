@@ -250,7 +250,7 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
     +------------------------+-----------------+---------------------------------------+
-    | ocp                    | None            | :math:`\\Sigma`                       |
+    | prob                    | None            | :math:`\\Sigma`                       |
     +------------------------+-----------------+---------------------------------------+
     | ocp_map                | None            | :math:`\\gamma \rightarrow \\gamma`   |
     +------------------------+-----------------+---------------------------------------+
@@ -272,7 +272,7 @@ def solve(**kwargs):
     initial_helper = kwargs.get('initial_helper', False)
     method = kwargs.get('method', 'traditional')
     n_cpus = int(kwargs.get('n_cpus', 1))
-    ocp = kwargs.get('ocp', None)
+    ocp = kwargs.get('prob', None)
     ocp_map = kwargs.get('ocp_map', None)
     ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
     optim_options = kwargs.get('optim_options', dict())
@@ -308,14 +308,14 @@ def solve(**kwargs):
         pool = None
 
     if ocp is None:
-        raise NotImplementedError('\"ocp\" must be defined.')
+        raise NotImplementedError('\"prob\" must be defined.')
     """
     Main code
     """
 
     f_ocp = FuncOCP(ocp)
     # breakpoint()
-    # s_ocp = SymOCP(ocp)
+    # s_ocp = SymOCP(prob)
     # breakpoint()
     # bvp = FuncBVP(s_bvp)
 

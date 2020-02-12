@@ -36,7 +36,7 @@ def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, arra
         logging.debug('Cannot Compile Function: {}'.format(func_name))
         return func
 
-    except TypeError:
+    except TypeError as e:
         logging.debug('Cannot Compile Function: {} (probably NoneType)'.format(func_name))
         return func
 
@@ -355,39 +355,3 @@ class FuncOCP(object):
 
     def __repr__(self):
         return '{}_FunctionalOCP'.format(self.name)
-
-
-# def compile_deriv_func(states, control_options,):
-#
-#     # TODO control u is expected to feed into functions, look into changing
-#
-#     if len(self.sym_bvp.u) == 0:
-#
-#         calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.x_dot)
-#         calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k], self.sym_bvp.q_dot)
-#
-#         def deriv_func(x, _, p_d, k):
-#             return np.array(calc_x_dot(x, p_d, k))
-#
-#         def quad_func(x, _, p_d, k):
-#             return np.array(calc_q_dot(x, p_d, k))
-#
-#     else:
-#         calc_x_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
-#                                self.sym_bvp.x_dot)
-#         calc_q_dot = lambdify_([self.sym_bvp.x, self.sym_bvp.u, self.sym_bvp.p_d, self.sym_bvp.k],
-#                                self.sym_bvp.q_dot)
-#         calc_u = self.compute_control
-#
-#         def deriv_func(x, _, p_d, k):
-#             u = calc_u(x, p_d, k)
-#             return np.array(calc_x_dot(x, u, p_d, k))
-#
-#         def quad_func(x, _, p_d, k):
-#             u = calc_u(x, p_d, k)
-#             return np.array(calc_q_dot(x, u, p_d, k))
-#
-#     deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
-#     quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
-#
-#     return calc_x_dot, deriv_func, quad_func

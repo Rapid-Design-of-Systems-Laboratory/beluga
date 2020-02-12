@@ -1,4 +1,7 @@
 from .base_classes import BaseProblem, BaseInput, BaseFunc, BaseSym
+from beluga.optimlib import *
+from collections import OrderedDict
+from copy import copy
 
 
 class BaseBVP(BaseProblem):
@@ -8,15 +11,37 @@ class BaseBVP(BaseProblem):
         self.costates = []
         self.coparameters = []
         self.constraint_multipliers = []
+        self.control_options = []
 
         self.algebraic_equations = []
         self.constants_of_motion = []
 
         self.hamiltonian = None
-
         self.func_jac = {'df_dy': None, 'df_dp': None}
         self.bc_jac = {'initial': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None},
                        'terminal': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None}}
+
+    def generate_repr_data(self):
+        display_dict = OrderedDict()
+        display_dict['States'] = self.states
+        display_dict['Parameters'] = self.parameters
+        display_dict['Initial Constraints'] = self.constraints['initial']
+        display_dict['Terminal Constraints'] = self.constraints['terminal']
+        return display_dict
+
+    def copy_problem_data(self, duplicate):
+        BaseProblem.copy_problem_data(self, duplicate)
+        duplicate.costates = self.copy_list_items(self.costates)
+        duplicate.coparameters = self.copy_list_items(self.coparameters)
+        duplicate.constraint_multipliers = self.copy_list_items(self.constraint_multipliers)
+        duplicate.control_options = self.copy_list_items(self.control_options)
+
+        duplicate.algebraic_equations = self.copy_list_items(self.algebraic_equations)
+        duplicate.constants_of_motion = self.copy_list_items(self.constants_of_motion)
+
+        duplicate.hamiltonian = copy(self.hamiltonian)
+        duplicate.func_jac = copy(self.func_jac)
+        duplicate.bc_jac = copy(self.bc_jac)
 
 
 class InputBVP(BaseInput, BaseBVP):
@@ -39,6 +64,9 @@ class InputBVP(BaseInput, BaseBVP):
         self.constraint_multipliers.append({'name': name, 'units': units})
         return self
 
+    def control_option(self, controls, exprs):
+        self.control_options.append({'controls': controls, 'exprs': exprs})
+
     def algebraic_equation(self, name, expr, units):
         self.algebraic_equations.append({'name': name, 'expr': expr, 'units': units})
         return self
@@ -60,79 +88,6 @@ class InputBVP(BaseInput, BaseBVP):
         self.bc_jac[location][kind] = expr
         return self
 
-    def sympify_vars(self, sym_prob):
-        BaseInput.sympify_vars(self, sym_prob)
-
-        # Costates
-        for costate in sym_prob.costates:
-            self.sympify_name(costate)
-
-        # Coparmeters
-        for coparameter in sym_prob.coparameters:
-            self.sympify_name(coparameter)
-
-        # Constraint Multipliers
-        for constraint_multiplier in sym_prob.constraint_multipliers:
-            self.sympify_name(constraint_multiplier)
-
-        # Algebraic Equations
-        for algebraic_equation in sym_prob.algebraic_equations:
-            self.sympify_name(algebraic_equation)
-
-        # Constants of Motion
-        for constant_of_motion in sym_prob.constants_of_motion:
-            self.sympify_name(constant_of_motion)
-
-    @staticmethod
-    def sympify_units(sym_prob):
-        BaseInput.sympify_units(sym_prob)
-
-        # Costates
-        for costate in sym_prob.costates:
-            costate['units'] = sym_prob.sympify(costate['units'])
-
-        # Coparameters
-        for coparameter in sym_prob.costates:
-            coparameter['units'] = sym_prob.sympify(coparameter['units'])
-
-        # Constraint Multipliers
-        for constraint_multiplier in sym_prob.constraint_multipliers:
-            constraint_multiplier['units'] = sym_prob.sympify(constraint_multiplier['units'])
-
-        # Algebraic Equations
-        for algebraic_equation in sym_prob.algebraic_equations:
-            algebraic_equation['units'] = sym_prob.sympify(algebraic_equation['units'])
-
-        # Constants of Motion
-        for constant_of_motion in sym_prob.constants_of_motion:
-            constant_of_motion['units'] = sym_prob.sympify(constant_of_motion['units'])
-
-        # Cost
-        sym_prob.hamiltonian['units'] = sym_prob.sympify(sym_prob.hamiltonian['units'])
-
-    @staticmethod
-    def sympify_exprs(sym_prob):
-        BaseInput.sympify_exprs(sym_prob)
-
-        # Costates
-        for costate in sym_prob.costates:
-            costate['eom'] = sym_prob.sympify(costate['eom'])
-
-        # Coparameters
-        for coparameter in sym_prob.costates:
-            coparameter['eom'] = sym_prob.sympify(coparameter['eom'])
-
-        # Algebraic Equations
-        for algebraic_equation in sym_prob.algebraic_equations:
-            algebraic_equation['expr'] = sym_prob.sympify(algebraic_equation['expr'])
-
-        # Constants of Motion
-        for constant_of_motion in sym_prob.constants_of_motion:
-            constant_of_motion['expr'] = sym_prob.sympify(constant_of_motion['expr'])
-
-        # Cost
-        sym_prob.hamiltonian['units'] = sym_prob.sympify(sym_prob.hamiltonian['units'])
-
     def sympify_problem(self, sym_prob=None):
 
         if sym_prob is None:
@@ -142,50 +97,89 @@ class InputBVP(BaseInput, BaseBVP):
         return sym_prob
 
 
-class SymBVP(BaseInput, BaseBVP):
+class SymBVP(BaseSym, BaseBVP):
     def __init__(self, name=None):
-        BaseInput.__init__(self, name=name)
+        BaseSym.__init__(self, name=name)
         BaseBVP.__init__(self, name=name)
 
         self.problem_type = 'SymBVP'
         self.omega = None
 
+    def sympify_vars(self):
+        BaseSym.sympify_vars(self)
 
-class FuncBVP(BaseBVP):
+        # Costates
+        for costate in self.costates:
+            self.sympify_name(costate)
+
+        # Coparmeters
+        for coparameter in self.coparameters:
+            self.sympify_name(coparameter)
+
+        # Constraint Multipliers
+        for constraint_multiplier in self.constraint_multipliers:
+            self.sympify_name(constraint_multiplier)
+
+        # Control Options
+        for control_option in self.control_options:
+            control_option['controls'] = self.sympify(control_option['controls'])
+
+        # Algebraic Equations
+        for algebraic_equation in self.algebraic_equations:
+            self.sympify_name(algebraic_equation)
+
+        # Constants of Motion
+        for constant_of_motion in self.constants_of_motion:
+            self.sympify_name(constant_of_motion)
+
+    def sympify_units(self):
+        BaseSym.sympify_units(self)
+
+        # Costates
+        for costate in self.costates:
+            costate['units'] = self.sympify(costate['units'])
+
+        # Coparameters
+        for coparameter in self.costates:
+            coparameter['units'] = self.sympify(coparameter['units'])
+
+        # Constraint Multipliers
+        for constraint_multiplier in self.constraint_multipliers:
+            constraint_multiplier['units'] = self.sympify(constraint_multiplier['units'])
+
+        # Algebraic Equations
+        for algebraic_equation in self.algebraic_equations:
+            algebraic_equation['units'] = self.sympify(algebraic_equation['units'])
+
+        # Constants of Motion
+        for constant_of_motion in self.constants_of_motion:
+            constant_of_motion['units'] = self.sympify(constant_of_motion['units'])
+
+        # Cost
+        self.hamiltonian['units'] = self.sympify(self.hamiltonian['units'])
+
+    def sympify_exprs(self):
+        BaseSym.sympify_exprs(self)
+
+        # Costates
+        for costate in self.costates:
+            costate['eom'] = self.sympify(costate['eom'])
+
+        # Coparameters
+        for coparameter in self.costates:
+            coparameter['eom'] = self.sympify(coparameter['eom'])
+
+        # Algebraic Equations
+        for algebraic_equation in self.algebraic_equations:
+            algebraic_equation['expr'] = self.sympify(algebraic_equation['expr'])
+
+        # Constants of Motion
+        for constant_of_motion in self.constants_of_motion:
+            constant_of_motion['expr'] = self.sympify(constant_of_motion['expr'])
+
+        # Cost
+        self.hamiltonian['units'] = self.sympify(self.hamiltonian['units'])
+
+
+class FuncBVP(BaseFunc, BaseBVP):
     pass
-
-
-class BVP:
-    def __init__(self):
-        self.name = None
-        self.root_ocp = None
-        self.mappings = []
-
-        self.independent_variable = None
-        self.state_list = []
-        self.costate_list = []
-        self.constant_list = []
-        self.parameter_list = []
-        self.coparameter_list = []
-        self.quantity_list = []
-        self.lagrange_multipliers = []
-        self.constraint_dict = {'initial': [], 'terminal': []}
-        self.symmetry_list = []
-        self.custom_function_list = []
-        self.table_list = []
-        self.units = []
-
-        self.sympified_exprs = False
-        self.locals_dict = dict()
-        self.mod_dict = dict()
-
-        self.constants_of_motion = []
-
-        self.algebraic_equations = []
-
-        self.hamiltonian = None
-        self.omega = None
-
-        self.func_jac = {'df_dy': None, 'df_dp': None}
-        self.bc_jac = {'initial': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None},
-                       'terminal': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None}}

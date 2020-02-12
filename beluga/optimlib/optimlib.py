@@ -506,7 +506,7 @@ def noether(bvp, quantity):
         return g, unit
 
 
-def F_momentumshift(ocp):
+def momentum_shift(ocp):
     r"""
 
     :param ocp:
@@ -766,7 +766,7 @@ def dualize(ocp, method='indirect'):
     # TODO: investigate use of noquad
     # d = []
     # for ii in range(len(coparameters)):
-    #     if ocp.parameters()[ii]['noquad'] is True:
+    #     if prob.parameters()[ii]['noquad'] is True:
     #         d += [ii]
     #
     # coparameters = [p for ii, p in enumerate(coparameters) if ii not in d]
