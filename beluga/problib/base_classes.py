@@ -198,6 +198,7 @@ class BaseSym(BaseProblem):
         BaseProblem.__init__(self, name=name)
 
         self.problem_type = 'BaseSym'
+        self.mappings = []
 
     def sympify_name(self, item):
         item['sym'] = sympy.Symbol(item['name'])
