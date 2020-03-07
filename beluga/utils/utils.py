@@ -30,12 +30,12 @@ def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg')
         save_dict['prob'] = ocp
 
     if bvp is not None:
-        save_dict['bvp'] = bvp
+        save_dict['prob'] = bvp
 
     if bvp_solver is not None:
         assert issubclass(bvp_solver.__class__, beluga.bvpsol.BaseAlgorithm), 'bvp_solver should be subclass ' \
                                                                               'of beluga.bvpsol.BaseAlgorithm'
-        save_dict['bvp solver'] = bvp_solver
+        save_dict['prob solver'] = bvp_solver
 
     if sol_set is not None:
         assert all([sol.__class__ is beluga.ivpsol.ivpsol.Trajectory for cont_set in sol_set for sol in cont_set]),\

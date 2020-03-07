@@ -1068,7 +1068,7 @@ def test_Shooting_3():
 
 
 def test_Shooting_4():
-    # This problem contains a quad and tests if the bvp solver correctly
+    # This problem contains a quad and tests if the prob solver correctly
     # integrates the quadfun. Also tests multiple shooting.
 
     def odefun(x, u, p, const):

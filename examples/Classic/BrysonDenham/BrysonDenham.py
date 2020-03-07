@@ -29,12 +29,12 @@ ocp.path_cost('u**2', 'rad**2')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x - x_0', 'm') \
-    .initial('v - v_0', 'm/s') \
-    .initial('t', 's') \
-    .terminal('x - x_f', 'm')   \
-    .terminal('v - v_f', 'm')   \
-    .terminal('t - 1', 's')
+    .initial_constraint('x - x_0', 'm') \
+    .initial_constraint('v - v_0', 'm/s') \
+    .initial_constraint('t', 's') \
+    .terminal_constraint('x - x_f', 'm') \
+    .terminal_constraint('v - v_f', 'm') \
+    .terminal_constraint('t - 1', 's')
 
 ocp.path_constraint('x', 'm', lower='-x_max', upper='x_max', activator='epsilon1', method='utm')
 

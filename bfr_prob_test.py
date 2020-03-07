@@ -1,6 +1,7 @@
 import beluga
 import logging
 import numpy as np
+from beluga.problib import *
 
 bfr_diameter = 9
 
@@ -23,7 +24,7 @@ bfr_massflow1 = -615.8468*7
 Step 1
 """
 
-ocp = beluga.OCP()
+ocp = beluga.problib.InputOCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -78,7 +79,7 @@ ocp.constant('v_y_f', 0, 'm/s')
 ocp.path_cost('1', '1')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('x - x_0', 'm') \
     .initial_constraint('y - y_0', 'm') \
     .initial_constraint('v_x - v_x_0', 'm/s') \
@@ -91,43 +92,8 @@ ocp.constraints() \
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
-bvp_solver = beluga.bvp_algorithm('spbvp')
+ocp = ocp.sympify_problem()
 
-guess_maker = beluga.guess_generator('auto',
-                start=[0, 0, 0, 0.01, 60880],          # Starting values for states in order
-                costate_guess = -0.1,
-                control_guess=[0],
-                use_control_guess=False
-)
-
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
-
-continuation_steps = beluga.init_continuation()
-
-continuation_steps.add_step('bisection') \
-                .num_cases(60) \
-                .const('A', np.pi*(bfr_diameter/2)**2) \
-                .const('eps', 1) \
-                .const('mass_0', bfr_mass0) \
-                .const('mass_0f', bfr_mass0f) \
-                .const('F0_sea', bfr_thrust0_sea) \
-                .const('F0_vac', bfr_thrust0_vac) \
-                .const('F1_sea', bfr_thrust1_sea) \
-                .const('F1_vac', bfr_thrust1_vac) \
-                .const('md0', bfr_massflow0) \
-                .const('md1', bfr_massflow1) \
-                .const('stage_tol', 10)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(10) \
-                .const('rho_ref', 1.225)
-
-continuation_steps.add_step('bisection') \
-                .num_cases(20, 'log') \
-                .const('stage_tol', 1e-3)
-
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker, autoscale=True)
+dual = dualize(ocp, method='indirect')
+alg = algebraic_control_law(dual)
+dif = differential_control_law(dual)

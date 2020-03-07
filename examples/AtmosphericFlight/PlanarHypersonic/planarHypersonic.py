@@ -51,12 +51,12 @@ ocp.terminal_cost('-v^2', 'm^2/s^2')
 
 # Define constraints
 ocp.constraints() \
-    .initial('h-h_0', 'm') \
-    .initial('theta', 'rad') \
-    .initial('v-v_0', 'm/s') \
-    .initial('t', 's') \
-    .terminal('h-h_f', 'm')  \
-    .terminal('theta-theta_f', 'rad')
+    .initial_constraint('h-h_0', 'm') \
+    .initial_constraint('theta', 'rad') \
+    .initial_constraint('v-v_0', 'm/s') \
+    .initial_constraint('t', 's') \
+    .terminal_constraint('h-h_f', 'm') \
+    .terminal_constraint('theta-theta_f', 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 

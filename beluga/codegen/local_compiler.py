@@ -14,7 +14,9 @@ class LocalCompiler:
     def __deepcopy__(self, memodict=None):
         return self
 
-    def add_symbolic_local(self, name, local):
+    def add_symbolic_local(self, name, local=None):
+        if local is None:
+            local = sympy.Symbol(name)
         self.sym_locals[name] = local
         return self.sym_locals
 

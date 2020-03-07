@@ -1,4 +1,4 @@
-from .base_classes import BaseProblem, BaseInput, BaseSym, BaseFunc
+from .bvp_classes import BaseBVP, InputBVP, SymBVP, FuncBVP, default_tol
 from collections import OrderedDict
 from copy import copy
 import sympy
@@ -7,15 +7,17 @@ import numpy as np
 from beluga.codegen import jit_compile_func
 
 
-class BaseOCP(BaseProblem):
+class BaseOCP(BaseBVP):
     def __init__(self, name=None):
-        BaseProblem.__init__(self, name=name)
+        BaseBVP.__init__(self, name=name)
 
         self.problem_type = 'BaseOCP'
 
         self.controls = []
         self.constraints = {'initial': [], 'path': [], 'terminal': []}
         self.cost = {'initial': 0., 'path': 0., 'terminal': 0., 'units': None, 'tol': None}
+
+        self.constants_of_motion = []
 
     def generate_repr_data(self):
         display_dict = OrderedDict()
@@ -27,44 +29,48 @@ class BaseOCP(BaseProblem):
         return display_dict
 
     def copy_problem_data(self, duplicate):
-        BaseProblem.copy_problem_data(self, duplicate)
+        BaseBVP.copy_problem_data(self, duplicate)
         duplicate.controls = self.copy_list_items(self.controls)
         duplicate.constraints['path'] = self.copy_list_items(self.constraints['path'])
         duplicate.cost = copy(self.cost)
 
 
-class InputOCP(BaseInput, BaseOCP):
+class InputOCP(InputBVP, BaseOCP):
     def __init__(self, name=None):
-        BaseInput.__init__(self, name=name)
+        InputBVP.__init__(self, name=name)
         BaseOCP.__init__(self, name=name)
 
         self.problem_type = 'InputOCP'
 
-    def control(self, name, units, tol=None):
+    def control(self, name, units, tol=default_tol):
         self.controls.append({'name': name, 'sym': sympy.Symbol(name), 'units': units, 'tol': tol})
         self.local_compiler.add_symbolic_local(name, sympy.Symbol(name))
         return self
 
-    def path_constraint(self, expr, units, lower, upper, activator, method='utm', tol=None):
+    def path_constraint(self, expr, units, lower, upper, activator, method='utm', tol=default_tol):
         self.constraints['path'].append({'expr': expr, 'units': units, 'lower': lower, 'upper': upper,
                                          'activator': activator, 'method': method, 'tol': tol})
         return self
 
-    def initial_cost(self, expr, units, tol=None):
+    def constant_of_motion(self, name, expr, units):
+        self.constants_of_motion.append({'name': name, 'expr': expr, 'units': units})
+        return self
+
+    def initial_cost(self, expr, units, tol=default_tol):
         self.cost['initial'] = expr
         # TODO Add units check
         self.cost['units'] = units
         self.cost['tol'] = tol
         return self
 
-    def path_cost(self, expr, units, tol=None):
+    def path_cost(self, expr, units, tol=default_tol):
         self.cost['path'] = expr
         # TODO Add units check
         self.cost['units'] = units + '*' + self.ind_var['units']
         self.cost['tol'] = tol
         return self
 
-    def terminal_cost(self, expr, units, tol=None):
+    def terminal_cost(self, expr, units, tol=default_tol):
         self.cost['terminal'] = expr
         # TODO Add units check
         self.cost['units'] = units
@@ -72,7 +78,7 @@ class InputOCP(BaseInput, BaseOCP):
         return self
 
     # TODO Rename cost
-    def set_cost(self, initial=None, path=None, terminal=None, units=None, tol=None):
+    def set_cost(self, initial=None, path=None, terminal=None, units=None, tol=default_tol):
         if initial is not None:
             self.cost['initial'] = initial
         if path is not None:
@@ -89,25 +95,29 @@ class InputOCP(BaseInput, BaseOCP):
         if sym_prob is None:
             sym_prob = SymOCP()
 
-        BaseInput.sympify_problem(self, sym_prob=sym_prob)
+        InputBVP.sympify_problem(self, sym_prob=sym_prob)
         return sym_prob
 
 
-class SymOCP(BaseOCP, BaseSym):
+class SymOCP(BaseOCP, SymBVP):
     def __init__(self, name=None):
         BaseOCP.__init__(self, name=name)
-        BaseSym.__init__(self, name=name)
+        SymBVP.__init__(self, name=name)
         self.problem_type = 'SymOCP'
 
     def sympify_vars(self):
-        BaseSym.sympify_vars(self)
+        SymBVP.sympify_vars(self)
 
         # Controls
         for control in self.controls:
             self.sympify_name(control)
 
+        # Constants of Motion
+        for constant_of_motion in self.constants_of_motion:
+            self.sympify_name(constant_of_motion)
+
     def sympify_units(self):
-        BaseSym.sympify_units(self)
+        SymBVP.sympify_units(self)
 
         # Controls
         for control in self.controls:
@@ -121,7 +131,7 @@ class SymOCP(BaseOCP, BaseSym):
         self.cost['units'] = self.sympify(self.cost['units'])
 
     def sympify_exprs(self):
-        BaseSym.sympify_exprs(self)
+        SymBVP.sympify_exprs(self)
 
         # Path Constraints
         for constraint in self.constraints['path']:
@@ -146,15 +156,16 @@ class SymOCP(BaseOCP, BaseSym):
 
 
 # TODO Finish fleshing out this class
-class FuncOCP(BaseOCP, BaseFunc):
+class FuncOCP(BaseOCP, FuncBVP):
     def __init__(self):
         BaseOCP.__init__(self)
-        BaseFunc.__init__(self)
+        FuncBVP.__init__(self)
 
+        self.compute_f = None
         self._control_syms = []
 
     def make_sym_lists_for_args(self):
-        BaseFunc.make_sym_lists_for_args(self)
+        FuncBVP.make_sym_lists_for_args(self)
         self._control_syms = self.list_syms(self.controls)
         return self
 

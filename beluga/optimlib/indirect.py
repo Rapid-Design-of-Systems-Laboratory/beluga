@@ -14,7 +14,7 @@ def ocp_to_bvp(ocp, **kwargs):
     Converts an OCP to a BVP using indirect methods.
 
     :param ocp: An OCP.
-    :return: bvp, map, map_inverse
+    :return: prob, map, map_inverse
     """
     signature = []
     cat_chain = [ocp]

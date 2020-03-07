@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 # from .optimlib import *
-# from beluga.problib import BaseSym
+# from beluga.problib import SymBVP
 
 
 class BaseSolMap:
@@ -53,4 +53,29 @@ class MomemtumShiftSolMap(BaseSolMap):
         sol.y = np.delete(sol.y, self.time_idx, axis=0)
 
         return sol
+
+
+class ScaleTime(BaseSolMap):
+    pass
+
+
+class RASHS(BaseSolMap):
+    pass
+
+
+class EpsTrig(BaseSolMap):
+    pass
+
+
+class UTM(BaseSolMap):
+    pass
+
+
+class Dualize(BaseSolMap):
+    pass
+
+
+class PMP(BaseSolMap):
+    pass
+
 

@@ -63,7 +63,7 @@ ocp.initial_constraint('t', 's')
 ocp.terminal_constraint('h - h_f', 'm')
 ocp.terminal_constraint('v - v_f', 'm/s')
 
-ocp.path_constraint('u', 'newton', lower='u_lower', upper='u_upper', activator='epsilon1', method='utm')
+ocp.path_constraint('u', 'newton', lower='u_lower', upper='u_upper', activator='epsilon1', method='epstrig')
 
 ocp.scale(m='h', s='h/v')
 

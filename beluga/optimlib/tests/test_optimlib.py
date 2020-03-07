@@ -26,11 +26,11 @@ def test_composable_functors(method):
     problem.constant('y_f', -1, 'm')
 
     problem.path_cost('1', '1')
-    problem.constraints().initial('x', 'm')
-    problem.constraints().initial('y', 'm')
-    problem.constraints().initial('v', 'm')
-    problem.constraints().terminal('x - x_f', 'm')
-    problem.constraints().terminal('y - y_f', 'm')
+    problem.constraints().initial_constraint('x', 'm')
+    problem.constraints().initial_constraint('y', 'm')
+    problem.constraints().initial_constraint('v', 'm')
+    problem.constraints().terminal_constraint('x - x_f', 'm')
+    problem.constraints().terminal_constraint('y - y_f', 'm')
 
     bvp, mapper, mapper_inv = ocp2bvp(problem, method=method)
 
@@ -122,9 +122,9 @@ def test_init_workspace():
     problem.control('u', 'N')
     problem.constant('g', 9.80665, 'm/s^2')
     problem.path_cost('1', 's')
-    problem.constraints().initial('x-x_0', 'm')
-    problem.constraints().initial('v-v_0', 'm/s')
-    problem.constraints().terminal('x-x_f', 'm')
+    problem.constraints().initial_constraint('x-x_0', 'm')
+    problem.constraints().initial_constraint('v-v_0', 'm/s')
+    problem.constraints().terminal_constraint('x-x_f', 'm')
     problem.scale(m='x', s='x/v', N=1)
 
     ws = init_workspace(problem)

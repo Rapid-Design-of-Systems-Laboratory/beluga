@@ -1,25 +1,55 @@
-from .base_classes import BaseProblem, BaseInput, BaseFunc, BaseSym
-from beluga.optimlib import *
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 from copy import copy
 
+import sympy
+import numpy as np
 
-class BaseBVP(BaseProblem):
+from beluga.codegen import LocalCompiler, jit_compile_func
+from beluga.optimlib.special_functions import custom_functions_lib, table_lib
+
+default_tol = 1e-6
+
+
+class BaseBVP:
     def __init__(self, name=None):
-        BaseProblem.__init__(name=name)
+        self.problem_type = 'BaseBVP'
+        self.name = name
 
-        self.costates = []
-        self.coparameters = []
-        self.constraint_multipliers = []
-        self.control_options = []
+        self.ind_var = {'name': None, 'units': None}
+        self.states = []
+        self.parameters = []
+        self.constants = []
+        self.quads = []
+        self.constraints = {'initial': [], 'terminal': []}
+        self.quantities = []
+        self.custom_functions = []
+        self.tables = []
+        self.switches = []
 
-        self.algebraic_equations = []
-        self.constants_of_motion = []
-
-        self.hamiltonian = None
         self.func_jac = {'df_dy': None, 'df_dp': None}
         self.bc_jac = {'initial': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None},
                        'terminal': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None}}
+
+        self.symmetries = []
+
+        self.units = []
+
+        self.local_compiler = LocalCompiler()
+
+        self.sympify = self.local_compiler.sympify
+        self.lambdify = self.local_compiler.lambdify
+
+        self.add_symbolic_local = self.local_compiler.add_symbolic_local
+        self.add_function_local = self.local_compiler.add_function_local
+
+    def __str__(self):
+        return '{}_{}'.format(self.problem_type, self.name)
+
+    def __repr__(self):
+        display_dict = self.generate_repr_data()
+        out_str = '{}: {}\n'.format(self.problem_type, self.name)
+        out_str += self.str_display_dict(display_dict, tabs=1)
+        return out_str
 
     def generate_repr_data(self):
         display_dict = OrderedDict()
@@ -29,63 +59,135 @@ class BaseBVP(BaseProblem):
         display_dict['Terminal Constraints'] = self.constraints['terminal']
         return display_dict
 
+    def str_display_dict(self, display_dict, tabs=0):
+        tab_str = '\t' * tabs
+        out_str = ''
+        for name, item in display_dict.items():
+            if isinstance(item, Iterable) and not isinstance(item, str):
+                out_str += self.str_list_info(item, tabs=tabs, name=name)
+            else:
+                out_str += tab_str + '{}: {}\n'.format(name, item)
+        return out_str
+
+    @staticmethod
+    def str_list_info(data, name=None, tabs=0):
+        tab_str = '\t' * tabs
+
+        if name is not None:
+            out_str = tab_str + name + ':\n'
+            tab_str += '\t'
+        else:
+            out_str = ''
+
+        for datum in data:
+            out_str += tab_str + str(datum) + '\n'
+
+        return out_str
+
+    @staticmethod
+    def copy_list_items(original):
+        dupicate = []
+        for item in original:
+            dupicate.append(copy(item))
+        return dupicate
+
     def copy_problem_data(self, duplicate):
-        BaseProblem.copy_problem_data(self, duplicate)
-        duplicate.costates = self.copy_list_items(self.costates)
-        duplicate.coparameters = self.copy_list_items(self.coparameters)
-        duplicate.constraint_multipliers = self.copy_list_items(self.constraint_multipliers)
-        duplicate.control_options = self.copy_list_items(self.control_options)
 
-        duplicate.algebraic_equations = self.copy_list_items(self.algebraic_equations)
-        duplicate.constants_of_motion = self.copy_list_items(self.constants_of_motion)
+        duplicate.name = self.name
 
-        duplicate.hamiltonian = copy(self.hamiltonian)
+        duplicate.ind_var = copy(self.ind_var)
+        duplicate.states = self.copy_list_items(self.states)
+        duplicate.parameters = self.copy_list_items(self.parameters)
+        duplicate.constants = self.copy_list_items(self.constants)
+        duplicate.quads = self.copy_list_items(self.quads)
+        for location in ['initial', 'terminal']:
+            duplicate.constraints[location] = self.copy_list_items(self.constraints[location])
+        duplicate.quantities = self.copy_list_items(self.quantities)
+        duplicate.custom_functions = self.copy_list_items(self.custom_functions)
+        duplicate.tables = self.copy_list_items(self.tables)
+        duplicate.switches = self.copy_list_items(self.switches)
+        duplicate.symmetries = self.symmetries
+
+        duplicate.units = self.copy_list_items(self.units)
+
         duplicate.func_jac = copy(self.func_jac)
         duplicate.bc_jac = copy(self.bc_jac)
 
+        # This should not be a copy but the same object (as intended)
+        duplicate.local_compiler = self.local_compiler
+        duplicate.sympify = self.sympify
+        duplicate.lambdify = self.lambdify
+        duplicate.add_symbolic_local = self.add_symbolic_local
+        duplicate.add_function_local = self.add_function_local
 
-class InputBVP(BaseInput, BaseBVP):
+        return duplicate
+
+
+class InputBVP(BaseBVP):
     def __init__(self, name=None):
-
-        BaseInput.__init__(self, name=name)
         BaseBVP.__init__(self, name=name)
 
         self.problem_type = 'InputBVP'
 
-    def costate(self, name, eom, units, tol=None):
-        self.costates.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
+    def independent(self, name, units, tol=default_tol):
+        self.ind_var = {'name': name, 'units': units, 'tol': tol}
         return self
 
-    def coparameter(self, name, eom, units, tol=None):
-        self.coparameters.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
+    def state(self, name, eom, units, tol=default_tol):
+        self.states.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
         return self
 
-    def constraint_multiplier(self, name, units):
-        self.constraint_multipliers.append({'name': name, 'units': units})
+    def constant(self, name, default_value, units):
+        self.constants.append({'name': name, 'default_value': default_value, 'units': units})
         return self
 
-    def control_option(self, controls, exprs):
-        self.control_options.append({'controls': controls, 'exprs': exprs})
-
-    def algebraic_equation(self, name, expr, units):
-        self.algebraic_equations.append({'name': name, 'expr': expr, 'units': units})
+    def parameter(self, name, units):
+        self.parameters.append({'name': name, 'units': units})
         return self
 
-    def constant_of_motion(self, name, expr, units):
-        self.constants_of_motion.append({'name': name, 'expr': expr, 'units': units})
+    def quad(self, name, eom, units, tol=default_tol):
+        self.quads.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
         return self
 
-    def set_hamiltonian(self, expr, units):
-        self.hamiltonian = {'expr': expr, 'units': units}
-        self.constants_of_motion.append({'name': 'hamiltonian', 'expr': expr, 'units': units})
+    def quantity(self, name, expr):
+        self.quantities.append({'name': name, 'expr': expr})
         return self
 
-    def set_func_jac_expr(self, kind, expr):
-        self.func_jac[kind] = expr
+    def initial_constraint(self, expr, units, tol=default_tol):
+        self.constraints['initial'].append({'expr': expr, 'units': units, 'tol': tol})
         return self
 
-    def set_bc_jac_expr(self, location, kind, expr):
-        self.bc_jac[location][kind] = expr
+    def terminal_constraint(self, expr, units, tol=default_tol):
+        self.constraints['terminal'].append({'expr': expr, 'units': units, 'tol': tol})
+        return self
+
+    def custom_function(self, name, func, func_units, arg_units):
+        self.custom_functions.append({'name': name, 'func': func, 'func_units': func_units, 'arg_units': arg_units})
+        return self
+
+    def table(self, name, kind, ret_data, arg_data, table_units, arg_units):
+        if kind.lower() == '1d_spline':
+            table = table_lib.TableSpline1D(name, table_units, arg_data)
+        else:
+            raise NotImplementedError('{} is not a implemented table kind'.format(kind))
+
+        self.tables.append({'name': name, 'kind': kind, 'ret_data': ret_data, 'arg_data': arg_data, 'table': table,
+                            'table_units': table_units, 'arg_units': arg_units})
+        return self
+
+    def switch(self, name, functions, conditions, tol):
+        self.switches.append({'name': name, 'sym': sympy.Symbol(name), 'functions': functions, 'conditions': conditions,
+                              'tol': tol})
+        return self
+
+    def scale(self, **kwargs):
+        for name in kwargs.keys():
+            self.units.append({'name': name, 'expr': kwargs[name]})
+        return self
+
+    def symmetry(self, field, units, remove=True):
+        self.symmetries.append({'field': field, 'units': units, 'remove': remove})
+
         return self
 
     def sympify_problem(self, sym_prob=None):
@@ -93,93 +195,228 @@ class InputBVP(BaseInput, BaseBVP):
         if sym_prob is None:
             sym_prob = SymBVP()
 
-        BaseInput.sympify_problem(self, sym_prob=sym_prob)
+        self.copy_problem_data(sym_prob)
+
+        sym_prob.sympify_vars()
+        sym_prob.sympify_units()
+        sym_prob.sympify_exprs()
+
         return sym_prob
 
 
-class SymBVP(BaseSym, BaseBVP):
+class SymBVP(BaseBVP):
     def __init__(self, name=None):
-        BaseSym.__init__(self, name=name)
         BaseBVP.__init__(self, name=name)
 
         self.problem_type = 'SymBVP'
-        self.omega = None
+        self.mappings = []
+
+    def sympify_name(self, item):
+        item['sym'] = sympy.Symbol(item['name'])
+        self.add_symbolic_local(item['name'], item['sym'])
 
     def sympify_vars(self):
-        BaseSym.sympify_vars(self)
 
-        # Costates
-        for costate in self.costates:
-            self.sympify_name(costate)
+        # Independent
+        self.sympify_name(self.ind_var)
 
-        # Coparmeters
-        for coparameter in self.coparameters:
-            self.sympify_name(coparameter)
+        # States
+        for state in self.states:
+            self.sympify_name(state)
 
-        # Constraint Multipliers
-        for constraint_multiplier in self.constraint_multipliers:
-            self.sympify_name(constraint_multiplier)
+        # Parmeters
+        for parameter in self.parameters:
+            self.sympify_name(parameter)
 
-        # Control Options
-        for control_option in self.control_options:
-            control_option['controls'] = self.sympify(control_option['controls'])
+        # Constants
+        for constant in self.constants:
+            self.sympify_name(constant)
 
-        # Algebraic Equations
-        for algebraic_equation in self.algebraic_equations:
-            self.sympify_name(algebraic_equation)
+        # Custom Functions
+        for custom_function in self.custom_functions:
+            custom_function['sym'] = sympy.Symbol(custom_function['name'])
+            custom_function['sym_func'] = custom_functions_lib.CustomFunctionGenerator(
+                custom_function['func'], name=custom_function['name'], func_dict=self.local_compiler.func_locals)
+            self.add_symbolic_local(custom_function['name'], custom_function['sym_func'])
 
-        # Constants of Motion
-        for constant_of_motion in self.constants_of_motion:
-            self.sympify_name(constant_of_motion)
+        # Tables
+        for table in self.tables:
+            table['sym'] = sympy.Symbol(table['name'])
+            if table['kind'].lower() == '1d_spline':
+                table['table_func'] = table_lib.TableSpline1D(table['name'], table['arg_data'], table['ret_data'])
+            else:
+                raise NotImplementedError('{} is not a implemented table kind'.format(table['kind']))
+            table['sym_table'] =\
+                table_lib.SymTableGenerator(table['table_func'], func_dict=self.local_compiler.func_locals, order=0)
+            self.add_symbolic_local(table['name'], table['sym_table'])
+
+        # Switches
+        for switch in self.switches:
+            self.sympify_name(switch)
+
+        # Quantites TODO Find a more elegant solution to this
+        for _ in enumerate(self.quantities):
+            for quantity in self.quantities:
+                quantity['expr'] = self.local_compiler.sympify(str(quantity['expr']))
+                self.add_symbolic_local(quantity['name'], quantity['expr'])
+
+        return self
 
     def sympify_units(self):
-        BaseSym.sympify_units(self)
+        # Units
+        for unit in self.units:
+            unit['sym'] = sympy.Symbol(unit['name'])
+            self.add_symbolic_local(unit['name'], unit['sym'])
 
-        # Costates
-        for costate in self.costates:
-            costate['units'] = self.sympify(costate['units'])
+        # Independent
+        self.ind_var['units'] = self.sympify(self.ind_var['units'])
 
-        # Coparameters
-        for coparameter in self.costates:
-            coparameter['units'] = self.sympify(coparameter['units'])
+        # States
+        for state in self.states:
+            state['units'] = self.sympify(state['units'])
 
-        # Constraint Multipliers
-        for constraint_multiplier in self.constraint_multipliers:
-            constraint_multiplier['units'] = self.sympify(constraint_multiplier['units'])
+        # Quads
+        for quad in self.quads:
+            quad['units'] = self.sympify(quad['units'])
 
-        # Algebraic Equations
-        for algebraic_equation in self.algebraic_equations:
-            algebraic_equation['units'] = self.sympify(algebraic_equation['units'])
+        # Parmeters
+        for parameter in self.parameters:
+            parameter['units'] = self.sympify(parameter['units'])
 
-        # Constants of Motion
-        for constant_of_motion in self.constants_of_motion:
-            constant_of_motion['units'] = self.sympify(constant_of_motion['units'])
+        # Constants
+        for constant in self.constants:
+            constant['units'] = self.sympify(constant['units'])
 
-        # Cost
-        self.hamiltonian['units'] = self.sympify(self.hamiltonian['units'])
+            # Constraints
+            for location in ['initial', 'terminal']:
+                for constraint in self.constraints[location]:
+                    constraint['units'] = self.sympify(constraint['units'])
+
+        # Quad
+        for quad in self.quads:
+            quad['units'] = self.sympify(quad['units'])
+
+        # Custom Functions
+        for custom_function in self.custom_functions:
+            custom_function['func_units'] = self.sympify(custom_function['func_units'])
+            custom_function['arg_units'] = [self.sympify(arg_units) for arg_units in custom_function['arg_units']]
+
+        # Tables
+        for table in self.tables:
+            table['ret_units'] = self.sympify(table['ret_units'])
+            table['arg_units'] = [self.sympify(arg_units) for arg_units in table['arg_units']]
+
+        # Symmetries
+        for symmetry in self.symmetries:
+            symmetry['units'] = self.sympify(symmetry['units'])
+
+        return self
 
     def sympify_exprs(self):
-        BaseSym.sympify_exprs(self)
 
-        # Costates
-        for costate in self.costates:
-            costate['eom'] = self.sympify(costate['eom'])
+        # States
+        for state in self.states:
+            state['eom'] = self.sympify(state['eom'])
 
-        # Coparameters
-        for coparameter in self.costates:
-            coparameter['eom'] = self.sympify(coparameter['eom'])
+        # Constraints
+        for location in ['initial', 'terminal']:
+            for constraint in self.constraints[location]:
+                constraint['expr'] = self.sympify(constraint['expr'])
 
-        # Algebraic Equations
-        for algebraic_equation in self.algebraic_equations:
-            algebraic_equation['expr'] = self.sympify(algebraic_equation['expr'])
+        # Switches
+        for switch in self.switches:
+            switch['functions'] = self.sympify(switch['functions'])
+            switch['conditions'] = self.sympify(switch['conditions'])
+            switch['tol'] = self.sympify(switch['tol'])
 
-        # Constants of Motion
-        for constant_of_motion in self.constants_of_motion:
-            constant_of_motion['expr'] = self.sympify(constant_of_motion['expr'])
+        # Symmetries
+        for symmetry in self.symmetries:
+            symmetry['field'] = self.sympify(symmetry['field'])
 
-        # Cost
-        self.hamiltonian['units'] = self.sympify(self.hamiltonian['units'])
+        return self
+
+    def lambdify_problem(self, func_prob=None):
+
+        if func_prob is None:
+            func_prob = FuncBVP()
+
+        self.copy_problem_data(func_prob)
+
+        func_prob.make_arg_lists()
+        func_prob.compile_eoms()
+        func_prob.compile_bc()
+
+        return func_prob
 
 
-class FuncBVP(BaseFunc, BaseBVP):
-    pass
+class FuncBVP(BaseBVP):
+    def __init__(self, name=None):
+        BaseBVP.__init__(self, name=name)
+
+        self.problem_type = 'FuncBVP'
+
+        self._arg_syms = {
+            'states': [],
+            'parameters': [],
+            'constants': [],
+            'quads': []
+        }
+
+        # TODO Review names for these
+        self.x_dot_func = None
+        self.q_dot_func = None
+
+        self.deriv_func = None
+        self.quad_func = None
+
+        self.bc_func = None
+
+    @staticmethod
+    def list_syms(info_list, field='sym'):
+        sym_list = []
+        for item in info_list:
+            sym_list.append(item[field])
+        return sym_list
+
+    def make_arg_lists(self):
+        # Compile symbolic lists for arguments
+        self._arg_syms['states'] = self.list_syms(self.states)
+        self._arg_syms['parameters'] = self.list_syms(self.parameters)
+        self._arg_syms['constants'] = self.list_syms(self.constants)
+        self._arg_syms['quads'] = self.list_syms(self.quads)
+
+        return self
+
+    # TODO Modify for more complex deriv_func's with algebraic expressions
+    def compile_eoms(self):
+        x_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
+                                    self._arg_syms['constants']], self.list_syms(self.states, 'eom'))
+        q_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
+                                    self._arg_syms['constants']], self.list_syms(self.quads, 'eom'))
+
+        def deriv_func(x, _, p_d, k):
+            return np.array(x_dot_func(x, p_d, k))
+
+        def quad_func(x, _, p_d, k):
+            return np.array(q_dot_func(x, p_d, k))
+
+        self.x_dot_func, self.q_dot_func = x_dot_func, q_dot_func
+        self.deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
+        self.quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
+
+        return
+
+    def compile_bc(self):
+        bc_0_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
+                                   [], self._arg_syms['constants']],
+                                  self.list_syms(self.constraints['initial'], 'expr'))
+        bc_f_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
+                                   [], self._arg_syms['constants']],
+                                  self.list_syms(self.constraints['terminal'], 'expr'))
+
+        def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
+            bc_0 = np.array(bc_0_func(x_0, q_0, p_d, p_n, k))
+            bc_f = np.array(bc_f_func(x_f, q_f, p_d, p_n, k))
+            return np.concatenate((bc_0, bc_f))
+
+        self.bc_func = jit_compile_func(bc_func, 9, func_name='bc_func')

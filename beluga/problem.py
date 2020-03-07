@@ -573,7 +573,7 @@ class ConstraintList(dict):
 
         return self
 
-    def initial(self, function, unit):
+    def initial_constraint(self, function, unit):
         if not isinstance(function, str):
             raise ValueError
         if not isinstance(unit, str):
@@ -584,7 +584,7 @@ class ConstraintList(dict):
         self['initial'] = temp
         return self
 
-    def terminal(self, function, unit):
+    def terminal_constraint(self, function, unit):
         if not isinstance(function, str):
             raise ValueError
         if not isinstance(unit, str):

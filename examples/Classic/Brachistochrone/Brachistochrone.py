@@ -29,12 +29,12 @@ ocp.path_cost('1', '1')
 
 # Define constraints
 ocp.constraints() \
-    .initial('x', 'm') \
-    .initial('y', 'm') \
-    .initial('v', 'm/s') \
-    .initial('t', 's') \
-    .terminal('x-x_f', 'm')   \
-    .terminal('y-y_f', 'm')
+    .initial_constraint('x', 'm') \
+    .initial_constraint('y', 'm') \
+    .initial_constraint('v', 'm/s') \
+    .initial_constraint('t', 's') \
+    .terminal_constraint('x-x_f', 'm') \
+    .terminal_constraint('y-y_f', 'm')
 
 ocp.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 

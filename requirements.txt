@@ -7,7 +7,7 @@ matplotlib>=2.2.2
 npnlp>=0.0.2
 numba>0.40.1
 numexpr>=2.6.8
-numpy>=1.14.3
+numpy>=1.16.3
 scipy>=1.2.0
 sympy>=1.1.1
 pathos>=0.2.2.1

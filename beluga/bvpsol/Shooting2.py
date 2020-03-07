@@ -21,7 +21,7 @@ scipy_root_algorithms = {'hybr', 'lm', 'broyden1', 'broyden2', 'anderson', 'line
 # with open(filename, 'rb') as file:
 #     save_dict = pickle.load(file)
 #
-# bvp_test = save_dict['bvp']
+# bvp_test = save_dict['prob']
 # sols = save_dict['solutions']
 #
 # sol_int = sols[-1][0]

@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import beluga.optimlib
 import time
+from beluga.problib.prob_maps import *
 
 prob = beluga.problib.InputOCP()
 
@@ -36,9 +37,10 @@ prob.constant('mdot', 0.0025, 'M/s')
 
 prob.constant('alpha', 0, 'rad')
 
+prob.parameter('param', '1')
 
 # Define costs
-prob.terminal_cost('-r^2', 'L')
+prob.terminal_cost('-r^2 + param**2', 'L')
 
 # Define constraints
 prob.initial_constraint('r-r_0', 'L')
@@ -56,8 +58,10 @@ prob.scale(L='r', s='r/v_theta', M='m', rad=1)
 sym_prob = prob.sympify_problem()
 # lam_prob = sym_prob.lambdify_problem()
 
+ocp = sym_prob
+
 x_test = np.array([2, 0.0, 0.5, 0.1, 1])
-p_test = np.array([])
+p_test = np.array([1])
 k_test = np.array([1, 0.005, 1, 0, 0, 1, 1, 0, 1, 0.0025, 0])
 q_test = np.array([])
 nu_test = np.array([])
