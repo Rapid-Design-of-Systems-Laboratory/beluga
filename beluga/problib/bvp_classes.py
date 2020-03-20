@@ -20,11 +20,15 @@ class BaseBVP:
         self.parameters = []
         self.constants = []
         self.quads = []
+        self.constraint_parameters = {'initial': [], 'terminal': []}
         self.constraints = {'initial': [], 'terminal': []}
         self.quantities = []
         self.custom_functions = []
         self.tables = []
         self.switches = []
+
+        # TODO Remove the need for this
+        self.control_options = []
 
         self.func_jac = {'df_dy': None, 'df_dp': None}
         self.bc_jac = {'initial': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None},
@@ -91,7 +95,7 @@ class BaseBVP:
             dupicate.append(copy(item))
         return dupicate
 
-    def copy_problem_data(self, duplicate):
+    def copy_data_to_prob(self, duplicate):
 
         duplicate.name = self.name
 
@@ -101,6 +105,7 @@ class BaseBVP:
         duplicate.constants = self.copy_list_items(self.constants)
         duplicate.quads = self.copy_list_items(self.quads)
         for location in ['initial', 'terminal']:
+            duplicate.constraint_parameters[location] = self.copy_list_items(self.constraint_parameters[location])
             duplicate.constraints[location] = self.copy_list_items(self.constraints[location])
         duplicate.quantities = self.copy_list_items(self.quantities)
         duplicate.custom_functions = self.copy_list_items(self.custom_functions)
@@ -114,13 +119,18 @@ class BaseBVP:
         duplicate.bc_jac = copy(self.bc_jac)
 
         # This should not be a copy but the same object (as intended)
-        duplicate.local_compiler = self.local_compiler
-        duplicate.sympify = self.sympify
-        duplicate.lambdify = self.lambdify
-        duplicate.add_symbolic_local = self.add_symbolic_local
-        duplicate.add_function_local = self.add_function_local
+        duplicate.set_local_compiler(self.local_compiler)
 
         return duplicate
+
+    def set_local_compiler(self, local_compiler):
+        self.local_compiler = local_compiler
+
+        self.sympify = self.local_compiler.sympify
+        self.lambdify = self.local_compiler.lambdify
+
+        self.add_symbolic_local = self.local_compiler.add_symbolic_local
+        self.add_function_local = self.local_compiler.add_function_local
 
 
 class InputBVP(BaseBVP):
@@ -161,6 +171,10 @@ class InputBVP(BaseBVP):
         self.constraints['terminal'].append({'expr': expr, 'units': units, 'tol': tol})
         return self
 
+    def constraint_parameter(self, name, units, location):
+        self.constraint_parameters[location].append({'name': name, 'units': units})
+        return self
+
     def custom_function(self, name, func, func_units, arg_units):
         self.custom_functions.append({'name': name, 'func': func, 'func_units': func_units, 'arg_units': arg_units})
         return self
@@ -175,9 +189,9 @@ class InputBVP(BaseBVP):
                             'table_units': table_units, 'arg_units': arg_units})
         return self
 
-    def switch(self, name, functions, conditions, tol):
+    def switch(self, name, functions, conditions, activator):
         self.switches.append({'name': name, 'sym': sympy.Symbol(name), 'functions': functions, 'conditions': conditions,
-                              'tol': tol})
+                              'activator': activator})
         return self
 
     def scale(self, **kwargs):
@@ -195,7 +209,7 @@ class InputBVP(BaseBVP):
         if sym_prob is None:
             sym_prob = SymBVP()
 
-        self.copy_problem_data(sym_prob)
+        self.copy_data_to_prob(sym_prob)
 
         sym_prob.sympify_vars()
         sym_prob.sympify_units()
@@ -231,6 +245,11 @@ class SymBVP(BaseBVP):
         # Constants
         for constant in self.constants:
             self.sympify_name(constant)
+
+        # Constraints
+        for location in ['initial', 'terminal']:
+            for constraint_parameter in self.constraint_parameters[location]:
+                self.sympify_name(constraint_parameter)
 
         # Custom Functions
         for custom_function in self.custom_functions:
@@ -287,10 +306,13 @@ class SymBVP(BaseBVP):
         for constant in self.constants:
             constant['units'] = self.sympify(constant['units'])
 
-            # Constraints
-            for location in ['initial', 'terminal']:
-                for constraint in self.constraints[location]:
-                    constraint['units'] = self.sympify(constraint['units'])
+        # Constraints
+        for location in ['initial', 'terminal']:
+            for constraint in self.constraints[location]:
+                constraint['units'] = self.sympify(constraint['units'])
+
+            for constraint_parameter in self.constraint_parameters[location]:
+                constraint_parameter['units'] = self.sympify(constraint_parameter['units'])
 
         # Quad
         for quad in self.quads:
@@ -327,7 +349,7 @@ class SymBVP(BaseBVP):
         for switch in self.switches:
             switch['functions'] = self.sympify(switch['functions'])
             switch['conditions'] = self.sympify(switch['conditions'])
-            switch['tol'] = self.sympify(switch['tol'])
+            switch['activator'] = self.sympify(switch['activator'])
 
         # Symmetries
         for symmetry in self.symmetries:
@@ -340,7 +362,7 @@ class SymBVP(BaseBVP):
         if func_prob is None:
             func_prob = FuncBVP()
 
-        self.copy_problem_data(func_prob)
+        self.copy_data_to_prob(func_prob)
 
         func_prob.make_arg_lists()
         func_prob.compile_eoms()

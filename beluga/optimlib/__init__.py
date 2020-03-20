@@ -1,4 +1,4 @@
 from .optimlib import *
 from .indirect import *
-from .mapping_classes import *
+from .functional_maps import *
 # from .diffyg_deprecated import *

@@ -88,7 +88,7 @@ Base Class Reference
 
 .. autofunction:: F_UTM
 
-.. autofunction:: Dualize
+.. autofunction:: DualizeMapper
 
 .. autofunction:: F_PMP
 

@@ -1,9 +1,5 @@
-import beluga
-import logging
-import numpy as np
 import beluga.optimlib
-import time
-from beluga.problib.prob_maps import *
+from beluga.optimlib.functional_maps.prob_maps import *
 
 prob = beluga.problib.InputOCP()
 

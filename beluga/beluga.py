@@ -22,7 +22,7 @@ import time
 import pathos
 import scipy.integrate as integrate
 
-config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
+config = dict(logfile='beluga.log', default_bvp_solver='spbvp')
 
 
 def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
@@ -85,8 +85,6 @@ def ocp2bvp(ocp, **kwargs):
     logging.debug("Computing the necessary conditions of optimality")
     if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
         bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
-    elif method == 'diffyg_deprecated':
-        bvp_raw, _map, _map_inverse = DIFFYG_DEP_ocp_to_bvp(ocp, **optim_options)
     elif method == 'direct':
         bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp, **optim_options)
     else:
@@ -309,6 +307,7 @@ def solve(**kwargs):
 
     if ocp is None:
         raise NotImplementedError('\"prob\" must be defined.')
+
     """
     Main code
     """
@@ -330,8 +329,6 @@ def solve(**kwargs):
     else:
         if ocp_map is None or ocp_map_inverse is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
-
-
 
     solinit = Trajectory()
     solinit.const = np.array(bvp.raw['constants_values'])

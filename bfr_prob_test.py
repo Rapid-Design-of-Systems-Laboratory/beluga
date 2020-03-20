@@ -2,6 +2,7 @@ import beluga
 import logging
 import numpy as np
 from beluga.problib import *
+from beluga.optimlib.indirect import ocp_to_bvp
 
 bfr_diameter = 9
 
@@ -92,8 +93,5 @@ ocp \
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
-ocp = ocp.sympify_problem()
-
-dual = dualize(ocp, method='indirect')
-alg = algebraic_control_law(dual)
-dif = differential_control_law(dual)
+ocp_sym = ocp.sympify_problem()  
+bvp, sol_set = ocp_to_bvp(ocp_sym)

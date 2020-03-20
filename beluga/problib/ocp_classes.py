@@ -28,8 +28,8 @@ class BaseOCP(BaseBVP):
         display_dict['Terminal Cost'] = self.cost['terminal']
         return display_dict
 
-    def copy_problem_data(self, duplicate):
-        BaseBVP.copy_problem_data(self, duplicate)
+    def copy_data_to_prob(self, duplicate):
+        BaseBVP.copy_data_to_prob(self, duplicate)
         duplicate.controls = self.copy_list_items(self.controls)
         duplicate.constraints['path'] = self.copy_list_items(self.constraints['path'])
         duplicate.cost = copy(self.cost)

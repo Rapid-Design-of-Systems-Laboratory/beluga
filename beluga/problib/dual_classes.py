@@ -12,8 +12,8 @@ class BaseDual(BaseOCP):
         self.problem_type = 'BaseDual'
 
         self.costates = []
-        # self.coparameters = []
-        self.constraint_multipliers = {'initial': [], 'terminal': []}
+        self.coparameters = []
+        self.constraint_adjoints = {'initial': [], 'terminal': []}
 
         self.hamiltonian = {'expr': None, 'units': None}
 
@@ -25,14 +25,11 @@ class BaseDual(BaseOCP):
         display_dict['Terminal Constraints'] = self.constraints['terminal']
         return display_dict
 
-    def copy_problem_data(self, duplicate):
-        BaseOCP.copy_problem_data(self, duplicate)
+    def copy_data_to_prob(self, duplicate):
+        BaseOCP.copy_data_to_prob(self, duplicate)
         duplicate.costates = self.copy_list_items(self.costates)
-        # duplicate.coparameters = self.copy_list_items(self.coparameters)
-        duplicate.constraint_multipliers = self.copy_list_items(self.constraint_multipliers)
-        duplicate.control_options = self.copy_list_items(self.control_options)
-
-        duplicate.algebraic_equations = self.copy_list_items(self.algebraic_equations)
+        for location in ['intitial', 'terminal']:
+            duplicate.constraint_adjoints[location] = self.copy_list_items(self.constraint_adjoints[location])
         duplicate.constants_of_motion = self.copy_list_items(self.constants_of_motion)
 
         duplicate.hamiltonian = copy(self.hamiltonian)
@@ -40,7 +37,7 @@ class BaseDual(BaseOCP):
         duplicate.bc_jac = copy(self.bc_jac)
 
     def load_from_ocp(self, ocp: BaseOCP):
-        ocp.copy_problem_data(self)
+        ocp.copy_data_to_prob(self)
         return self
 
 
@@ -56,20 +53,20 @@ class InputDual(InputOCP, BaseDual):
         self.costates.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
         return self
 
-    # def coparameter(self, name, eom, units, tol=None):
-    #     self.coparameters.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
-    #     return self
+    def coparameter(self, name, eom, units, tol=None):
+        self.coparameters.append({'name': name, 'eom': eom, 'units': units, 'tol': tol})
+        return self
 
     def constraint_multiplier(self, name, units, location):
-        self.constraint_multipliers[location].append({'name': name, 'units': units})
+        self.constraint_adjoints[location].append({'name': name, 'units': units})
         return self
 
-    def control_option(self, controls, exprs):
-        self.control_options.append({'controls': controls, 'exprs': exprs})
+    # def control_option(self, controls, exprs):
+    #     self.control_options.append({'controls': controls, 'exprs': exprs})
 
-    def algebraic_equation(self, name, expr, units):
-        self.algebraic_equations.append({'name': name, 'expr': expr, 'units': units})
-        return self
+    # def algebraic_equation(self, name, expr, units):
+    #     self.algebraic_equations.append({'name': name, 'expr': expr, 'units': units})
+    #     return self
 
     def set_hamiltonian(self, expr, units):
         self.hamiltonian = {'expr': expr, 'units': units}
@@ -109,20 +106,20 @@ class SymDual(SymOCP, BaseDual):
             self.sympify_name(costate)
 
         # Coparmeters
-        # for coparameter in self.coparameters:
-        #     self.sympify_name(coparameter)
+        for coparameter in self.coparameters:
+            self.sympify_name(coparameter)
 
-        # Constraint Multipliers
-        for constraint_multiplier in self.constraint_multipliers:
-            self.sympify_name(constraint_multiplier)
+        # # Constraint Multipliers
+        # for constraint_multiplier in self.constraint_multipliers:
+        #     self.sympify_name(constraint_multiplier)
 
-        # Control Options
-        for control_option in self.control_options:
-            control_option['controls'] = self.sympify(control_option['controls'])
+        # # Control Options
+        # for control_option in self.control_options:
+        #     control_option['controls'] = self.sympify(control_option['controls'])
 
-        # Algebraic Equations
-        for algebraic_equation in self.algebraic_equations:
-            self.sympify_name(algebraic_equation)
+        # # Algebraic Equations
+        # for algebraic_equation in self.algebraic_equations:
+        #     self.sympify_name(algebraic_equation)
 
     def sympify_units(self):
         SymOCP.sympify_units(self)
@@ -134,14 +131,6 @@ class SymDual(SymOCP, BaseDual):
         # Coparameters
         for coparameter in self.costates:
             coparameter['units'] = self.sympify(coparameter['units'])
-
-        # Constraint Multipliers
-        for constraint_multiplier in self.constraint_multipliers:
-            constraint_multiplier['units'] = self.sympify(constraint_multiplier['units'])
-
-        # Algebraic Equations
-        for algebraic_equation in self.algebraic_equations:
-            algebraic_equation['units'] = self.sympify(algebraic_equation['units'])
 
         # Constants of Motion
         for constant_of_motion in self.constants_of_motion:
@@ -160,10 +149,6 @@ class SymDual(SymOCP, BaseDual):
         # Coparameters
         for coparameter in self.costates:
             coparameter['eom'] = self.sympify(coparameter['eom'])
-
-        # Algebraic Equations
-        for algebraic_equation in self.algebraic_equations:
-            algebraic_equation['expr'] = self.sympify(algebraic_equation['expr'])
 
         # Constants of Motion
         for constant_of_motion in self.constants_of_motion:

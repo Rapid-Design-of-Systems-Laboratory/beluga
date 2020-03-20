@@ -4,7 +4,6 @@ from .continuation import ContinuationList as init_continuation
 from .codegen import *
 # from .problem import OCP
 from .problib import bvp_classes, ocp_classes, dual_classes
-from .ocp import OCP
 from .scaling import Scaling
 
 import os
