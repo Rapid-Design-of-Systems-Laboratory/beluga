@@ -21,10 +21,8 @@ import time
 import pathos
 import scipy.integrate as integrate
 
-config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
-
-def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
+def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwargs):
     """
     Attaches a logger to beluga's main process.
 
@@ -35,8 +33,12 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
     # Suppress warnings
     warnings.filterwarnings("ignore")
 
+    # logfile options for logging.FileHandler
+    config = {'filename': 'beluga.log'}
+    config.update(kwargs)
+
     # Initialize logging system
-    helpers.init_logging(logging_level, display_level, config['logfile'])
+    helpers.init_logging(logging_level, display_level, config)
 
 
 def bvp_algorithm(name, **kwargs):

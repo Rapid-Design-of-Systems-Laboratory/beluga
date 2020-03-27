@@ -8,7 +8,7 @@ def root():
     return os.path.dirname(__file__)
 
 
-def init_logging(logging_level, display_level, logfile):
+def init_logging(logging_level, display_level, config):
     """Initializes the logging system"""
     # Define custom formatter class that formats messages based on level
     # Ref: http://stackoverflow.com/a/8349076/538379
@@ -41,7 +41,7 @@ def init_logging(logging_level, display_level, logfile):
     logger.setLevel(logging_level)
     logger._displayLevel = display_level
 
-    fh = logging.FileHandler(logfile)
+    fh = logging.FileHandler(**config)
     fh.setLevel(logging_level)
 
     # Set default format string based on logging level
