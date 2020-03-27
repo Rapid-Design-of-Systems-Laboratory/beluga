@@ -3,8 +3,14 @@ from .beluga import bvp_algorithm, guess_generator, ocp2bvp, run_continuation_se
 from .continuation import ContinuationList as init_continuation
 from .problem import OCP
 from .scaling import Scaling
+from functools import partial
 import os
 import glob
+
+import logging
+logging.BELUGA = logging.INFO - 5
+logging.addLevelName(logging.BELUGA, 'BELUGA')
+logging.beluga = partial(logging.log, logging.BELUGA)
 
 from beluga.release import __version__, __splash__
 
