@@ -127,7 +127,7 @@ class ContinuationStrategy(abc.ABC):
         gamma_guess = copy.deepcopy(self.gammas[i])
         gamma_guess.const = const0
         self.ctr += 1
-        logging.debug('CHOOSE\ttraj #' + str(i) + ' as guess.')
+        logging.beluga('CHOOSE\ttraj #' + str(i) + ' as guess.')
         return gamma_guess
 
     def var_iterator(self):
@@ -274,7 +274,7 @@ class BisectionStrategy(ManualStrategy):
         # Increment total number of steps
         self._num_cases = self._num_cases + self.num_divisions-1
 
-        logging.debug('Increasing number of cases to '+str(self._num_cases)+'\n')
+        logging.beluga('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
         return super(BisectionStrategy, self).next(True)
 

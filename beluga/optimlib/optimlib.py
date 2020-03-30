@@ -778,9 +778,9 @@ def make_control_law(dhdu, controls):
     :return: Control law options.
     """
     var_list = list(controls)
-    logging.debug("Solving dH/du...")
+    logging.beluga("Solving dH/du...")
     ctrl_sol = sympy.solve(dhdu, var_list, dict=True, minimal=True, simplify=False)
-    logging.debug('Control found')
+    logging.beluga('Control found')
     control_options = ctrl_sol
     return control_options
 

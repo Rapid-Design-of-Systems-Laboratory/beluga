@@ -192,7 +192,7 @@ def ocp_to_bvp(ocp, **kwargs):
         dbc_dp_a = None
         dbc_dp_b = None
 
-    logging.debug('Problem formulation: Lambda := (' + ' . '.join(reversed(signature)) + ')(Sigma)')
+    logging.beluga('Problem formulation: Lambda := (' + ' . '.join(reversed(signature)) + ')(Sigma)')
 
     dHdu = make_dhdu(bvp._properties['constants_of_motion'][0]['function'], bvp.controls(), total_derivative)
 
