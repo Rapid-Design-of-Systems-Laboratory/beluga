@@ -8,9 +8,7 @@ import os
 import glob
 
 import logging
-logging.BELUGA = logging.INFO - 5
-logging.addLevelName(logging.BELUGA, 'BELUGA')
-logging.beluga = partial(logging.log, logging.BELUGA)
+logging.beluga = partial(logging.log, logging.DEBUG + 5)
 
 from beluga.release import __version__, __splash__
 

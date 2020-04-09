@@ -37,6 +37,10 @@ def init_logging(logging_level, display_level, config):
 
             return result
 
+    # raise the logging level for DEBUG messages
+    if logging_level == logging.DEBUG:
+        logging_level += 5
+
     logger = logging.getLogger()
     logger.setLevel(logging_level)
     logger._displayLevel = display_level
