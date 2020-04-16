@@ -3,6 +3,10 @@ from .ocp_classes import BaseOCP, InputOCP, FuncOCP, SymOCP, default_tol
 from beluga.optimlib import *
 from collections import OrderedDict
 from copy import copy
+from beluga.codegen import jit_compile_func
+from .. import LocalCompiler
+import numpy as np
+from beluga.optimlib.special_functions import custom_functions_lib, table_lib
 
 
 class BaseDual(BaseOCP):
@@ -159,4 +163,66 @@ class SymDual(SymOCP, BaseDual):
 
 
 class FuncDual(FuncOCP, BaseDual):
-    pass
+    def __init__(self, name=None):
+        BaseDual.__init__(self, name=name)
+
+        self.problem_type = 'FuncDual'
+
+        self._arg_syms = {
+            'states': [],
+            'parameters': [],
+            'constants': [],
+            'quads': []
+        }
+
+        # TODO Review names for these
+        self.x_dot_func = None
+        self.q_dot_func = None
+
+        self.deriv_func = None
+        self.quad_func = None
+
+        self.bc_func = None
+
+    def make_arg_lists(self):
+        # Compile symbolic lists for arguments
+        self._arg_syms['states'] = self.list_syms(self.states)
+        self._arg_syms['parameters'] = self.list_syms(self.parameters)
+        self._arg_syms['constants'] = self.list_syms(self.constants)
+        self._arg_syms['quads'] = self.list_syms(self.quads)
+
+        return self
+
+    # TODO Modify for more complex deriv_func's with algebraic expressions
+    def compile_eoms(self):
+        x_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
+                                    self._arg_syms['constants']], self.list_syms(self.states, 'eom'))
+        q_dot_func = self.lambdify([self._arg_syms['states'],+ self._arg_syms['parameters'],
+                                    self._arg_syms['constants']], self.list_syms(self.quads, 'eom'))
+
+        def deriv_func(x, _, p_d, k):
+            return np.array(x_dot_func(x, p_d, k))
+
+        def quad_func(x, _, p_d, k):
+            return np.array(q_dot_func(x, p_d, k))
+
+        self.x_dot_func, self.q_dot_func = x_dot_func, q_dot_func
+        self.deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
+        self.quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
+
+        return deriv_func, quad_func
+
+    def compile_bc(self):
+        bc_0_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
+                                   [], self._arg_syms['constants']],
+                                  self.list_syms(self.constraints['initial'], 'expr'))
+        bc_f_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
+                                   [], self._arg_syms['constants']],
+                                  self.list_syms(self.constraints['terminal'], 'expr'))
+
+        def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
+            bc_0 = np.array(bc_0_func(x_0, q_0, p_d, p_n, k))
+            bc_f = np.array(bc_f_func(x_f, q_f, p_d, p_n, k))
+            return np.concatenate((bc_0, bc_f))
+
+        self.bc_func = jit_compile_func(bc_func, 9, func_name='bc_func')

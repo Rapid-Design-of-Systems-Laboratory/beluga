@@ -4,7 +4,8 @@ from copy import copy
 import sympy
 import numpy as np
 
-from beluga.codegen import LocalCompiler, jit_compile_func
+from beluga.codegen import jit_compile_func, compile_control
+from beluga import LocalCompiler
 from beluga.optimlib.special_functions import custom_functions_lib, table_lib
 
 default_tol = 1e-6
@@ -26,6 +27,8 @@ class BaseBVP:
         self.custom_functions = []
         self.tables = []
         self.switches = []
+
+        self.algebraic_control_options = None
 
         # TODO Remove the need for this
         self.control_options = []
@@ -112,6 +115,8 @@ class BaseBVP:
         duplicate.tables = self.copy_list_items(self.tables)
         duplicate.switches = self.copy_list_items(self.switches)
         duplicate.symmetries = self.symmetries
+
+        duplicate.algebraic_control_options = copy(self.algebraic_control_options)
 
         duplicate.units = self.copy_list_items(self.units)
 
@@ -370,6 +375,10 @@ class SymBVP(BaseBVP):
 
         return func_prob
 
+    @staticmethod
+    def list_field(info_list, field='sym'):
+        return [var[field] for var in info_list]
+
 
 class FuncBVP(BaseBVP):
     def __init__(self, name=None):
@@ -381,7 +390,7 @@ class FuncBVP(BaseBVP):
             'states': [],
             'parameters': [],
             'constants': [],
-            'quads': []
+            'quads': [],
         }
 
         # TODO Review names for these
@@ -406,39 +415,95 @@ class FuncBVP(BaseBVP):
         self._arg_syms['parameters'] = self.list_syms(self.parameters)
         self._arg_syms['constants'] = self.list_syms(self.constants)
         self._arg_syms['quads'] = self.list_syms(self.quads)
+        self._arg_syms['initial_constraint_parameters'] = self.list_syms(self.constraint_parameters['initial'])
+        self._arg_syms['terminal_constraint_parameters'] = self.list_syms(self.constraint_parameters['terminal'])
 
         return self
 
     # TODO Modify for more complex deriv_func's with algebraic expressions
     def compile_eoms(self):
-        x_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
-                                    self._arg_syms['constants']], self.list_syms(self.states, 'eom'))
-        q_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
-                                    self._arg_syms['constants']], self.list_syms(self.quads, 'eom'))
 
-        def deriv_func(x, _, p_d, k):
-            return np.array(x_dot_func(x, p_d, k))
+        if self.algebraic_control_options is None:
+            x_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
+                                        self._arg_syms['constants']], self.list_syms(self.states, 'eom'))
+            q_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
+                                        self._arg_syms['constants']], self.list_syms(self.quads, 'eom'))
 
-        def quad_func(x, _, p_d, k):
-            return np.array(q_dot_func(x, p_d, k))
+            deriv_func = x_dot_func
+            quad_func = q_dot_func
+
+        else:
+            x_dot_func = self.lambdify([self._arg_syms['states'], self.algebraic_control_options['controls'],
+                                        self._arg_syms['parameters'], self._arg_syms['constants']],
+                                       self.list_syms(self.states, 'eom'))
+            q_dot_func = self.lambdify([self._arg_syms['states'], self.algebraic_control_options['controls'],
+                                        self._arg_syms['parameters'], self._arg_syms['constants']],
+                                       self.list_syms(self.quads, 'eom'))
+
+            control_function = compile_control(self.algebraic_control_options['options'],
+                                               self.algebraic_control_options['hamiltonian'],
+                                               self.algebraic_control_options['controls'], self._arg_syms['states'],
+                                               self._arg_syms['parameters'], self._arg_syms['constants'])
+
+            def deriv_func(x, p, k):
+                u = control_function(x, p, k)
+                return x_dot_func(x, u, p, k)
+
+            def quad_func(x, p, k):
+                u = control_function(x, p, k)
+                return q_dot_func(x, u, p, k)
 
         self.x_dot_func, self.q_dot_func = x_dot_func, q_dot_func
-        self.deriv_func = jit_compile_func(deriv_func, 4, func_name='deriv_func')
-        self.quad_func = jit_compile_func(quad_func, 4, func_name='quad_func')
+        self.deriv_func = jit_compile_func(deriv_func, 3, func_name='deriv_func')
+        self.quad_func = jit_compile_func(quad_func, 3, func_name='quad_func')
 
-        return
+        return deriv_func, quad_func
 
     def compile_bc(self):
-        bc_0_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
-                                   [], self._arg_syms['constants']],
-                                  self.list_syms(self.constraints['initial'], 'expr'))
-        bc_f_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
-                                   [], self._arg_syms['constants']],
-                                  self.list_syms(self.constraints['terminal'], 'expr'))
 
-        def bc_func(x_0, q_0, _, x_f, q_f, __, p_d, p_n, k):
-            bc_0 = np.array(bc_0_func(x_0, q_0, p_d, p_n, k))
-            bc_f = np.array(bc_f_func(x_f, q_f, p_d, p_n, k))
-            return np.concatenate((bc_0, bc_f))
+        if self.algebraic_control_options is None:
+            bc_0_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
+                                       self._arg_syms['constraint_parameters'], self._arg_syms['constants']],
+                                      self.list_syms(self.constraints['initial'], 'expr'))
+            bc_f_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'], self._arg_syms['parameters'],
+                                       self._arg_syms['constraint_parameters'], self._arg_syms['constants']],
+                                      self.list_syms(self.constraints['terminal'], 'expr'))
 
-        self.bc_func = jit_compile_func(bc_func, 9, func_name='bc_func')
+            def bc_func(x_0, q_0, nu_0, x_f, q_f, nu_f, p, k):
+                u0 = control_function(x_0, p, k)
+                bc_0 = np.array(bc_0_func(x_0, q_0, u0, p, nu_0, k))
+
+                uf = control_function(x_f, p, k)
+                bc_f = np.array(bc_f_func(x_f, q_f, uf, p, nu_f, k))
+
+                return np.concatenate((bc_0, bc_f))
+
+            self.bc_func = jit_compile_func(bc_func, 8, func_name='bc_func')
+
+        else:
+            control_function = compile_control(self.algebraic_control_options['options'],
+                                               self.algebraic_control_options['hamiltonian'],
+                                               self.algebraic_control_options['controls'], self._arg_syms['states'],
+                                               self._arg_syms['parameters'], self._arg_syms['constants'])
+
+            bc_0_func = self.lambdify([self._arg_syms['states'],  self._arg_syms['quads'],
+                                       self.algebraic_control_options['controls'], self._arg_syms['parameters'],
+                                       self._arg_syms['initial_constraint_parameters'], self._arg_syms['constants']],
+                                      self.list_syms(self.constraints['initial'], 'expr'))
+            bc_f_func = self.lambdify([self._arg_syms['states'], self._arg_syms['quads'],
+                                       self.algebraic_control_options['controls'], self._arg_syms['parameters'],
+                                       self._arg_syms['terminal_constraint_parameters'], self._arg_syms['constants']],
+                                      self.list_syms(self.constraints['terminal'], 'expr'))
+
+            def bc_func(x_0, q_0, nu_0, x_f, q_f, nu_f, p, k):
+                u0 = control_function(x_0, p, k)
+                bc_0 = np.array(bc_0_func(x_0, q_0, u0, p, nu_0, k))
+
+                uf = control_function(x_f, p, k)
+                bc_f = np.array(bc_f_func(x_f, q_f, uf, p, nu_f, k))
+
+                return np.concatenate((bc_0, bc_f))
+
+            self.bc_func = jit_compile_func(bc_func, 8, func_name='bc_func')
+
+        return self.bc_func

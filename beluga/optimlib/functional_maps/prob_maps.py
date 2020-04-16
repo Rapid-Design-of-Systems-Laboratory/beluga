@@ -8,6 +8,7 @@ from beluga.optimlib import rash_mult, recursive_sub, epstrig_path, utm_path, to
 import copy
 import sympy
 import logging
+from beluga.codegen.codegen import compile_control
 
 
 def f_momentum_shift(prob: Union[SymBVP, SymOCP], new_ind_name=None, in_place=False) -> \
@@ -248,17 +249,16 @@ def f_algebraic_control_law(prob: SymDual, in_place=False) -> (SymDual, Identity
     if not in_place:
         prob = copy.deepcopy(prob)
 
-    control_syms = [control['sym'] for control in prob.controls]
+    # control_syms = [control['sym'] for control in prob.controls]
+    control_syms = prob.list_field(prob.controls, field='sym')
     dh_du = [prob.hamiltonian['expr'].diff(control_sym) for control_sym in control_syms]
     logging.debug("Solving dH/du...")
-    control_options = sympy.solve(dh_du, control_syms, dict=True, minimal=True, simplify=True)
+    control_options = sympy.solve(dh_du, control_syms,  minimal=True, simplify=True)
     logging.debug('Control found')
 
-    for control in prob.controls:
-        control.update({'options': []})
-    for option in control_options:
-        for control in prob.controls:
-            control['options'].append(option[control['name']])
+    # TODO Use algebraic equations and custom functions in future
+    prob.algebraic_control_options = {'controls': control_syms, 'options': control_options,
+                                      'hamiltonian': prob.hamiltonian['expr']}
 
     sol_mapper = IdentityMapper()
 
@@ -328,6 +328,7 @@ def f_differential_control_law(prob: SymDual, in_place=False, method='traditiona
 def f_squash_to_bvp(dual: SymDual) -> (SymBVP, SquashToBVPMapper):
 
     dual = copy.deepcopy(dual)
+
     bvp = SymBVP(name=dual.name)
 
     bvp.set_local_compiler(dual.local_compiler)
@@ -337,6 +338,8 @@ def f_squash_to_bvp(dual: SymDual) -> (SymBVP, SquashToBVPMapper):
     bvp.parameters = dual.parameters
     bvp.constants = dual.constants
     bvp.quads = dual.quads + dual.coparameters
+
+    bvp.algebraic_control_options = dual.algebraic_control_options
 
     constraint_adjoints_idxs = {}
     for location in ['initial', 'terminal']:

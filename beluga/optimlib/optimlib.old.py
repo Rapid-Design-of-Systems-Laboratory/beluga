@@ -4,7 +4,7 @@ Base functions shared by all optimization methods.
 
 
 from beluga.utils import sympify, _combine_args_kwargs, recursive_sub
-from beluga.codegen import jit_compile_func, lambdify_
+from beluga.codegen import jit_compile_func, jit_lambdify
 import copy
 import numpy as np
 import sympy
@@ -1670,7 +1670,7 @@ def F_MF(bvp, com_index):
     states = [(s['symbol']) for s in bvp.states()]
     parameters = [(s['symbol']) for s in bvp.parameters()]
     constants = [(s['symbol']) for s in bvp.get_constants()]
-    fn_p = lambdify_([states, parameters, constants], com['function'])
+    fn_p = jit_lambdify([states, parameters, constants], com['function'])
 
     atoms = com['function'].atoms()
     atoms2 = set()
@@ -1716,7 +1716,7 @@ def F_MF(bvp, com_index):
     parameters = [s['symbol'] for s in bvp.parameters()]
     constants = [s['symbol'] for s in bvp.get_constants()]
     the_p = [com['symbol']]
-    fn_q = lambdify_([states, parameters, constants], lhs)
+    fn_q = jit_lambdify([states, parameters, constants], lhs)
 
     replace_q = bvp.states()[symmetry_index]['symbol']
     solve_for_q = sympy.solve(lhs - symmetry_symbol, replace_q, dict=True, simplify=False)
@@ -1787,9 +1787,9 @@ def F_MF(bvp, com_index):
     quads = [s['symbol'] for s in bvp.quads()]
     parameters = [s['symbol'] for s in bvp.parameters()]
     constants = [s['symbol'] for s in bvp.get_constants()]
-    fn_q_inv = lambdify_([states, quads, parameters, constants], solve_for_q[0][replace_q])
+    fn_q_inv = jit_lambdify([states, quads, parameters, constants], solve_for_q[0][replace_q])
 
-    fn_p_inv = lambdify_([states, parameters, constants], solve_for_p[0][replace_p])
+    fn_p_inv = jit_lambdify([states, parameters, constants], solve_for_p[0][replace_p])
 
     def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q=fn_q, fn_p=fn_p):
         gamma = copy.deepcopy(gamma)

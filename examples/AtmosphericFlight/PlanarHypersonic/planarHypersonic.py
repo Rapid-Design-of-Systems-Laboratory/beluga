@@ -10,7 +10,7 @@ from math import *
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.problib.InputOCP('planar_hypersonic')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -50,13 +50,12 @@ ocp.constant('theta_f', 0, 'rad')
 ocp.terminal_cost('-v^2', 'm^2/s^2')
 
 # Define constraints
-ocp.constraints() \
-    .initial_constraint('h-h_0', 'm') \
-    .initial_constraint('theta', 'rad') \
-    .initial_constraint('v-v_0', 'm/s') \
-    .initial_constraint('t', 's') \
-    .terminal_constraint('h-h_f', 'm') \
-    .terminal_constraint('theta-theta_f', 'rad')
+ocp.initial_constraint('h-h_0', 'm')
+ocp.initial_constraint('theta', 'rad')
+ocp.initial_constraint('v-v_0', 'm/s')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('h-h_f', 'm')
+ocp.terminal_constraint('theta-theta_f', 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 

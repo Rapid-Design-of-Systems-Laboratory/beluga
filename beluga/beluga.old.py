@@ -332,7 +332,6 @@ def solve(**kwargs):
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
 
-
     solinit = Trajectory()
     solinit.const = np.array(bvp.raw['constants_values'])
 

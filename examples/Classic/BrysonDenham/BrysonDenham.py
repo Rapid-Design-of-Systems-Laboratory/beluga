@@ -4,14 +4,14 @@
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.OCP('Bryson-Denham')
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v', 'm') \
-   .state('v', 'u', 'm/s')
+ocp.state('x', 'v', 'm')
+ocp.state('v', 'u', 'm/s')
 
 # Define controls
 ocp.control('u', 'rad')
@@ -28,13 +28,12 @@ ocp.constant('x_max', 0.3, 'm')
 ocp.path_cost('u**2', 'rad**2')
 
 # Define constraints
-ocp.constraints() \
-    .initial_constraint('x - x_0', 'm') \
-    .initial_constraint('v - v_0', 'm/s') \
-    .initial_constraint('t', 's') \
-    .terminal_constraint('x - x_f', 'm') \
-    .terminal_constraint('v - v_f', 'm') \
-    .terminal_constraint('t - 1', 's')
+ocp.initial_constraint('x - x_0', 'm')
+ocp.initial_constraint('v - v_0', 'm/s')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('x - x_f', 'm')
+ocp.terminal_constraint('v - v_f', 'm')
+ocp.terminal_constraint('t - 1', 's')
 
 ocp.path_constraint('x', 'm', lower='-x_max', upper='x_max', activator='epsilon1', method='utm')
 

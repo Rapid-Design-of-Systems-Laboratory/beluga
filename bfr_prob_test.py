@@ -94,4 +94,12 @@ ocp \
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
 ocp_sym = ocp.sympify_problem()  
-bvp, sol_set = ocp_to_bvp(ocp_sym)
+bvp, sol_set = ocp_to_bvp(ocp_sym, control_method='algebraic')
+lam_bvp = bvp.lambdify_problem()
+
+y_test = np.array([1. for _ in bvp.states])
+q_test = np.array([1. for _ in bvp.quads])
+p_test = np.array([1. for _ in bvp.parameters])
+k_test = np.array([k['default_value'] for k in bvp.constants])
+nu0_test = np.array([1. for _ in bvp.constraint_parameters['initial']])
+nuf_test = np.array([1. for _ in bvp.constraint_parameters['terminal']])

@@ -2,12 +2,12 @@ import inspect
 import sys
 import warnings
 import copy
-import logging
+# import logging
 
-from beluga.codegen import *
+# from beluga.codegen import *
 from tqdm import tqdm
 
-import numpy as np
+# import numpy as np
 
 from beluga import problem, helpers
 from beluga.codegen.codegen import *
@@ -15,8 +15,8 @@ import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
-from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
-from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
+# from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
+# from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 # from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
@@ -69,40 +69,6 @@ def guess_generator(*args, **kwargs):
     guess_gen = problem.GuessGenerator()
     guess_gen.setup(*args, **kwargs)
     return guess_gen
-
-
-def ocp2bvp(ocp, **kwargs):
-    """
-
-    :param ocp: The optimal control problem.
-    :return: (prob, map, map_inverse) - A codegen compiled BVP with associated mappings to and from the OCP.
-    """
-
-    method = kwargs.get('method', 'indirect').lower()
-    optim_options = kwargs.get('optim_options', dict())
-    optim_options.update({'method': method})
-
-    logging.debug("Computing the necessary conditions of optimality")
-    if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
-        bvp_raw, _map, _map_inverse = BH_ocp_to_bvp(ocp, **optim_options)
-    elif method == 'direct':
-        bvp_raw, _map, _map_inverse = DIRECT_ocp_to_bvp(ocp, **optim_options)
-    else:
-        raise NotImplementedError
-
-    bvp_raw['custom_functions'] = ocp.custom_functions()
-    s_bvp = SymBVP(bvp_raw)
-    bvp = FuncBVP(s_bvp)
-    ocp._scaling.initialize(bvp.raw)
-    bvp.raw['scaling'] = ocp._scaling
-
-    def ocp_map(sol):
-        return _map(sol)
-
-    def ocp_map_inverse(sol):
-        return _map_inverse(sol)
-
-    return bvp, ocp_map, ocp_map_inverse
 
 
 def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
@@ -192,8 +158,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 ya = sol.y[0,:]
                 yb = sol.y[-1,:]
                 if sol.q.size > 0:
-                    qa = sol.q[0,:]
-                    qb = sol.q[-1,:]
+                    qa = sol.q[0, :]
+                    qb = sol.q[-1, :]
                 else:
                     qa = np.array([])
                     qb = np.array([])
@@ -312,7 +278,7 @@ def solve(**kwargs):
     Main code
     """
 
-    f_ocp = FuncOCP(ocp)
+    f_ocp = ocp.sympify_problem().lambdify_
     # breakpoint()
     # s_ocp = SymOCP(prob)
     # breakpoint()

@@ -4,7 +4,7 @@ Base functions shared by all optimization methods.
 
 
 from beluga.utils import sympify, recursive_sub
-from beluga.codegen import lambdify_
+from beluga.codegen import jit_lambdify
 import copy
 import numpy as np
 import sympy

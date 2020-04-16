@@ -1,10 +1,11 @@
 from .helpers import root
-from .beluga import bvp_algorithm, guess_generator, ocp2bvp, run_continuation_set, solve, add_logger, bvpsol
 from .continuation import ContinuationList as init_continuation
 from .codegen import *
+from .problib import *
 # from .problem import OCP
-from .problib import bvp_classes, ocp_classes, dual_classes
 from .scaling import Scaling
+from .problib.ocp_classes import InputOCP as OCP
+from .problib.bvp_classes import InputBVP as BVP
 
 import os
 import glob

@@ -1,4 +1,4 @@
-from beluga.codegen.local_compiler import LocalCompiler
+from beluga import LocalCompiler
 import sympy
 
 default_tol = 1e-4

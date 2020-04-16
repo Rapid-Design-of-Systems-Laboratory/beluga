@@ -4,7 +4,7 @@ from beluga.problib.sol_classes import *
 import copy
 import sympy
 from typing import Union
-from beluga.codegen.local_compiler import LocalCompiler
+from beluga import LocalCompiler
 
 
 class SolMapper(ABC):
@@ -186,3 +186,6 @@ class SquashToBVPMapper(SolMapper):
     def inv_map(self, sol: BVPSol) -> DualSol:
         pass
 
+
+class InterfaceSolverMapper(SolMapper):
+    pass
