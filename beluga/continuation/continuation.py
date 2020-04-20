@@ -98,7 +98,7 @@ class ContinuationStrategy(abc.ABC):
     def init(self, gamma, bvp):
         self.bvp = bvp
         for var_name in self.var_iterator():
-            if var_name not in self.bvp.raw['constants']:
+            if var_name not in [str(s['symbol']) for s in self.bvp.get_constants()]:
                 raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
         gamma_in = copy.deepcopy(gamma)
         gamma_in.converged = False
@@ -119,7 +119,7 @@ class ContinuationStrategy(abc.ABC):
         total_change = 0.0
         const0 = copy.deepcopy(self.gammas[-1].const)
         for var_name in self.vars:
-            jj = self.bvp.raw['constants'].index(var_name)
+            jj = [str(s['symbol']) for s in self.bvp.get_constants()].index(var_name)
             const0[jj] = self.vars[var_name].steps[self.ctr]
             total_change += abs(self.vars[var_name].steps[self.ctr])
 
@@ -176,11 +176,11 @@ class ManualStrategy(ContinuationStrategy):
 
         # Iterate through all types of variables
         for var_name in self.var_iterator():
-            if var_name not in bvp.raw['constants']:
+            if var_name not in [str(s['symbol']) for s in self.bvp.get_constants()]:
                 raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
 
             # Set current value of each continuation variable
-            jj = bvp.raw['constants'].index(var_name)
+            jj = [str(s['symbol']) for s in self.bvp.get_constants()].index(var_name)
             self.vars[var_name].value = sol.const[jj]
             # Calculate update steps for continuation process
             if self._spacing == 'linear':

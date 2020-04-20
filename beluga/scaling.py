@@ -47,25 +47,19 @@ class Scaling(dict):
         # TODO: Automate the following sections
 
         # Scaling functions for constants
-        self.scale_func['const'] = {str(const): self.create_scale_fn(unit)
-                                    for const, unit in zip(ws['constants'], ws['constants_units'])}
+        self.scale_func['const'] = {str(s['symbol']): s['unit'] for s in ws.get_constants()}
 
-        # Scaling functions for states & costates (combined)
+        # Scaling functions for states & quads
         self.scale_func['states'] = {}
-        self.scale_func['states'] = {str(state): self.create_scale_fn(unit)
-                                     for state, unit in zip(ws['states'], ws['states_units'])}
-        self.scale_func['quads'] = {str(quad): self.create_scale_fn(unit)
-                                    for quad, unit in zip(ws['quads'], ws['quads_units'])}
+        self.scale_func['states'] = {str(s['symbol']): s['unit'] for s in ws.states()}
+        self.scale_func['quads'] = {str(s['symbol']): s['unit'] for s in ws.quads()}
 
         self.scale_func['initial'] = self.scale_func['states']
         self.scale_func['terminal'] = self.scale_func['states']
 
         # Scaling functions for constraint multipliers and other parameters
-        self.scale_func['parameters'] = {p: self.create_scale_fn(unit) for p, unit
-                                         in zip(ws['dynamical_parameters'], ws['dynamical_parameters_units'])}
-        self.scale_func['parameters'].update({p: self.create_scale_fn(unit) for p, unit
-                                              in zip(ws['nondynamical_parameters'],
-                                                     ws['nondynamical_parameters_units'])})
+        self.scale_func['parameters'] = {str(s['symbol']): s['unit'] for s in ws.parameters()}
+        self.scale_func['parameters'].update({str(s['symbol']): s['unit'] for s in ws.nd_parameters()})
 
     def create_scale_fn(self, unit_expr):
         return lambdify(self.units_sym, sympify(unit_expr))
