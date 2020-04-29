@@ -19,6 +19,10 @@ def jit_lambdify(args, sym_func, array_inputs=True, complex_numbers=False):
 
 
 def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, array_inputs=True):
+    if func_name is None:
+        if hasattr(func, 'name'):
+            func_name = func.__name__
+
     try:
         if complex_numbers and array_inputs:
             arg_types = tuple([complex128[:] for _ in range(num_args)])

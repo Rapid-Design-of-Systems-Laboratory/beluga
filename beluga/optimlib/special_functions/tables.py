@@ -7,10 +7,10 @@ import logging
 
 # TODO Extend to N-dim tables
 class SymTableGenerator(object):
-    def __init__(self, table, func_dict=None, order=None):
+    def __init__(self, table, local_compiler=None, order=None):
 
         self.table = table
-        self.func_dict = func_dict
+        self.local_compiler = local_compiler
 
         if order is None:
             self.order = 0
@@ -18,16 +18,16 @@ class SymTableGenerator(object):
             self.order = order
 
     def __call__(self, *args):
-        return SymTable(self.table, *args, func_dict=self.func_dict, order=self.order)
+        return SymTable(self.table, *args, local_compiler=self.local_compiler, order=self.order)
 
 
 class SymTableMeta(Function):
-    def __new__(cls, table, arg, func_dict=None):
+    def __new__(cls, table, arg, local_compiler=None):
         obj = super(SymTableMeta, cls).__new__(cls, arg)
         obj.nargs = (1,)
         obj.order = 0
         obj.table = table
-        obj.func_dict = func_dict
+        obj.local_compiler = local_compiler
         return obj
 
     @property
@@ -36,20 +36,19 @@ class SymTableMeta(Function):
 
     def fdiff(self, argindex=1):
         if argindex == 1:
-            return SymTable(self.table, self.args[0], order=self.order + 1, func_dict=self.func_dict)
+            return SymTable(self.table, self.args[0], order=self.order + 1, local_compiler=self.local_compiler)
         else:
             raise ArgumentIndexError(self, argindex)
 
 
 class SymTable(SymTableMeta):
-    def __new__(cls, table, arg, func_dict=None, order=0):
+    def __new__(cls, table, arg, local_compiler=None, order=0):
         name = cls.construct_name(str(table), str(arg), order)
-        obj = type(name, (SymTableMeta,), {})(table, arg, func_dict=func_dict)
+        obj = type(name, (SymTableMeta,), {})(table, arg, local_compiler=local_compiler)
         obj.table_func = table.form_eval_function(order)
-        obj.func_dict = func_dict
-        if obj.func_dict is not None:
-            if name not in func_dict:
-                obj.func_dict[name] = obj.table_func
+        obj.local_compiler = local_compiler
+        if obj.local_compiler is not None:
+            obj.local_compiler.add_function_local(name, obj.table_func)
         obj.order = order
         return obj
 
@@ -68,7 +67,7 @@ class SymTable(SymTableMeta):
 
 
 class TableSpline1D(object):
-    def __init__(self, name, data_x, data_y):
+    def __init__(self, name, data_y, data_x):
 
         self.name = name
         self.data_x = data_x

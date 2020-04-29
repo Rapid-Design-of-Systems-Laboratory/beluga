@@ -9,7 +9,7 @@ import logging
 
 
 class CustomFunctionGenerator(object):
-    def __init__(self, base_func, name=None, arg_len=None, func_dict=None, deriv_list=None, order=None,
+    def __init__(self, base_func, name=None, arg_len=None, local_compiler=None, deriv_list=None, order=None,
                  num_deriv_type='c_diff'):
 
         if arg_len is None:
@@ -23,7 +23,7 @@ class CustomFunctionGenerator(object):
             self.order = order
 
         self.deriv_list = deriv_list
-        self.func_dict = func_dict
+        self.local_compiler = local_compiler
         self.num_deriv_type = num_deriv_type
 
         if type(base_func) is targets.registry.CPUDispatcher:
@@ -37,7 +37,7 @@ class CustomFunctionGenerator(object):
             self.name = name
 
     def __call__(self, *args):
-        return CustomFunction(self.base_func, args, func_dict=self.func_dict, order=self.order,
+        return CustomFunction(self.name, self.base_func, args, local_compiler=self.local_compiler, order=self.order,
                               deriv_method=self.num_deriv_type)
 
     def __repr__(self):
@@ -45,10 +45,11 @@ class CustomFunctionGenerator(object):
 
 
 class CustomFunctionMeta(Function):
-    def __new__(cls, base_func, arg_list):
+    def __new__(cls, base_name, base_func, arg_list):
         obj = super(CustomFunctionMeta, cls).__new__(cls, *arg_list)
         obj.nargs = (len(arg_list),)
         obj.arg_list = tuple(arg_list)
+        obj.base_name = base_name
         if type(base_func) is targets.registry.CPUDispatcher:
             obj.base_func = base_func
         else:
@@ -64,29 +65,28 @@ class CustomFunctionMeta(Function):
         if argindex <= self.nargs[0]:
             order = list(self.order)
             order[argindex - 1] += 1
-            return CustomFunction(self.base_func, self.arg_list, order=tuple(order), func_dict=self.func_dict)
+            return CustomFunction(self.base_func, self.arg_list, order=tuple(order), local_compiler=self.local_compiler)
         else:
             raise ArgumentIndexError(self, argindex)
 
 
 class CustomFunction(Function):
-    def __new__(cls, base_func, arg_list, func_dict=None, order=None, deriv_method='c_diff'):
+    def __new__(cls, base_name, base_func, arg_list, local_compiler=None, order=None, deriv_method='c_diff'):
 
         cls.check_args(arg_list, base_func)
 
         if order is None:
             order = ([0 for _ in range(len(arg_list))])
 
-        name = cls.construct_name(base_func.__name__, arg_list, order)
-        obj = type(name, (CustomFunctionMeta,), {})(base_func, arg_list)
+        name = cls.construct_name(base_name, arg_list, order)
+        obj = type(name, (CustomFunctionMeta,), {})(name, base_func, arg_list)
         if sum(order) == 0:
             obj.eval_func = base_func
         else:
             obj.eval_func = gen_num_diff(base_func, order=order, method=deriv_method)
-        obj.func_dict = func_dict
-        if obj.func_dict is not None:
-            if name not in obj.func_dict:
-                obj.func_dict[name] = obj.eval_func
+        obj.local_compiler = local_compiler
+        if obj.local_compiler is not None:
+            obj.local_compiler.add_function_local(name, obj.eval_func)
         obj.order = order
         return obj
 

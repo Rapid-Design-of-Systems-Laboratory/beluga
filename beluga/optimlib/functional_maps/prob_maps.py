@@ -3,7 +3,7 @@ from beluga.problib.bvp_classes import SymBVP, default_tol
 from beluga.problib.ocp_classes import SymOCP
 from beluga.problib.dual_classes import SymDual
 from .sol_maps import *
-from beluga.optimlib import rash_mult, recursive_sub, epstrig_path, utm_path, total_derivative,\
+from beluga.optimlib import rashs_mult, recursive_sub, epstrig_path, utm_path, total_derivative,\
     make_standard_symplectic_form, make_hamiltonian_vector_field, noether
 import copy
 import sympy
@@ -132,7 +132,7 @@ def f_rashs(prob: Union[SymBVP, SymOCP], in_place=False) -> (Union[SymBVP, SymOC
             for func_i, cond_i in zip(switch['functions'], switch['conditions']):
                 temp_value = func_i
                 for cond_ij in cond_i:
-                    temp_value *= rash_mult(cond_ij, switch['activator'])
+                    temp_value *= rashs_mult(cond_ij, switch['activator'])
                 true_value += temp_value
             switch['functions'] = true_value
 

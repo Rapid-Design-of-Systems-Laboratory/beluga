@@ -6,7 +6,7 @@ import numpy as np
 
 from beluga.codegen import jit_compile_func, compile_control
 from beluga import LocalCompiler
-from beluga.optimlib.special_functions import custom_functions_lib, table_lib
+from beluga.optimlib.special_functions import custom_functions, tables
 
 default_tol = 1e-6
 
@@ -186,7 +186,7 @@ class InputBVP(BaseBVP):
 
     def table(self, name, kind, ret_data, arg_data, table_units, arg_units):
         if kind.lower() == '1d_spline':
-            table = table_lib.TableSpline1D(name, table_units, arg_data)
+            table = tables.TableSpline1D(name, table_units, arg_data)
         else:
             raise NotImplementedError('{} is not a implemented table kind'.format(kind))
 
@@ -259,19 +259,19 @@ class SymBVP(BaseBVP):
         # Custom Functions
         for custom_function in self.custom_functions:
             custom_function['sym'] = sympy.Symbol(custom_function['name'])
-            custom_function['sym_func'] = custom_functions_lib.CustomFunctionGenerator(
-                custom_function['func'], name=custom_function['name'], func_dict=self.local_compiler.func_locals)
+            custom_function['sym_func'] = custom_functions.CustomFunctionGenerator(
+                custom_function['func'], name=custom_function['name'], local_compiler=self.local_compiler.func_locals)
             self.add_symbolic_local(custom_function['name'], custom_function['sym_func'])
 
         # Tables
         for table in self.tables:
             table['sym'] = sympy.Symbol(table['name'])
             if table['kind'].lower() == '1d_spline':
-                table['table_func'] = table_lib.TableSpline1D(table['name'], table['arg_data'], table['ret_data'])
+                table['table_func'] = table.TableSpline1D(table['name'], table['arg_data'], table['ret_data'])
             else:
                 raise NotImplementedError('{} is not a implemented table kind'.format(table['kind']))
             table['sym_table'] =\
-                table_lib.SymTableGenerator(table['table_func'], func_dict=self.local_compiler.func_locals, order=0)
+                table.SymTableGenerator(table['table_func'], func_dict=self.local_compiler.func_locals, order=0)
             self.add_symbolic_local(table['name'], table['sym_table'])
 
         # Switches

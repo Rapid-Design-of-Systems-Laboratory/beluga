@@ -438,7 +438,7 @@ def utm_path(constraint, lower, upper, activator):
     return activator*(1/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower))) - 1)
 
 
-def rash_mult(condition, tolerance):
+def rashs_mult(condition, tolerance):
     r"""
     Creates a smooth multiplier to model switching conditions.
 

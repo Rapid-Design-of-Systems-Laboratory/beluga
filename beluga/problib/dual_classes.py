@@ -1,4 +1,4 @@
-# from .bvp_classes import BaseBVP, InputBVP, FuncBVP, SymBVP
+# from .bvp_classes import BaseProb, InputProb, FuncProb, SymProb
 from .ocp_classes import BaseOCP, InputOCP, FuncOCP, SymOCP, default_tol
 from beluga.optimlib import *
 from collections import OrderedDict
@@ -6,7 +6,7 @@ from copy import copy
 from beluga.codegen import jit_compile_func
 from .. import LocalCompiler
 import numpy as np
-from beluga.optimlib.special_functions import custom_functions_lib, table_lib
+from beluga.optimlib.special_functions import custom_functions, tables
 
 
 class BaseDual(BaseOCP):
@@ -197,7 +197,7 @@ class FuncDual(FuncOCP, BaseDual):
     def compile_eoms(self):
         x_dot_func = self.lambdify([self._arg_syms['states'], self._arg_syms['parameters'],
                                     self._arg_syms['constants']], self.list_syms(self.states, 'eom'))
-        q_dot_func = self.lambdify([self._arg_syms['states'],+ self._arg_syms['parameters'],
+        q_dot_func = self.lambdify([self._arg_syms['states'] + self._arg_syms['parameters'],
                                     self._arg_syms['constants']], self.list_syms(self.quads, 'eom'))
 
         def deriv_func(x, _, p_d, k):
