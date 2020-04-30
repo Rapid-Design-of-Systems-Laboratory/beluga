@@ -456,7 +456,7 @@ class OCP(BVP):
         Parameters
         ----------
         expr - str
-            Expression for cost function
+            NamedExpression for cost function
         unit - str
             Unit of cost function
         cost_type - str

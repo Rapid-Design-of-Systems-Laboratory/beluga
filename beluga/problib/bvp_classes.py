@@ -116,7 +116,7 @@ class BaseBVP:
         duplicate.switches = self.copy_list_items(self.switches)
         duplicate.symmetries = self.symmetries
 
-        duplicate.algebraic_control_options = copy(self.algebraic_control_options)
+        duplicate.control_law = copy(self.algebraic_control_options)
 
         duplicate.units = self.copy_list_items(self.units)
 
@@ -131,7 +131,7 @@ class BaseBVP:
     def set_local_compiler(self, local_compiler):
         self.local_compiler = local_compiler
 
-        self.sympify = self.local_compiler.sympify
+        self.sympify = self.local_compiler.sympify_self
         self.lambdify = self.local_compiler.lambdify
 
         self.add_symbolic_local = self.local_compiler.add_symbolic_local

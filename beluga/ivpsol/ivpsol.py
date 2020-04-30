@@ -73,8 +73,8 @@ class Propagator(Algorithm):
         r"""
         Propagates the differential equations over a defined time interval.
 
-        :param eom_func: Function representing the equations of motion.
-        :param quad_func: Function representing the quadratures.
+        :param eom_func: FunctionComponent representing the equations of motion.
+        :param quad_func: FunctionComponent representing the quadratures.
         :param tspan: Independent time interval.
         :param y0: Initial state position.
         :param q0: Initial quad position.
@@ -290,7 +290,7 @@ class Trajectory(object):
         """
         Sets the function used for interpolation.
 
-        :param func: Function for interpolation or a string for SciPy's interp1d(kind=func).
+        :param func: FunctionComponent for interpolation or a string for SciPy's interp1d(kind=func).
         """
         if callable(func):
             self.interpolate = func

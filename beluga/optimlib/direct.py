@@ -55,11 +55,11 @@ def ocp_to_bvp(ocp, **kwargs):
 
     quantity_vars, quantity_list, derivative_fn = process_quantities(switches, switches_values)
     for quantity_var in quantity_vars.keys():
-        initial_cost = initial_cost.subs(Symbol(quantity_var), quantity_vars[quantity_var])
-        path_cost = path_cost.subs(Symbol(quantity_var), quantity_vars[quantity_var])
-        terminal_cost = terminal_cost.subs(Symbol(quantity_var), quantity_vars[quantity_var])
+        initial_cost = initial_cost.subs_self(Symbol(quantity_var), quantity_vars[quantity_var])
+        path_cost = path_cost.subs_self(Symbol(quantity_var), quantity_vars[quantity_var])
+        terminal_cost = terminal_cost.subs_self(Symbol(quantity_var), quantity_vars[quantity_var])
         for ii in range(len(states_rates)):
-            states_rates[ii] = states_rates[ii].subs(Symbol(quantity_var), quantity_vars[quantity_var])
+            states_rates[ii] = states_rates[ii].subs_self(Symbol(quantity_var), quantity_vars[quantity_var])
 
     # Generate the problem data
     tf = sympify('_tf')
@@ -67,7 +67,7 @@ def ocp_to_bvp(ocp, **kwargs):
     dynamical_parameters_units = parameters_units + [independent_variable_units]
     bc_initial = [c for c in constraints['initial']]
     bc_terminal = [c for c in constraints['terminal']]
-    # bc_terminal = [bc.subs(independent_variable, tf) for bc in bc_terminal]
+    # bc_terminal = [bc.subs_self(independent_variable, tf) for bc in bc_terminal]
     path_constraints = []
     path_constraints_units = []
     for ii, c in enumerate(constraints['path']):

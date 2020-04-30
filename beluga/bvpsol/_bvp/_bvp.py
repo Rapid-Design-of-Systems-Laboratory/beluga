@@ -375,11 +375,11 @@ def solve_newton(n, m, h, col_fun, bc, jac, y, p, B, bvp_tol):
     h : ndarray, shape (m-1,)
         Mesh intervals.
     col_fun : callable
-        Function computing collocation residuals.
+        FunctionComponent computing collocation residuals.
     bc : callable
-        Function computing boundary condition residuals.
+        FunctionComponent computing boundary condition residuals.
     jac : callable
-        Function computing the Jacobian of the whole system (including
+        FunctionComponent computing the Jacobian of the whole system (including
         collocation and boundary condition residuals). It is supposed to
         return csc_matrix.
     y : ndarray, shape (n, m)
@@ -758,7 +758,7 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         return value must be an array with shape (n, m) and with the same
         layout as ``y``.
     bc : callable
-        Function evaluating residuals of the boundary conditions. The calling
+        FunctionComponent evaluating residuals of the boundary conditions. The calling
         signature is ``bc(ya, yb)``, or ``bc(ya, yb, p)`` if parameters are
         present. All arguments are ndarray: ``ya`` and ``yb`` with shape (n,),
         and ``p`` with shape (k,). The return value must be an array with
@@ -777,7 +777,7 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         Matrix defining the singular term. If None (default), the problem is
         solved without the singular term.
     fun_jac : callable or None, optional
-        Function computing derivatives of f with respect to y and p. The
+        FunctionComponent computing derivatives of f with respect to y and p. The
         calling signature is ``fun_jac(x, y)``, or ``fun_jac(x, y, p)`` if
         parameters are present. The return must contain 1 or 2 elements in the
         following order:
@@ -794,7 +794,7 @@ def solve_bvp(fun, bc, x, y, p=None, S=None, fun_jac=None, bc_jac=None,
         If `fun_jac` is None (default), the derivatives will be estimated
         by the forward finite differences.
     bc_jac : callable or None, optional
-        Function computing derivatives of bc with respect to ya, yb and p.
+        FunctionComponent computing derivatives of bc with respect to ya, yb and p.
         The calling signature is ``bc_jac(ya, yb)``, or ``bc_jac(ya, yb, p)``
         if parameters are present. The return must contain 2 or 3 elements in
         the following order:

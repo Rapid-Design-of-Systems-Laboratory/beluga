@@ -140,5 +140,5 @@ class TableSpline1D(object):
 
         except errors.NumbaError as e:
             logging.debug(e)
-            logging.debug('Cannot Compile Function Table')
+            logging.debug('Cannot Compile FunctionComponent TableComponent')
             return interp

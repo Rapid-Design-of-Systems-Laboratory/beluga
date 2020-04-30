@@ -87,7 +87,7 @@ def f_epstrig(prob: SymOCP, in_place=False) -> (SymOCP, EpsTrigMapper):
                         [(constraint['upper'] - constraint['lower']) / 2 * sympy.sin(constraint['expr'])
                          + (constraint['upper'] + constraint['lower']) / 2]))
     for state in prob.states:
-        state['eom'] = state['eom'].subs(sub_dict, simultaneous=True)
+        state['eom'] = state['eom'].subs_self(sub_dict, simultaneous=True)
 
     prob.constraints['path'].pop(0)
 

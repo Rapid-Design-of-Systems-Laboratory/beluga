@@ -720,7 +720,7 @@ def make_constrained_arc_fns(states, costates, costates_rates, controls, paramet
     """
 
     raise NotImplementedError
-    # tf_var = sympify('tf')
+    # tf_var = sympify_self('tf')
     # costate_eoms = [{'eom':[str(rate*tf_var) for rate in costates_rates], 'arctype':0}]
     # bc_list = []  # Unconstrained arc placeholder
 
@@ -930,7 +930,7 @@ def process_quantities(quantities, quantities_values):
 
     quantity_subs = [(q, q_val) for q, q_val in zip(quantities, quantities_values)]
     quantity_sym, quantity_expr = zip(*quantity_subs)
-    quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
+    quantity_expr = [qty_expr.subs_self(quantity_subs) for qty_expr in quantity_expr]
 
     # Use substituted expressions to recreate quantity expressions
     quantity_subs = [(str(qty_var), qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
@@ -941,7 +941,7 @@ def process_quantities(quantities, quantities_values):
     quantity_list = [{'name': str(qty_var), 'expr': str(qty_expr)}
                      for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
 
-    # Function partial that takes derivative while considering quantities
+    # FunctionComponent partial that takes derivative while considering quantities
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
     return quantity_vars, quantity_list, derivative_fn
 
@@ -974,7 +974,7 @@ def total_derivative(expr, var, dependent_vars=None):
     """
     Take derivative taking pre-defined quantities into consideration
 
-    :param expr: Expression to evaluate the derivative of.
+    :param expr: NamedExpression to evaluate the derivative of.
     :param var: Variable to take the derivative with respect to.
     :param dependent_vars: Other dependent variables to consider with chain rule.
     """
@@ -984,7 +984,7 @@ def total_derivative(expr, var, dependent_vars=None):
     dep_var_names = dependent_vars.keys()
     dep_var_expr = [expr for (_, expr) in dependent_vars.items()]
 
-    dFdq = [sympy.diff(expr, dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
+    dFdq = [sympy.diff(expr, dep_var).subs_self(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [sympy.diff(qexpr, var) for qexpr in dep_var_expr]
     out = sum(d1 * d2 for d1, d2 in zip(dFdq, dqdx)) + sympy.diff(expr, var)
     return out
@@ -1290,7 +1290,7 @@ def F_EPSTRIG(ocp):
 
     subber = dict(zip([f], [(upper - lower) / 2 * sympy.sin(the_constraint['function']) + (upper + lower) / 2]))
     for ii in range(len(ocp.states())):
-        ocp.states()[ii]['eom'] = ocp.states()[ii]['eom'].subs(subber, simultaneous=True)
+        ocp.states()[ii]['eom'] = ocp.states()[ii]['eom'].subs_self(subber, simultaneous=True)
 
     def gamma_map(gamma):
         gamma = copy.deepcopy(gamma)

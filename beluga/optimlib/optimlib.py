@@ -318,7 +318,7 @@ def process_quantities(quantities, quantities_values):
 
     quantity_subs = [(q, q_val) for q, q_val in zip(quantities, quantities_values)]
     quantity_sym, quantity_expr = zip(*quantity_subs)
-    quantity_expr = [qty_expr.subs(quantity_subs) for qty_expr in quantity_expr]
+    quantity_expr = [qty_expr.subs_self(quantity_subs) for qty_expr in quantity_expr]
 
     # Use substituted expressions to recreate quantity expressions
     quantity_subs = [(str(qty_var), qty_expr) for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
@@ -329,7 +329,7 @@ def process_quantities(quantities, quantities_values):
     quantity_list = [{'name': str(qty_var), 'expr': str(qty_expr)}
                      for qty_var, qty_expr in zip(quantity_sym, quantity_expr)]
 
-    # Function partial that takes derivative while considering quantities
+    # FunctionComponent partial that takes derivative while considering quantities
     derivative_fn = ft.partial(total_derivative, dependent_vars=quantity_vars)
     return quantity_vars, quantity_list, derivative_fn
 
@@ -362,7 +362,7 @@ def total_derivative(expr, var, dependent_vars=None):
     """
     Take derivative taking pre-defined quantities into consideration
 
-    :param expr: Expression to evaluate the derivative of.
+    :param expr: NamedExpression to evaluate the derivative of.
     :param var: Variable to take the derivative with respect to.
     :param dependent_vars: Other dependent variables to consider with chain rule.
     """
@@ -372,7 +372,7 @@ def total_derivative(expr, var, dependent_vars=None):
     dep_var_names = dependent_vars.keys()
     dep_var_expr = [expr for (_, expr) in dependent_vars.items()]
 
-    dfdq = [expr.diff(dep_var).subs(dependent_vars.items()) for dep_var in dep_var_names]
+    dfdq = [expr.diff(dep_var).subs_self(dependent_vars.items()) for dep_var in dep_var_names]
     dqdx = [qexpr.diff(var) for qexpr in dep_var_expr]
     out = sum(d1 * d2 for d1, d2 in zip(dfdq, dqdx)) + sympy.diff(expr, var)
     return out
@@ -468,6 +468,7 @@ def pb(f, g, bvp):
     raise NotImplementedError
 
 
+# TODO Check this
 def noether(prob, quantity):
     r"""
 
@@ -478,7 +479,7 @@ def noether(prob, quantity):
     if not is_symplectic(prob.omega):
         raise ValueError('Can\'t use Noether\'. System does not appear to be symplectic.')
 
-    if 'field' in quantity.keys():
+    if hasattr(quantity, 'field'):
         is_symmetry = True
     else:
         is_symmetry = False
@@ -486,13 +487,13 @@ def noether(prob, quantity):
     if is_symmetry:
         unit = 0
         omega = prob.omega.tomatrix()
-        chi = sympy.Matrix(quantity['field'])
+        chi = sympy.Matrix(quantity.field)
         omega_chi = omega.LUsolve(chi)
         gstar = 0
         for jj, state in enumerate(prob.states):
-            gstar += sympy.integrate(omega_chi[jj], state['symbol'])
+            gstar += sympy.integrate(omega_chi[jj], state.sym)
 
-        unit = prob.constants_of_motion[0]['unit'] / quantity['unit']
+        unit = prob.constants_of_motion[0].units / quantity.units
 
         return gstar, unit
 
@@ -500,7 +501,7 @@ def noether(prob, quantity):
         g = pb(None, quantity, prob)
         nonz = np.nonzero(g)
         if len(nonz) == 1:
-            unit = prob.states[nonz[0][0]]['unit']
+            unit = prob.states[nonz[0][0]].units
         else:
             raise NotImplementedError
 

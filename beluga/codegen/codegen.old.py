@@ -33,11 +33,11 @@ def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, arra
 
     except errors.NumbaError as e:
         logging.debug(e)
-        logging.debug('Cannot Compile Function: {}'.format(func_name))
+        logging.debug('Cannot Compile FunctionComponent: {}'.format(func_name))
         return func
 
     except TypeError as e:
-        logging.debug('Cannot Compile Function: {} (probably NoneType)'.format(func_name))
+        logging.debug('Cannot Compile FunctionComponent: {} (probably NoneType)'.format(func_name))
         return func
 
 
@@ -54,8 +54,8 @@ class SymBVP:
     
         self.raw = problem_data    
     
-        # Unpack and sympify problem data
-        # self.t = sympify(problem_data['independent'])
+        # Unpack and sympify_self problem data
+        # self.t = sympify_self(problem_data['independent'])
         self.x = sympify(problem_data['states'])
         self.u = sympify(problem_data['controls'])
         self.p_d = sympify(problem_data['dynamical_parameters'])
@@ -128,7 +128,7 @@ class FuncBVP(object):
 
         sym_bvp = self.sym_bvp
 
-        num_options = len(sym_bvp.algebraic_control_options)
+        num_options = len(sym_bvp.control_law)
 
         if num_options == 0:
             def calc_u(_, __, ___):
@@ -137,14 +137,14 @@ class FuncBVP(object):
         elif num_options == 1:
 
             compiled_option = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
-                                        sym_bvp.algebraic_control_options[0])
+                                        sym_bvp.control_law[0])
 
             def calc_u(x, p_d, k):
                 return np.array(compiled_option(x, p_d, k))
 
         else:
             compiled_options = lambdify_([self.sym_bvp.x, self.sym_bvp.p_d, self.sym_bvp.k],
-                                         sym_bvp.algebraic_control_options)
+                                         sym_bvp.control_law)
 
             ham_func = self.ham_func
 

@@ -37,12 +37,12 @@ def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, arra
 
     except errors.NumbaError as e:
         logging.debug(e)
-        logging.debug('Cannot Compile Function: {}'.format(func_name))
+        logging.debug('Cannot Compile FunctionComponent: {}'.format(func_name))
         print(e)
         return func
 
     except TypeError:
-        logging.debug('Cannot Compile Function: {} (probably NoneType)'.format(func_name))
+        logging.debug('Cannot Compile FunctionComponent: {} (probably NoneType)'.format(func_name))
         return func
 
 
@@ -61,7 +61,7 @@ class LocalCompiler:
 
     def __repr__(self):
         return 'LocalCompiler:\n\tSymbolic Locals: ' + str(self.sym_locals) \
-               + '\n\tFunction Locals: ' + str(self.func_locals)
+               + '\n\tFunctionComponent Locals: ' + str(self.func_locals)
 
     def __deepcopy__(self, memodict=None):
         return self

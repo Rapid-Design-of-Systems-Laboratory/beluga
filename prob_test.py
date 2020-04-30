@@ -18,7 +18,7 @@ ocp.state('v', 'v_dot', 'm/s')
 ocp.control('u', 'm/s**2')
 
 
-# Define Function for Gravity
+# Define FunctionComponent for Gravity
 def gravity_model(alt):
     g = 1.625
     rm = 1.7371e6

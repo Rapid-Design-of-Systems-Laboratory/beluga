@@ -119,7 +119,7 @@ class SymDual(SymOCP, BaseDual):
 
         # # Control Options
         # for control_option in self.control_options:
-        #     control_option['controls'] = self.sympify(control_option['controls'])
+        #     control_option['controls'] = self.sympify_self(control_option['controls'])
 
         # # Algebraic Equations
         # for algebraic_equation in self.algebraic_equations:
