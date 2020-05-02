@@ -425,9 +425,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     for cont_num, continuation_step in enumerate(continuation_set):
         tempset = []
         for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
+            u = np.array([bvp.compute_u(sol.y[0], sol.dynamical_parameters, sol.const)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
+                u = np.vstack((u, bvp.compute_u(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
             sol.u = u
 
             tempset.append(ocp_map_inverse(sol))

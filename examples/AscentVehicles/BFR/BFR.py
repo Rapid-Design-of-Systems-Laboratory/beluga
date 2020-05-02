@@ -23,17 +23,17 @@ bfr_massflow1 = -615.8468*7
 Step 1
 """
 
-ocp = beluga.OCP()
+ocp = beluga.Problem(name='BFR')
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v_x', 'm') \
-   .state('y', 'v_y', 'm') \
-   .state('v_x', 'Thrust/mass*cos(theta) - D/mass*v_x/sqrt(v_x**2 + v_y**2)', 'm/s') \
-   .state('v_y', 'Thrust/mass*sin(theta) - D/mass*v_y/sqrt(v_x**2 + v_y**2) - g', 'm/s') \
-   .state('mass', 'mass_flow*eps', 'kg')
+ocp.state('x', 'v_x', 'm')
+ocp.state('y', 'v_y', 'm')
+ocp.state('v_x', 'Thrust/mass*cos(theta) - D/mass*v_x/sqrt(v_x**2 + v_y**2)', 'm/s')
+ocp.state('v_y', 'Thrust/mass*sin(theta) - D/mass*v_y/sqrt(v_x**2 + v_y**2) - g', 'm/s')
+ocp.state('mass', 'mass_flow*eps', 'kg')
 
 # Define controls
 ocp.control('theta', 'rad')
@@ -78,16 +78,15 @@ ocp.constant('v_y_f', 0, 'm/s')
 ocp.path_cost('1', '1')
 
 # Define constraints
-ocp.constraints() \
-    .initial_constraint('x - x_0', 'm') \
-    .initial_constraint('y - y_0', 'm') \
-    .initial_constraint('v_x - v_x_0', 'm/s') \
-    .initial_constraint('v_y - v_y_0', 'm/s') \
-    .initial_constraint('mass - mass_0', 'kg') \
-    .initial_constraint('t', 's') \
-    .terminal_constraint('y - y_f', 'm') \
-    .terminal_constraint('v_x - sqrt(mu/(y_f+Re))', 'm/s') \
-    .terminal_constraint('v_y - v_y_f', 'm/s')
+ocp.initial_constraint('x - x_0', 'm')
+ocp.initial_constraint('y - y_0', 'm')
+ocp.initial_constraint('v_x - v_x_0', 'm/s')
+ocp.initial_constraint('v_y - v_y_0', 'm/s')
+ocp.initial_constraint('mass - mass_0', 'kg')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('y - y_f', 'm')
+ocp.terminal_constraint('v_x - sqrt(mu/(y_f+Re))', 'm/s')
+ocp.terminal_constraint('v_y - v_y_f', 'm/s')
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 

@@ -9,16 +9,16 @@ import logging
 
 
 class CustomFunctionGenerator(object):
-    def __init__(self, base_func, name=None, arg_len=None, local_compiler=None, deriv_list=None, order=None,
+    def __init__(self, base_func, name=None, arg_types=None, local_compiler=None, deriv_list=None, order=None,
                  num_deriv_type='c_diff'):
 
-        if arg_len is None:
-            self.arg_len = len(inspect.signature(base_func).parameters)
+        if arg_types is None:
+            self.arg_types = ['scalar' for _ in inspect.signature(base_func).parameters]
         else:
-            self.arg_len = arg_len
+            self.arg_types = arg_types
 
         if order is None:
-            self.order = tuple([0] * self.arg_len)
+            self.order = tuple([0] * len(self.arg_types))
         else:
             self.order = order
 
@@ -29,7 +29,7 @@ class CustomFunctionGenerator(object):
         if type(base_func) is targets.registry.CPUDispatcher:
             self.base_func = base_func
         else:
-            self.base_func = jit_compile_func(base_func, self.arg_len, array_inputs=False)
+            self.base_func = jit_compile_func(base_func, self.arg_types, complex_numbers=False)
 
         if name is None:
             self.name = 'Sym(' + self.base_func.__name__ + ')'
@@ -53,7 +53,7 @@ class CustomFunctionMeta(Function):
         if type(base_func) is targets.registry.CPUDispatcher:
             obj.base_func = base_func
         else:
-            obj.base_func = jit_compile_func(base_func, len(arg_list), array_inputs=False)
+            obj.base_func = jit_compile_func(base_func, arg_list)
 
         return obj
 

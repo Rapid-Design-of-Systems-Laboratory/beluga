@@ -8,7 +8,6 @@ from beluga.optimlib import rashs_mult, recursive_sub, epstrig_path, utm_path, t
 import copy
 import sympy
 import logging
-from beluga.codegen.codegen import compile_control
 
 
 def f_momentum_shift(prob: Union[SymBVP, SymOCP], new_ind_name=None, in_place=False) -> \

@@ -3,26 +3,75 @@ import numpy as np
 import sympy
 from numba import njit, float64, complex128, errors
 from sympy import lambdify
-from collections.abc import Iterable
+from collections.abc import Iterable, Collection
 
 
-def jit_lambdify(args, sym_func, array_inputs=True, complex_numbers=False):
+def jit_lambdify(args, sym_func, complex_numbers=False):
 
     mods = ['numpy', 'math']
 
     tup_func = tuplefy(sym_func)
     lam_func = lambdify(args, tup_func, mods)
-    jit_func = jit_compile_func(lam_func, len(args),
-                                func_name=repr(sym_func), complex_numbers=complex_numbers, array_inputs=array_inputs)
+    jit_func = jit_compile_func(lam_func, args, func_name=repr(sym_func), complex_numbers=complex_numbers)
 
     return jit_func
 
 
-def jit_compile_func(func, num_args, func_name=None, complex_numbers=False, array_inputs=True):
+def jit_compile_func(func, args, func_name=None, complex_numbers=False):
+    if func_name is None:
+        if hasattr(func, 'name'):
+            func_name = func.name
+
+    if complex_numbers:
+        scalar_type = complex128
+        array_type = complex128[:]
+    else:
+        scalar_type = float64
+        array_type = float64[:]
+
+    # TODO Make more elegant
+    if not isinstance(args, Iterable):
+        args = [args]
+
+    arg_types = []
+    for arg in args:
+        if isinstance(arg, str):
+            if arg == 'scalar':
+                arg_types.append(scalar_type)
+            elif arg == 'array':
+                arg_types.append(array_type)
+            else:
+                logging.debug('{} not able to be specified. Type specified should be either scalar or array.\n'
+                              'Defaulting to "array" type'.format(arg))
+                arg_types.append(array_type)
+        else:
+            if isinstance(arg, Collection):
+                arg_types.append(array_type)
+            else:
+                arg_types.append(scalar_type)
+    arg_types = tuple(arg_types)
+
+    try:
+        jit_func = njit(arg_types)(func)
+        return jit_func
+
+    except errors.NumbaError as e:
+        logging.debug(e)
+        logging.debug('Cannot Compile FunctionComponent: {}'.format(func_name))
+        print(e)
+        return func
+
+    except TypeError:
+        logging.debug('Cannot Compile FunctionComponent: {} (probably NoneType)'.format(func_name))
+        return func
+
+
+def jit_compile_func_num_args(func, num_args, func_name=None, complex_numbers=False, array_inputs=True):
     if func_name is None:
         if hasattr(func, 'name'):
             func_name = func.__name__
 
+    # TODO Handle mixed singleton and array inputs
     try:
         if complex_numbers and array_inputs:
             arg_types = tuple([complex128[:] for _ in range(num_args)])
@@ -90,41 +139,5 @@ class LocalCompiler:
 
         tup_func = tuplefy(sym_func)
         lam_func = sympy.lambdify(args, tup_func, modules)
-        jit_func = jit_compile_func(lam_func, len(args), func_name=repr(sym_func),
-                                    complex_numbers=complex_numbers, array_inputs=array_inputs)
+        jit_func = jit_compile_func(lam_func, args, func_name=repr(sym_func), complex_numbers=complex_numbers)
         return jit_func
-
-
-def compile_control(control_options, hamiltonioan, controls, states, parameters, constants,
-                    local_compiler=LocalCompiler()):
-
-    num_options = len(control_options)
-
-    if num_options == 0:
-        def calc_u(_, __, ___):
-            return None
-
-    elif num_options == 1:
-        calc_u = local_compiler.lambdify([states, parameters, constants], control_options[0])
-
-    else:
-        compiled_options = local_compiler.lambdify([states, parameters, constants], control_options)
-        ham_func = local_compiler.lambdify([states, controls, parameters, constants], hamiltonioan)
-
-        def calc_u(x, p, k):
-
-            u_set = np.array(compiled_options(x, p, k))
-
-            u = u_set[0, :]
-            ham = ham_func(x, u_set[0, :], p, k)
-
-            for n in range(1, num_options):
-                ham_i = ham_func(x, u_set[n, :], p, k)
-                if ham_i < ham:
-                    u, ham = u_set[n, :], ham_i
-
-            return u
-
-    control_function = jit_compile_func(calc_u, 3, func_name='control_function')
-
-    return control_function

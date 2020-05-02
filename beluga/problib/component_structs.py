@@ -190,14 +190,14 @@ class FunctionStruct(CallableStruct):
     def __init__(self, name: str, func: Callable, units: str, arg_units: Collection,
                  dim_consistent=False, local_compiler=None):
 
-        self.num_args = len(arg_units)
+        self.arg_types = ['scalar' for _ in arg_units]
 
         if not dim_consistent:
             raise NotImplementedError('Dimensionally inconsistant functions not yet implemented')
         else:
-            self.func = jit_compile_func(func, self.num_args, array_inputs=False)
+            self.func = jit_compile_func(func, self.arg_types)
             self.sym = custom_functions.CustomFunctionGenerator(
-                self.func, name=name, arg_len=self.num_args, local_compiler=local_compiler)
+                self.func, name=name, arg_types=self.arg_types, local_compiler=local_compiler)
 
         super(FunctionStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent,
                                              local_compiler=local_compiler)
@@ -298,28 +298,28 @@ class PathConstraintStruct(DimensionalExpressionStruct):
         self.upper = self.upper.subs(old, new)
 
 
-lc = LocalCompiler()
-p = NamedDimensionalStruct('p', 'm', local_compiler=lc)
-k = Constant('k', 1., '1/s', local_compiler=lc)
-x = DynamicStruct('x', 'v', 'm', local_compiler=lc)
-quant = NamedExpressionStruct('v', 'k*p', local_compiler=lc)
-
-
-def simple_func(y):
-    return y**3
-
-
-f = FunctionStruct('f', simple_func, '1', ['1'], local_compiler=lc, dim_consistent=True)
-a = sympy.Symbol('a')
-fs = f.sym(a)
-
-tab_x = np.linspace(-1, 1, 100)
-tab_y = np.sin(tab_x)
-
-tab = TableStruct('tab', '1d_spline', tab_y, tab_x, '1', ['1'], dim_consistent=True, local_compiler=lc)
-
-s = SwitchStruct('mass_flow', ['md0', 'md1'], [['mass - mass_0f'], ['mass_0f - mass']], 'stage_tol',
-                 local_compiler=lc)
-
-p.sympify_self(), k.sympify_self(), x.sympify_self(), quant.sympify_self(), f.sympify_self(), tab.sympify_self(),
-s.sympify_self()
+# lc = LocalCompiler()
+# p = NamedDimensionalStruct('p', 'm', local_compiler=lc)
+# k = Constant('k', 1., '1/s', local_compiler=lc)
+# x = DynamicStruct('x', 'v', 'm', local_compiler=lc)
+# quant = NamedExpressionStruct('v', 'k*p', local_compiler=lc)
+#
+#
+# def simple_func(y):
+#     return y**3
+#
+#
+# f = FunctionStruct('f', simple_func, '1', ['1'], local_compiler=lc, dim_consistent=True)
+# a = sympy.Symbol('a')
+# fs = f.sym(a)
+#
+# tab_x = np.linspace(-1, 1, 100)
+# tab_y = np.sin(tab_x)
+#
+# tab = TableStruct('tab', '1d_spline', tab_y, tab_x, '1', ['1'], dim_consistent=True, local_compiler=lc)
+#
+# s = SwitchStruct('mass_flow', ['md0', 'md1'], [['mass - mass_0f'], ['mass_0f - mass']], 'stage_tol',
+#                  local_compiler=lc)
+#
+# p.sympify_self(), k.sympify_self(), x.sympify_self(), quant.sympify_self(), f.sympify_self(), tab.sympify_self(),
+# s.sympify_self()

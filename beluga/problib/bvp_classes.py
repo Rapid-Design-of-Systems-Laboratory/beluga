@@ -4,7 +4,7 @@ from copy import copy
 import sympy
 import numpy as np
 
-from beluga.codegen import jit_compile_func, compile_control
+from beluga.codegen import jit_compile_func
 from beluga import LocalCompiler
 from beluga.optimlib.special_functions import custom_functions, tables
 

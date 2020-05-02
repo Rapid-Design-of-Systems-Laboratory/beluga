@@ -57,18 +57,6 @@ def bvp_algorithm(name, **kwargs):
         # Raise exception if the loop completes without finding an algorithm by the given name
         raise ValueError('Algorithm ' + name + ' not found')
 
-def compile_bvp(ocp, s_bvp):
-    """
-    Compiles a BVP with codegen.
-
-    :param s_bvp:
-    :return:
-    """
-    f_bvp = FuncBVP(s_bvp, ocp.custom_functions())
-    ocp._scaling.initialize(s_bvp)
-    scaling = ocp._scaling
-
-    return f_bvp, scaling
 
 def guess_generator(*args, **kwargs):
     """
@@ -292,86 +280,7 @@ def solve(**kwargs):
     Main code
     """
 
-    f_ocp = ocp.sympify_problem().lambdify_
-    # breakpoint()
-    # s_ocp = SymOCP(prob)
-    # breakpoint()
-    # prob = FuncDual(s_bvp)
 
-    logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
-
-    if bvp is None:
-        bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)
-        logging.debug('Resulting BVP problem:')
-        logging.debug(str(bvp))
-        f_bvp, scaling = compile_bvp(ocp, bvp)
-
-    else:
-        if ocp_map is None or ocp_map_inverse is None:
-            raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
-        f_bvp, scaling = compile_bvp(ocp, bvp)
-
-    solinit = Trajectory()
-    solinit.const = np.array([s['value'] for s in bvp.get_constants()])
-
-    solinit = guess_generator.generate(f_bvp, solinit, ocp_map, ocp_map_inverse)
-
-    sol_temp = copy.deepcopy(solinit)
-
-    u = np.array([f_bvp.compute_control(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
-    for ii in range(len(sol_temp.t) - 1):
-        u = np.vstack((u, f_bvp.compute_control(sol_temp.y[ii + 1], sol_temp.dynamical_parameters, sol_temp.const)))
-    sol_temp.u = u
-    state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
-    traj = ocp_map_inverse(sol_temp)
-
-    initial_states = np.hstack((traj.y[0, :], traj.t[0]))
-    terminal_states = np.hstack((traj.y[-1, :], traj.t[-1]))
-
-    initial_bc = dict(zip(state_names, initial_states))
-    terminal_bc = dict(zip(state_names, terminal_states))
-
-    if steps is not None and initial_helper:
-        for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in [str(s['symbol']) for s in bvp.get_constants()]:
-                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bc0 + '_0')
-                solinit.const[jj] = initial_bc[bc0]
-
-        for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in [str(s['symbol']) for s in bvp.get_constants()]:
-                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
-
-    quad_names = [str(s['symbol']) for s in bvp.quads()]
-    n_quads = len(quad_names)
-    if n_quads > 0:
-        initial_quads = solinit.q[0, :]
-        terminal_quads = solinit.q[-1, :]
-        initial_bc = dict(zip(quad_names, initial_quads))
-        terminal_bc = dict(zip(quad_names, terminal_quads))
-        for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in [str(s['symbol']) for s in bvp.get_constants()]:
-                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bc0 + '_0')
-                solinit.const[ii] = initial_bc[bc0]
-
-        for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in [str(s['symbol']) for s in bvp.get_constants()]:
-                jj = [str(s['symbol']) for s in bvp.get_constants()].index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
-
-    """
-    Main continuation process
-    """
-    time0 = time.time()
-    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, f_bvp, pool, scaling, autoscale)
-    total_time = time.time() - time0
-    logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
-    bvp_algorithm.close()
-
-    """
-    Post processing and output
-    """
-    out = postprocess(continuation_set, f_ocp, f_bvp, ocp_map_inverse)
 
     if pool is not None:
         pool.close()
@@ -403,9 +312,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     for cont_num, continuation_step in enumerate(continuation_set):
         tempset = []
         for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
+            u = np.array([bvp.compute_u(sol.y[0], sol.dynamical_parameters, sol.const)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
+                u = np.vstack((u, bvp.compute_u(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
             sol.u = u
 
             tempset.append(ocp_map_inverse(sol))

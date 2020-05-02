@@ -98,15 +98,27 @@ ocp.path_constraint('theta_dot', 'rad/s', '-theta_max', 'theta_max', 'eps', meth
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
-ocp.sympify_self()
-ocp.apply_quantities()
-ocp.momentum_shift()
-ocp.epstrig()
-ocp.utm()
-ocp.rashs()
-ocp.dualize(method='traditional')
+ocp.map_ocp_to_bvp(control_method='differential', analytical_jacobian=False)
+ocp.compile_problem()
+
+# ocp.sympify_self()
+# ocp.apply_quantities()
+# ocp.momentum_shift()
+# ocp.epstrig()
+# ocp.utm()
+# ocp.rashs()
+# ocp.dualize(method='traditional')
 # ocp.algebraic_control_law()
-ocp.differential_control_law()
-ocp.squash_to_bvp()
-ocp.normalize_time()
-ocp.compute_analytical_jacobians()
+# # ocp.differential_control_law()
+# ocp.squash_to_bvp()
+# ocp.normalize_time()
+# ocp.compute_analytical_jacobians()
+
+t = 0.1
+y = np.ones(len(ocp.states))
+u = np.ones(len(ocp.controls))
+p = np.ones(len(ocp.parameters))
+p_con = np.ones(len(ocp.constraint_parameters))
+k = np.ones(len(ocp.constants))
+
+# ocp.functional_problem.compile_problem(ocp)
