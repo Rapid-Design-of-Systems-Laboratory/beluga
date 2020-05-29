@@ -28,7 +28,14 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwarg
 
     :keyword logging_level: The level at which logging is written to the output file.
     :keyword display_level: The level at which logging is displayed to stdout.
+    :keyword filename: Name of the log file. Default is `beluga.log`.
+    :keyword mode: File mode (mode='w' will overwrite the file each time).
+    :keyword encoding: Log file encoding.
+    :keyword delay: Delays opening log file until first call to emit().
     :return: None
+
+    .. seealso::
+            logging.FileHandler
     """
     # Suppress warnings
     warnings.filterwarnings("ignore")
