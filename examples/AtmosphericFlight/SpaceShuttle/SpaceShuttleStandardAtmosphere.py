@@ -99,15 +99,14 @@ ocp.constant('phi_f', 0, 'rad')
 ocp.terminal_cost('-phi**2 + fpa*(gam - gam_f)**2', 'rad**2')
 
 # Define constraints
-ocp.constraints() \
-    .initial('h-h_0', 'm') \
-    .initial('theta-theta_0', 'rad') \
-    .initial('phi-phi_0', 'rad') \
-    .initial('v-v_0', 'm/s') \
-    .initial('gam-gam_0', 'rad') \
-    .initial('psi-psi_0', 'rad') \
-    .initial('t', 's') \
-    .terminal('h-h_f', 'm')
+ocp.initial_constraint('h-h_0', 'm')
+ocp.initial_constraint('theta-theta_0', 'rad')
+ocp.initial_constraint('phi-phi_0', 'rad')
+ocp.initial_constraint('v-v_0', 'm/s')
+ocp.initial_constraint('gam-gam_0', 'rad')
+ocp.initial_constraint('psi-psi_0', 'rad')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('h-h_f', 'm')
 
 ocp.path_constraint('alpha', 'rad', lower='-amax', upper='amax', activator='eps', method='utm')
 ocp.path_constraint('bank', 'rad', lower='-bmax', upper='bmax', activator='eps', method='utm')

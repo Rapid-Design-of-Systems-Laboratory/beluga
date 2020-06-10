@@ -344,8 +344,8 @@ class FuncOCP(object):
         x_dot = [s['eom'] for s in self.sym_ocp.states()]
         self.deriv_func = lambdify_([independent, states, controls, params, consts], x_dot)
 
-        bc0 = [s['function'] for s in self.sym_ocp.constraints()['initial']]
-        bcf = [s['function'] for s in self.sym_ocp.constraints()['terminal']]
+        bc0 = [s['function'] for s in self.sym_ocp.get_initial_constraints()]
+        bcf = [s['function'] for s in self.sym_ocp.get_terminal_constraints()]
 
         self.bc_initial = lambdify_([independent, states, controls, params, consts], bc0)
         self.bc_terminal = lambdify_([independent, states, controls, params, consts], bcf)

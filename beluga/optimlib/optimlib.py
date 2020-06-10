@@ -499,7 +499,9 @@ def init_workspace(ocp):
     workspace['parameters'] = [k['name'] for k in ocp.parameters()]
     workspace['parameters_units'] = [k['unit'] for k in ocp.parameters()]
 
-    constraints = ocp.constraints()
+    constraints = dict()
+    constraints['initial'] = ocp.get_initial_constraints()
+    constraints['terminal'] = ocp.get_terminal_constraints()
     constraints['path'] = ocp.get_path_constraints()
 
     workspace['constraints'] = {c_type: [sympify(c_obj['function']) for c_obj in c_list]
@@ -1359,19 +1361,16 @@ def Dualize(ocp, method='indirect'):
 
     n_states = len(ocp.states())
 
-    terminal_bcs_to_aug = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
+    terminal_bcs_to_aug = [[bc['function'], bc['unit']] for bc in ocp.get_terminal_constraints() if
                            total_derivative(bc['function'], independent_variable) == 0]
-
-    terminal_bcs_time = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
+    terminal_bcs_time = [[bc['function'], bc['unit']] for bc in ocp.get_terminal_constraints() if
                          total_derivative(bc['function'], independent_variable) != 0]
-
-    ocp.constraints()['terminal'] = [{'function': bc[0], 'unit':bc[1]} for bc in terminal_bcs_to_aug]
 
     # TODO: The following can be cleaned up by rewriting `make_augmented_cost`
     constraints = dict()
     constraints_units = dict()
-    constraints['initial'] = [b['function'] for b in ocp.constraints()['initial']]
-    constraints_units['initial'] = [b['unit'] for b in ocp.constraints()['initial']]
+    constraints['initial'] = [b['function'] for b in ocp.get_initial_constraints()]
+    constraints_units['initial'] = [b['unit'] for b in ocp.get_initial_constraints()]
     constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
     constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
 

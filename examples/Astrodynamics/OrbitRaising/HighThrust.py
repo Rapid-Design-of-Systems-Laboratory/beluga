@@ -36,16 +36,15 @@ ocp.constant('mdot', 0.05, 'M/s')
 ocp.terminal_cost('-r^2', 'L')
 
 # Define constraints
-ocp.constraints() \
-    .initial('r-r_0', 'L') \
-    .initial('theta - theta_0', 'rad') \
-    .initial('v_r - v_r_0', 'L/s') \
-    .initial('v_theta - v_theta_0', 'L/s') \
-    .initial('m - m_0', 'M') \
-    .initial('t', 's') \
-    .terminal('v_r - v_r_f', 'L/s')  \
-    .terminal('v_theta - sqrt(mu / r)', 'L/s') \
-    .terminal('t - t_f', 's')
+ocp.initial_constraint('r-r_0', 'L')
+ocp.initial_constraint('theta - theta_0', 'rad')
+ocp.initial_constraint('v_r - v_r_0', 'L/s')
+ocp.initial_constraint('v_theta - v_theta_0', 'L/s')
+ocp.initial_constraint('m - m_0', 'M')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('v_r - v_r_f', 'L/s')
+ocp.terminal_constraint('v_theta - sqrt(mu / r)', 'L/s')
+ocp.terminal_constraint('t - t_f', 's')
 
 ocp.scale(L='r', s='r/v_theta', M='m', rad=1)
 

@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 '''
 Begin the planar portion of the solution process.
 '''
-ocp = beluga.OCP('planarHypersonic')
+ocp = beluga.OCP()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -56,14 +56,13 @@ ocp.constant('theta_f', 0, 'rad')
 ocp.terminal_cost('-v^2', 'm^2/s^2')
 
 # Define constraints
-ocp.constraints() \
-    .initial('h-h_0', 'm') \
-    .initial('theta', 'rad') \
-    .initial('v-v_0', 'm/s') \
-    .initial('gam-gam_0', 'rad') \
-    .initial('t', 's') \
-    .terminal('h-h_f', 'm')  \
-    .terminal('theta-theta_f', 'rad')
+ocp.initial_constraint('h-h_0', 'm')
+ocp.initial_constraint('theta', 'rad')
+ocp.initial_constraint('v-v_0', 'm/s')
+ocp.initial_constraint('gam-gam_0', 'rad')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('h-h_f', 'm')
+ocp.terminal_constraint('theta-theta_f', 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
@@ -120,7 +119,7 @@ sol = cont_planar[-1][-1]
 '''
 Begin the 3 dof portion of the solution process.
 '''
-ocp_2 = beluga.OCP('hypersonic3DOF')
+ocp_2 = beluga.OCP()
 
 # Define independent variables
 ocp_2.independent('t', 's')
@@ -149,17 +148,16 @@ ocp_2.control('alpha', 'rad') \
 ocp_2.terminal_cost('-v^2', 'm^2/s^2')
 
 # Define constraints
-ocp_2.constraints() \
-    .initial('h-h_0', 'm') \
-    .initial('theta-theta_0', 'rad') \
-    .initial('phi-phi_0', 'rad') \
-    .initial('v-v_0', 'm/s') \
-    .initial('gam-gam_0', 'rad') \
-    .initial('psi-psi_0', 'rad') \
-    .initial('t', 's') \
-    .terminal('h-h_f', 'm') \
-    .terminal('theta-theta_f', 'rad') \
-    .terminal('phi-phi_f', 'rad')
+ocp.initial_constraint('h-h_0', 'm')
+ocp.initial_constraint('theta-theta_0', 'rad')
+ocp.initial_constraint('phi-phi_0', 'rad')
+ocp.initial_constraint('v-v_0', 'm/s')
+ocp.initial_constraint('gam-gam_0', 'rad')
+ocp.initial_constraint('psi-psi_0', 'rad')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('h-h_f', 'm')
+ocp.terminal_constraint('theta-theta_f', 'rad')
+ocp.terminal_constraint('phi-phi_f', 'rad')
 
 # Define constants
 ocp_2.constant('mu', 3.986e5*1e9, 'm**3/s**2')  # Gravitational parameter, m**3/s**2

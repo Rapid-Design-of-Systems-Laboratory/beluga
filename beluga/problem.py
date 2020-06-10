@@ -38,7 +38,6 @@ class OCP(BVP):
 
         self._systems = {'default': {}}  # Dynamic system definitions
         self._properties = {}  # Problem properties
-        self._constraints = ConstraintList()
 
         self._scaling = Scaling()
 
@@ -113,6 +112,25 @@ class OCP(BVP):
         """
         temp = self._properties.get('independent', None)
         return temp
+    
+    def get_initial_constraints(self):
+        r"""Gets the initial constraints for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.initial_constraint('x', 'm')
+        initial_constraints: [{'function': x, 'unit': m, 'lower': None, 'upper': None, 'activator': None, 'method': None}]
+        >>> sigma.get_initial_constraints()
+        [{'function': x, 'unit': m, 'lower': None, 'upper': None, 'activator': None, 'method': None}]
+
+        .. seealso::
+            initial_constraint
+
+        """
+        return self._properties.get('initial_constraints', [])
 
     def get_initial_cost(self):
         r"""Gets the initial cost of the OCP.
@@ -206,6 +224,25 @@ class OCP(BVP):
         """
         temp = self._properties.get('switches', [])
         return temp
+    
+    def get_terminal_constraints(self):
+        r"""Gets the terminal constraints for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.terminal_constraint('x', 'm')
+        terminal_constraints: [{'function': x, 'unit': m, 'lower': None, 'upper': None, 'activator': None, 'method': None}]
+        >>> sigma.get_terminal_constraints()
+        [{'function': x, 'unit': m, 'lower': None, 'upper': None, 'activator': None, 'method': None}]
+
+        .. seealso::
+            terminal_constraint
+
+        """
+        return self._properties.get('terminal_constraints', [])
 
     def get_terminal_cost(self):
         r"""Gets the terminal cost of the OCP.
@@ -250,6 +287,50 @@ class OCP(BVP):
 
         temp = {'symbol': symbol, 'unit': unit}
         self._properties['independent'] = temp
+        return self
+    
+    def initial_constraint(self, function, unit, lower=None, upper=None, activator=None, method=None):
+        r"""Defines an initial constraint for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.initial_constraint('x', 'm')
+        initial_constraints: [{'function': x, 'unit': m, 'lower': None, 'upper': None, 'activator': None, 'method': None}]
+
+        .. seealso::
+            get_initial_constraints
+
+        """
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+        if isinstance(lower, str):
+            lower = sympify(lower)
+        if isinstance(upper, str):
+            upper = sympify(upper)
+        if isinstance(activator, str):
+            activator = sympify(activator)
+
+        if not isinstance(function, Expr):
+            raise ValueError
+        if not isinstance(unit, Expr):
+            raise ValueError
+        if not (isinstance(lower, Expr) or lower is None):
+            raise ValueError
+        if not (isinstance(upper, Expr) or upper is None):
+            raise ValueError
+        if not (isinstance(activator, Expr) or activator is None):
+            raise ValueError
+        if not (isinstance(method, str) or method is None):
+            raise ValueError
+        
+        temp = self._properties.get('initial_constraints', [])
+        temp.append({'function': function, 'unit': unit, 'lower': lower, 'upper': upper, 'activator': activator, 'method': method})
+        self._properties['initial_constraints'] = temp
         return self
 
     def initial_cost(self, function, unit):
@@ -408,6 +489,50 @@ class OCP(BVP):
         temp.append({'symbol': symbol, 'function': functions, 'conditions': conditions, 'tolerance': tolerance})
         self._properties['switches'] = temp
         return self
+    
+    def terminal_constraint(self, function, unit, lower=None, upper=None, activator=None, method=None):
+        r"""Defines a terminal constraint for the OCP.
+
+        Examples
+        ========
+
+        >>> from beluga.problem import OCP
+        >>> sigma = OCP()
+        >>> sigma.terminal_constraint('x', 'm')
+        terminal_constraints: [{'function': x, 'unit': m, 'lower': None, 'upper': None, 'activator': None, 'method': None}]
+
+        .. seealso::
+            get_terminal_constraints
+
+        """
+        if isinstance(function, str):
+            function = sympify(function)
+        if isinstance(unit, str):
+            unit = sympify(unit)
+        if isinstance(lower, str):
+            lower = sympify(lower)
+        if isinstance(upper, str):
+            upper = sympify(upper)
+        if isinstance(activator, str):
+            activator = sympify(activator)
+
+        if not isinstance(function, Expr):
+            raise ValueError
+        if not isinstance(unit, Expr):
+            raise ValueError
+        if not (isinstance(lower, Expr) or lower is None):
+            raise ValueError
+        if not (isinstance(upper, Expr) or upper is None):
+            raise ValueError
+        if not (isinstance(activator, Expr) or activator is None):
+            raise ValueError
+        if not (isinstance(method, str) or method is None):
+            raise ValueError
+        
+        temp = self._properties.get('terminal_constraints', [])
+        temp.append({'function': function, 'unit': unit, 'lower': lower, 'upper': upper, 'activator': activator, 'method': method})
+        self._properties['terminal_constraints'] = temp
+        return self
 
     def terminal_cost(self, function, unit):
         r"""Sets the terminal cost of the OCP.
@@ -510,14 +635,6 @@ class OCP(BVP):
     parameters = partialmethod(get_property, property_name='parameters')
     custom_functions = partialmethod(get_property, property_name='custom_functions')
 
-    def constraints(self):
-        """
-        Returns the ConstraintList object containing alias methods
-        This function is purely for aesthetic purposes while method chaining
-        in the input file
-        """
-        return self._constraints
-
     def scale(self, **scale_mappings):
         """Defines scaling for dimensional units in the problem."""
         for unit, scale_expr in scale_mappings.items():
@@ -530,77 +647,6 @@ class OCP(BVP):
         return str({'properties': self._properties,
                     'constraints': self._constraints,
                     'continuation': str(self.continuation)})
-
-
-class ConstraintList(dict):
-    """
-    Class containing information for the constraints on an optimal control problem.
-
-    Valid parameters and their arguments are in the following table.
-
-    +--------------------------------+----------------------------------------+----------------------------------------+
-    | Valid parameters               | arguments                              | datatype                               |
-    +================================+========================================+========================================+
-    | initial                        | (function, unit)                       | (string, string)                       |
-    +--------------------------------+----------------------------------------+----------------------------------------+
-    | terminal                       | (function, unit)                       | (string, string)                       |
-    +--------------------------------+----------------------------------------+----------------------------------------+
-    | path                           | (function, unit, lb, ub, activator)    | (string, string, str/num, str/num,     |
-    |                                |                                        |                               string)  |
-    +--------------------------------+----------------------------------------+----------------------------------------+
-
-    """
-    # def __new__(cls, *args, **kwargs):
-    #     obj = super(ConstraintList, cls).__new__(cls, *args, **kwargs)
-    #     return obj
-
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-
-    def add_constraint(self, *args, constraint_type='', constraint_args=None, **kwargs):
-        """
-        Adds constraint of the specified type
-        Returns reference to self.constraint_aliases for chaining
-        """
-
-        c_list = self.get(constraint_type, [])
-
-        if constraint_args is None:
-            constraint_args = list()
-
-        constraint = _combine_args_kwargs(constraint_args, args, kwargs)
-        c_list.append(constraint)
-        self[constraint_type] = c_list
-
-        return self
-
-    def initial(self, function, unit):
-        if not isinstance(function, str):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-
-        temp = self.get('initial', [])
-        temp.append({'function': sympify(function), 'unit': sympify(unit)})
-        self['initial'] = temp
-        return self
-
-    def terminal(self, function, unit):
-        if not isinstance(function, str):
-            raise ValueError
-        if not isinstance(unit, str):
-            raise ValueError
-
-        temp = self.get('terminal', [])
-        temp.append({'function': sympify(function), 'unit': sympify(unit)})
-        self['terminal'] = temp
-        return self
-
-    # def path(self, function, unit, lower, upper, activator, method):
-    #
-
-    # Aliases for defining constraints of different types
-    constraint_args = ('expr', 'unit')
 
 
 BVP = namedtuple('BVP', 'deriv_func bc_func compute_control path_constraints')
