@@ -647,6 +647,9 @@ class OCP(BVP):
         return str({'properties': self._properties,
                     'constraints': self._constraints,
                     'continuation': str(self.continuation)})
+    
+    def constraints(self):
+        raise NotImplementedError('constraints() object has been removed. Use .initial_constraint() and .terminal_constraint() instead.')
 
 
 BVP = namedtuple('BVP', 'deriv_func bc_func compute_control path_constraints')
