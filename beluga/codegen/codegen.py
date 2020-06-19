@@ -1,8 +1,8 @@
 import logging
-import numpy as np
 import sympy
 from numba import njit, float64, complex128, errors
 from sympy import lambdify
+import numpy as np
 from collections.abc import Iterable, Collection
 
 
@@ -129,7 +129,7 @@ class LocalCompiler:
         return self.func_locals
 
     # noinspection PyTypeChecker
-    def lambdify(self, args, sym_func, additional_modules=None, array_inputs=True, complex_numbers=False):
+    def lambdify(self, args, sym_func, additional_modules=None, complex_numbers=False):
 
         default_modules = ['numpy', 'math']
         if additional_modules is None:
@@ -141,3 +141,34 @@ class LocalCompiler:
         lam_func = sympy.lambdify(args, tup_func, modules)
         jit_func = jit_compile_func(lam_func, args, func_name=repr(sym_func), complex_numbers=complex_numbers)
         return jit_func
+
+
+def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify):
+
+    num_options = len(control_options)
+
+    if num_options == 0:
+        return None
+
+    elif num_options == 1:
+        compiled_option = lambdify_func(args, control_options[0])
+
+        def calc_u(_t, _y, _p, _k):
+            return np.array(compiled_option(_t, _y, _p, _k))
+
+    else:
+        compiled_options = lambdify_func(args, control_options)
+
+        def calc_u(_t, _y, _p, _k):
+            u_set = np.array(compiled_options(_t, _y, _p, _k))
+
+            u = u_set[0, :]
+            ham = ham_func(_t, _y, u, _p, _k)
+            for n in range(1, num_options):
+                ham_i = ham_func(_t, _y, u_set[n, :], _p, _k)
+                if ham_i < ham:
+                    u = u_set[n, :]
+
+            return u
+
+    return jit_compile_func(calc_u, args, func_name='control_function')

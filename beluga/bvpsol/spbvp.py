@@ -39,7 +39,7 @@ class spbvp(BaseAlgorithm):
             nquads = 0
             self.quadrature_function = return_nil
 
-        ndyn = solinit.dynamical_parameters.size
+        ndyn = solinit.p.size
         nnondyn = solinit.nondynamical_parameters.size
 
         def _fun(t, y, params=np.array([]), const=solinit.const):
@@ -83,11 +83,11 @@ class spbvp(BaseAlgorithm):
 
         if nquads > 0:
             opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T,
-                            np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
+                            np.hstack((solinit.p, solinit.nondynamical_parameters)),
                             max_nodes=self.max_nodes, fun_jac=_fun_jac, bc_jac=_bc_jac)
         else:
             opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T,
-                            np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
+                            np.hstack((solinit.p, solinit.nondynamical_parameters)),
                             max_nodes=self.max_nodes, fun_jac=_fun_jac, bc_jac=_bc_jac)
 
         sol = Trajectory(solinit)

@@ -4,7 +4,7 @@ Base functions shared by all optimization methods.
 
 
 from beluga.utils import sympify, recursive_sub
-from beluga.codegen import jit_lambdify
+from beluga.codegen import jit_lambdify, LocalCompiler, jit_compile_func, compile_control
 import copy
 import numpy as np
 import sympy
@@ -506,3 +506,367 @@ def noether(prob, quantity):
             raise NotImplementedError
 
         return g, unit
+
+
+def identity_map(gamma):
+    return gamma
+
+
+def generate_momentumshift_maps():
+
+    def gamma_map(gamma):
+        gamma = copy.deepcopy(gamma)
+        if len(gamma.dual_t) == 0:
+            gamma.dual_t = np.zeros_like(gamma.t)
+
+        gamma.y = np.column_stack((gamma.y, gamma.t))
+        # gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
+        # gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
+
+        if len(gamma.dual) == 0:
+            gamma.dual = np.zeros_like(gamma.y)
+
+        gamma.dual = np.column_stack((gamma.dual, gamma.dual_t))
+
+        return gamma
+
+    def gamma_map_inverse(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.t = gamma.y[:, -1]
+        gamma.dual_t = gamma.dual[:, -1]
+        gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
+        gamma.dual = np.delete(gamma.dual, np.s_[-1:], axis=1)
+        # gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
+        return gamma
+
+    return gamma_map, gamma_map_inverse
+
+
+def generate_scaletime_map():
+
+    def gamma_map(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.p = np.hstack((gamma.p, gamma.t[-1] - gamma.t[0]))
+        gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
+        return gamma
+
+    def gamma_map_inverse(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.t = gamma.t * gamma.p[-1]
+        gamma.p = np.delete(gamma.p, np.s_[-1:])
+        return gamma
+
+    return gamma_map, gamma_map_inverse
+
+
+def generate_epstrig_map(prob, control_idx, lower_expr, upper_expr,
+                         ind_var_sym, state_syms, parameter_syms, constant_syms,
+                         local_compiler: LocalCompiler = None):
+    # TODO Make this more efficient and elegant
+
+    args = [ind_var_sym, state_syms, parameter_syms, constant_syms]
+
+    if local_compiler is None:
+        local_compiler = LocalCompiler()
+    else:
+        local_compiler = local_compiler
+
+    prob.map_func = None
+    prob.inv_map_func = None
+
+    u_trig = sympy.Symbol('_u_trig')
+
+    u_min = lower_expr
+    u_max = upper_expr
+
+    u_range = u_max - u_min
+    u_offset = (u_max + u_min) / 2
+
+    u_expr = u_range * sympy.sin(u_trig) + u_offset
+
+    map_func = local_compiler.lambdify([u_trig] + args, u_expr)
+
+    u_trig = sympy.Symbol('_u_trig')
+
+    u_range = upper_expr - lower_expr
+    u_offset = (upper_expr + lower_expr) / 2
+
+    u_expr = u_range * sympy.sin(u_trig) + u_offset
+
+    inv_map_func = local_compiler.lambdify([u_trig] + args, u_expr)
+
+    def gamma_map(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.u[:, control_idx] = map_func(gamma.u[:, control_idx], gamma.t, gamma.y[:], gamma.p, gamma.k)
+        return gamma
+
+    def gamma_map_inverse(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.u[:, control_idx] = inv_map_func(gamma.u[:, control_idx], gamma.t, gamma.y[:], gamma.p, gamma.k)
+        return gamma
+
+    return gamma_map, gamma_map_inverse
+
+
+def generate_dualize_map(num_states, num_p_con):
+
+    def gamma_map(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.y = np.column_stack((gamma.y, gamma.dual))
+        gamma.dual = np.array([])
+        gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(num_p_con)))
+        return gamma
+
+    def gamma_map_inverse(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma.dual = gamma.y[:, -num_states:]
+        gamma.y = gamma.y[:, :num_states]
+        gamma.nondynamical_parameters = gamma.nondynamical_parameters[:-num_p_con]
+        return gamma
+
+    return gamma_map, gamma_map_inverse
+
+
+def generate_algebraic_control_map(prob):
+
+    _args = \
+        [prob.independent_variable.sym, prob.extract_syms(prob.states), prob.extract_syms(prob.costates),
+         prob.extract_syms(prob.parameters), prob.extract_syms(prob.constants)]
+
+    _args_w_control = copy.copy(_args)
+    _args_w_control.insert(3, prob.extract_syms(prob.controls))
+
+    ham_func = prob.lambdify(_args_w_control, prob.hamiltonian.expr)
+
+    compute_u = compile_control(prob.control_law, _args, ham_func, lambdify_func=prob.lambdify)
+
+    def gamma_map(gamma):
+        gamma = copy.deepcopy(gamma)
+        return gamma
+
+    def gamma_map_inverse(gamma):
+        gamma = copy.deepcopy(gamma)
+        gamma = np.array([compute_u(_t, _y, _lam, _p, _k) for _t, _y, _lam, _p, _k
+                          in zip(gamma.t, gamma.y.T, gamma.duallam.T, gamma.p, gamma.k)])
+        return gamma
+
+    return gamma_map, gamma_map_inverse
+
+
+def generate_differential_control_map(bvp, method='indirect'):
+
+    def gamma_map(gamma, n=n_states, m=n_controls):
+        gamma = copy.deepcopy(gamma)
+        if len(gamma.dual_u) == 0:
+            gamma.dual_u = np.zeros_like(gamma.u)
+
+        if method == 'indirect':
+            gamma.y = np.column_stack((gamma.y[:, :int(n / 2)], gamma.u, gamma.y[:, -int(n / 2):]))
+        elif method == 'diffyg':
+            gamma.y = np.column_stack((gamma.y[:, :int(n / 2)], gamma.u, gamma.y[:, -int(n / 2):], gamma.dual_u))
+        gamma.u = np.array([]).reshape((n, 0))
+        return gamma
+
+    def gamma_map_inverse(gamma, n=n_states, m=n_controls):
+        gamma = copy.deepcopy(gamma)
+        if method == 'indirect':
+            y1h = gamma.y[:, :int(n / 2)]
+            gamma.u = gamma.y[:, int(n / 2):int(n / 2)+m]
+            y2h = gamma.y[:, int(n/2)+m:n+m]
+            gamma.y = np.hstack((y1h, y2h))
+        elif method == 'diffyg':
+            y1h = gamma.y[:, :int(n / 2)]
+            gamma.u = gamma.y[:, int(n / 2):int(n / 2) + m]
+            y2h = gamma.y[:, int(n / 2) + m:n + m]
+            gamma.dual_u = gamma.y[:, -m:]
+            gamma.y = np.hstack((y1h, y2h))
+        return gamma
+
+    return bvp, gamma_map, gamma_map_inverse
+
+
+# def F_MF(bvp, com_index):
+#     r"""
+#
+#     :param bvp:
+#     :param com_index:
+#     :return:
+#     """
+#     bvp = copy.deepcopy(bvp)
+#     # hamiltonian = bvp.get_constants_of_motion()[0]['function']
+#     # O = bvp.the_omega()
+#     # X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
+#
+#     com = bvp.get_constants_of_motion()[com_index]
+#
+#     # states = [str(s['symbol']) for s in bvp.states()]
+#     # parameters = [str(s['symbol']) for s in bvp.parameters()]
+#     # constants = [str(s['symbol']) for s in bvp.get_constants()]
+#     # fn_p = make_jit_fn(states + parameters + constants, str(com['function']))
+#
+#     states = [(s['symbol']) for s in bvp.states()]
+#     parameters = [(s['symbol']) for s in bvp.parameters()]
+#     constants = [(s['symbol']) for s in bvp.get_constants()]
+#     fn_p = jit_lambdify([states, parameters, constants], com['function'])
+#
+#     atoms = com['function'].atoms()
+#     atoms2 = set()
+#     for a in atoms:
+#         if isinstance(a, Symbol) and (a not in {s['symbol'] for s in bvp.parameters() + bvp.get_constants()}):
+#             atoms2.add(a)
+#
+#     atoms = atoms2
+#
+#     solve_for_p = sympy.solve(com['function'] - com['symbol'], atoms, dict=True, simplify=False)
+#
+#     if len(solve_for_p) > 1:
+#         raise ValueError
+#
+#     for parameter in solve_for_p[0].keys():
+#         the_symmetry, symmetry_unit = noether(bvp, com)
+#         replace_p = parameter
+#         for ii, s in enumerate(bvp.states()):
+#             if s['symbol'] == parameter:
+#                 parameter_index = ii
+#                 bvp.parameter(com['symbol'], com['unit'])
+#
+#     symmetry_index = parameter_index - int(len(bvp.states())/2)
+#
+#     # Derive the quad
+#     # Evaluate int(pdq) = int(PdQ)
+#     n = len(bvp.quads())
+#     symmetry_symbol = Symbol('_q' + str(n))
+#     _lhs = com['function']/com['symbol']*the_symmetry
+#     lhs = 0
+#     for ii, s in enumerate(bvp.states()):
+#         lhs += sympy.integrate(_lhs[ii], s['symbol'])
+#
+#     lhs, _ = recursive_sub(lhs, solve_for_p[0])
+#
+#     # states = [str(s['symbol']) for s in bvp.states()]
+#     # parameters = [str(s['symbol']) for s in bvp.parameters()]
+#     # constants = [str(s['symbol']) for s in bvp.get_constants()]
+#     # the_p = [str(com['symbol'])]
+#     # fn_q = make_jit_fn(states + parameters + constants, str(lhs))
+#
+#     states = [s['symbol'] for s in bvp.states()]
+#     parameters = [s['symbol'] for s in bvp.parameters()]
+#     constants = [s['symbol'] for s in bvp.get_constants()]
+#     the_p = [com['symbol']]
+#     fn_q = jit_lambdify([states, parameters, constants], lhs)
+#
+#     replace_q = bvp.states()[symmetry_index]['symbol']
+#     solve_for_q = sympy.solve(lhs - symmetry_symbol, replace_q, dict=True, simplify=False)
+#
+#     # Evaluate X_H(pi(., c)), pi = O^sharp
+#     O = bvp.the_omega().tomatrix()
+#     rvec = sympy.Matrix(([0]*len(bvp.states())))
+#     for ii, s1 in enumerate(bvp.states()):
+#         for jj, s2 in enumerate(bvp.states()):
+#             rvec[ii] += O[ii,jj]*total_derivative(com['function'], s2['symbol'])
+#
+#     symmetry_eom = 0
+#     for ii, s in enumerate(bvp.states()):
+#         symmetry_eom += s['eom']*rvec[ii]
+#
+#     # TODO: Figure out how to find units of the quads. This is only works in some specialized cases.
+#     symmetry_unit = bvp.states()[symmetry_index]['unit']
+#
+#     bvp.quad(symmetry_symbol, symmetry_eom, symmetry_unit)
+#
+#     for ii, s in enumerate(bvp.states()):
+#         s['eom'], _ = recursive_sub(s['eom'], solve_for_p[0])
+#         s['eom'], _ = recursive_sub(s['eom'], solve_for_q[0])
+#
+#     for ii, s in enumerate(bvp.all_bcs()):
+#         s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
+#         s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
+#
+#     for ii, law in enumerate(bvp._control_law):
+#         for jj, symbol in enumerate(law.keys()):
+#             bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_p[0])
+#             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
+#             bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_q[0])
+#             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
+#
+#     for ii, s in enumerate(bvp.get_constants_of_motion()):
+#         if ii != com_index:
+#             s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
+#             s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
+#
+#     O = bvp.the_omega().tomatrix()
+#     if parameter_index > symmetry_index:
+#         del bvp.states()[parameter_index]
+#         del bvp.states()[symmetry_index]
+#         O.row_del(parameter_index)
+#         O.col_del(parameter_index)
+#         O.row_del(symmetry_index)
+#         O.col_del(symmetry_index)
+#     else:
+#         del bvp.states()[symmetry_index]
+#         del bvp.states()[parameter_index]
+#         O.row_del(symmetry_index)
+#         O.col_del(symmetry_index)
+#         O.row_del(parameter_index)
+#         O.col_del(parameter_index)
+#
+#     bvp.omega(sympy.MutableDenseNDimArray(O))
+#
+#     del bvp.get_constants_of_motion()[com_index]
+#
+#     # states = [str(s['symbol']) for s in bvp.states()]
+#     # quads = [str(s['symbol']) for s in bvp.quads()]
+#     # parameters = [str(s['symbol']) for s in bvp.parameters()]
+#     # constants = [str(s['symbol']) for s in bvp.get_constants()]
+#     # fn_q_inv = make_jit_fn(states + quads + parameters + constants, str(solve_for_q[0][replace_q]))
+#
+#     states = [s['symbol'] for s in bvp.states()]
+#     quads = [s['symbol'] for s in bvp.quads()]
+#     parameters = [s['symbol'] for s in bvp.parameters()]
+#     constants = [s['symbol'] for s in bvp.get_constants()]
+#     fn_q_inv = jit_lambdify([states, quads, parameters, constants], solve_for_q[0][replace_q])
+#
+#     fn_p_inv = jit_lambdify([states, parameters, constants], solve_for_p[0][replace_p])
+#
+#     def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q=fn_q, fn_p=fn_p):
+#         gamma = copy.deepcopy(gamma)
+#         cval = fn_p(gamma.y[0], gamma.p, gamma.const)
+#         qval = np.ones_like(gamma.t)
+#         gamma.p = np.hstack((gamma.p, cval))
+#         for ii, t in enumerate(gamma.t):
+#             qval[ii] = fn_q(gamma.y[ii], gamma.p, gamma.const)
+#
+#         if parameter_index > symmetry_index:
+#             gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
+#             gamma.y = np.delete(gamma.y, np.s_[symmetry_index], axis=1)
+#         else:
+#             gamma.y = np.delete(gamma.y, np.s_[symmetry_index], axis=1)
+#             gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
+#
+#         gamma.q = np.column_stack((gamma.q, qval))
+#         return gamma
+#
+#     def gamma_map_inverse(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q_inv=fn_q_inv, fn_p_inv=fn_p_inv):
+#         gamma = copy.deepcopy(gamma)
+#         qinv = np.ones_like(gamma.t)
+#         pinv = np.ones_like(gamma.t)
+#         for ii, t in enumerate(gamma.t):
+#             qinv[ii] = fn_q_inv(gamma.y[ii], gamma.q[ii], gamma.p, gamma.const)
+#             pinv[ii] = fn_p_inv(gamma.y[ii], gamma.p, gamma.const)
+#         # breakpoint()
+#         cval = gamma.p[-1]
+#         state = np.ones_like(gamma.t)*cval
+#         state = pinv
+#         qval = qinv
+#         if parameter_index > symmetry_index:
+#             gamma.y = np.column_stack((gamma.y[:, :symmetry_index], qval, gamma.y[:, symmetry_index:]))
+#             gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))
+#         else:
+#             gamma.y = np.column_stack((gamma.y[:, :parameter_index], state, gamma.y[:, parameter_index:]))
+#             gamma.y = np.column_stack((gamma.y[:, :symmetry_index], qval, gamma.y[:, symmetry_index:]))
+#
+#         gamma.q = np.delete(gamma.q, np.s_[-1], axis=1)
+#         gamma.p = gamma.p[:-1]
+#         return gamma
+#
+#     return bvp, gamma_map, gamma_map_inverse

@@ -1067,4 +1067,4 @@ def test_spbvp_3():
     solinit.dynamical_parameters = np.array([1])
     solinit.const = np.array([])
     out = algo.solve(solinit)['sol']
-    assert abs(out.dynamical_parameters - 2) < tol
+    assert abs(out.p - 2) < tol

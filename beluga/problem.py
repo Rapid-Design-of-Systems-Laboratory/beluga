@@ -700,10 +700,10 @@ class GuessGenerator(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.ones(len(solinit.dynamical_parameters))
-        elif len(param_guess) < len(solinit.dynamical_parameters):
-            param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
-        elif len(param_guess) > len(solinit.dynamical_parameters):
+            param_guess = np.ones(len(solinit.p))
+        elif len(param_guess) < len(solinit.p):
+            param_guess += np.ones(len(solinit.p) - len(param_guess))
+        elif len(param_guess) > len(solinit.p):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
@@ -717,13 +717,13 @@ class GuessGenerator(object):
         solinit.dual = np.array([d0, d0])
         solinit.q = np.array([q0, q0])
         solinit.u = np.array([u0, u0])
-        solinit.dynamical_parameters = param_guess
+        solinit.p = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
         solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
-                      sol.dynamical_parameters, sol.const)
+                      sol.p, sol.const)
         solout = copy.deepcopy(solivp)
-        solout.dynamical_parameters = sol.dynamical_parameters
+        solout.p = sol.p
         solout.nondynamical_parameters = sol.nondynamical_parameters
         solout.const = sol.const
         elapsed_time = time.time() - time0
@@ -779,10 +779,10 @@ class GuessGenerator(object):
 
         # Guess zeros for missing parameters
         if param_guess is None:
-            param_guess = np.ones(len(solinit.dynamical_parameters))
-        elif len(param_guess) < len(solinit.dynamical_parameters):
-            param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
-        elif len(param_guess) > len(solinit.dynamical_parameters):
+            param_guess = np.ones(len(solinit.p))
+        elif len(param_guess) < len(solinit.p):
+            param_guess += np.ones(len(solinit.p) - len(param_guess))
+        elif len(param_guess) > len(solinit.p):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
@@ -795,7 +795,7 @@ class GuessGenerator(object):
         solinit.dual = np.array([d0, d0, d0, d0])
         solinit.q = np.array([q0, q0, q0, q0])
         solinit.u = np.array([u0, u0, u0, u0])
-        solinit.dynamical_parameters = param_guess
+        solinit.p = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
         solout = copy.deepcopy(sol)

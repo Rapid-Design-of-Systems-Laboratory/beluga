@@ -1192,14 +1192,14 @@ def F_scaletime(bvp):
 
     def gamma_map(gamma):
         gamma = copy.deepcopy(gamma)
-        gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
+        gamma.p = np.hstack((gamma.p, gamma.t[-1] - gamma.t[0]))
         gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
         return gamma
 
     def gamma_map_inverse(gamma):
         gamma = copy.deepcopy(gamma)
-        gamma.t = gamma.t * gamma.dynamical_parameters[-1]
-        gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
+        gamma.t = gamma.t * gamma.p[-1]
+        gamma.p = np.delete(gamma.p, np.s_[-1:])
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse
@@ -1793,11 +1793,11 @@ def F_MF(bvp, com_index):
 
     def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q=fn_q, fn_p=fn_p):
         gamma = copy.deepcopy(gamma)
-        cval = fn_p(gamma.y[0], gamma.dynamical_parameters, gamma.const)
+        cval = fn_p(gamma.y[0], gamma.p, gamma.const)
         qval = np.ones_like(gamma.t)
-        gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, cval))
+        gamma.p = np.hstack((gamma.p, cval))
         for ii, t in enumerate(gamma.t):
-            qval[ii] = fn_q(gamma.y[ii], gamma.dynamical_parameters, gamma.const)
+            qval[ii] = fn_q(gamma.y[ii], gamma.p, gamma.const)
 
         if parameter_index > symmetry_index:
             gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
@@ -1814,10 +1814,10 @@ def F_MF(bvp, com_index):
         qinv = np.ones_like(gamma.t)
         pinv = np.ones_like(gamma.t)
         for ii, t in enumerate(gamma.t):
-            qinv[ii] = fn_q_inv(gamma.y[ii], gamma.q[ii], gamma.dynamical_parameters, gamma.const)
-            pinv[ii] = fn_p_inv(gamma.y[ii], gamma.dynamical_parameters, gamma.const)
+            qinv[ii] = fn_q_inv(gamma.y[ii], gamma.q[ii], gamma.p, gamma.const)
+            pinv[ii] = fn_p_inv(gamma.y[ii], gamma.p, gamma.const)
         # breakpoint()
-        cval = gamma.dynamical_parameters[-1]
+        cval = gamma.p[-1]
         state = np.ones_like(gamma.t)*cval
         state = pinv
         qval = qinv
@@ -1829,7 +1829,7 @@ def F_MF(bvp, com_index):
             gamma.y = np.column_stack((gamma.y[:, :symmetry_index], qval, gamma.y[:, symmetry_index:]))
 
         gamma.q = np.delete(gamma.q, np.s_[-1], axis=1)
-        gamma.dynamical_parameters = gamma.dynamical_parameters[:-1]
+        gamma.p = gamma.p[:-1]
         return gamma
 
     return bvp, gamma_map, gamma_map_inverse

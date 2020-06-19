@@ -124,7 +124,7 @@ class Scaling(dict):
 
         # Scale parameters
         for idx, param in enumerate([str(p) for p in self.problem_data['dynamical_parameters']]):
-            solout.dynamical_parameters[idx] /= self.scale_vals['parameters'][param]
+            solout.p[idx] /= self.scale_vals['parameters'][param]
 
         for idx, param in enumerate([str(p) for p in self.problem_data['nondynamical_parameters']]):
             solout.nondynamical_parameters[idx] /= self.scale_vals['parameters'][param]
@@ -152,7 +152,7 @@ class Scaling(dict):
 
         # Scale parameters
         for idx, param in enumerate([str(p) for p in self.problem_data['dynamical_parameters']]):
-            solout.dynamical_parameters[idx] *= self.scale_vals['parameters'][param]
+            solout.p[idx] *= self.scale_vals['parameters'][param]
 
         for idx, param in enumerate([str(p) for p in self.problem_data['nondynamical_parameters']]):
             solout.nondynamical_parameters[idx] *= self.scale_vals['parameters'][param]

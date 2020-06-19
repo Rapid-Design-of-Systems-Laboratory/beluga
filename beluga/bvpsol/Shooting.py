@@ -325,11 +325,11 @@ class Shooting(BaseAlgorithm):
         else:
             dtype = float
         sol.q = np.array(sol.q, dtype=np.float64)
-        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
+        sol.p = np.array(sol.p, dtype=np.float64)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
 
         n = sol.y[0].shape[0]
-        k = sol.dynamical_parameters.shape[0]
+        k = sol.p.shape[0]
         # sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.nondynamical_parameters))
         # sol.nondynamical_parameters = np.empty((0,))
 
@@ -348,13 +348,13 @@ class Shooting(BaseAlgorithm):
         else:
             q0g = sol.q[0, :]
 
-        parameter_guess = sol.dynamical_parameters
+        parameter_guess = sol.p
         nondynamical_parameter_guess = sol.nondynamical_parameters
 
         # Get some info on the size of the problem
         n_odes = y0g.shape[0]
         n_quads = q0g.shape[0]
-        n_dynparams = sol.dynamical_parameters.shape[0]
+        n_dynparams = sol.p.shape[0]
         # n_nondynparams = nondynamical_parameter_guess.shape[0]
 
         # Make the state-transition ode matrix
@@ -677,7 +677,7 @@ class Shooting(BaseAlgorithm):
         sol.q = q_out
         sol.u = u_out
 
-        sol.dynamical_parameters = parameter_guess
+        sol.p = parameter_guess
         sol.nondynamical_parameters = nondynamical_parameter_guess
         sol.converged = converged
 

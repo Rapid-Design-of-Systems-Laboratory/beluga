@@ -59,8 +59,8 @@ def test_composable_functors(method):
     assert g2.t.size == gamma.t.size
     assert (g2.t - gamma.t < tol).all()
 
-    assert g2.dynamical_parameters.size == gamma.dynamical_parameters.size
-    assert (g2.dynamical_parameters - gamma.dynamical_parameters < tol).all()
+    assert g2.p.size == gamma.p.size
+    assert (g2.p - gamma.p < tol).all()
 
     assert g2.nondynamical_parameters.size == gamma.nondynamical_parameters.size
     assert (g2.nondynamical_parameters - gamma.nondynamical_parameters < tol).all()

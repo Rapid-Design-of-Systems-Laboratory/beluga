@@ -1,4 +1,4 @@
-from beluga import LocalCompiler
+from ..codegen import LocalCompiler
 from beluga.optimlib.special_functions import *
 import sympy
 from typing import Union, Callable, Collection, Iterable
@@ -297,29 +297,3 @@ class PathConstraintStruct(DimensionalExpressionStruct):
         self.lower = self.lower.subs(old, new)
         self.upper = self.upper.subs(old, new)
 
-
-# lc = LocalCompiler()
-# p = NamedDimensionalStruct('p', 'm', local_compiler=lc)
-# k = Constant('k', 1., '1/s', local_compiler=lc)
-# x = DynamicStruct('x', 'v', 'm', local_compiler=lc)
-# quant = NamedExpressionStruct('v', 'k*p', local_compiler=lc)
-#
-#
-# def simple_func(y):
-#     return y**3
-#
-#
-# f = FunctionStruct('f', simple_func, '1', ['1'], local_compiler=lc, dim_consistent=True)
-# a = sympy.Symbol('a')
-# fs = f.sym(a)
-#
-# tab_x = np.linspace(-1, 1, 100)
-# tab_y = np.sin(tab_x)
-#
-# tab = TableStruct('tab', '1d_spline', tab_y, tab_x, '1', ['1'], dim_consistent=True, local_compiler=lc)
-#
-# s = SwitchStruct('mass_flow', ['md0', 'md1'], [['mass - mass_0f'], ['mass_0f - mass']], 'stage_tol',
-#                  local_compiler=lc)
-#
-# p.sympify_self(), k.sympify_self(), x.sympify_self(), quant.sympify_self(), f.sympify_self(), tab.sympify_self(),
-# s.sympify_self()

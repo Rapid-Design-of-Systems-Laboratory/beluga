@@ -140,16 +140,16 @@ class Collocation(BaseAlgorithm):
         else:
             self.number_of_quads = sol.q.shape[1]
 
-        if sol.dynamical_parameters is None:
-            sol.dynamical_parameters = np.array([], dtype=np.float64)
+        if sol.p is None:
+            sol.p = np.array([], dtype=np.float64)
 
         if sol.nondynamical_parameters is None:
             sol.nondynamical_parameters = np.array([], dtype=np.float64)
 
-        self.number_of_dynamical_params = len(sol.dynamical_parameters)
+        self.number_of_dynamical_params = len(sol.p)
         self.number_of_nondynamical_params = len(sol.nondynamical_parameters)
 
-        vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters)
+        vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.p, sol.nondynamical_parameters)
 
         self.const = sol.const
         sol.converged = False
@@ -162,11 +162,11 @@ class Collocation(BaseAlgorithm):
             tol=self.tolerance, callback=None, options={'maxiter': self.max_iterations})
 
         sol.t = self.tspan
-        sol.y, q0, sol.u, sol.dynamical_parameters, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
+        sol.y, q0, sol.u, sol.p, sol.nondynamical_parameters = self._unwrap_params(xopt['x'])
 
         if self.number_of_quads > 0:
             sol.q = self._integrate(self.quadrature_function, self.derivative_function, sol.y, sol.u,
-                                    sol.dynamical_parameters, self.const, self.tspan, q0)
+                                    sol.p, self.const, self.tspan, q0)
 
         if 'kkt' in xopt:
             sol.dual = self._kkt_to_dual(sol, xopt['kkt'][0])

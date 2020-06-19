@@ -67,7 +67,7 @@ class Pseudospectral(BaseAlgorithm):
             num_controls = 0
 
         # Find the number of parameters
-        num_params = sol.dynamical_parameters.size
+        num_params = sol.p.size
         num_nondynamical_params = sol.nondynamical_parameters.size
 
         # Default costs and quads to return nothing if not defined
@@ -104,10 +104,10 @@ class Pseudospectral(BaseAlgorithm):
             uf = []
 
         if num_controls > 0:
-            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, u0, sol.y[-1], qf, uf, sol.dynamical_parameters,
+            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, u0, sol.y[-1], qf, uf, sol.p,
                                                           sol.nondynamical_parameters, sol.const))
         else:
-            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, [], sol.y[-1], qf, [], sol.dynamical_parameters,
+            num_bcs = len(self.boundarycondition_function(sol.y[0], q0, [], sol.y[-1], qf, [], sol.p,
                                                           sol.nondynamical_parameters, sol.const))
 
         t0 = sol.t[0]
@@ -191,7 +191,7 @@ class Pseudospectral(BaseAlgorithm):
         else:
             sol.q = np.array([])
         sol.u = u
-        sol.dynamical_parameters = params
+        sol.p = params
         sol.nondynamical_parameters = nondynamical_params
         sol.t = (tau*(tf-t0) + (tf+t0))/2
         sol.converged = True
@@ -359,7 +359,7 @@ def _unwrap_params(X, num_eoms, num_quads, num_controls, num_params, num_nondyna
 def _wrap_params(sol, num_eoms, num_quads, num_controls, num_params, num_nondynamical_params, nodes):
     X = np.hstack([sol.y[:, ii][:] for ii in range(num_eoms)] + [sol.q[0, ii] for ii in range(num_quads)] +
                   [sol.u[:, ii] for ii in range(num_controls)] +
-                  [sol.dynamical_parameters] + [sol.nondynamical_parameters])
+                  [sol.p] + [sol.nondynamical_parameters])
     return X
 
 

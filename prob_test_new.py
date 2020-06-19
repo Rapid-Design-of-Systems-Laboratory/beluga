@@ -98,8 +98,7 @@ ocp.path_constraint('theta_dot', 'rad/s', '-theta_max', 'theta_max', 'eps', meth
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
-ocp.map_ocp_to_bvp(control_method='differential', analytical_jacobian=False)
-ocp.compile_problem()
+ocp.compile_indirect(control_method='algebraic', analytical_jacobian=False)
 
 # ocp.sympify_self()
 # ocp.apply_quantities()

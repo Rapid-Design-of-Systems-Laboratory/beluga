@@ -10,14 +10,13 @@ from tqdm import tqdm
 import numpy as np
 
 from beluga import problem, helpers
-from beluga.codegen.codegen import *
 import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
 from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
-# from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
+from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
 import scipy.integrate as integrate
@@ -42,11 +41,11 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
 
 def bvp_algorithm(name, **kwargs):
     """
-    Helper method to load prob algorithm by name.
+    Helper method to load bvp algorithm by name.
 
-    :param name: The name of the prob algorithm
-    :keywords: Additional keyword arguments passed into the prob solver.
-    :return: An instance of the prob solver.
+    :param name: The name of the bvp algorithm
+    :keywords: Additional keyword arguments passed into the bvp solver.
+    :return: An instance of the bvp solver.
     """
     # Load algorithm from the package
     for N, obj in inspect.getmembers(bvpsol):
@@ -75,7 +74,7 @@ def ocp2bvp(ocp, **kwargs):
     """
 
     :param ocp: The optimal control problem.
-    :return: (prob, map, map_inverse) - A codegen compiled BVP with associated mappings to and from the OCP.
+    :return: (bvp, map, map_inverse) - A codegen compiled BVP with associated mappings to and from the OCP.
     """
 
     method = kwargs.get('method', 'indirect').lower()
@@ -124,7 +123,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     # Initialize scaling
     s = bvp.raw['scaling']
 
-    # Load the derivative function into the prob algorithm
+    # Load the derivative function into the bvp algorithm
     bvp_algo.set_derivative_function(bvp.deriv_func)
     bvp_algo.set_derivative_jacobian(bvp.deriv_jac_func)
     bvp_algo.set_quadrature_function(bvp.quad_func)
@@ -238,9 +237,9 @@ def solve(**kwargs):
     +========================+=================+=======================================+
     | autoscale              | True            | bool                                  |
     +------------------------+-----------------+---------------------------------------+
-    | prob                    | None            | codegen'd BVPs                        |
+    | bvp                    | None            | codegen'd BVPs                        |
     +------------------------+-----------------+---------------------------------------+
-    | bvp_algorithm          | None            | prob algorithm                         |
+    | bvp_algorithm          | None            | bvp algorithm                         |
     +------------------------+-----------------+---------------------------------------+
     | guess_generator        | None            | guess generator                       |
     +------------------------+-----------------+---------------------------------------+
@@ -250,7 +249,7 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
     +------------------------+-----------------+---------------------------------------+
-    | prob                    | None            | :math:`\\Sigma`                       |
+    | ocp                    | None            | :math:`\\Sigma`                       |
     +------------------------+-----------------+---------------------------------------+
     | ocp_map                | None            | :math:`\\gamma \rightarrow \\gamma`   |
     +------------------------+-----------------+---------------------------------------+
@@ -266,13 +265,13 @@ def solve(**kwargs):
     """
 
     autoscale = kwargs.get('autoscale', True)
-    bvp = kwargs.get('prob', None)
+    bvp = kwargs.get('bvp', None)
     bvp_algorithm = kwargs.get('bvp_algorithm', None)
     guess_generator = kwargs.get('guess_generator', None)
     initial_helper = kwargs.get('initial_helper', False)
     method = kwargs.get('method', 'traditional')
     n_cpus = int(kwargs.get('n_cpus', 1))
-    ocp = kwargs.get('prob', None)
+    ocp = kwargs.get('ocp', None)
     ocp_map = kwargs.get('ocp_map', None)
     ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
     optim_options = kwargs.get('optim_options', dict())
@@ -308,16 +307,16 @@ def solve(**kwargs):
         pool = None
 
     if ocp is None:
-        raise NotImplementedError('\"prob\" must be defined.')
+        raise NotImplementedError('\"ocp\" must be defined.')
     """
     Main code
     """
 
     f_ocp = FuncOCP(ocp)
     # breakpoint()
-    # s_ocp = SymOCP(prob)
+    # s_ocp = SymOCP(ocp)
     # breakpoint()
-    # prob = FuncDual(s_bvp)
+    # bvp = FuncBVP(s_bvp)
 
     logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
@@ -330,6 +329,7 @@ def solve(**kwargs):
     else:
         if ocp_map is None or ocp_map_inverse is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
+
 
 
     solinit = Trajectory()
@@ -425,9 +425,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     for cont_num, continuation_step in enumerate(continuation_set):
         tempset = []
         for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_u(sol.y[0], sol.p, sol.const)])
+            u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.const)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_u(sol.y[ii + 1], sol.p, sol.const)))
+                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.const)))
             sol.u = u
 
             tempset.append(ocp_map_inverse(sol))

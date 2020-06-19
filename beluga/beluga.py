@@ -2,27 +2,25 @@ import inspect
 import sys
 import warnings
 import copy
-# import logging
+import logging
 
-# from beluga.codegen import *
+from beluga.codegen import *
 from tqdm import tqdm
 
-# import numpy as np
+import numpy as np
 
 from beluga import problem, helpers
-from beluga.codegen.codegen import *
 import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
 # from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 # from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
-# from beluga.optimlib.diffyg_deprecated import ocp_to_bvp as DIFFYG_DEP_ocp_to_bvp
 import time
 import pathos
 import scipy.integrate as integrate
 
-config = dict(logfile='beluga.log', default_bvp_solver='spbvp')
+config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
 
 def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
@@ -42,11 +40,11 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
 
 def bvp_algorithm(name, **kwargs):
     """
-    Helper method to load prob algorithm by name.
+    Helper method to load bvp algorithm by name.
 
-    :param name: The name of the prob algorithm
-    :keywords: Additional keyword arguments passed into the prob solver.
-    :return: An instance of the prob solver.
+    :param name: The name of the bvp algorithm
+    :keywords: Additional keyword arguments passed into the bvp solver.
+    :return: An instance of the bvp solver.
     """
     # Load algorithm from the package
     for N, obj in inspect.getmembers(bvpsol):
@@ -78,19 +76,17 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     :param bvp_algo: BVP algorithm to be used.
     :param steps: The steps in a continuation set.
     :param solinit: Initial guess for the first problem in steps.
-    :param s_bvp: The raw boundary-value problem.
-    :param f_bvp: The compiled boundary-value problem.
+    :param bvp: The compiled boundary-value problem to solve.
     :param pool: A processing pool, if available.
-    :param scaling: Scaling tool.
     :param autoscale: Whether or not scaling is used.
     :return: A set of solutions for the steps.
     """
     # Loop through all the continuation steps
     solution_set = []
     # Initialize scaling
-    s = scaling
+    s = bvp.raw['scaling']
 
-    # Load the derivative function into the prob algorithm
+    # Load the derivative function into the bvp algorithm
     bvp_algo.set_derivative_function(bvp.deriv_func)
     bvp_algo.set_derivative_jacobian(bvp.deriv_jac_func)
     bvp_algo.set_quadrature_function(bvp.quad_func)
@@ -130,7 +126,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
-            step.init(sol_guess, s_bvp)
+            step.init(sol_guess, bvp)
             try:
                 log_level = logging.getLogger()._displayLevel
             except:
@@ -160,8 +156,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 ya = sol.y[0,:]
                 yb = sol.y[-1,:]
                 if sol.q.size > 0:
-                    qa = sol.q[0, :]
-                    qb = sol.q[-1, :]
+                    qa = sol.q[0,:]
+                    qb = sol.q[-1,:]
                 else:
                     qa = np.array([])
                     qb = np.array([])
@@ -204,9 +200,9 @@ def solve(**kwargs):
     +========================+=================+=======================================+
     | autoscale              | True            | bool                                  |
     +------------------------+-----------------+---------------------------------------+
-    | prob                    | None            | codegen'd BVPs                        |
+    | bvp                    | None            | codegen'd BVPs                        |
     +------------------------+-----------------+---------------------------------------+
-    | bvp_algorithm          | None            | prob algorithm                         |
+    | bvp_algorithm          | None            | bvp algorithm                         |
     +------------------------+-----------------+---------------------------------------+
     | guess_generator        | None            | guess generator                       |
     +------------------------+-----------------+---------------------------------------+
@@ -216,7 +212,7 @@ def solve(**kwargs):
     +------------------------+-----------------+---------------------------------------+
     | n_cpus                 | 1               | integer                               |
     +------------------------+-----------------+---------------------------------------+
-    | prob                    | None            | :math:`\\Sigma`                       |
+    | ocp                    | None            | :math:`\\Sigma`                       |
     +------------------------+-----------------+---------------------------------------+
     | ocp_map                | None            | :math:`\\gamma \rightarrow \\gamma`   |
     +------------------------+-----------------+---------------------------------------+
@@ -232,13 +228,13 @@ def solve(**kwargs):
     """
 
     autoscale = kwargs.get('autoscale', True)
-    bvp = kwargs.get('prob', None)
+    bvp = kwargs.get('bvp', None)
     bvp_algorithm = kwargs.get('bvp_algorithm', None)
     guess_generator = kwargs.get('guess_generator', None)
     initial_helper = kwargs.get('initial_helper', False)
     method = kwargs.get('method', 'traditional')
     n_cpus = int(kwargs.get('n_cpus', 1))
-    ocp = kwargs.get('prob', None)
+    ocp = kwargs.get('ocp', None)
     ocp_map = kwargs.get('ocp_map', None)
     ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
     optim_options = kwargs.get('optim_options', dict())
@@ -258,7 +254,8 @@ def solve(**kwargs):
     logging.debug('llvmlite:\t' + str(llvmlite_version))
     logging.debug('numba:\t\t' + str(numba_version))
     logging.debug('numpy:\t\t' + str(numpy_version))
-    logging.debug('python:\t\t' + str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]))
+    logging.debug('python:\t\t' + str(sys.version_info[0]) + '.' + str(sys.version_info[1])
+                  + '.' + str(sys.version_info[2]))
     logging.debug('scipy:\t\t' + str(scipy_version))
     logging.debug('sympy:\t\t' + str(sympy_version))
     logging.debug('\n')
@@ -274,13 +271,101 @@ def solve(**kwargs):
         pool = None
 
     if ocp is None:
-        raise NotImplementedError('\"prob\" must be defined.')
-
+        raise NotImplementedError('\"ocp\" must be defined.')
     """
     Main code
     """
 
+    f_ocp = ocp.compile_problem()
+    # breakpoint()
+    # s_ocp = SymOCP(ocp)
+    # breakpoint()
+    # bvp = FuncBVP(s_bvp)
 
+    logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
+
+    if bvp is None:
+        # bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)
+        logging.debug("Computing the necessary conditions of optimality")
+        if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
+            bvp = copy.deepcopy(ocp).compile_indirect(**optim_options)
+        elif method == 'direct':
+            bvp = copy.deepcopy(ocp).compile_direct(**optim_options)
+        else:
+            raise NotImplementedError
+        logging.debug('Resulting BVP problem:')
+        for key in bvp.raw.keys():
+            logging.debug(str(key) + ': ' + str(bvp.raw[key]))
+
+        ocp_map = bvp.sol_map_chain
+        ocp_map_inverse = bvp.sol_map_chain[::-1]
+
+    else:
+        if ocp_map is None or ocp_map_inverse is None:
+            raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
+
+    solinit = Trajectory()
+    solinit.const = np.array(bvp.raw['constants_values'])
+
+    solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
+
+    sol_temp = copy.deepcopy(solinit)
+
+    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
+    for ii in range(len(sol_temp.t) - 1):
+        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.dynamical_parameters, sol_temp.const)))
+    sol_temp.u = u
+    state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
+    traj = ocp_map_inverse(sol_temp)
+
+    initial_states = np.hstack((traj.y[0, :], traj.t[0]))
+    terminal_states = np.hstack((traj.y[-1, :], traj.t[-1]))
+
+    initial_bc = dict(zip(state_names, initial_states))
+    terminal_bc = dict(zip(state_names, terminal_states))
+
+    if steps is not None and initial_helper:
+        for ii, bc0 in enumerate(initial_bc):
+            if bc0 + '_0' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bc0 + '_0')
+                solinit.const[jj] = initial_bc[bc0]
+
+        for ii, bcf in enumerate(terminal_bc):
+            if bcf + '_f' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bcf + '_f')
+                solinit.const[jj] = terminal_bc[bcf]
+
+    quad_names = bvp.raw['quads']
+    n_quads = len(quad_names)
+    if n_quads > 0:
+        initial_quads = solinit.q[0, :]
+        terminal_quads = solinit.q[-1, :]
+        initial_bc = dict(zip(quad_names, initial_quads))
+        terminal_bc = dict(zip(quad_names, terminal_quads))
+
+        for ii, bc0 in enumerate(initial_bc):
+            if bc0 + '_0' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bc0 + '_0')
+                solinit.const[ii + '_0'] = initial_bc[bc0]
+
+        for ii, bcf in enumerate(terminal_bc):
+            if bcf + '_f' in bvp.raw['constants']:
+                jj = bvp.raw['constants'].index(bcf + '_f')
+                solinit.const[jj] = terminal_bc[bcf]
+
+    """
+    Main continuation process
+    """
+    time0 = time.time()
+    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    total_time = time.time() - time0
+    logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
+    bvp_algorithm.close()
+
+    """
+    Post processing and output
+    """
+    out = postprocess(continuation_set, f_ocp, bvp, ocp_map_inverse)
 
     if pool is not None:
         pool.close()
@@ -312,9 +397,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     for cont_num, continuation_step in enumerate(continuation_set):
         tempset = []
         for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_u(sol.y[0], sol.dynamical_parameters, sol.const)])
+            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_u(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
+                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
             sol.u = u
 
             tempset.append(ocp_map_inverse(sol))
