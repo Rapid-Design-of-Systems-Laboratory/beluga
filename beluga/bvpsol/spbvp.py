@@ -42,20 +42,20 @@ class spbvp(BaseAlgorithm):
         ndyn = solinit.p.size
         nnondyn = solinit.nondynamical_parameters.size
 
-        def _fun(t, y, params=np.array([]), const=solinit.const):
+        def _fun(t, y, params=np.array([]), const=solinit.k):
             y = y.T
             o1 = np.vstack([self.derivative_function(yi[:nstates], np.array([]), params[:ndyn], const) for yi in y])
             o2 = np.vstack([self.quadrature_function(yi[:nstates], np.array([]), params[:ndyn], const) for yi in y])
             return np.hstack((o1, o2)).T
 
         # TODO: The way parameters are used is inconsitent
-        def _bc(ya, yb, params=np.array([]), const=solinit.const):
+        def _bc(ya, yb, params=np.array([]), const=solinit.k):
             return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], np.array(()), yb[:nstates],
                                                    yb[nstates:nstates+nquads], np.array(()), params[:ndyn],
                                                    params[ndyn:ndyn+nnondyn], const)
 
         if self.derivative_function_jac is not None:
-            def _fun_jac(t, y, params=np.array([]), const=solinit.const):
+            def _fun_jac(t, y, params=np.array([]), const=solinit.k):
                 y = y.T
                 df_dy = np.zeros((y[0].size, y[0].size, t.size))
                 df_dp = np.zeros((y[0].size, ndyn+nnondyn, t.size))
@@ -75,7 +75,7 @@ class spbvp(BaseAlgorithm):
             _fun_jac = None
 
         if self.boundarycondition_function_jac is not None:
-            def _bc_jac(ya, yb, params=np.array([]), const=solinit.const):
+            def _bc_jac(ya, yb, params=np.array([]), const=solinit.k):
                 dbc_dya, dbc_dyb, dbc_dp = self.boundarycondition_function_jac(ya, yb, np.array([]), params, const)
                 return dbc_dya, dbc_dyb, dbc_dp
         else:
@@ -94,12 +94,12 @@ class spbvp(BaseAlgorithm):
         sol.t = opt['x']
         sol.y = opt['y'].T[:, :nstates]
         sol.q = opt['y'].T[:, nstates:nstates+nquads]
-        sol.dual = np.zeros_like(sol.y)
+        sol.lam = np.zeros_like(sol.y)
         if opt['p'] is not None:
-            sol.dynamical_parameters = opt['p'][:ndyn]
+            sol.p = opt['p'][:ndyn]
             sol.nondynamical_parameters = opt['p'][ndyn:ndyn+nnondyn]
         else:
-            sol.dynamical_parameters = np.array([])
+            sol.p = np.array([])
             sol.nondynamical_parameters = np.array([])
 
         sol.converged = opt['success']

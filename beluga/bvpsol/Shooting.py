@@ -141,7 +141,7 @@ class Shooting(BaseAlgorithm):
 
         def preload(args):
             return prop(derivative_function, quadrature_function, args[0], args[1], args[2], args[3],
-                        dyn_param, sol.const)
+                        dyn_param, sol.k)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -172,7 +172,7 @@ class Shooting(BaseAlgorithm):
 
         def preload(args):
             return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], args[3],
-                        dyn_param, sol.const)
+                        dyn_param, sol.k)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g, u0g))
@@ -334,7 +334,7 @@ class Shooting(BaseAlgorithm):
         # sol.nondynamical_parameters = np.empty((0,))
 
         fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
-            self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
+            self.derivative_function, self.boundarycondition_function, None, None, sol.k, k, dtype)
 
         pool = kwargs.get('pool', None)
 
@@ -422,7 +422,7 @@ class Shooting(BaseAlgorithm):
 
         def _constraint_function_wrapper(X):
             return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,
-                                        sol.const)
+                                        sol.k)
 
         # Set up the jacobian of the constraint function
         def _jacobian_function(xx, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs):

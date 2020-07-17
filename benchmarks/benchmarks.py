@@ -59,8 +59,8 @@ class Brachistochrone:
 
         continuation_steps.add_step('bisection') \
             .num_cases(21) \
-            .const('x_f', 10) \
-            .const('y_f', -10)
+            .k('x_f', 10) \
+            .k('y_f', -10)
 
         self.continuation_steps = continuation_steps
 

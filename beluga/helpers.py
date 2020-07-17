@@ -32,6 +32,7 @@ def init_logging(logging_level, display_level, logfile):
 
             # Restore the original format configured by the user
             self._fmt = format_orig
+
             # For Python>3.2
             self._style = logging.PercentStyle(self._fmt)
 

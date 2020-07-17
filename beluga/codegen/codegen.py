@@ -56,9 +56,7 @@ def jit_compile_func(func, args, func_name=None, complex_numbers=False):
         return jit_func
 
     except errors.NumbaError as e:
-        logging.debug(e)
         logging.debug('Cannot Compile FunctionComponent: {}'.format(func_name))
-        print(e)
         return func
 
     except TypeError:
@@ -85,9 +83,7 @@ def jit_compile_func_num_args(func, num_args, func_name=None, complex_numbers=Fa
         return jit_func
 
     except errors.NumbaError as e:
-        logging.debug(e)
         logging.debug('Cannot Compile FunctionComponent: {}'.format(func_name))
-        print(e)
         return func
 
     except TypeError:

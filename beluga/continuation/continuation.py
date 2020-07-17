@@ -91,7 +91,7 @@ class ContinuationStrategy(abc.ABC):
             if traj.converged is False:
                 norms.append(9e99)
             else:
-                norms.append(gamma_norm(traj.const, const))
+                norms.append(gamma_norm(traj.k, const))
 
         return np.argmin(norms)
 
@@ -117,7 +117,7 @@ class ContinuationStrategy(abc.ABC):
 
         # Update auxiliary variables using previously calculated step sizes
         total_change = 0.0
-        const0 = copy.deepcopy(self.gammas[-1].const)
+        const0 = copy.deepcopy(self.gammas[-1].k)
         for var_name in self.vars:
             jj = [str(s['symbol']) for s in self.bvp.get_constants()].index(var_name)
             const0[jj] = self.vars[var_name].steps[self.ctr]
@@ -125,7 +125,7 @@ class ContinuationStrategy(abc.ABC):
 
         i = self.get_closest_gamma(const0)
         gamma_guess = copy.deepcopy(self.gammas[i])
-        gamma_guess.const = const0
+        gamma_guess.k = const0
         self.ctr += 1
         logging.debug('CHOOSE\ttraj #' + str(i) + ' as guess.')
         return gamma_guess
@@ -181,7 +181,7 @@ class ManualStrategy(ContinuationStrategy):
 
             # Set current value of each continuation variable
             jj = [str(s['symbol']) for s in self.bvp.get_constants()].index(var_name)
-            self.vars[var_name].value = sol.const[jj]
+            self.vars[var_name].value = sol.k[jj]
             # Calculate update steps for continuation process
             if self._spacing == 'linear':
                 self.vars[var_name].steps = np.linspace(self.vars[var_name].value,
@@ -334,7 +334,7 @@ class ProductStrategy(ContinuationStrategy):
         self.num_cases(self.num_subdivisions() ** num_vars)
         for var_name in self.vars.keys():
             jj = bvp.raw['constants'].index(var_name)
-            self.vars[var_name].value = sol.const[jj]
+            self.vars[var_name].value = sol.k[jj]
 
         ls_set = [np.linspace(self.vars[var_name].value, self.vars[var_name].target,
                               self._num_subdivisions) for var_name in self.vars.keys()]
@@ -343,34 +343,6 @@ class ProductStrategy(ContinuationStrategy):
             for var_name in self.vars.keys():
                 self.vars[var_name].steps.append(val[ii])
                 ii += 1
-
-    # def next(self, ignore_last_step=False):
-    #     if len(self.gammas) == 0:
-    #         raise ValueError('No boundary value problem associated with this object')
-    #
-    #     if not ignore_last_step and self.last_sol is not None and not self.last_sol.converged:
-    #         logging.error('The last step did not converge!')
-    #         raise RuntimeError('Solution diverged! Stopping.')
-    #
-    #     if self.ctr >= self._num_cases:
-    #         raise StopIteration
-    #
-    #     # Update auxiliary variables using previously calculated step sizes
-    #     total_change = 0.0
-    #     for var_type in self.vars:
-    #         for var_name in self.vars[var_type]:
-    #             self.sol.aux[var_type][var_name] = self.vars[var_type][var_name].steps[self.ctr]
-    #             total_change += abs(self.vars[var_type][var_name].steps[self.ctr])
-    #
-    #     self.ctr += 1
-    #     # if self.ctr % self.num_subdivisions() == 1 and self.ctr != 1:
-    #     #     aux = copy.deepcopy(self.sol.aux)
-    #     #     self.sol = self.sols[-self.num_subdivisions()]
-    #     #     self.sol.aux = aux
-    #
-    #     self.sols.append(copy.deepcopy(self.sol))
-    #     self.last_sol = self.sol
-    #     return copy.deepcopy(self.sol)
 
     def num_cases(self, num_cases=None):
         if num_cases is None:

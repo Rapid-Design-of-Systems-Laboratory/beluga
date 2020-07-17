@@ -105,10 +105,10 @@ class Pseudospectral(BaseAlgorithm):
 
         if num_controls > 0:
             num_bcs = len(self.boundarycondition_function(sol.y[0], q0, u0, sol.y[-1], qf, uf, sol.p,
-                                                          sol.nondynamical_parameters, sol.const))
+                                                          sol.nondynamical_parameters, sol.k))
         else:
             num_bcs = len(self.boundarycondition_function(sol.y[0], q0, [], sol.y[-1], qf, [], sol.p,
-                                                          sol.nondynamical_parameters, sol.const))
+                                                          sol.nondynamical_parameters, sol.k))
 
         t0 = sol.t[0]
         tf = sol.t[-1]
@@ -159,7 +159,7 @@ class Pseudospectral(BaseAlgorithm):
                       'weights': weights,
                       'D': D,
                       'nodes': self.number_of_nodes,
-                      'const': sol.const,
+                      'const': sol.k,
                       'closure': self.closure,
                       'knots': 0,
                       't0': t0,
@@ -181,9 +181,9 @@ class Pseudospectral(BaseAlgorithm):
                                                                num_nondynamical_params, self.number_of_nodes)
         costates = _lagrange_to_costates(xopt['kkt'], num_eoms, self.number_of_nodes, weights)
         sol.y = y
-        sol.dual = costates
+        sol.lam = costates
         if num_quads > 0:
-            Q = np.vstack([self.quadrature_function([], y[ii], params, sol.const)
+            Q = np.vstack([self.quadrature_function([], y[ii], params, sol.k)
                            for ii in range(self.number_of_nodes)])
             # TODO: Speed up this calculation here. The full inner product doesn't need to be evaluated every time.
             sol.q = np.vstack([np.hstack([(tf - t0) / 4 * np.inner(weights[:jj], Q[:jj, ii])

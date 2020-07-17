@@ -13,8 +13,6 @@ import functools as ft
 import re
 import logging
 
-from .bvp import BVP
-
 
 # TODO Implement Full Units Check
 
@@ -523,19 +521,19 @@ def generate_momentumshift_maps():
         # gamma.dynamical_parameters = np.hstack((gamma.dynamical_parameters, gamma.t[-1] - gamma.t[0]))
         # gamma.t = gamma.t / gamma.t[-1]  # TODO: Check if this should be gamma.t / (gamma.t[-1] - gamma.t[0])
 
-        if len(gamma.dual) == 0:
-            gamma.dual = np.zeros_like(gamma.y)
+        if len(gamma.lam) == 0:
+            gamma.lam = np.zeros_like(gamma.y)
 
-        gamma.dual = np.column_stack((gamma.dual, gamma.dual_t))
+        gamma.lam = np.column_stack((gamma.lam, gamma.dual_t))
 
         return gamma
 
     def gamma_map_inverse(gamma):
         gamma = copy.deepcopy(gamma)
         gamma.t = gamma.y[:, -1]
-        gamma.dual_t = gamma.dual[:, -1]
+        gamma.dual_t = gamma.lam[:, -1]
         gamma.y = np.delete(gamma.y, np.s_[-1:], axis=1)
-        gamma.dual = np.delete(gamma.dual, np.s_[-1:], axis=1)
+        gamma.lam = np.delete(gamma.lam, np.s_[-1:], axis=1)
         # gamma.dynamical_parameters = np.delete(gamma.dynamical_parameters, np.s_[-1:])
         return gamma
 
@@ -612,14 +610,14 @@ def generate_dualize_map(num_states, num_p_con):
 
     def gamma_map(gamma):
         gamma = copy.deepcopy(gamma)
-        gamma.y = np.column_stack((gamma.y, gamma.dual))
-        gamma.dual = np.array([])
+        gamma.y = np.column_stack((gamma.y, gamma.lam))
+        gamma.lam = np.array([])
         gamma.nondynamical_parameters = np.hstack((gamma.nondynamical_parameters, np.ones(num_p_con)))
         return gamma
 
     def gamma_map_inverse(gamma):
         gamma = copy.deepcopy(gamma)
-        gamma.dual = gamma.y[:, -num_states:]
+        gamma.lam = gamma.y[:, -num_states:]
         gamma.y = gamma.y[:, :num_states]
         gamma.nondynamical_parameters = gamma.nondynamical_parameters[:-num_p_con]
         return gamma

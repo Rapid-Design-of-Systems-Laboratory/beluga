@@ -1,5 +1,5 @@
 from .component_structs import *
-from beluga.problib.sol_classes import *
+from beluga.problib.traj_classes import *
 # from beluga.optimlib.functional_maps.sol_maps import *
 from beluga.optimlib.optimlib import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
 
@@ -8,7 +8,7 @@ import numpy as np
 
 from beluga.codegen import jit_compile_func, compile_control
 from ..codegen import LocalCompiler
-from typing import Iterable, List, Any
+from typing import Iterable, List
 import copy
 
 
@@ -24,7 +24,8 @@ class Problem:
 
         self.local_compiler = LocalCompiler()
         self.sol_map_chain = []
-        self.solution_set = SolSet()
+        # self.solution_set = SolSet()
+        self.solution_set = []
 
         self.independent_variable = None
 
@@ -269,7 +270,7 @@ class Problem:
             raise RuntimeError('{} has no attribute "{}"'.format(structs, attr))
 
     @staticmethod
-    def _combined_lists(items: Iterable[Any]):
+    def _combined_lists(items):
         out = []
         if isinstance(items, Iterable):
             for item in items:
@@ -337,6 +338,8 @@ class Problem:
 
         for quantity in self.quantities:
             self._subs_all(quantity.sym, quantity.expr)
+
+        # TODO add quantity calculation to Trajectory class
 
     def momentum_shift(self, new_ind_name=None):
 
@@ -577,6 +580,13 @@ class Problem:
 
         return self
 
+    def mf(self, com_index=0):
+        constant_of_motion = self.constants_of_motion[com_index]
+
+        state_syms = self.getattr_from_list(self.states, 'sym')
+        parameter_syms = self.getattr_from_list(self.parameters, 'sym')
+        constant_syms = self.getattr_from_list(self.constants, 'sym')
+
     def squash_to_bvp(self):
 
         costate_idxs = slice(len(self.states), len(self.states) + len(self.costates))
@@ -607,7 +617,9 @@ class Problem:
                                          local_compiler=self.local_compiler).sympify_self()
         self.parameters.append(delta_t)
 
-        for state in self._combined_lists(self._dynamic_structs):
+        _dynamic_structs = [self.states, self.costates]
+
+        for state in self._combined_lists(_dynamic_structs):
             state.eom = state.eom * delta_t.sym
 
         self.cost.path *= delta_t.sym
@@ -800,6 +812,8 @@ class Problem:
         return self
 
     def compile_problem(self, use_control_arg=False):
+        self._ensure_sympified()
+
         if self.functional_problem is None:
             self.functional_problem = FuncProblem(self, local_compiler=self.local_compiler)
 
@@ -904,7 +918,7 @@ class FuncProblem:
 
         self._initialized = True
 
-    def compile_problem(self, use_control_arg=False, use_quad_arg=False):
+    def compile_problem(self, use_time_arg=False, use_control_arg=False, use_quad_arg=False):
 
         self._initialize()
 

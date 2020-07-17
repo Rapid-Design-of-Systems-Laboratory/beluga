@@ -209,7 +209,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
 
                 dp = sol.p
                 ndp = sol.nondynamical_parameters
-                C = sol.const
+                C = sol.k
 
                 bc_residuals_unscaled = bvp_algo.boundarycondition_function(ya, qa, ua, yb, qb, ub, dp, ndp, C)
 
@@ -333,15 +333,15 @@ def solve(**kwargs):
 
 
     solinit = Trajectory()
-    solinit.const = np.array(bvp.raw['constants_values'])
+    solinit.k = np.array(bvp.raw['constants_values'])
 
     solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
 
     sol_temp = copy.deepcopy(solinit)
 
-    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.p, sol_temp.const)])
+    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.p, sol_temp.k)])
     for ii in range(len(sol_temp.t) - 1):
-        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.p, sol_temp.const)))
+        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.p, sol_temp.k)))
     sol_temp.u = u
     state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
     traj = ocp_map_inverse(sol_temp)
@@ -356,12 +356,12 @@ def solve(**kwargs):
         for ii, bc0 in enumerate(initial_bc):
             if bc0 + '_0' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.const[jj] = initial_bc[bc0]
+                solinit.k[jj] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
             if bcf + '_f' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
+                solinit.k[jj] = terminal_bc[bcf]
 
     quad_names = bvp.raw['quads']
     n_quads = len(quad_names)
@@ -374,12 +374,12 @@ def solve(**kwargs):
         for ii, bc0 in enumerate(initial_bc):
             if bc0 + '_0' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.const[ii + '_0'] = initial_bc[bc0]
+                solinit.k[ii + '_0'] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
             if bcf + '_f' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
+                solinit.k[jj] = terminal_bc[bcf]
 
     """
     Main continuation process
@@ -425,9 +425,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     for cont_num, continuation_step in enumerate(continuation_set):
         tempset = []
         for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_u(sol.y[0], sol.p, sol.const)])
+            u = np.array([bvp.compute_u(sol.y[0], sol.p, sol.k)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_u(sol.y[ii + 1], sol.p, sol.const)))
+                u = np.vstack((u, bvp.compute_u(sol.y[ii + 1], sol.p, sol.k)))
             sol.u = u
 
             tempset.append(ocp_map_inverse(sol))
@@ -436,11 +436,11 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     # Calculate the cost for each trajectory
     for cont_num, continuation_step in enumerate(out):
         for sol_num, sol in enumerate(continuation_step):
-            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
-            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.const)
-            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
+            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
+            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.k)
+            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
             for ii in range(len(sol.t) - 1):
-                cpath = np.hstack((cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.const)))
+                cpath = np.hstack((cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.k)))
 
             cpath = integrate.simps(cpath, sol.t)
             sol.cost = c0 + cpath + cf

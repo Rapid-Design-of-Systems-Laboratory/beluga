@@ -9,11 +9,12 @@ from tqdm import tqdm
 
 import numpy as np
 
-from beluga import problem, helpers
+from beluga import helpers
 import beluga.bvpsol as bvpsol
 from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
+from beluga.guess_generation import GuessGenerator
 # from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 # from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 import time
@@ -64,7 +65,7 @@ def guess_generator(*args, **kwargs):
     :keywords: Additional keyword arguments passed into the guess generator.
     :return: An instance of the guess generator.
     """
-    guess_gen = problem.GuessGenerator()
+    guess_gen = GuessGenerator()
     guess_gen.setup(*args, **kwargs)
     return guess_gen
 
@@ -153,25 +154,25 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 if autoscale:
                     sol = s.unscale(sol)
 
-                ya = sol.y[0,:]
-                yb = sol.y[-1,:]
+                ya = sol.y[0, :]
+                yb = sol.y[-1, :]
                 if sol.q.size > 0:
-                    qa = sol.q[0,:]
-                    qb = sol.q[-1,:]
+                    qa = sol.q[0, :]
+                    qb = sol.q[-1, :]
                 else:
                     qa = np.array([])
                     qb = np.array([])
 
                 if sol.u.size > 0:
-                    ua = sol.u[0,:]
-                    ub = sol.u[-1,:]
+                    ua = sol.u[0, :]
+                    ub = sol.u[-1, :]
                 else:
                     ua = np.array([])
                     ub = np.array([])
 
-                dp = sol.dynamical_parameters
+                dp = sol.p
                 ndp = sol.nondynamical_parameters
-                C = sol.const
+                C = sol.k
 
                 bc_residuals_unscaled = bvp_algo.boundarycondition_function(ya, qa, ua, yb, qb, ub, dp, ndp, C)
 
@@ -191,7 +192,21 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     return solution_set
 
 
-def solve(**kwargs):
+def solve(
+        autoscale=True,
+        bvp=None,
+        bvp_algo=None,
+        guess_gen=None,
+        initial_helper=False,
+        method='traditional',
+        n_cpus=1,
+        ocp=None,
+        ocp_map=None,
+        ocp_map_inverse=None,
+        optim_options=None,
+        steps=None,
+        save_sols=True):
+
     """
     Solves the OCP using specified method
 
@@ -227,19 +242,8 @@ def solve(**kwargs):
 
     """
 
-    autoscale = kwargs.get('autoscale', True)
-    bvp = kwargs.get('bvp', None)
-    bvp_algorithm = kwargs.get('bvp_algorithm', None)
-    guess_generator = kwargs.get('guess_generator', None)
-    initial_helper = kwargs.get('initial_helper', False)
-    method = kwargs.get('method', 'traditional')
-    n_cpus = int(kwargs.get('n_cpus', 1))
-    ocp = kwargs.get('ocp', None)
-    ocp_map = kwargs.get('ocp_map', None)
-    ocp_map_inverse = kwargs.get('ocp_map_inverse', None)
-    optim_options = kwargs.get('optim_options', dict())
-    steps = kwargs.get('steps', None)
-    save_sols = kwargs.get('save', True)
+    if optim_options is None:
+        optim_options = {}
 
     # Display useful info about the environment to debug logger.
     logging.debug('\n'+__splash__+'\n')
@@ -258,7 +262,6 @@ def solve(**kwargs):
                   + '.' + str(sys.version_info[2]))
     logging.debug('scipy:\t\t' + str(scipy_version))
     logging.debug('sympy:\t\t' + str(sympy_version))
-    logging.debug('\n')
 
     """
     Error checking
@@ -272,15 +275,12 @@ def solve(**kwargs):
 
     if ocp is None:
         raise NotImplementedError('\"ocp\" must be defined.')
+
     """
     Main code
     """
 
-    f_ocp = ocp.compile_problem()
-    # breakpoint()
-    # s_ocp = SymOCP(ocp)
-    # breakpoint()
-    # bvp = FuncBVP(s_bvp)
+    f_ocp = ocp.compile_problem(use_control_arg=True)
 
     logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
@@ -294,26 +294,25 @@ def solve(**kwargs):
         else:
             raise NotImplementedError
         logging.debug('Resulting BVP problem:')
-        for key in bvp.raw.keys():
-            logging.debug(str(key) + ': ' + str(bvp.raw[key]))
+        logging.debug(bvp.__repr__())
 
-        ocp_map = bvp.sol_map_chain
-        ocp_map_inverse = bvp.sol_map_chain[::-1]
+        ocp_map = bvp.map_sol
+        ocp_map_inverse = bvp.inv_map_sol
 
     else:
         if ocp_map is None or ocp_map_inverse is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
     solinit = Trajectory()
-    solinit.const = np.array(bvp.raw['constants_values'])
+    solinit.const = np.array(bvp.getattr_from_list(bvp.constants, 'default_val'))
 
-    solinit = guess_generator.generate(bvp, solinit, ocp_map, ocp_map_inverse)
+    solinit = guess_gen.generate(bvp.functional_problem, solinit, ocp_map, ocp_map_inverse)
 
     sol_temp = copy.deepcopy(solinit)
 
-    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
+    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.p, sol_temp.k)])
     for ii in range(len(sol_temp.t) - 1):
-        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.dynamical_parameters, sol_temp.const)))
+        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.p, sol_temp.k)))
     sol_temp.u = u
     state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
     traj = ocp_map_inverse(sol_temp)
@@ -328,12 +327,12 @@ def solve(**kwargs):
         for ii, bc0 in enumerate(initial_bc):
             if bc0 + '_0' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.const[jj] = initial_bc[bc0]
+                solinit.k[jj] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
             if bcf + '_f' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
+                solinit.k[jj] = terminal_bc[bcf]
 
     quad_names = bvp.raw['quads']
     n_quads = len(quad_names)
@@ -346,12 +345,12 @@ def solve(**kwargs):
         for ii, bc0 in enumerate(initial_bc):
             if bc0 + '_0' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.const[ii + '_0'] = initial_bc[bc0]
+                solinit.k[ii + '_0'] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
             if bcf + '_f' in bvp.raw['constants']:
                 jj = bvp.raw['constants'].index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
+                solinit.k[jj] = terminal_bc[bcf]
 
     """
     Main continuation process
@@ -397,9 +396,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     for cont_num, continuation_step in enumerate(continuation_set):
         tempset = []
         for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_control(sol.y[0], sol.dynamical_parameters, sol.const)])
+            u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.k)])
             for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.dynamical_parameters, sol.const)))
+                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.k)))
             sol.u = u
 
             tempset.append(ocp_map_inverse(sol))
@@ -408,11 +407,11 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     # Calculate the cost for each trajectory
     for cont_num, continuation_step in enumerate(out):
         for sol_num, sol in enumerate(continuation_step):
-            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.dynamical_parameters, sol.const)
-            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.dynamical_parameters, sol.const)
-            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.dynamical_parameters, sol.const)
+            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
+            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.k)
+            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
             for ii in range(len(sol.t) - 1):
-                cpath = np.hstack((cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.dynamical_parameters, sol.const)))
+                cpath = np.hstack((cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.k)))
 
             cpath = integrate.simps(cpath, sol.t)
             sol.cost = c0 + cpath + cf

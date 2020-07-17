@@ -151,7 +151,7 @@ class Collocation(BaseAlgorithm):
 
         vectorized = self._wrap_params(sol.y, sol.q, sol.u, sol.p, sol.nondynamical_parameters)
 
-        self.const = sol.const
+        self.const = sol.k
         sol.converged = False
 
         # noinspection PyTypeChecker
@@ -169,9 +169,9 @@ class Collocation(BaseAlgorithm):
                                     sol.p, self.const, self.tspan, q0)
 
         if 'kkt' in xopt:
-            sol.dual = self._kkt_to_dual(sol, xopt['kkt'][0])
+            sol.lam = self._kkt_to_dual(sol, xopt['kkt'][0])
         else:
-            sol.dual = np.ones_like(sol.y)*np.nan
+            sol.lam = np.ones_like(sol.y) * np.nan
 
         sol.converged = xopt['success']
 

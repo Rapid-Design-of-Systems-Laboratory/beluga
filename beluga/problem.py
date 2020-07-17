@@ -714,18 +714,18 @@ class GuessGenerator(object):
         prop = Propagator()
         solinit.t = tspan
         solinit.y = np.array([x0, x0])
-        solinit.dual = np.array([d0, d0])
+        solinit.lam = np.array([d0, d0])
         solinit.q = np.array([q0, q0])
         solinit.u = np.array([u0, u0])
         solinit.p = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
         solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
-                      sol.p, sol.const)
+                      sol.p, sol.k)
         solout = copy.deepcopy(solivp)
         solout.p = sol.p
         solout.nondynamical_parameters = sol.nondynamical_parameters
-        solout.const = sol.const
+        solout.k = sol.k
         elapsed_time = time.time() - time0
         logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
         logging.debug('Terminal states of guess:')
@@ -792,14 +792,14 @@ class GuessGenerator(object):
         time0 = time.time()
         solinit.t = np.linspace(tspan[0], tspan[-1], num=4)
         solinit.y = np.array([x0, x0, x0, x0])
-        solinit.dual = np.array([d0, d0, d0, d0])
+        solinit.lam = np.array([d0, d0, d0, d0])
         solinit.q = np.array([q0, q0, q0, q0])
         solinit.u = np.array([u0, u0, u0, u0])
         solinit.p = param_guess
         solinit.nondynamical_parameters = nondynamical_param_guess
         sol = guess_map(solinit)
         solout = copy.deepcopy(sol)
-        solout.const = sol.const
+        solout.k = sol.k
         elapsed_time = time.time() - time0
         logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
         logging.debug('Terminal states of guess:')

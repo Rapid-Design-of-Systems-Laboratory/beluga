@@ -5,85 +5,209 @@ import numpy as np
 import copy
 from abc import ABC
 from typing import Callable
-from ..ivpsol.propagators import Propagator
+from ..ivpsol import Propagator
 from ..problib import Solution, Problem
+import beluga
 
 
-class AutoGuessGenerator:
-    def __init__(self, tspan=None, state_guess=None, parameter_guess=None, constraint_parameter_guess=None,
-                 control_guess=None, costate_guess=-0.1, coparameter_guess=-0.1, constraint_multiplier_guess=-0.1):
+class GuessGenerator(object):
+    """Generates the initial guess from a variety of sources."""
+    def __init__(self, **kwargs):
+        self.setup_funcs = {'auto': self.setup_auto,
+                            'static': self.setup_static,
+                            'ones': self.setup_ones}
+        self.generate_funcs = {'auto': self.auto,
+                               'static': self.static,
+                               'ones': self.ones}
+        self.setup(**kwargs)
+        self.dae_num_states = 0
 
-        if tspan is None:
-            self.tspan = [0, 0.1]
+        self.mode = 'auto'
+        self.solinit = None
+        self.direction = 'forward'
+        self.time_integrate = 0.1
+        self.start = None
+        self.quad_guess = None
+        self.costate_guess = None
+        self.param_guess = None
+        self.control_guess = None
+        self.use_control_guess = False
+
+    def setup(self, mode='auto', **kwargs):
+        """Sets up the initial guess generation process"""
+        self.mode = mode
+        if mode in self.setup_funcs:
+            self.setup_funcs[mode](**kwargs)
         else:
-            self.tspan = tspan
+            raise ValueError('Invalid initial guess mode specified')
 
-        self.state_guess = state_guess
-        self.parameter_guess = parameter_guess
-        self.constraint_multiplier_guess = constraint_multiplier_guess
-        self.control_guess = control_guess
-        self.constraint_parameter_guess = constraint_parameter_guess
+        return self
+
+    def generate(self, *args):
+        """Generates initial guess data from given settings"""
+        if self.mode in self.generate_funcs:
+            return self.generate_funcs[self.mode](*args)
+        else:
+            raise ValueError('Invalid initial guess mode specified')
+
+    def setup_static(self, solinit=None):
+        self.solinit = solinit
+
+    def static(self, bvp_fn, solinit, ocp_map, ocp_map_inverse):
+        """Directly specify initial guess structure"""
+        return ocp_map(self.solinit)
+
+    def setup_auto(self, start=None, direction='forward', time_integrate=1, quad_guess=np.array([]), costate_guess=0.1,
+                   control_guess=0.1, use_control_guess=False, param_guess=None):
+        """Setup automatic initial guess generation"""
+
+        if direction in ['forward', 'reverse']:
+            self.direction = direction
+        else:
+            raise ValueError('Direction must be either forward or reverse.')
+
+        self.time_integrate = abs(time_integrate)
+        if time_integrate == 0:
+            raise ValueError('Integration time must be non-zero')
+
+        # TODO: Check size against number of states here
+        self.start = start
+        self.quad_guess = quad_guess
         self.costate_guess = costate_guess
-        self.coparameter_guess = coparameter_guess
-        self.constraint_multiplier_guess = constraint_multiplier_guess
+        self.param_guess = param_guess
+        self.control_guess = control_guess
+        self.use_control_guess = use_control_guess
 
-    def __call__(self, prob: Problem):
-        if self.state_guess is None:
-            raise RuntimeError('"state_guess" needed for "auto" guess generator')
+    def auto(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
+        """Generates initial guess by forward/reverse integration."""
 
-        y0 = np.array([self.state_guess], dtype=np.float64)
-
-        if self.parameter_guess is None:
-            p = np.array([])
+        if self.direction == 'forward':
+            tspan = np.array([0, self.time_integrate])
+        elif self.direction == 'reverse':
+            tspan = np.array([0, -self.time_integrate])
         else:
-            p = np.array(self.parameter_guess)
+            tspan = np.array([0, self.time_integrate])
 
-        k = np.array(prob.getattr_from_list(prob.constants, 'default_val'))
+        x0 = np.array(self.start)
+        q0 = np.array(self.quad_guess)
 
-        if self.control_guess is None:
-            control_generator = None
-        elif isinstance(self.control_guess, Callable):
-            control_generator = self.control_guess
+        # Add costates
+        if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
+            d0 = np.r_[self.costate_guess * np.ones(len(self.start))]
         else:
-            _u = np.array(self.control_guess)
+            d0 = np.r_[self.costate_guess]
 
-            def control_generator(*_):
-                return _u
+        if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
+            u0 = self.control_guess*np.ones(self.dae_num_states)
+        else:
+            u0 = self.control_guess
 
-        prop = Propagator(prob, control_generator=control_generator, propagate_quads=False)
-        sol_prop = prop(prob.functional_problem.deriv_func, self.tspan, y0, p, k)
+        # Guess zeros for missing parameters
+        if param_guess is None:
+            param_guess = np.ones(len(solinit.dynamical_parameters))
+        elif len(param_guess) < len(solinit.dynamical_parameters):
+            param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
+        elif len(param_guess) > len(solinit.dynamical_parameters):
+            raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
+        nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
-        return
+        logging.debug('Generating initial guess by propagating: ')
+        logging.debug(str(x0))
 
+        time0 = time.time()
+        prop = Propagator()
+        solinit.t = np.array(tspan, dtype=beluga.DTYPE)
+        solinit.y = np.array([x0, x0], dtype=beluga.DTYPE)
+        solinit.dual = np.array([d0, d0], dtype=beluga.DTYPE)
+        solinit.q = np.array([q0, q0], dtype=beluga.DTYPE)
+        solinit.u = np.array([u0, u0], dtype=beluga.DTYPE)
+        solinit.dynamical_parameters = np.array(param_guess, dtype=beluga.DTYPE)
+        solinit.nondynamical_parameters = np.array(nondynamical_param_guess, dtype=beluga.DTYPE)
+        sol = guess_map(solinit)
+        # solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
+        #               sol.dynamical_parameters, sol.const)
+        solivp = prop(bvp_fn.deriv_func, None, sol.t, sol.y[0], None, sol.dynamical_parameters, sol.const)
+        solout = copy.deepcopy(solivp)
+        solout.dynamical_parameters = sol.dynamical_parameters
+        solout.nondynamical_parameters = sol.nondynamical_parameters
+        solout.const = sol.const
+        elapsed_time = time.time() - time0
+        logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
+        logging.debug('Terminal states of guess:')
+        logging.debug(str(solout.y[-1, :]))
 
-class StaticGuessGenerator:
-    pass
+        return solout
 
+    def setup_ones(self, start=None, direction='forward', time_integrate=1, quad_guess=np.array([]), costate_guess=0.1,
+                   control_guess=0.1, use_control_guess=False, param_guess=None):
+        """Setup automatic initial guess generation"""
 
-class OnesGuessGenerator:
-    pass
+        if direction in ['forward', 'reverse']:
+            self.direction = direction
+        else:
+            raise ValueError('Direction must be either forward or reverse.')
 
+        self.time_integrate = abs(time_integrate)
+        if time_integrate == 0:
+            raise ValueError('Integration time must be non-zero')
 
-def initial_helper(prob: Problem, sol: Solution):
+        # TODO: Check size against number of states here
+        self.start = start
+        self.quad_guess = quad_guess
+        self.costate_guess = costate_guess
+        self.param_guess = param_guess
+        self.control_guess = control_guess
+        self.use_control_guess = use_control_guess
 
-    constant_names = prob.getattr_from_list(prob.constants, 'name')
-    for state_idx, state_name in prob.getattr_from_list(prob.states, 'name'):
-        initial_state_name = state_name + '_0'
-        terminal_state_name = state_name + '_f'
-        if initial_state_name in constant_names:
-            sol.k[constant_names.index(initial_state_name)] = sol.y[0, state_idx]
+    def ones(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
 
-        if terminal_state_name in constant_names:
-            sol.k[constant_names.index(initial_state_name)] = sol.y[-1, state_idx]
+        if self.direction == 'forward':
+            tspan = np.array([0, self.time_integrate])
+        elif self.direction == 'reverse':
+            tspan = np.array([0, -self.time_integrate])
+        else:
+            tspan = np.array([0, self.time_integrate])
 
-    for quad_idx, quad_name in prob.getattr_from_list(prob.quads, 'name'):
-        initial_quad_name = quad_name + '_0'
-        terminal_quad_name = quad_name + '_f'
-        if initial_quad_name in constant_names:
-            sol.k[constant_names.index(initial_quad_name)] = sol.y[0, quad_idx]
+        x0 = np.array(self.start)
+        q0 = np.array(self.quad_guess)
 
-        if terminal_quad_name in constant_names:
-            sol.k[constant_names.index(terminal_quad_name)] = sol.y[-1, quad_idx]
+        # Add costates
+        if isinstance(self.costate_guess, float) or isinstance(self.costate_guess, int):
+            d0 = np.r_[self.costate_guess * np.ones(len(self.start))]
+        else:
+            d0 = np.r_[self.costate_guess]
 
+        if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
+            u0 = self.control_guess * np.ones(self.dae_num_states)
+        else:
+            u0 = self.control_guess
 
+        # Guess zeros for missing parameters
+        if param_guess is None:
+            param_guess = np.ones(len(solinit.dynamical_parameters))
+        elif len(param_guess) < len(solinit.dynamical_parameters):
+            param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
+        elif len(param_guess) > len(solinit.dynamical_parameters):
+            raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
+        nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
+        logging.debug('Generating initial guess by propagating: ')
+        logging.debug(str(x0))
+
+        time0 = time.time()
+        solinit.t = np.linspace(tspan[0], tspan[-1], num=4)
+        solinit.y = np.array([x0, x0, x0, x0], dtype=beluga.DTYPE)
+        solinit.dual = np.array([d0, d0, d0, d0], dtype=beluga.DTYPE)
+        solinit.q = np.array([q0, q0, q0, q0], dtype=beluga.DTYPE)
+        solinit.u = np.array([u0, u0, u0, u0], dtype=beluga.DTYPE)
+        solinit.dynamical_parameters = np.array(param_guess, dtype=beluga.DTYPE)
+        solinit.nondynamical_parameters = np.array(nondynamical_param_guess, dtype=beluga.DTYPE)
+        sol = guess_map(solinit)
+        solout = copy.deepcopy(sol)
+        solout.const = sol.const
+        elapsed_time = time.time() - time0
+        logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
+        logging.debug('Terminal states of guess:')
+        logging.debug(str(solout.y[-1, :]))
+
+        return solout

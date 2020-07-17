@@ -115,7 +115,7 @@ class Scaling(dict):
 
         # Scale auxiliary variables
         for idx, const in enumerate(self.problem_data['consts']):
-            solout.const[idx] /= self.scale_vals['const'][const]
+            solout.k[idx] /= self.scale_vals['const'][const]
 
         # for aux in (self.problem_data['aux_list']):
         #     if aux['type'] not in Scaling.excluded_aux:
@@ -144,7 +144,7 @@ class Scaling(dict):
 
         # Scale auxiliary variables
         for idx, const in enumerate(self.problem_data['consts']):
-            solout.const[idx] *= self.scale_vals['const'][const]
+            solout.k[idx] *= self.scale_vals['const'][const]
         # for aux in (self.problem_data['aux_list']):
         #     if aux['type'] not in Scaling.excluded_aux:
         #         for var_ in aux['vars']:

@@ -4,7 +4,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP('Bryson-Denham')
+ocp = beluga.Problem('Bryson-Denham')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -74,9 +74,9 @@ continuation_steps.add_step('bisection') \
 sol_set_indirect = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
-    bvp_algorithm=bvp_solver_indirect,
+    optim_options={'analytical_jacobian': False, 'control_method': 'differential'},
+    bvp_algo=bvp_solver_indirect,
     steps=continuation_steps,
-    guess_generator=guess_maker_indirect,
+    guess_gen=guess_maker_indirect,
     autoscale=False,
-    save='indirect_data.blg')
+    save_sols='indirect_data.blg')
