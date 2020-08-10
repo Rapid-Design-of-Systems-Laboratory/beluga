@@ -10,6 +10,7 @@ from beluga.codegen import jit_compile_func, compile_control
 from ..codegen import LocalCompiler
 from typing import Iterable, List
 import copy
+from beluga.ivpsol import Trajectory
 
 
 class Problem:
@@ -260,6 +261,7 @@ class Problem:
         else:
             raise RuntimeError('{} has no attribute "sym"'.format(structs))
 
+    # TODO: make name a potential input
     @staticmethod
     def getattr_from_list(structs: List[NamedStruct], attr: str):
         if isinstance(structs, Iterable):
@@ -451,16 +453,19 @@ class Problem:
     def dualize(self, method='traditional'):
         self._ensure_sympified()
 
-        location_suffix_dict = {'initial': '0', 'terminal': 'f'}
+        for idx, constraint in enumerate(self.constraints['initial']):
+            nu_name = '_nu_0_{}'.format(idx)
+            nu = NamedDimensionalStruct(
+                nu_name, self.cost.units / constraint.units, local_compiler=self.local_compiler).sympify_self()
+            self.constraint_adjoints.append(nu)
+            self.cost.initial += nu.sym*constraint.expr
 
-        for location in location_suffix_dict.keys():
-            for idx, constraint in enumerate(self.constraints[location]):
-                loc_subscript = location_suffix_dict[location]
-                nu_name = '_nu_{}_{}'.format(loc_subscript, idx)
-                nu = NamedDimensionalStruct(
-                    nu_name, self.cost.units / constraint.units, local_compiler=self.local_compiler).sympify_self()
-                self.constraint_adjoints.append(nu)
-                self.cost.initial += nu.sym*constraint.expr
+        for idx, constraint in enumerate(self.constraints['terminal']):
+            nu_name = '_nu_f_{}'.format(idx)
+            nu = NamedDimensionalStruct(
+                nu_name, self.cost.units / constraint.units, local_compiler=self.local_compiler).sympify_self()
+            self.constraint_adjoints.append(nu)
+            self.cost.terminal += nu.sym*constraint.expr
 
         # Make costates TODO Check if quads need costates
         self.hamiltonian = \
@@ -500,18 +505,26 @@ class Problem:
                 self.constants_of_motion.append(NamedDimensionalExpressionStruct('com_{}'.format(idx), g_star,  units))
 
         # Make costate constraints
-        for location in ['initial', 'terminal']:
-            for state, costate in zip(self.states + self.parameters, self.costates + self.coparameters):
-                constraint_expr = costate.sym + self.cost.__getattribute__(location).diff(state.sym)
-                self.constraints[location].append(
-                    DimensionalExpressionStruct(constraint_expr, costate.units, local_compiler=self.local_compiler))
+        for state, costate in zip(self.states + self.parameters, self.costates + self.coparameters):
+            constraint_expr = costate.sym + self.cost.initial.diff(state.sym)
+            self.constraints['initial'].append(
+                DimensionalExpressionStruct(constraint_expr, costate.units, local_compiler=self.local_compiler))
 
+            constraint_expr = costate.sym - self.cost.terminal.diff(state.sym)
+            self.constraints['terminal'].append(
+                DimensionalExpressionStruct(constraint_expr, costate.units, local_compiler=self.local_compiler))
+
+        # TODO: Check Placement of Hamiltonian Constraint Placement
         # Make time/Hamiltonian constraints
-            constraint_expr = self.cost.__getattribute__(location).diff(self.independent_variable.sym)
-            self.constraints[location].append(DimensionalExpressionStruct(
-                constraint_expr, self.hamiltonian.units, local_compiler=self.local_compiler))
+        # constraint_expr = self.cost.initial.diff(self.independent_variable.sym) - self.hamiltonian.expr
+        # self.constraints['initial'].append(DimensionalExpressionStruct(
+        #         constraint_expr, self.hamiltonian.units, local_compiler=self.local_compiler))
 
-        self.sol_map_chain.append(DualizeMapper())
+        constraint_expr = self.cost.terminal.diff(self.independent_variable.sym) + self.hamiltonian.expr
+        self.constraints['terminal'].append(DimensionalExpressionStruct(
+            constraint_expr, self.hamiltonian.units, local_compiler=self.local_compiler))
+
+        self.sol_map_chain.append(DualizeMapper(len(self.costates), len(self.constraint_adjoints)))
 
         self.dualized = True
 
@@ -725,7 +738,7 @@ class Problem:
         self.compile_problem()
 
     def compile_indirect(self, analytical_jacobian=False, control_method='differential', method='traditional',
-                         reduction=False, do_momentum_shift=False, do_normalize_time=False):
+                         reduction=False, do_momentum_shift=True, do_normalize_time=True):
 
         self._ensure_sympified()
 
@@ -823,10 +836,11 @@ class Problem:
         return self
 
     def map_sol(self, sol, inverse=False):
-        for sol_map in self.sol_map_chain:
-            if inverse:
+        if inverse:
+            for sol_map in reversed(self.sol_map_chain):
                 sol = sol_map.inv_map(sol)
-            else:
+        else:
+            for sol_map in self.sol_map_chain:
                 sol = sol_map.map(sol)
 
         return sol
@@ -879,6 +893,8 @@ class FuncProblem:
         self.initial_cost_func, self.path_cost_func, self.terminal_cost_func = None, None, None
         self.ineq_constraints = None
 
+        self.scale_sol = None
+
         self._state_syms = []
         self._control_syms = []
         self._parameter_syms = []
@@ -904,21 +920,42 @@ class FuncProblem:
         self._constraint_parameters_syms = self.prob.extract_syms(self.prob.constraint_parameters)
 
         self._dynamic_args = \
-            [self.prob.independent_variable.sym, self._state_syms, self._parameter_syms, self._constant_syms]
+            [self._state_syms, self._parameter_syms, self._constant_syms]
         self._dynamic_args_w_controls = \
             [self.prob.independent_variable.sym, self._state_syms, self._control_syms,
              self._parameter_syms, self._constant_syms]
 
         self._bc_args = \
-            [self.prob.independent_variable.sym, self._state_syms, self._parameter_syms,
+            [self._state_syms, self._parameter_syms,
              self._constraint_parameters_syms, self._constant_syms]
         self._bc_args_w_quads = \
-            [self.prob.independent_variable.sym, self._state_syms, self._quad_syms, self._parameter_syms,
+            [self._state_syms, self._quad_syms, self._parameter_syms,
              self._constraint_parameters_syms, self._constant_syms]
+
+        self._units_args = \
+            [self._state_syms, self._quad_syms, self._control_syms,
+             self._parameter_syms, self._constant_syms]
+
+        # self._dynamic_args = \
+        #     [self.prob.independent_variable.sym, self._state_syms, self._parameter_syms, self._constant_syms]
+        # self._dynamic_args_w_controls = \
+        #     [self.prob.independent_variable.sym, self._state_syms, self._control_syms,
+        #      self._parameter_syms, self._constant_syms]
+        #
+        # self._bc_args = \
+        #     [self.prob.independent_variable.sym, self._state_syms, self._parameter_syms,
+        #      self._constraint_parameters_syms, self._constant_syms]
+        # self._bc_args_w_quads = \
+        #     [self.prob.independent_variable.sym, self._state_syms, self._quad_syms, self._parameter_syms,
+        #      self._constraint_parameters_syms, self._constant_syms]
+        #
+        # self._units_args = \
+        #     [self.prob.independent_variable.sym, self._state_syms, self._quad_syms, self._control_syms,
+        #      self._parameter_syms, self._constant_syms]
 
         self._initialized = True
 
-    def compile_problem(self, use_time_arg=False, use_control_arg=False, use_quad_arg=False):
+    def compile_problem(self, use_time_arg=False, use_control_arg=False, use_quad_arg=True):
 
         self._initialize()
 
@@ -931,6 +968,8 @@ class FuncProblem:
         self.compile_bc(use_quad_arg=use_quad_arg)
 
         self.compile_cost(use_quad_arg=use_quad_arg, use_control_arg=use_control_arg)
+
+        self.compile_scaling()
 
         return self
 
@@ -963,20 +1002,20 @@ class FuncProblem:
             compute_y_dot = self.compute_y_dot
             compute_q_dot = self.compute_q_dot
 
-            def deriv_func(_t, _y, _p, _k):
-                _u = compute_u(_t, _y, _p, _k)
-                return np.array(compute_y_dot(_t, _y, _u, _p, _k))
+            def deriv_func(_y, _p, _k):
+                _u = compute_u(_y, _p, _k)
+                return np.array(compute_y_dot(_y, _u, _p, _k))
 
-            def quad_func(_t, _y, _p, _k):
-                _u = compute_u(_t, _y, _p, _k)
-                return np.array(compute_q_dot(_t, _y, _u, _p, _k))
+            def quad_func(_y, _p, _k):
+                _u = compute_u(_y, _p, _k)
+                return np.array(compute_q_dot(_y, _u, _p, _k))
 
             self.deriv_func = jit_compile_func(deriv_func, self._dynamic_args)
             self.quad_func = jit_compile_func(quad_func, self._dynamic_args)
 
         return self.deriv_func, self.quad_func
 
-    def compile_bc(self, use_quad_arg=False):
+    def compile_bc(self, use_quad_arg=True):
 
         sym_initial_bc = self.prob.getattr_from_list(self.prob.constraints['initial'], 'expr')
         sym_terminal_bc = self.prob.getattr_from_list(self.prob.constraints['terminal'], 'expr')
@@ -987,9 +1026,9 @@ class FuncProblem:
             compute_initial_bc = self.lambdify(_args, sym_initial_bc)
             compute_terminal_bc = self.lambdify(_args, sym_terminal_bc)
 
-            def bc_func(_t0, _y0, _q0, _tf, _yf, _qf, _p, _p_con, _k):
-                bc_0 = np.array(compute_initial_bc(_t0, _y0, _q0, _p, _p_con, _k))
-                bc_f = np.array(compute_terminal_bc(_tf, _yf, _qf, _p, _p_con, _k))
+            def bc_func(_y0, _q0, _yf, _qf, _p, _p_con, _k):
+                bc_0 = np.array(compute_initial_bc(_y0, _q0, _p, _p_con, _k))
+                bc_f = np.array(compute_terminal_bc(_yf, _qf, _p, _p_con, _k))
                 return np.concatenate((bc_0, bc_f))
 
             _combined_args = \
@@ -1004,9 +1043,9 @@ class FuncProblem:
             compute_initial_bc = self.lambdify(_args, sym_initial_bc)
             compute_terminal_bc = self.lambdify(_args, sym_terminal_bc)
 
-            def bc_func(_t0, _y0, _tf, _yf, _p, _p_con, _k):
-                bc_0 = np.array(compute_initial_bc(_t0, _y0, _p, _p_con, _k))
-                bc_f = np.array(compute_terminal_bc(_tf, _yf, _p, _p_con, _k))
+            def bc_func(_y0, _yf, _p, _p_con, _k):
+                bc_0 = np.array(compute_initial_bc(_y0, _p, _p_con, _k))
+                bc_f = np.array(compute_terminal_bc(_yf, _p, _p_con, _k))
                 return np.concatenate((bc_0, bc_f))
 
             _combined_args = \
@@ -1027,8 +1066,8 @@ class FuncProblem:
             df_dy = self.lambdify(self._dynamic_args_w_controls, self.prob.func_jac['df_dy'])
             df_dp = self.lambdify(self._dynamic_args_w_controls, self.prob.func_jac['df_dp'])
 
-            def deriv_func_jac(_t, _y, _u, _p, _k):
-                return np.array(df_dy(_t, _y, _u, _p, _k)), np.array(df_dp(_t, _y, _u, _p, _k))
+            def deriv_func_jac(_y, _u, _p, _k):
+                return np.array(df_dy(_y, _u, _p, _k)), np.array(df_dp(_y, _u, _p, _k))
 
             self.deriv_func_jac = jit_compile_func(deriv_func_jac, self._dynamic_args_w_controls,
                                                    func_name='deriv_func_jac')
@@ -1039,9 +1078,9 @@ class FuncProblem:
 
             compute_u = self.compute_u
 
-            def deriv_func_jac(_t, _y, _p, _k):
-                _u = compute_u(_t, _y, _p, _k)
-                return np.array(df_dy(_t, _y, _u, _p, _k)), np.array(df_dp(_t, _y, _u, _p, _k))
+            def deriv_func_jac(_y, _p, _k):
+                _u = compute_u(_y, _p, _k)
+                return np.array(df_dy(_y, _u, _p, _k)), np.array(df_dp(_y, _u, _p, _k))
 
             self.deriv_func_jac = jit_compile_func(deriv_func_jac, self._dynamic_args,
                                                    func_name='deriv_func_jac')
@@ -1050,15 +1089,15 @@ class FuncProblem:
             df_dy = self.lambdify(self._dynamic_args, self.prob.func_jac['df_dy'])
             df_dp = self.lambdify(self._dynamic_args, self.prob.func_jac['df_dp'])
 
-            def deriv_func_jac(_t, _y, _p, _k):
-                return np.array(df_dy(_t, _y, _p, _k)), np.array(df_dp(_t, _y, _p, _k))
+            def deriv_func_jac(_y, _p, _k):
+                return np.array(df_dy(_y, _p, _k)), np.array(df_dp(_y, _p, _k))
 
             self.deriv_func_jac = jit_compile_func(deriv_func_jac, self._dynamic_args,
                                                    func_name='deriv_func_jac')
 
         return self.deriv_func_jac
 
-    def compile_bc_jac_func(self, use_quad_arg=False):
+    def compile_bc_jac_func(self, use_quad_arg=True):
 
         if all([item is None
                 for item in list(self.prob.bc_jac['initial'].values()) + list(self.prob.bc_jac['terminal'].values())]):
@@ -1079,24 +1118,24 @@ class FuncProblem:
             dbc_0_dq = self.lambdify(_args, self.prob.bc_jac['initial']['dbc_dq'])
             dbc_f_dq = self.lambdify(_args, self.prob.bc_jac['terminal']['dbc_dq'])
 
-            def bc_func_jac(_t0, _y0, _q0, _tf, _yf, _qf, _p, _p_con, _k):
-                return np.array(dbc_0_dy(_t0, _y0, _q0, _p, _p_con, _k)), \
-                       np.array(dbc_f_dy(_tf, _yf, _qf, _p, _p_con, _k)), \
-                       np.array(dbc_0_dq(_t0, _y0, _q0, _p, _p_con, _k)), \
-                       np.array(dbc_f_dq(_tf, _yf, _qf, _p, _p_con, _k)), \
-                       (np.array(dbc_0_dp(_t0, _y0, _q0, _p, _p_con, _k))
-                        + np.array(dbc_f_dp(_tf, _yf, _qf, _p, _p_con, _k)))
+            def bc_func_jac(_y0, _q0, _yf, _qf, _p, _p_con, _k):
+                return np.array(dbc_0_dy(_y0, _q0, _p, _p_con, _k)), \
+                       np.array(dbc_f_dy(_yf, _qf, _p, _p_con, _k)), \
+                       np.array(dbc_0_dq(_y0, _q0, _p, _p_con, _k)), \
+                       np.array(dbc_f_dq(_yf, _qf, _p, _p_con, _k)), \
+                       (np.array(dbc_0_dp(_y0, _q0, _p, _p_con, _k))
+                        + np.array(dbc_f_dp(_yf, _qf, _p, _p_con, _k)))
 
             _combined_args = \
                 ([self.prob.independent_variable.sym] + self._state_syms + self._quad_syms) * 2 \
                 + self._parameter_syms + self._constraint_parameters_syms + self._constant_syms
 
         else:
-            def bc_func_jac(_t0, _y0, _tf, _yf, _p, _p_con, _k):
-                return np.array(dbc_0_dy(_t0, _y0, _p, _p_con, _k)), \
-                       np.array(dbc_f_dy(_tf, _yf, _p, _p_con, _k)), \
-                       (np.array(dbc_0_dp(_t0, _y0, _p, _p_con, _k))
-                        + np.array(dbc_f_dp(_tf, _yf, _p, _p_con, _k)))
+            def bc_func_jac(_y0, _q0, _yf, _qf, _p, _p_con, _k):
+                return np.array(dbc_0_dy(_y0, _p, _p_con, _k)), \
+                       np.array(dbc_f_dy(_yf, _p, _p_con, _k)), \
+                       (np.array(dbc_0_dp(_y0, _p, _p_con, _k))
+                        + np.array(dbc_f_dp(_yf, _p, _p_con, _k)))
 
             _combined_args = \
                 ([self.prob.independent_variable.sym] + self._state_syms) * 2 \
@@ -1106,7 +1145,7 @@ class FuncProblem:
 
         return self.bc_func_jac
 
-    def compile_cost(self, use_quad_arg=False, use_control_arg=False):
+    def compile_cost(self, use_quad_arg=True, use_control_arg=False):
 
         if use_quad_arg:
             _bc_args = self._bc_args_w_quads
@@ -1129,12 +1168,80 @@ class FuncProblem:
             _compute_u = self.compute_u
             _compute_path_cost = self.lambdify(self._dynamic_args_w_controls, self.prob.cost.path)
 
-            def path_cost_func(_t, _y, _p, _k):
-                _u = _compute_u(_t, _y, _p, _k)
-                return np.array(_compute_path_cost(_t, _y, _u, _p, _k))
+            def path_cost_func(_y, _p, _k):
+                _u = _compute_u(_y, _p, _k)
+                return np.array(_compute_path_cost(_y, _u, _p, _k))
 
             self.path_cost_func = jit_compile_func(path_cost_func, self._dynamic_args)
 
         return self.initial_cost_func, self.path_cost_func, self.terminal_cost_func
+
+    def compile_scaling(self):
+        lambdify = self.lambdify
+        getattr_from_list = self.prob.getattr_from_list
+
+        units = self.prob.units
+        units_syms = getattr_from_list(units, 'sym')
+        units_func = getattr_from_list(units, 'expr')
+
+        compute_unit_factors = lambdify(self._units_args, units_func)
+
+        scalable_components_list = [
+            self.prob.independent_variable,
+            self.prob.states,
+            self.prob.quads,
+            self.prob.controls,
+            self.prob.parameters,
+            self.prob.constraint_parameters,
+            self.prob.constants]
+
+        compute_factors = [
+            lambdify(units_syms, getattr_from_list(component, 'units')) for component in scalable_components_list
+        ]
+
+        def scale_sol(sol: Trajectory, inv=False):
+
+            sol = copy.deepcopy(sol)
+
+            ref_vals = tuple([max_mag(_arr) for _arr in [sol.t, sol.y, sol.q, sol.u]]
+                             + [np.fabs(_arr) for _arr in [sol.dynamical_parameters, sol.const]])
+
+            unit_factors = compute_unit_factors(*ref_vals)
+            factors = [compute_factor(*unit_factors) for compute_factor in compute_factors]
+
+            if inv:
+                op = np.multiply
+            else:
+                op = np.divide
+
+            sol.t = op(sol.t, factors[0])
+            sol.y = op(sol.y, factors[1])
+            sol.q = op(sol.q, factors[2])
+            sol.u = op(sol.u, factors[3])
+            sol.dynamical_parameters = op(sol.dynamical_parameters, factors[4])
+            sol.nondynamical_parameters = op(sol.nondynamical_parameters, factors[5])
+            sol.const = op(sol.const, factors[6])
+
+            return sol
+
+        self.scale_sol = scale_sol
+
+        return self
+
+
+def max_mag(arr: np.ndarray, axis=0):
+    if arr is None:
+        return np.array([])
+    elif not isinstance(arr, Iterable):
+        return abs(arr)
+    elif not isinstance(arr, np.ndarray):
+        arr = np.array(arr)
+
+    if arr.size == 0:
+        return arr
+    else:
+        return np.max(np.fabs(arr), axis=axis)
+
+
 
 

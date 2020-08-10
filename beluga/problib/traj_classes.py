@@ -31,30 +31,26 @@ class MomentumShiftMapper(SolMapper):
         self.ind_state_idx = ind_state_idx
 
     def map(self, sol: Solution) -> Solution:
-        sol = copy.deepcopy(sol)
-
         if self.ind_state_idx is None:
             self.ind_state_idx = np.shape(sol.y)[1]
 
         if len(sol.dual_t) == 0:
             sol.dual_t = np.zeros_like(sol.t)
 
-        sol.y = np.insert(sol.y, self.ind_state_idx, sol.t, axis=0)
-        sol.dual = np.insert(sol.dual, self.ind_state_idx, sol.dual_t, axis=0)
+        sol.y = np.insert(sol.y, self.ind_state_idx, sol.t, axis=1)
+        sol.dual = np.insert(sol.dual, self.ind_state_idx, sol.dual_t, axis=1)
 
         return sol
 
     def inv_map(self, sol: Solution) -> Solution:
-        sol = copy.deepcopy(sol)
-
         if self.ind_state_idx is None:
             self.ind_state_idx = np.shape(sol.y)[1] - 1
 
         sol.t = sol.y[:, self.ind_state_idx]
-        np.delete(sol.y, self.ind_state_idx, axis=0)
+        np.delete(sol.y, self.ind_state_idx, axis=1)
 
         sol.dual_t = sol.dual[:, self.ind_state_idx]
-        np.delete(sol.dual, self.ind_state_idx, axis=0)
+        np.delete(sol.dual, self.ind_state_idx, axis=1)
 
         return sol
 
@@ -123,10 +119,15 @@ class EpsTrigMapper(SolMapper):
 
 
 class DualizeMapper(SolMapper):
+    def __init__(self, dual_len, nu_len):
+        self.dual_len = dual_len
+        self.nu_len = nu_len
+
     def map(self, sol: Solution, lam=empty_array, nu=empty_array) -> Solution:
 
-        sol.dual = lam
-        sol.nondynamical_parameters = nu
+        # sol.dual = lam
+        if len(sol.nondynamical_parameters) == 0:
+            sol.nondynamical_parameters = np.ones(self.nu_len)
 
         return sol
 
@@ -213,7 +214,7 @@ class AlgebraicControlMapper(SolMapper):
 
     def inv_map(self, sol: Solution) -> Solution:
         sol.u = np.array([self.compute_u(_t, _y, _lam, _p, _k) for _t, _y, _lam, _p, _k
-                          in zip(sol.t, sol.y.T, sol.lam.T, sol.p, sol.k)])
+                          in zip(sol.t, sol.y.T, sol.dual.T, sol.dynamical_parameters, sol.const)])
         return sol
 
 
@@ -222,13 +223,14 @@ class DifferentialControlMapper(SolMapper):
         self.control_idxs = control_idxs
 
     def map(self, sol: Solution) -> Solution:
-        sol.y = np.insert(sol.y, self.control_idxs, sol.u, axis=1)
-        sol.u = empty_array
+        for idx, u in sorted(zip(self.control_idxs, sol.u)):
+            sol.y = np.insert(sol.y, idx, u, axis=1)
+            sol.u = np.delete(sol.u, np.where(sol.u[0, :] == u), axis=1)
         return sol
 
     def inv_map(self, sol: Solution) -> Solution:
         sol.u = sol.y[:, self.control_idxs]
-        sol.y = np.delete(sol.y, self.control_idxs)
+        sol.y = np.delete(sol.y, self.control_idxs, axis=1)
         return sol
 
 
@@ -246,7 +248,7 @@ class SquashToBVPMapper(SolMapper):
     def map(self, sol: Solution) -> Solution:
 
         if len(sol.dual) > 0:
-            sol.y = np.concatenate((sol.y, sol.dual))
+            sol.y = np.concatenate((sol.y, sol.dual), axis=1)
 
         sol.dual = empty_array
         sol.dual_t = empty_array
@@ -256,8 +258,8 @@ class SquashToBVPMapper(SolMapper):
 
     def inv_map(self, sol: Solution) -> Solution:
 
-        sol.dual = sol.y[self.costate_idxs]
-        sol.y = np.delete(sol.y, self.costate_idxs)
-        sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, self.constraint_adjoints_idxs)
+        sol.dual = sol.y[:, self.costate_idxs]
+        sol.y = np.delete(sol.y, self.costate_idxs, axis=1)
+        # sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, self.constraint_adjoints_idxs)
 
         return sol

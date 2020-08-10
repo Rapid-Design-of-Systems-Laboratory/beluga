@@ -166,7 +166,8 @@ class CostStruct(DimensionalStruct):
         self.terminal = self._sympify_internal(self.terminal)
 
     def subs_self(self, old, new):
-        if not (hasattr(self.initial, 'subs_self') and hasattr(self.path, 'subs_self') and hasattr(self.terminal, 'subs_self')):
+        if not (hasattr(self.initial, 'subs_self') and hasattr(self.path, 'subs_self')
+                and hasattr(self.terminal, 'subs_self')):
             self.sympify_self()
         self.initial = self.initial.subs(old, new)
         self.path = self.path.subs(old, new)
@@ -291,9 +292,9 @@ class PathConstraintStruct(DimensionalExpressionStruct):
         self.activator = self._sympify_internal(self.activator)
 
     def subs_self(self, old, new):
-        if not (hasattr(self.expr, 'subs_self') and hasattr(self.lower, 'subs_self') and hasattr(self.upper, 'subs_self')):
+        if not (hasattr(self.expr, 'subs_self')
+                and hasattr(self.lower, 'subs_self') and hasattr(self.upper, 'subs_self')):
             self.sympify_self()
         self.expr = self.expr.subs(old, new)
         self.lower = self.lower.subs(old, new)
         self.upper = self.upper.subs(old, new)
-

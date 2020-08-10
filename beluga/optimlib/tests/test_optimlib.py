@@ -37,9 +37,9 @@ def test_composable_functors(method):
     gamma = Trajectory()
     gamma.t = np.linspace(0, 1, num=10)
     gamma.y = np.vstack([np.linspace(0, 0, num=10) for _ in range(3)]).T
-    gamma.dual = np.vstack([np.linspace(-1, -1, num=10) for _ in range(3)]).T
+    gamma.lam = np.vstack([np.linspace(-1, -1, num=10) for _ in range(3)]).T
     gamma.u = -np.pi / 2 * np.ones((10, 1))
-    gamma.const = np.array([-9.81, 1, -1])
+    gamma.k = np.array([-9.81, 1, -1])
 
     g1 = mapper(gamma)
     g2 = mapper_inv(g1)
@@ -50,8 +50,8 @@ def test_composable_functors(method):
     assert g2.q.shape == gamma.q.shape
     assert (g2.q - gamma.q < tol).all()
 
-    assert g2.dual.shape == gamma.dual.shape
-    assert (g2.dual - gamma.dual < tol).all()
+    assert g2.lam.shape == gamma.lam.shape
+    assert (g2.lam - gamma.lam < tol).all()
 
     assert g2.u.shape == gamma.u.shape
     assert (g2.u - gamma.u < tol).all()

@@ -68,6 +68,7 @@ class ContinuationStrategy(abc.ABC):
         self.vars = {}
         self.ctr = None
         self.bvp = None
+        self.constant_names = []
 
     def __str__(self):
         return str(self.vars)
@@ -97,12 +98,13 @@ class ContinuationStrategy(abc.ABC):
 
     def init(self, gamma, bvp):
         self.bvp = bvp
-        for var_name in self.var_iterator():
-            if var_name not in [str(s['symbol']) for s in self.bvp.get_constants()]:
-                raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
+        # for var_name in self.var_iterator():
+        #     if var_name not in [str(s['symbol']) for s in self.bvp.get_constants()]:
+        #         raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
         gamma_in = copy.deepcopy(gamma)
         gamma_in.converged = False
         self.gammas = [gamma_in]
+        self.constant_names = bvp.getattr_from_list(bvp.constants, 'name')
 
     def next(self, ignore_last_step=False):
         if len(self.gammas) is 0:
@@ -117,13 +119,13 @@ class ContinuationStrategy(abc.ABC):
 
         # Update auxiliary variables using previously calculated step sizes
         total_change = 0.0
-        const0 = copy.deepcopy(self.gammas[-1].k)
+        const0 = copy.deepcopy(self.gammas[-1].const)
         for var_name in self.vars:
-            jj = [str(s['symbol']) for s in self.bvp.get_constants()].index(var_name)
+            jj = self.constant_names.index(var_name)
             const0[jj] = self.vars[var_name].steps[self.ctr]
             total_change += abs(self.vars[var_name].steps[self.ctr])
 
-        i = self.get_closest_gamma(const0)
+        i = int(self.get_closest_gamma(const0))
         gamma_guess = copy.deepcopy(self.gammas[i])
         gamma_guess.k = const0
         self.ctr += 1
@@ -145,14 +147,14 @@ class ManualStrategy(ContinuationStrategy):
     # A unique short name to select this class
     strategy_name = 'manual'
 
-    def __init__(self, num_cases=1, vars=None):  # TODO change vars to other variable name to avoid overwriting
+    def __init__(self, num_cases=1, _vars=None):  # TODO change vars to other variable name to avoid overwriting
         super(ManualStrategy, self).__init__()
         self._num_cases = num_cases
         self._spacing = 'linear'
-        if vars is None:
+        if _vars is None:
             self.vars = {}
         else:
-            self.vars = vars  # dictionary of values
+            self.vars = _vars  # dictionary of values
         self.ctr = 0   # iteration counter
         self.last_sol = None
 
@@ -170,27 +172,27 @@ class ManualStrategy(ContinuationStrategy):
         self.vars = {}
         self.reset()
 
-    # TODO: Change to store only stepsize and use yield
+    # TODO: Change to store only step-size and use yield
     def init(self, sol, bvp):
         super(ManualStrategy, self).init(sol, bvp)
 
         # Iterate through all types of variables
         for var_name in self.var_iterator():
-            if var_name not in [str(s['symbol']) for s in self.bvp.get_constants()]:
+            if var_name not in self.constant_names:
                 raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
 
             # Set current value of each continuation variable
-            jj = [str(s['symbol']) for s in self.bvp.get_constants()].index(var_name)
-            self.vars[var_name].value = sol.k[jj]
+            jj = self.constant_names.index(var_name)
+            self.vars[var_name].value = sol.const[jj]
             # Calculate update steps for continuation process
             if self._spacing == 'linear':
                 self.vars[var_name].steps = np.linspace(self.vars[var_name].value,
-                                                                  self.vars[var_name].target,
-                                                                  self._num_cases)
+                                                        self.vars[var_name].target,
+                                                        self._num_cases)
             elif self._spacing == 'log':
                 self.vars[var_name].steps = np.logspace(np.log10(self.vars[var_name].value),
-                                                                  np.log10(self.vars[var_name].target),
-                                                                  self._num_cases)
+                                                        np.log10(self.vars[var_name].target),
+                                                        self._num_cases)
 
     def set(self, name, target, param_type):
         """
@@ -291,6 +293,7 @@ class ProductStrategy(ContinuationStrategy):
         self.sols = []
         self._num_cases = None
         self._num_subdivisions = num_subdivisions
+        self.division_ctr = 0
         self.vars = {}  # dictionary of values
         self.ctr = 0  # iteration counter
 

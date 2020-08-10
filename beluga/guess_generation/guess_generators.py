@@ -124,9 +124,8 @@ class GuessGenerator(object):
         solinit.dynamical_parameters = np.array(param_guess, dtype=beluga.DTYPE)
         solinit.nondynamical_parameters = np.array(nondynamical_param_guess, dtype=beluga.DTYPE)
         sol = guess_map(solinit)
-        # solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0], sol.u[0],
-        #               sol.dynamical_parameters, sol.const)
-        solivp = prop(bvp_fn.deriv_func, None, sol.t, sol.y[0], None, sol.dynamical_parameters, sol.const)
+        solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0],
+                      sol.dynamical_parameters, sol.const)
         solout = copy.deepcopy(solivp)
         solout.dynamical_parameters = sol.dynamical_parameters
         solout.nondynamical_parameters = sol.nondynamical_parameters

@@ -26,20 +26,20 @@ def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.blg')
 
     save_dict = {}
     if ocp is not None:
-        assert ocp.__class__ is beluga.problem.OCP, 'prob should be of beluga.problem.OCP class'
+        # assert ocp.__class__ is beluga.Problem, 'prob should be of beluga.problem.OCP class'
         save_dict['prob'] = ocp
 
     if bvp is not None:
         save_dict['prob'] = bvp
 
     if bvp_solver is not None:
-        assert issubclass(bvp_solver.__class__, beluga.bvpsol.BaseAlgorithm), 'bvp_solver should be subclass ' \
-                                                                              'of beluga.bvpsol.BaseAlgorithm'
+        # assert issubclass(bvp_solver.__class__, beluga.bvpsol.BaseAlgorithm), 'bvp_solver should be subclass ' \
+        #                                                                       'of beluga.bvpsol.BaseAlgorithm'
         save_dict['prob solver'] = bvp_solver
 
     if sol_set is not None:
-        assert all([sol.__class__ is beluga.ivpsol.ivpsol.Trajectory for cont_set in sol_set for sol in cont_set]),\
-            'all solutions in sol_set should be of class beluga.ivpsol.ivpsol.Trajectory'
+        # assert all([sol.__class__ is beluga.ivpsol.ivpsol.Trajectory for cont_set in sol_set for sol in cont_set]),\
+        #     'all solutions in sol_set should be of class beluga.ivpsol.ivpsol.Trajectory'
         save_dict['solutions'] = sol_set
 
     with open(filename, 'wb') as file:

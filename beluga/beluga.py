@@ -39,6 +39,7 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
     helpers.init_logging(logging_level, display_level, config['logfile'])
 
 
+# TODO: What's the point of this?
 def bvp_algorithm(name, **kwargs):
     """
     Helper method to load bvp algorithm by name.
@@ -57,6 +58,7 @@ def bvp_algorithm(name, **kwargs):
         raise ValueError('Algorithm ' + name + ' not found')
 
 
+# TODO: What's the point of this?
 def guess_generator(*args, **kwargs):
     """
     Helper for creating an initial guess generator.
@@ -84,19 +86,22 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
     """
     # Loop through all the continuation steps
     solution_set = []
+
+    functional_problem = bvp.functional_problem
+
     # Initialize scaling
-    s = bvp.raw['scaling']
+    scale = functional_problem.scale_sol
 
     # Load the derivative function into the bvp algorithm
-    bvp_algo.set_derivative_function(bvp.deriv_func)
-    bvp_algo.set_derivative_jacobian(bvp.deriv_jac_func)
-    bvp_algo.set_quadrature_function(bvp.quad_func)
-    bvp_algo.set_boundarycondition_function(bvp.bc_func)
-    bvp_algo.set_boundarycondition_jacobian(bvp.bc_func_jac)
-    bvp_algo.set_initial_cost_function(bvp.initial_cost)
-    bvp_algo.set_path_cost_function(bvp.path_cost)
-    bvp_algo.set_terminal_cost_function(bvp.terminal_cost)
-    bvp_algo.set_inequality_constraint_function(bvp.ineq_constraints)
+    bvp_algo.set_derivative_function(functional_problem.deriv_func)
+    bvp_algo.set_derivative_jacobian(functional_problem.deriv_func_jac)
+    bvp_algo.set_quadrature_function(functional_problem.quad_func)
+    bvp_algo.set_boundarycondition_function(functional_problem.bc_func)
+    bvp_algo.set_boundarycondition_jacobian(functional_problem.bc_func_jac)
+    # bvp_algo.set_initial_cost_function(functional_problem.initial_cost)
+    # bvp_algo.set_path_cost_function(functional_problem.path_cost)
+    # bvp_algo.set_terminal_cost_function(functional_problem.terminal_cost)
+    bvp_algo.set_inequality_constraint_function(functional_problem.ineq_constraints)
 
     sol_guess = solinit
     # sol = None
@@ -104,14 +109,13 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
         logging.info('Solving OCP...')
         time0 = time.time()
         if autoscale:
-            s.compute_scaling(sol_guess)
-            sol_guess = s.scale(sol_guess)
+            sol_guess = scale(sol_guess)
 
         opt = bvp_algo.solve(sol_guess, pool=pool)
         sol = opt['sol']
 
         if autoscale:
-            sol = s.unscale(sol)
+            sol = scale(sol, inv=True)
 
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
@@ -133,26 +137,26 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
             except:
                 log_level = logging.getLogger().getEffectiveLevel()
 
-            L = len(step)
-            continuation_progress = tqdm(step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
-                                  ascii=True, unit='trajectory')
+            step_len = len(step)
+            continuation_progress = tqdm(
+                step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
+                ascii=True, unit='trajectory')
             for sol_guess in continuation_progress:
                 continuation_progress.total = len(step)
-                if L != continuation_progress.total:
-                    L = continuation_progress.total
+                if step_len != continuation_progress.total:
+                    step_len = continuation_progress.total
                     continuation_progress.refresh()
 
                 logging.debug('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
                 time0 = time.time()
                 if autoscale:
-                    s.compute_scaling(sol_guess)
-                    sol_guess = s.scale(sol_guess)
+                    sol_guess = scale(sol_guess)
 
                 opt = bvp_algo.solve(sol_guess, pool=pool)
                 sol = opt['sol']
 
                 if autoscale:
-                    sol = s.unscale(sol)
+                    sol = scale(sol, inv=True)
 
                 ya = sol.y[0, :]
                 yb = sol.y[-1, :]
@@ -170,11 +174,11 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                     ua = np.array([])
                     ub = np.array([])
 
-                dp = sol.p
+                dp = sol.dynamical_parameters
                 ndp = sol.nondynamical_parameters
-                C = sol.k
+                k = sol.const
 
-                bc_residuals_unscaled = bvp_algo.boundarycondition_function(ya, qa, ua, yb, qb, ub, dp, ndp, C)
+                bc_residuals_unscaled = bvp_algo.boundarycondition_function(ya, qa, yb, qb, dp, ndp, k)
 
                 step.add_gamma(sol)
 
@@ -184,7 +188,9 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 """
                 sol_guess = copy.deepcopy(sol)
                 elapsed_time = time.time() - time0
-                logging.debug('STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'.format(step.ctr, step.num_cases(), opt['niter'], max(bc_residuals_unscaled), elapsed_time))
+                logging.debug('STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'
+                              .format(step.ctr, step.num_cases(), opt['niter'],
+                                      max(bc_residuals_unscaled), elapsed_time))
                 solution_set[step_idx].append(copy.deepcopy(sol))
                 if not sol.converged:
                     logging.debug('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
@@ -310,11 +316,13 @@ def solve(
 
     sol_temp = copy.deepcopy(solinit)
 
-    u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.p, sol_temp.k)])
-    for ii in range(len(sol_temp.t) - 1):
-        u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.p, sol_temp.k)))
-    sol_temp.u = u
-    state_names = [str(s['symbol']) for s in ocp.states()] + [str(ocp.get_independent()['symbol'])]
+    if bvp.functional_problem.compute_u is not None:
+        u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.p, sol_temp.k)])
+        for ii in range(len(sol_temp.t) - 1):
+            u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.p, sol_temp.k)))
+        sol_temp.u = u
+
+    state_names = bvp.getattr_from_list(bvp.states, 'name')
     traj = ocp_map_inverse(sol_temp)
 
     initial_states = np.hstack((traj.y[0, :], traj.t[0]))
@@ -334,32 +342,32 @@ def solve(
                 jj = bvp.raw['constants'].index(bcf + '_f')
                 solinit.k[jj] = terminal_bc[bcf]
 
-    quad_names = bvp.raw['quads']
-    n_quads = len(quad_names)
-    if n_quads > 0:
-        initial_quads = solinit.q[0, :]
-        terminal_quads = solinit.q[-1, :]
-        initial_bc = dict(zip(quad_names, initial_quads))
-        terminal_bc = dict(zip(quad_names, terminal_quads))
-
-        for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.k[ii + '_0'] = initial_bc[bc0]
-
-        for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bcf + '_f')
-                solinit.k[jj] = terminal_bc[bcf]
+    # quad_names = bvp.raw['quads']
+    # n_quads = len(quad_names)
+    # if n_quads > 0:
+    #     initial_quads = solinit.q[0, :]
+    #     terminal_quads = solinit.q[-1, :]
+    #     initial_bc = dict(zip(quad_names, initial_quads))
+    #     terminal_bc = dict(zip(quad_names, terminal_quads))
+    #
+    #     for ii, bc0 in enumerate(initial_bc):
+    #         if bc0 + '_0' in bvp.raw['constants']:
+    #             jj = bvp.raw['constants'].index(bc0 + '_0')
+    #             solinit.k[str(ii) + '_0'] = initial_bc[bc0]
+    #
+    #     for ii, bcf in enumerate(terminal_bc):
+    #         if bcf + '_f' in bvp.raw['constants']:
+    #             jj = bvp.raw['constants'].index(bcf + '_f')
+    #             solinit.k[jj] = terminal_bc[bcf]
 
     """
     Main continuation process
     """
     time0 = time.time()
-    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
+    continuation_set = run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
-    bvp_algorithm.close()
+    bvp_algo.close()
 
     """
     Post processing and output
@@ -393,16 +401,16 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     out = []
 
     # Calculate the control time-history for each trajectory
-    for cont_num, continuation_step in enumerate(continuation_set):
-        tempset = []
-        for sol_num, sol in enumerate(continuation_step):
-            u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.k)])
-            for ii in range(len(sol.t) - 1):
-                u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.k)))
-            sol.u = u
-
-            tempset.append(ocp_map_inverse(sol))
-        out.append(tempset)
+    # for cont_num, continuation_step in enumerate(continuation_set):
+    #     tempset = []
+    #     for sol_num, sol in enumerate(continuation_step):
+    #         u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.k)])
+    #         for ii in range(len(sol.t) - 1):
+    #             u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.k)))
+    #         sol.u = u
+    #
+    #         tempset.append(ocp_map_inverse(sol))
+    #     out.append(tempset)
 
     # Calculate the cost for each trajectory
     for cont_num, continuation_step in enumerate(out):
@@ -411,7 +419,8 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
             cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.k)
             cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
             for ii in range(len(sol.t) - 1):
-                cpath = np.hstack((cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.k)))
+                cpath = np.hstack(
+                    (cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.k)))
 
             cpath = integrate.simps(cpath, sol.t)
             sol.cost = c0 + cpath + cf

@@ -5,13 +5,15 @@ from sympy import *
 from beluga.utils import sympify
 
 
-class Scaling:
+class Scaling(dict):
     excluded_aux = ['function']
 
-    def __init__(self, units):
+    def __init__(self):
 
-        self.units = units
+        dict.__init__(self)
 
+        self.units = {}
+        self.units_sym = []
         self.scale_func = {}
         self.problem_data = {}
         self.scale_factors = None
