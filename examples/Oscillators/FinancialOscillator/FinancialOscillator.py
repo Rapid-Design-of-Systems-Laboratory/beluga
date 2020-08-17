@@ -32,11 +32,11 @@ ocp_indirect.constant('epsilon1', 10, 'nd')
 ocp_indirect.path_cost('(x1 + 5*t - 5)**2', 'nd')
 
 # Define constraints
-ocp_indirect.constraints().initial('x1 - x1_0', 'nd')
-ocp_indirect.constraints().initial('x2 - x2_0', 'nd')
-ocp_indirect.constraints().initial('t', 'nd')
+ocp_indirect.initial_constraint('x1 - x1_0', 'nd')
+ocp_indirect.initial_constraint('x2 - x2_0', 'nd')
+ocp_indirect.initial_constraint('t', 'nd')
 ocp_indirect.path_constraint('u', 'rad', lower='-2', upper='2', activator='epsilon1', method='epstrig')
-ocp_indirect.constraints().terminal('t - 1', 'nd')
+ocp_indirect.terminal_constraint('t - 1', 'nd')
 
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 

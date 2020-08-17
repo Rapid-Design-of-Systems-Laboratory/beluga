@@ -48,14 +48,13 @@ ocp.constant('u_max', 1, 'rad^2/s^4')
 ocp.path_cost('1', '1')
 
 # Define constraints
-ocp.constraints() \
-    .initial('t', 's') \
-    .initial('w1 - w1_0', 'rad/s') \
-    .initial('w2 - w2_0', 'rad/s') \
-    .initial('w3 - w3_0', 'rad/s') \
-    .terminal('w1 - w1_f', 'rad/s') \
-    .terminal('w2 - w2_f', 'rad/s') \
-    .terminal('w3 - w3_f', 'rad/s')
+ocp.initial_constraint('t', 's')
+ocp.initial_constraint('w1 - w1_0', 'rad/s')
+ocp.initial_constraint('w2 - w2_0', 'rad/s')
+ocp.initial_constraint('w3 - w3_0', 'rad/s')
+ocp.terminal_constraint('w1 - w1_f', 'rad/s')
+ocp.terminal_constraint('w2 - w2_f', 'rad/s')
+ocp.terminal_constraint('w3 - w3_f', 'rad/s')
 
 ocp.path_constraint('u1', 'rad/s^2', lower='u_min', upper='u_max', activator='epsilon1', method='utm')
 ocp.path_constraint('u2', 'rad/s^2', lower='u_min', upper='u_max', activator='epsilon1', method='utm')

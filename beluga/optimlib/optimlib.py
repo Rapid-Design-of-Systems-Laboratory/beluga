@@ -499,7 +499,9 @@ def init_workspace(ocp):
     workspace['parameters'] = [k['name'] for k in ocp.parameters()]
     workspace['parameters_units'] = [k['unit'] for k in ocp.parameters()]
 
-    constraints = ocp.constraints()
+    constraints = dict()
+    constraints['initial'] = ocp.get_initial_constraints()
+    constraints['terminal'] = ocp.get_terminal_constraints()
     constraints['path'] = ocp.get_path_constraints()
 
     workspace['constraints'] = {c_type: [sympify(c_obj['function']) for c_obj in c_list]
@@ -594,7 +596,7 @@ def exterior_derivative(f, basis, derivative_fn):
         df = [0]*len(basis)
         df = sympy.MutableDenseNDimArray(df)
         for ii in range(n):
-            df[ii] = derivative_fn(f, basis[ii])
+            df[(ii,)] = derivative_fn(f, basis[ii])
 
     # Handle the (1+)-grade cases
     if isinstance(f, sympy.Array) or isinstance(f, sympy.NDimArray):
@@ -1035,18 +1037,18 @@ def is_symplectic(form):
     return out
 
 
-def utm_path(constraint, lower, upper, activator):
+def utm_term(constraint, lower, upper, activator):
     r"""
-    Creates an interior penalty-type term to enforce path constraints.
+    Creates an interior penalty-type term to enforce constraints.
 
-    :param constraint: The path constraint.
-    :param lower: Lower bounds on the path constraint.
-    :param upper: Upper bounds on the path constraint.
-    :param activator: Activation term used in the path constraint.
+    :param constraint: The constraint.
+    :param lower: Lower bound on the constraint.
+    :param upper: Upper bound on the constraint.
+    :param activator: Activation term used in the constraint.
     :return: Term to augment a Hamiltonian with.
     """
     if lower is None or upper is None:
-        raise NotImplementedError('Lower and upper bounds on UTM-style path constraints MUST be defined.')
+        raise NotImplementedError('Lower and upper bounds on UTM-style constraints MUST be defined.')
     return activator*(1/(sympy.cos(sympy.pi/2*(2*constraint - upper - lower) / (upper - lower))) - 1)
 
 
@@ -1074,7 +1076,7 @@ def pb(f, g, bvp):
         h = sympy.MutableDenseNDimArray([0]*O.shape[0])
         for ii, s in enumerate(bvp.states()):
             for jj, t in enumerate(bvp.states()):
-                h[ii] += O[ii,jj]*total_derivative(g['function'], t['symbol'])
+                h[(ii,)] += O[ii,jj]*total_derivative(g['function'], t['symbol'])
 
         return h
     raise NotImplementedError
@@ -1312,16 +1314,27 @@ def F_EPSTRIG(ocp):
     return ocp, gamma_map, gamma_map_inverse
 
 
-def F_UTM(ocp):
+def F_UTM(ocp, location='path'):
     r"""
 
     :param ocp:
     :return:
     """
+    if location == 'initial':
+        utms = [str(_['method']).upper()=='UTM' for _ in ocp.get_initial_constraints()]
+        ind = np.where(utms)[0][0]
+        the_constraint = ocp.get_initial_constraints()[ind]
+    
+    if location == 'path':
+        the_constraint = ocp.get_path_constraints()[0]
+    
+    if location == 'terminal':
+        utms = [str(_['method']).upper()=='UTM' for _ in ocp.get_terminal_constraints()]
+        ind = np.where(utms)[0][0]
+        the_constraint = ocp.get_terminal_constraints()[ind]
+    
     ocp = copy.deepcopy(ocp)
-    the_constraint = ocp.get_path_constraints()[0]
     activator = the_constraint['activator']
-    path_cost = ocp.get_path_cost()
 
     activator_unit = None
     for const in ocp.get_constants():
@@ -1331,19 +1344,39 @@ def F_UTM(ocp):
     if activator_unit is None:
         raise Exception('Activator \'' + str(activator) + '\' not found in constants.')
 
-    L_UTM = utm_path(the_constraint['function'], the_constraint['lower'],
+    L_UTM = utm_term(the_constraint['function'], the_constraint['lower'],
                      the_constraint['upper'], the_constraint['activator'])
 
-    if path_cost is None:
-        ocp.path_cost(L_UTM, activator_unit)
-    else:
-        ocp.get_path_cost()['function'] += L_UTM
+    if location == 'initial':
+        initial_cost = ocp.get_initial_cost()
+        if initial_cost is None:
+            ocp.initial_cost(L_UTM, activator_unit)
+        else:
+            ocp.get_initial_cost()['function'] += L_UTM
+        
+        del ocp.get_terminal_constraints()[ind]
 
-    del ocp.get_path_constraints()[0]
+    if location == 'path':
+        path_cost = ocp.get_path_cost()
+        if path_cost is None:
+            ocp.path_cost(L_UTM, activator_unit)
+        else:
+            ocp.get_path_cost()['function'] += L_UTM
+
+        del ocp.get_path_constraints()[0]
+
+    if location == 'terminal':
+        terminal_cost = ocp.get_terminal_cost()
+        if terminal_cost is None:
+            ocp.terminal_cost(L_UTM, activator_unit)
+        else:
+            ocp.get_terminal_cost()['function'] += L_UTM
+        
+        del ocp.get_terminal_constraints()[ind]
+    
     gamma_map = Id
     gamma_map_inverse = Id
     return ocp, gamma_map, gamma_map_inverse
-
 
 def Dualize(ocp, method='indirect'):
     r"""
@@ -1359,19 +1392,16 @@ def Dualize(ocp, method='indirect'):
 
     n_states = len(ocp.states())
 
-    terminal_bcs_to_aug = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
+    terminal_bcs_to_aug = [[bc['function'], bc['unit']] for bc in ocp.get_terminal_constraints() if
                            total_derivative(bc['function'], independent_variable) == 0]
-
-    terminal_bcs_time = [[bc['function'], bc['unit']] for bc in ocp.constraints()['terminal'] if
+    terminal_bcs_time = [[bc['function'], bc['unit']] for bc in ocp.get_terminal_constraints() if
                          total_derivative(bc['function'], independent_variable) != 0]
-
-    ocp.constraints()['terminal'] = [{'function': bc[0], 'unit':bc[1]} for bc in terminal_bcs_to_aug]
 
     # TODO: The following can be cleaned up by rewriting `make_augmented_cost`
     constraints = dict()
     constraints_units = dict()
-    constraints['initial'] = [b['function'] for b in ocp.constraints()['initial']]
-    constraints_units['initial'] = [b['unit'] for b in ocp.constraints()['initial']]
+    constraints['initial'] = [b['function'] for b in ocp.get_initial_constraints()]
+    constraints_units['initial'] = [b['unit'] for b in ocp.get_initial_constraints()]
     constraints['terminal'] = [bc[0] for bc in terminal_bcs_to_aug]
     constraints_units['terminal'] = [bc[1] for bc in terminal_bcs_to_aug]
 

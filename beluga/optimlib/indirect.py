@@ -58,6 +58,29 @@ def ocp_to_bvp(ocp, **kwargs):
 
         else:
             raise NotImplementedError('Unknown path constraint method \"' + str(ocp.path_constraints()[0]['method'].upper()) + '\"')
+    
+    """
+    Deal with boundary constraints
+    """
+    n_initial_utm = sum([str(_['method']).upper() == 'UTM' for _ in ocp.get_initial_constraints()])
+    n_terminal_utm = sum([str(_['method']).upper() == 'UTM' for _ in ocp.get_terminal_constraints()])
+
+    while n_initial_utm > 0:
+        ocp, gam, gam_inv = F_UTM(ocp, 'initial')
+        n_initial_utm = sum([str(_['method']).upper() == 'UTM' for _ in ocp.get_initial_constraints()])
+        signature += ['F_UTMBC']
+        cat_chain += [ocp]
+        gamma_map_chain += [gam]
+        gamma_map_inverse_chain += [gam_inv]
+    
+    while n_terminal_utm > 0:
+        ocp, gam, gam_inv = F_UTM(ocp, 'terminal')
+        n_terminal_utm = sum([str(_['method']).upper() == 'UTM' for _ in ocp.get_terminal_constraints()])
+        signature += ['F_UTMBC']
+        cat_chain += [ocp]
+        gamma_map_chain += [gam]
+        gamma_map_inverse_chain += [gam_inv]
+
 
     """
     Deal with staging, switches, and their substitutions.

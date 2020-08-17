@@ -81,16 +81,15 @@ ocp.constant('v_y_f', 0, 'm/s')
 ocp.path_cost('1', '1')
 
 # Define constraints
-ocp.constraints() \
-    .initial('x - x_0', 'm')    \
-    .initial('y - y_0', 'm') \
-    .initial('v_x - v_x_0', 'm/s')  \
-    .initial('v_y - v_y_0', 'm/s')  \
-    .initial('mass - mass_0', 'kg') \
-    .initial('t', 's') \
-    .terminal('y - y_f', 'm') \
-    .terminal('v_x - sqrt(mu/(y_f+Re))', 'm/s') \
-    .terminal('v_y - v_y_f', 'm/s')
+ocp.initial_constraint('x - x_0', 'm')
+ocp.initial_constraint('y - y_0', 'm')
+ocp.initial_constraint('v_x - v_x_0', 'm/s')
+ocp.initial_constraint('v_y - v_y_0', 'm/s')
+ocp.initial_constraint('mass - mass_0', 'kg')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('y - y_f', 'm')
+ocp.terminal_constraint('v_x - sqrt(mu/(y_f+Re))', 'm/s')
+ocp.terminal_constraint('v_y - v_y_f', 'm/s')
 
 ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 

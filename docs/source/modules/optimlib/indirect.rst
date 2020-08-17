@@ -10,7 +10,9 @@ Controls are handled in one of two ways: ICRM [2]_ [3]_ or PMP.
 
 Path constraints are handled in one of two ways: UTM [4]_ [5]_ [6]_ [7]_ or epsilon-trig [4]_ [5]_
 
-Switching conditions are handled using RASHS [8]_.
+Inequality boundary constraints are handled using UTM [8]_.
+
+Switching conditions are handled using RASHS [9]_.
 
 .. From Mall: "use [4] for bang-bang and singular control problems"
     "Use [5] for problems with control constraints"
@@ -41,4 +43,6 @@ References
 
 .. [7] Kshitij Mall. "Advancing Optimal Control Theory using Trigonometry for Solving Complex Aerospace Problems." Dissertation. Purdue University, West Lafayette, 2018
 
-.. [8] Harish Saranathan, and Michael J. Grant. "The Relaxed Autonomously Switched Hybrid System (RASHS) Approach to Indirect Multi-Phase Trajectory Optimization for Aerospace Vehicles." AIAA 2018-0016, 2018 AIAA Atmospheric Flight Mechanics Conference. 2018
+.. [6] Nolan, Sean M., Michael J. Sparapany, and Daniel A. DeLaurentis. "Extension of Unified Trigonometrization Method to Enforce Inequality Boundary Conditions in Optimal Control Problems." AIAA AVIATION 2020 FORUM. 2020.
+
+.. [9] Harish Saranathan, and Michael J. Grant. "The Relaxed Autonomously Switched Hybrid System (RASHS) Approach to Indirect Multi-Phase Trajectory Optimization for Aerospace Vehicles." AIAA 2018-0016, 2018 AIAA Atmospheric Flight Mechanics Conference. 2018
