@@ -1,14 +1,14 @@
 import beluga
 import logging
 
-ocp = beluga.problib.Problem('Moonlander')
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('h', 'v', 'm')
-ocp.state('v', 'u - g', 'm/s')
+ocp.state('h', 'v', 'm') \
+   .state('v', 'u - g', 'm/s') \
 
 # Define controls
 ocp.control('u', 'm/s**2')
@@ -26,7 +26,7 @@ ocp.constant('u_lower', -1, 'm/s**2')
 ocp.constant('u_upper', 5, 'm/s**2')
 
 # Define costs
-ocp.path_cost('u', 'm/s**2')
+ocp.path_cost('u', 'm/s')
 
 # Define constraints
 ocp.initial_constraint('h - h_0', 'm')
@@ -41,32 +41,33 @@ ocp.scale(m='h', s='h/v')
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
-# guess_maker = beluga.guess_generator('auto',
-#                                      start=[20, -2.5],          # Starting values for states in order
-#                                      costate_guess=-0.1,
-#                                      control_guess=[0],
-#                                      use_control_guess=True)
+guess_maker = beluga.guess_generator('auto',
+                                     start=[20, -2.5],          # Starting values for states in order
+                                     costate_guess=-0.1,
+                                     control_guess=[0],
+                                     use_control_guess=True)
 
-# guess_maker = beluga.guess_generator('auto', tspan=[0, 1], state_guess=[20, -2.5], control_guess=[0],
-#                                      costate_guess=-0.1)
-#
-# beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
-#
-# continuation_steps = beluga.init_continuation()
-#
-# continuation_steps.add_step('bisection') \
-#     .num_cases(10) \
-#     .const('h_f', 0) \
-#     .const('v_f', 0)
-#
-# continuation_steps.add_step('bisection') \
-#     .num_cases(10) \
-#     .const('u_lower', 0) \
-#     .const('u_upper', 4)
-#
-# continuation_steps.add_step('bisection') \
-#     .num_cases(30, 'log') \
-#     .const('epsilon1', 1e-5)
-#
-# sol_set = beluga.solve(ocp, continuation_steps, guess_maker, method='indirect', analytical_jacobian=True,
-#                        control_method='differential', solver_algorithm=bvp_solver)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+
+continuation_steps = beluga.init_continuation()
+
+continuation_steps.add_step('bisection') \
+    .num_cases(10) \
+    .const('h_f', 0) \
+    .const('v_f', 0)
+
+continuation_steps.add_step('bisection') \
+    .num_cases(10) \
+    .const('u_lower', 0) \
+    .const('u_upper', 4)
+
+continuation_steps.add_step('bisection') \
+    .num_cases(30, 'log') \
+    .const('epsilon1', 1e-5)
+
+sol_set = beluga.solve(ocp=ocp,
+                       method='indirect',
+                       optim_options={'analytical_jacobian': False, 'control_method': 'differential'},
+                       bvp_algo=bvp_solver,
+                       steps=continuation_steps,
+                       guess_gen=guess_maker)

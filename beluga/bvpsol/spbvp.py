@@ -33,14 +33,14 @@ class spbvp(BaseAlgorithm):
         nquads = 0
 
         # TODO: Reimplement this
-        # def return_nil(*args, **kwargs):
-        #     return np.array([])
+        def return_nil(*args, **kwargs):
+            return np.array([])
 
-        # if solinit.q.size > 0:
-        #     nquads = solinit.q.shape[1]
-        # else:
-        #     nquads = 0
-        #     self.quadrature_function = return_nil
+        if solinit.q.size > 0:
+            nquads = solinit.q.shape[1]
+        else:
+            nquads = 0
+            self.quadrature_function = return_nil
 
         ndyn = solinit.dynamical_parameters.size
         nnondyn = solinit.nondynamical_parameters.size

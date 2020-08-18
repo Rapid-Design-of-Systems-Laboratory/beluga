@@ -15,6 +15,7 @@ from beluga.release import __splash__
 from beluga.ivpsol import Trajectory
 from beluga.utils import save
 from beluga.guess_generation import GuessGenerator
+from beluga.problib import Problem
 # from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
 # from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
 import time
@@ -72,7 +73,7 @@ def guess_generator(*args, **kwargs):
     return guess_gen
 
 
-def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
+def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
 
@@ -91,6 +92,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
 
     # Initialize scaling
     scale = functional_problem.scale_sol
+    compute_factors = functional_problem.compute_scale_factors
 
     # Load the derivative function into the bvp algorithm
     bvp_algo.set_derivative_function(functional_problem.deriv_func)
@@ -109,13 +111,14 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
         logging.info('Solving OCP...')
         time0 = time.time()
         if autoscale:
-            sol_guess = scale(sol_guess)
+            scale_factors = compute_factors(sol_guess)
+            sol_guess = scale(sol_guess, scale_factors)
 
         opt = bvp_algo.solve(sol_guess, pool=pool)
         sol = opt['sol']
 
         if autoscale:
-            sol = scale(sol, inv=True)
+            sol = scale(sol, scale_factors, inv=True)
 
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
@@ -150,13 +153,14 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale):
                 logging.debug('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
                 time0 = time.time()
                 if autoscale:
-                    sol_guess = scale(sol_guess)
+                    scale_factors = compute_factors(sol_guess)
+                    sol_guess = scale(sol_guess, scale_factors)
 
                 opt = bvp_algo.solve(sol_guess, pool=pool)
                 sol = opt['sol']
 
                 if autoscale:
-                    sol = scale(sol, inv=True)
+                    sol = scale(sol, scale_factors, inv=True)
 
                 ya = sol.y[0, :]
                 yb = sol.y[-1, :]
@@ -333,14 +337,14 @@ def solve(
 
     if steps is not None and initial_helper:
         for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bc0 + '_0')
-                solinit.k[jj] = initial_bc[bc0]
+            if bc0 + '_0' in bvp.getattr_from_list(bvp.constants, 'name'):
+                jj = bvp.getattr_from_list(bvp.constants, 'name').index(bc0 + '_0')
+                solinit.const[jj] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in bvp.raw['constants']:
-                jj = bvp.raw['constants'].index(bcf + '_f')
-                solinit.k[jj] = terminal_bc[bcf]
+            if bcf + '_f' in bvp.getattr_from_list(bvp.constants, 'name'):
+                jj = bvp.getattr_from_list(bvp.constants, 'name').index(bcf + '_f')
+                solinit.const[jj] = initial_bc[bcf]
 
     # quad_names = bvp.raw['quads']
     # n_quads = len(quad_names)
@@ -404,9 +408,9 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     # for cont_num, continuation_step in enumerate(continuation_set):
     #     tempset = []
     #     for sol_num, sol in enumerate(continuation_step):
-    #         u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.k)])
+    #         u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.const)])
     #         for ii in range(len(sol.t) - 1):
-    #             u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.k)))
+    #             u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.const)))
     #         sol.u = u
     #
     #         tempset.append(ocp_map_inverse(sol))
@@ -415,12 +419,12 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     # Calculate the cost for each trajectory
     for cont_num, continuation_step in enumerate(out):
         for sol_num, sol in enumerate(continuation_step):
-            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
-            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.k)
-            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.k)
+            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
+            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.const)
+            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
             for ii in range(len(sol.t) - 1):
                 cpath = np.hstack(
-                    (cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.k)))
+                    (cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.const)))
 
             cpath = integrate.simps(cpath, sol.t)
             sol.cost = c0 + cpath + cf

@@ -3,6 +3,7 @@
 
 import beluga
 import logging
+import numpy as np
 
 ocp = beluga.Problem('Bryson-Denham')
 
@@ -11,7 +12,9 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('x', 'v', 'm')
-ocp.state('v', 'u', 'm/s')
+ocp.state('v', 'u + cur(x)', 'm/s')
+
+ocp.table('cur', '1d_spline', np.array([0.01, 0.05, 0.01]), np.array([-10, 0.0, 10]), 'm/s', 'm')
 
 # Define controls
 ocp.control('u', 'rad')
@@ -25,7 +28,7 @@ ocp.constant('epsilon1', 10, 'rad**2')
 ocp.constant('x_max', 0.3, 'm')
 
 # Define costs
-ocp.path_cost('u**2', 'rad**2*s')
+ocp.path_cost('u**2', 'rad**2')
 
 # Define constraints
 ocp.initial_constraint('x - x_0', 'm')

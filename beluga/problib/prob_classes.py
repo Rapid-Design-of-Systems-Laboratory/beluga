@@ -827,8 +827,7 @@ class Problem:
     def compile_problem(self, use_control_arg=False):
         self._ensure_sympified()
 
-        if self.functional_problem is None:
-            self.functional_problem = FuncProblem(self, local_compiler=self.local_compiler)
+        self.functional_problem = FuncProblem(self, local_compiler=self.local_compiler)
 
         self.functional_problem.compile_problem(use_control_arg=use_control_arg)
         self.lambdified = True
@@ -893,6 +892,7 @@ class FuncProblem:
         self.initial_cost_func, self.path_cost_func, self.terminal_cost_func = None, None, None
         self.ineq_constraints = None
 
+        self.compute_scale_factors = None
         self.scale_sol = None
 
         self._state_syms = []
@@ -933,7 +933,7 @@ class FuncProblem:
              self._constraint_parameters_syms, self._constant_syms]
 
         self._units_args = \
-            [self._state_syms, self._quad_syms, self._control_syms,
+            [self.prob.independent_variable.sym, self._state_syms, self._quad_syms, self._control_syms,
              self._parameter_syms, self._constant_syms]
 
         # self._dynamic_args = \
@@ -1177,6 +1177,7 @@ class FuncProblem:
         return self.initial_cost_func, self.path_cost_func, self.terminal_cost_func
 
     def compile_scaling(self):
+
         lambdify = self.lambdify
         getattr_from_list = self.prob.getattr_from_list
 
@@ -1199,31 +1200,35 @@ class FuncProblem:
             lambdify(units_syms, getattr_from_list(component, 'units')) for component in scalable_components_list
         ]
 
-        def scale_sol(sol: Trajectory, inv=False):
-
-            sol = copy.deepcopy(sol)
+        def compute_scale_factors(sol: Trajectory):
 
             ref_vals = tuple([max_mag(_arr) for _arr in [sol.t, sol.y, sol.q, sol.u]]
                              + [np.fabs(_arr) for _arr in [sol.dynamical_parameters, sol.const]])
 
             unit_factors = compute_unit_factors(*ref_vals)
-            factors = [compute_factor(*unit_factors) for compute_factor in compute_factors]
+
+            return tuple([compute_factor(*unit_factors) for compute_factor in compute_factors])
+
+        def scale_sol(sol: Trajectory, scale_factors, inv=False):
+
+            sol = copy.deepcopy(sol)
 
             if inv:
                 op = np.multiply
             else:
                 op = np.divide
 
-            sol.t = op(sol.t, factors[0])
-            sol.y = op(sol.y, factors[1])
-            sol.q = op(sol.q, factors[2])
-            sol.u = op(sol.u, factors[3])
-            sol.dynamical_parameters = op(sol.dynamical_parameters, factors[4])
-            sol.nondynamical_parameters = op(sol.nondynamical_parameters, factors[5])
-            sol.const = op(sol.const, factors[6])
+            sol.t = op(sol.t, scale_factors[0])
+            sol.y = op(sol.y, scale_factors[1])
+            sol.q = op(sol.q, scale_factors[2])
+            sol.u = op(sol.u, scale_factors[3])
+            sol.dynamical_parameters = op(sol.dynamical_parameters, scale_factors[4])
+            sol.nondynamical_parameters = op(sol.nondynamical_parameters, scale_factors[5])
+            sol.const = op(sol.const, scale_factors[6])
 
             return sol
 
+        self.compute_scale_factors = compute_scale_factors
         self.scale_sol = scale_sol
 
         return self
@@ -1238,7 +1243,7 @@ def max_mag(arr: np.ndarray, axis=0):
         arr = np.array(arr)
 
     if arr.size == 0:
-        return arr
+        return np.array([])
     else:
         return np.max(np.fabs(arr), axis=axis)
 

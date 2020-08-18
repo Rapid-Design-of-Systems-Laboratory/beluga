@@ -92,7 +92,7 @@ class ContinuationStrategy(abc.ABC):
             if traj.converged is False:
                 norms.append(9e99)
             else:
-                norms.append(gamma_norm(traj.k, const))
+                norms.append(gamma_norm(traj.const, const))
 
         return np.argmin(norms)
 
@@ -127,7 +127,7 @@ class ContinuationStrategy(abc.ABC):
 
         i = int(self.get_closest_gamma(const0))
         gamma_guess = copy.deepcopy(self.gammas[i])
-        gamma_guess.k = const0
+        gamma_guess.const = const0
         self.ctr += 1
         logging.debug('CHOOSE\ttraj #' + str(i) + ' as guess.')
         return gamma_guess
@@ -337,7 +337,7 @@ class ProductStrategy(ContinuationStrategy):
         self.num_cases(self.num_subdivisions() ** num_vars)
         for var_name in self.vars.keys():
             jj = bvp.raw['constants'].index(var_name)
-            self.vars[var_name].value = sol.k[jj]
+            self.vars[var_name].value = sol.const[jj]
 
         ls_set = [np.linspace(self.vars[var_name].value, self.vars[var_name].target,
                               self._num_subdivisions) for var_name in self.vars.keys()]

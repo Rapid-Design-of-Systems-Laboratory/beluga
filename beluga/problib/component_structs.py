@@ -224,6 +224,9 @@ class TableStruct(CallableStruct):
         else:
             self.sym = tables.SymTableGenerator(self.table, local_compiler=local_compiler)
 
+        local_compiler.add_symbolic_local(name, self.sym)
+        local_compiler.add_function_local(name, self.table)
+
         super(TableStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent,
                                           local_compiler=local_compiler)
 
