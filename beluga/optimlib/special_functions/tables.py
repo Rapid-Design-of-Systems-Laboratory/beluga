@@ -140,6 +140,6 @@ class TableSpline1D(object):
             return jit_interp
 
         except errors.NumbaError as e:
-            logging.debug(e)
-            logging.debug('Cannot Compile Function Table')
+            logging.beluga(e)
+            logging.beluga('Cannot Compile Function Table')
             return interp

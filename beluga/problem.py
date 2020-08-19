@@ -757,8 +757,8 @@ class GuessGenerator(object):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
-        logging.debug('Generating initial guess by propagating: ')
-        logging.debug(str(x0))
+        logging.beluga('Generating initial guess by propagating: ')
+        logging.beluga(str(x0))
 
         time0 = time.time()
         prop = Propagator()
@@ -777,9 +777,9 @@ class GuessGenerator(object):
         solout.nondynamical_parameters = sol.nondynamical_parameters
         solout.const = sol.const
         elapsed_time = time.time() - time0
-        logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
-        logging.debug('Terminal states of guess:')
-        logging.debug(str(solout.y[-1, :]))
+        logging.beluga('Initial guess generated in %.2f seconds' % elapsed_time)
+        logging.beluga('Terminal states of guess:')
+        logging.beluga(str(solout.y[-1, :]))
 
         return solout
 
@@ -836,8 +836,8 @@ class GuessGenerator(object):
             raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
-        logging.debug('Generating initial guess by propagating: ')
-        logging.debug(str(x0))
+        logging.beluga('Generating initial guess by propagating: ')
+        logging.beluga(str(x0))
 
         time0 = time.time()
         solinit.t = np.linspace(tspan[0], tspan[-1], num=4)
@@ -851,8 +851,8 @@ class GuessGenerator(object):
         solout = copy.deepcopy(sol)
         solout.const = sol.const
         elapsed_time = time.time() - time0
-        logging.debug('Initial guess generated in %.2f seconds' % elapsed_time)
-        logging.debug('Terminal states of guess:')
-        logging.debug(str(solout.y[-1, :]))
+        logging.beluga('Initial guess generated in %.2f seconds' % elapsed_time)
+        logging.beluga('Terminal states of guess:')
+        logging.beluga(str(solout.y[-1, :]))
 
         return solout

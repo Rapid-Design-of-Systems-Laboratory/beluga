@@ -622,9 +622,9 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
                 if is_sparse:
-                    logging.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
+                    logging.beluga('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
                 else:
-                    logging.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac)))
+                    logging.beluga('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac)))
         elif self.algorithm.lower() == 'npnlp':
             from npnlp import minimize as mini
             opt = mini(cost, x_init, method='sqp', tol=self.tolerance,
