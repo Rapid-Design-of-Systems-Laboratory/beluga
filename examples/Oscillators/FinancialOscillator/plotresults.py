@@ -1,4 +1,3 @@
-from beluga.bvpsol.Pseudospectral import linter
 from beluga.utils import load
 import matplotlib.pyplot as plt
 import numpy as np
