@@ -36,6 +36,3 @@ Base Class Reference
 
 .. autoclass:: Collocation
     :members: solve
-
-.. autoclass:: Pseudospectral
-    :members: solve
