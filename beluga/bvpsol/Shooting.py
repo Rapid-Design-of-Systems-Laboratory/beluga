@@ -339,9 +339,6 @@ class Shooting(BaseAlgorithm):
 
         pool = kwargs.get('pool', None)
 
-        if sol.u.size > 0:
-            raise NotImplementedError('Shooting cannot directly handle control variables.')
-
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
         if self.quadrature_function is None or np.isnan(sol.q).all():
