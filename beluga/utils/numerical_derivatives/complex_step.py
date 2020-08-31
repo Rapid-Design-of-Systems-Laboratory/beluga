@@ -45,7 +45,7 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
             func_im = njit(tuple(arg_list_im))(func)
 
     except errors.NumbaError as e:
-        logging.debug(e, 'Cannot jit compile {} to compile numerical derivative'.format(func.__name__))
+        logging.debug(e, 'Cannot jit compile {} to compile numeric derivative'.format(func.__name__))
 
     if arg_len == 1:
         if deriv_order == 1:
@@ -65,7 +65,7 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
         try:
             csd = njit((arg_type,))(csd)
         except errors.NumbaError as e:
-            logging.debug(e, 'Cannot jit compile numerical derivative of {}'.format(func.__name__))
+            logging.debug(e, 'Cannot jit compile numeric derivative of {}'.format(func.__name__))
 
     else:
         arg_select = np.concatenate((np.zeros((arg_idx,), dtype=float), np.array([1.]),
@@ -94,7 +94,7 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
             csd = njit((types.UniTuple(arg_type, arg_len),))(csd)
 
         except errors.NumbaError as e:
-            logging.debug(e, 'Cannot jit compile numerical derivative of {}'.format(func.__name__))
+            logging.debug(e, 'Cannot jit compile numeric derivative of {}'.format(func.__name__))
 
             if deriv_order == 1:
                 step = 1e-50

@@ -12,7 +12,7 @@ i_0 = 1
 lu = 1
 lq = 1e5
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -37,7 +37,7 @@ ocp.constant('eps1', 100, '1')
 ocp.path_cost('lu*u**2/2 + lq*(i-i_0)**2/2', '1')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('i + i_0', 'a') \
     .initial_constraint('t', 's') \
     .terminal_constraint('i - i_0', 'a') \
@@ -80,9 +80,9 @@ continuation_steps.add_step('bisection') \
 sol_set_indirect = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method': 'icrm'},
-    bvp_algorithm=bvp_solver_indirect,
+    optim_options={'control_method': 'differential'},
+    bvp_algo=bvp_solver_indirect,
     steps=continuation_steps,
-    guess_generator=guess_maker_indirect,
+    guess_gen=guess_maker_indirect,
     autoscale=False
 )

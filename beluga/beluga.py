@@ -4,20 +4,18 @@ import warnings
 import copy
 import logging
 
-from beluga.codegen import *
 from tqdm import tqdm
 
 import numpy as np
 
-from beluga import helpers
-import beluga.bvpsol as bvpsol
+import beluga.numeric.bvp_solvers as bvpsol
 from beluga.release import __splash__
-from beluga.ivpsol import Trajectory
-from beluga.utils import save
-from beluga.guess_generation import GuessGenerator
-from beluga.problib import Problem
-# from beluga.optimlib.direct import ocp_to_bvp as DIRECT_ocp_to_bvp
-# from beluga.optimlib.indirect import ocp_to_bvp as BH_ocp_to_bvp
+from beluga.numeric.ivp_solvers import Trajectory
+from beluga.utils import save, init_logging
+from beluga.continuation import GuessGenerator
+from beluga.symbolic import Problem, getattr_from_list
+from .symbolic.problem_classes.mapping_functions import compile_problem, compile_direct, compile_indirect
+
 import time
 import pathos
 import scipy.integrate as integrate
@@ -37,7 +35,7 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
     warnings.filterwarnings("ignore")
 
     # Initialize logging system
-    helpers.init_logging(logging_level, display_level, config['logfile'])
+    init_logging(logging_level, display_level, config['logfile'])
 
 
 # TODO: What's the point of this?
@@ -113,6 +111,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
         if autoscale:
             scale_factors = compute_factors(sol_guess)
             sol_guess = scale(sol_guess, scale_factors)
+        else:
+            scale_factors = None
 
         opt = bvp_algo.solve(sol_guess, pool=pool)
         sol = opt['sol']
@@ -137,7 +137,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
             step.init(sol_guess, bvp)
             try:
                 log_level = logging.getLogger()._displayLevel
-            except:
+            except AttributeError:
                 log_level = logging.getLogger().getEffectiveLevel()
 
             step_len = len(step)
@@ -155,6 +155,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
                 if autoscale:
                     scale_factors = compute_factors(sol_guess)
                     sol_guess = scale(sol_guess, scale_factors)
+                else:
+                    scale_factors = None
 
                 opt = bvp_algo.solve(sol_guess, pool=pool)
                 sol = opt['sol']
@@ -171,12 +173,12 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
                     qa = np.array([])
                     qb = np.array([])
 
-                if sol.u.size > 0:
-                    ua = sol.u[0, :]
-                    ub = sol.u[-1, :]
-                else:
-                    ua = np.array([])
-                    ub = np.array([])
+                # if sol.u.size > 0:
+                #     ua = sol.u[0, :]
+                #     ub = sol.u[-1, :]
+                # else:
+                #     ua = np.array([])
+                #     ub = np.array([])
 
                 dp = sol.dynamical_parameters
                 ndp = sol.nondynamical_parameters
@@ -290,7 +292,7 @@ def solve(
     Main code
     """
 
-    f_ocp = ocp.compile_problem(use_control_arg=True)
+    f_ocp = compile_problem(ocp, use_control_arg=True)
 
     logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
@@ -298,9 +300,9 @@ def solve(
         # bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)
         logging.debug("Computing the necessary conditions of optimality")
         if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
-            bvp = copy.deepcopy(ocp).compile_indirect(**optim_options)
+            bvp = compile_indirect(copy.copy(ocp), **optim_options)
         elif method == 'direct':
-            bvp = copy.deepcopy(ocp).compile_direct(**optim_options)
+            bvp = compile_direct(copy.copy(ocp), **optim_options)
         else:
             raise NotImplementedError
         logging.debug('Resulting BVP problem:')
@@ -314,19 +316,20 @@ def solve(
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
     solinit = Trajectory()
-    solinit.const = np.array(bvp.getattr_from_list(bvp.constants, 'default_val'))
+    solinit.const = np.array(getattr_from_list(bvp.constants, 'default_val'))
 
     solinit = guess_gen.generate(bvp.functional_problem, solinit, ocp_map, ocp_map_inverse)
 
     sol_temp = copy.deepcopy(solinit)
 
     if bvp.functional_problem.compute_u is not None:
-        u = np.array([bvp.compute_control(sol_temp.y[0], sol_temp.p, sol_temp.k)])
+        u = np.array([bvp.functional_problem.compute_u(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
         for ii in range(len(sol_temp.t) - 1):
-            u = np.vstack((u, bvp.compute_control(sol_temp.y[ii + 1], sol_temp.p, sol_temp.k)))
+            u = np.vstack((u, bvp.functional_problem.compute_u(sol_temp.y[ii + 1],
+                                                               sol_temp.dynamical_parameters, sol_temp.const)))
         sol_temp.u = u
 
-    state_names = bvp.getattr_from_list(bvp.states, 'name')
+    state_names = getattr_from_list(bvp.states, 'name')
     traj = ocp_map_inverse(sol_temp)
 
     initial_states = np.hstack((traj.y[0, :], traj.t[0]))
@@ -337,14 +340,14 @@ def solve(
 
     if steps is not None and initial_helper:
         for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in bvp.getattr_from_list(bvp.constants, 'name'):
-                jj = bvp.getattr_from_list(bvp.constants, 'name').index(bc0 + '_0')
+            if bc0 + '_0' in getattr_from_list(bvp.constants, 'name'):
+                jj = getattr_from_list(bvp.constants, 'name').index(bc0 + '_0')
                 solinit.const[jj] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in bvp.getattr_from_list(bvp.constants, 'name'):
-                jj = bvp.getattr_from_list(bvp.constants, 'name').index(bcf + '_f')
-                solinit.const[jj] = initial_bc[bcf]
+            if bcf + '_f' in getattr_from_list(bvp.constants, 'name'):
+                jj = getattr_from_list(bvp.constants, 'name').index(bcf + '_f')
+                solinit.const[jj] = terminal_bc[bcf]
 
     # quad_names = bvp.raw['quads']
     # n_quads = len(quad_names)
@@ -405,28 +408,23 @@ def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
     out = []
 
     # Calculate the control time-history for each trajectory
-    # for cont_num, continuation_step in enumerate(continuation_set):
-    #     tempset = []
-    #     for sol_num, sol in enumerate(continuation_step):
-    #         u = np.array([bvp.compute_control(sol.y[0], sol.p, sol.const)])
-    #         for ii in range(len(sol.t) - 1):
-    #             u = np.vstack((u, bvp.compute_control(sol.y[ii + 1], sol.p, sol.const)))
-    #         sol.u = u
-    #
-    #         tempset.append(ocp_map_inverse(sol))
-    #     out.append(tempset)
+    for cont_num, continuation_step in enumerate(continuation_set):
+        tempset = []
+        for sol_num, sol in enumerate(continuation_step):
+            tempset.append(ocp_map_inverse(sol))
+        out.append(tempset)
 
     # Calculate the cost for each trajectory
-    for cont_num, continuation_step in enumerate(out):
-        for sol_num, sol in enumerate(continuation_step):
-            c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
-            cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.const)
-            cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
-            for ii in range(len(sol.t) - 1):
-                cpath = np.hstack(
-                    (cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.const)))
-
-            cpath = integrate.simps(cpath, sol.t)
-            sol.cost = c0 + cpath + cf
+    # for cont_num, continuation_step in enumerate(out):
+    #     for sol_num, sol in enumerate(continuation_step):
+    #         c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
+    #         cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.const)
+    #         cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
+    #         for ii in range(len(sol.t) - 1):
+    #             cpath = np.hstack(
+    #                 (cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.const)))
+    #
+    #         cpath = integrate.simps(cpath, sol.t)
+    #         sol.cost = c0 + cpath + cf
 
     return out

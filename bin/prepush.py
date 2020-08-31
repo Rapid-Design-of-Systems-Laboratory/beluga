@@ -1,4 +1,4 @@
-from beluga.ivpsol.timesteppers import Method
+from beluga.numeric.ivp_solvers import Method
 import numpy as np
 
 m = Method()

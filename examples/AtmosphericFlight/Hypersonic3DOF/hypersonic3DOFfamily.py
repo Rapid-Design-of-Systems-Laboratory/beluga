@@ -9,7 +9,7 @@ from math import pi
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -38,7 +38,7 @@ ocp.control('alpha', 'rad') \
 ocp.terminal_cost('-v', 'm/s')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('h-h_0', 'm') \
     .initial_constraint('theta-theta_0', 'rad') \
     .initial_constraint('phi', 'rad') \
@@ -69,14 +69,16 @@ ocp.constant('phi_f', 0, 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm(
-    'Shooting',
-    derivative_method='fd',
-    tolerance=1e-4,
-    max_iterations=100,
-    max_error=400,
-    algorithm='SLSQP'
-)
+# bvp_solver = beluga.bvp_algorithm(
+#     'Shooting',
+#     derivative_method='fd',
+#     tolerance=1e-4,
+#     max_iterations=100,
+#     max_error=400,
+#     algorithm='SLSQP'
+# )
+
+bvp_solver = beluga.bvp_algorithm('spbvp')
 
 guess_maker = beluga.guess_generator(
     'auto',
@@ -85,7 +87,7 @@ guess_maker = beluga.guess_generator(
     costate_guess=-0.1,
     control_guess=[0.0, 0.0],
     use_control_guess=True,
-    time_integrate=0.5,
+    time_integrate=0.5
 )
 
 continuation_steps = beluga.init_continuation()
@@ -110,13 +112,13 @@ continuation_steps.add_step('productspace') \
     .const('theta_f', 2 ** -10 * pi / 180) \
     .const('phi_f', 2 ** -6 * pi / 180)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    bvp_algorithm=bvp_solver,
+    bvp_algo=bvp_solver,
     steps=continuation_steps,
-    guess_generator=guess_maker,
+    guess_gen=guess_maker,
     initial_helper=True
 )

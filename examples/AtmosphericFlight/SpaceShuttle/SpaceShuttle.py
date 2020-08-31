@@ -17,7 +17,7 @@ v_0 = 7802.88
 v_f = 762
 gam_f = -5*np.pi/180
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -80,7 +80,7 @@ ocp.constant('phi_f', 0, 'rad')
 ocp.terminal_cost('-phi**2 + fpa*(gam - gam_f)**2', 'rad**2')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('h-h_0', 'm') \
     .initial_constraint('theta-theta_0', 'rad') \
     .initial_constraint('phi-phi_0', 'rad') \
@@ -146,10 +146,10 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    bvp_algorithm=bvp_solver,
+    bvp_algo=bvp_solver,
     steps=continuation_steps,
-    guess_generator=guess_maker,
-    optim_options={'control_method': 'icrm'},
+    guess_gen=guess_maker,
+    optim_options={'control_method': 'differential'},
     initial_helper=True,
-    save='space_shuttle.beluga'
+    save_sols='space_shuttle.beluga'
 )

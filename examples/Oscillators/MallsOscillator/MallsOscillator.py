@@ -11,7 +11,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -36,7 +36,7 @@ ocp.constant('u_min', -1, '1')
 ocp.path_cost('1', '1')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('x1 - x1_0', '1') \
     .initial_constraint('x2 - x2_0', '1') \
     .initial_constraint('t', 's') \
@@ -79,10 +79,10 @@ continuation_steps.add_step('bisection') \
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
-    bvp_algorithm=bvp_solver_indirect,
+    optim_options={'analytical_jacobian': True, 'control_method': 'differential'},
+    bvp_algo=bvp_solver_indirect,
     steps=continuation_steps,
-    guess_generator=guess_maker_indirect,
+    guess_gen=guess_maker_indirect,
     autoscale=False,
     initial_helper=True
 )

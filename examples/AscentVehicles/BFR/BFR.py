@@ -75,7 +75,7 @@ ocp.constant('y_f', 1.5e5, 'm')
 ocp.constant('v_y_f', 0, 'm/s')
 
 # Define costs
-ocp.path_cost('1', '1')
+ocp.path_cost('1', 's')
 
 # Define constraints
 ocp.initial_constraint('x - x_0', 'm')
@@ -88,15 +88,16 @@ ocp.terminal_constraint('y - y_f', 'm')
 ocp.terminal_constraint('v_x - sqrt(mu/(y_f+Re))', 'm/s')
 ocp.terminal_constraint('v_y - v_y_f', 'm/s')
 
-ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
+ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x**2/y', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
-guess_maker = beluga.guess_generator('auto',
-                start=[0, 0, 0, 0.01, 60880],          # Starting values for states in order
-                costate_guess = -0.1,
-                control_guess=[0],
-                use_control_guess=False
+guess_maker = beluga.guess_generator(
+    'auto',
+    start=[0., 0., 0., 0.01, 60880.],          # Starting values for states in order
+    costate_guess=-0.1,
+    control_guess=[0.001],
+    use_control_guess=True
 )
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
@@ -125,8 +126,11 @@ continuation_steps.add_step('bisection') \
                 .num_cases(20, 'log') \
                 .const('stage_tol', 1e-3)
 
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker, autoscale=True)
+sol_set = beluga.solve(
+    ocp=ocp,
+    method='indirect',
+    optim_options={'control_method': 'algebraic', 'analytical_jacobian': False},
+    bvp_algo=bvp_solver,
+    steps=continuation_steps,
+    guess_gen=guess_maker,
+    autoscale=True)

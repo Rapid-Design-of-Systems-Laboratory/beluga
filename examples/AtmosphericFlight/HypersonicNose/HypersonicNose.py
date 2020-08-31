@@ -9,7 +9,7 @@ import beluga
 import logging
 import matplotlib.pyplot as plt
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('l', 'm')
@@ -28,7 +28,7 @@ ocp.constant('eps1', 1, '1')
 ocp.path_cost('4*r*u**3/(1+u**2)', 'm')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('r - r_0', 'm') \
     .initial_constraint('l - 0', 'm') \
     .terminal_constraint('r', 'm') \
@@ -38,11 +38,12 @@ ocp.path_constraint('u', 'm/s', lower='-5', upper='5', method='utm', activator='
 
 ocp.scale(m='x', rad=1)
 
-guess_maker = beluga.guess_generator('ones',
-                start=[1.0],          # Starting values for states in order
-                costate_guess = 0.1,
-                control_guess=[0.35],
-                use_control_guess=True
+guess_maker = beluga.guess_generator(
+    'ones',
+    start=[1.0],          # Starting values for states in order
+    costate_guess=0.1,
+    control_guess=[0.35],
+    use_control_guess=True
 )
 
 continuation_steps = beluga.init_continuation()
@@ -57,19 +58,19 @@ bvp_solver = beluga.bvp_algorithm('spbvp')
 
 beluga.solve(ocp=ocp,
              method='indirect',
-             optim_options={'control_method': 'icrm', 'analytical_jacobian': True},
-             bvp_algorithm=bvp_solver,
+             optim_options={'control_method': 'differential', 'analytical_jacobian': True},
+             bvp_algo=bvp_solver,
              steps=continuation_steps,
-             guess_generator=guess_maker,
+             guess_gen=guess_maker,
              autoscale=False,
-             save='indirect_data.blg')
+             save_sols='indirect_data.blg')
 
-bvp_solver = beluga.bvp_algorithm('Collocation', num_nodes=60)
+# bvp_solver = beluga.bvp_algorithm('Collocation', num_nodes=60)
 
-beluga.solve(ocp=ocp,
-             method='direct',
-             bvp_algorithm=bvp_solver,
-             steps=None,
-             guess_generator=guess_maker,
-             autoscale=False,
-             save='direct_data.blg')
+# beluga.solve(ocp=ocp,
+#              method='direct',
+#              bvp_algo=bvp_solver,
+#              steps=None,
+#              guess_gen=guess_maker,
+#              autoscale=False,
+#              save_sols='direct_data.blg')

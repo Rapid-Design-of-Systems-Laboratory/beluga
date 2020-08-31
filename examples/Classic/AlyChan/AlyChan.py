@@ -8,7 +8,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -32,7 +32,7 @@ ocp.constant('u_max', 1, 'm/s**2')
 ocp.terminal_cost('x3', '1')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('x1 - x1_0', 'm') \
     .initial_constraint('x2 - x2_0', 'm/s') \
     .initial_constraint('x3 - x3_0', '1') \
@@ -47,7 +47,7 @@ bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_indirect = beluga.guess_generator(
     'auto',
-    start=[0, 0],
+    start=[0, 0, 0],
     direction='forward',
     costate_guess=-0.1,
     control_guess=[0.0],
@@ -67,9 +67,9 @@ continuation_steps.add_step('bisection') \
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
-    bvp_algorithm=bvp_solver_indirect,
+    optim_options={'analytical_jacobian': True, 'control_method': 'differential'},
+    bvp_algo=bvp_solver_indirect,
     steps=continuation_steps,
-    guess_generator=guess_maker_indirect,
+    guess_gen=guess_maker_indirect,
     autoscale=False,
     initial_helper=False)

@@ -25,7 +25,7 @@ ocp.state('h', 'v', 'm') \
 # Define controls
 ocp.control('thrust', '1')
 
-# Define constants' numerical values
+# Define constants' numeric values
 g_0 = 1.0
 
 h_0 = 1.0

@@ -1,5 +1,5 @@
 from beluga.utils.numerical_derivatives import gen_num_diff
-from beluga.optimlib.special_functions import custom_functions
+from beluga.symbolic.special_functions import custom_functions
 import sympy
 import math
 

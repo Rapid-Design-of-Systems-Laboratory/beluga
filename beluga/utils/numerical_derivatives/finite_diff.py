@@ -32,7 +32,7 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
             func = njit(tuple(arg_list))(func)
 
     except errors.NumbaError as e:
-        logging.debug(e, 'Cannot jit compile {} to compile numerical derivative'.format(func.__name__))
+        logging.debug(e, 'Cannot jit compile {} to compile numeric derivative'.format(func.__name__))
 
     step_array = []
     coeff_array = []
@@ -75,7 +75,7 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
         try:
             fin_diff = njit((arg_type,))(fin_diff)
         except errors.NumbaError as e:
-            logging.debug(e, 'Cannot jit compile numerical derivative of {}'.format(func.__name__))
+            logging.debug(e, 'Cannot jit compile numeric derivative of {}'.format(func.__name__))
 
     else:
         try:
@@ -90,7 +90,7 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
             fin_diff = njit((types.UniTuple(arg_type, arg_len),))(fin_diff)
 
         except errors.NumbaError as e:
-            logging.debug(e, 'Cannot jit compile numerical derivative of {}'.format(func.__name__))
+            logging.debug(e, 'Cannot jit compile numeric derivative of {}'.format(func.__name__))
 
             def fin_diff(*args):
                 diff = 0.

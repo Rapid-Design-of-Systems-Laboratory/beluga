@@ -10,18 +10,16 @@ with open('requirements_dev.txt') as f:
 
 long_description = '''beluga is a general purpose indirect trajectory optimization framework.'''
 
-modules = ['beluga.bvpsol',
-           'beluga.bvpsol._bvp',
-           'beluga.bvpsol._shooting',
-           'beluga.codegen',
-           'beluga.continuation',
-           'beluga.ivpsol',
-           'beluga.optimlib',
+modules = ['beluga.continuation',
+           'beluga.numeric',
+           'beluga.symbolic',
            'beluga.utils']
 
-tests = ['beluga.bvpsol.tests',
-         'beluga.ivpsol.tests',
-         'beluga.optimlib.tests']
+# tests = ['beluga.bvp_solvers.tests',
+#          'beluga.ivp_solvers.tests',
+#          'beluga.optimlib.tests']
+
+tests = []
 
 dir_setup = os.path.dirname(os.path.realpath(__file__))
 

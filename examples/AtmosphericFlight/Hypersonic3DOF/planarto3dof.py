@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 '''
 Begin the planar portion of the solution process.
 '''
-ocp = beluga.OCP('planarHypersonic')
+ocp = beluga.Problem('planarHypersonic')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -49,14 +49,14 @@ ocp.constant('Aref', pi*(24*.0254/2)**2, 'm^2')  # Reference area of vehicle, m^
 ocp.constant('h_0', 80000, 'm')
 ocp.constant('v_0', 4000, 'm/s')
 ocp.constant('gam_0', (-90)*pi/180, 'rad')
-ocp.constant('h_f', 80000, 'm')
+ocp.constant('h_f', 0, 'm')
 ocp.constant('theta_f', 0, 'rad')
 
 # Define costs
 ocp.terminal_cost('-v^2', 'm^2/s^2')
 
 # Define constraints
-ocp.constraints() \
+ocp \
     .initial_constraint('h-h_0', 'm') \
     .initial_constraint('theta', 'rad') \
     .initial_constraint('v-v_0', 'm/s') \
@@ -109,10 +109,10 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 cont_planar = beluga.solve(ocp=ocp,
                            method='indirect',
-                           optim_options={'control_method': 'icrm'},
-                           bvp_algorithm=bvp_solver,
+                           optim_options={'control_method': 'differential'},
+                           bvp_algo=bvp_solver,
                            steps=continuation_steps,
-                           guess_generator=guess_maker,
+                           guess_gen=guess_maker,
                            initial_helper=True)
 
 sol = cont_planar[-1][-1]
@@ -120,7 +120,7 @@ sol = cont_planar[-1][-1]
 '''
 Begin the 3 dof portion of the solution process.
 '''
-ocp_2 = beluga.OCP('hypersonic3DOF')
+ocp_2 = beluga.Problem('hypersonic3DOF')
 
 # Define independent variables
 ocp_2.independent('t', 's')
@@ -149,7 +149,7 @@ ocp_2.control('alpha', 'rad') \
 ocp_2.terminal_cost('-v^2', 'm^2/s^2')
 
 # Define constraints
-ocp_2.constraints() \
+ocp_2 \
     .initial_constraint('h-h_0', 'm') \
     .initial_constraint('theta-theta_0', 'rad') \
     .initial_constraint('phi-phi_0', 'rad') \
@@ -206,10 +206,10 @@ continuation_steps_2.add_step('bisection').num_cases(41) \
 cont_3dof = beluga.solve(
     ocp=ocp_2,
     method='indirect',
-    optim_options={'control_method': 'pmp'},
-    bvp_algorithm=bvp_solver_2,
+    optim_options={'control_method': 'algebraic'},
+    bvp_algo=bvp_solver_2,
     steps=continuation_steps_2,
-    guess_generator=guess_maker_2)
+    guess_gen=guess_maker_2)
 
 final_continuation = cont_3dof[-1]
 
