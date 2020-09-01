@@ -34,7 +34,6 @@ ocp.path_cost('(u**2 + y1**2)', 'm**2')
 ocp.initial_constraint('y1 - y1_0', 'm')
 ocp.initial_constraint('y2 - y2_0', 'm')
 ocp.initial_constraint('t', '1')
-ocp.initial_constraint('t', '1')
 ocp.terminal_constraint('t - t_f', '1')
 
 ocp.path_constraint('u + y1/6', 'm', lower='path_min', upper='path_max', activator='epsilon1', method='utm')

@@ -2,9 +2,9 @@ import inspect
 import sys
 import warnings
 import copy
-import logging
 import time
 import pathos
+import logging
 import numpy as np
 from tqdm import tqdm
 
@@ -17,22 +17,31 @@ from beluga.symbolic import Problem
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
 from beluga.symbolic.mapping_functions import compile_problem, compile_direct, compile_indirect
 
-config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
-
-def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR):
+def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwargs):
     """
     Attaches a logger to beluga's main process.
 
     :keyword logging_level: The level at which logging is written to the output file.
     :keyword display_level: The level at which logging is displayed to stdout.
+    :keyword filename: Name of the log file. Default is `beluga.log`.
+    :keyword mode: File mode. Default is 'w' (overwrite).
+    :keyword encoding: Log file encoding.
+    :keyword delay: Delays opening log file until first call to emit().
     :return: None
+
+    .. seealso::
+            logging.FileHandler
     """
     # Suppress warnings
     warnings.filterwarnings("ignore")
 
+    # logfile options for logging.FileHandler
+    config = {'filename': 'beluga.log', 'mode': 'w'}
+    config.update(kwargs)
+
     # Initialize logging system
-    init_logging(logging_level, display_level, config['logfile'])
+    init_logging(logging_level, display_level, config)
 
 
 # TODO: What's the point of this?
@@ -120,14 +129,14 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
         solution_set = [[copy.deepcopy(sol)]]
         if sol.converged:
             elapsed_time = time.time() - time0
-            logging.debug('Problem converged in %0.4f seconds\n' % elapsed_time)
+            logging.beluga('Problem converged in %0.4f seconds\n' % elapsed_time)
         else:
             elapsed_time = time.time() - time0
-            logging.debug('Problem failed to converge!\n')
+            logging.beluga('Problem failed to converge!\n')
     else:
         for step_idx, step in enumerate(steps):
-            logging.debug('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
-            # logging.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
+            logging.beluga('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
+            # logging.beluga('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
@@ -147,7 +156,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
                     step_len = continuation_progress.total
                     continuation_progress.refresh()
 
-                logging.debug('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
+                logging.beluga('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
                 time0 = time.time()
                 if autoscale:
                     scale_factors = compute_factors(sol_guess)
@@ -191,12 +200,12 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
                 """
                 sol_guess = copy.deepcopy(sol)
                 elapsed_time = time.time() - time0
-                logging.debug('STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'
-                              .format(step.ctr, step.num_cases(), opt['niter'],
-                                      max(bc_residuals_unscaled), elapsed_time))
+                logging.beluga(
+                    'STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'
+                    .format(step.ctr, step.num_cases(), opt['niter'], max(bc_residuals_unscaled), elapsed_time))
                 solution_set[step_idx].append(copy.deepcopy(sol))
                 if not sol.converged:
-                    logging.debug('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+                    logging.beluga('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
 
     return solution_set
 
@@ -255,7 +264,7 @@ def solve(
         optim_options = {}
 
     # Display useful info about the environment to debug logger.
-    logging.debug('\n'+__splash__+'\n')
+    logging.beluga('\n'+__splash__+'\n')
     from beluga import __version__ as beluga_version
     from llvmlite import __version__ as llvmlite_version
     from numba import __version__ as numba_version
@@ -263,14 +272,15 @@ def solve(
     from scipy import __version__ as scipy_version
     from sympy import __version__ as sympy_version
 
-    logging.debug('beluga:\t\t' + str(beluga_version))
-    logging.debug('llvmlite:\t' + str(llvmlite_version))
-    logging.debug('numba:\t\t' + str(numba_version))
-    logging.debug('numpy:\t\t' + str(numpy_version))
-    logging.debug('python:\t\t' + str(sys.version_info[0]) + '.' + str(sys.version_info[1])
-                  + '.' + str(sys.version_info[2]))
-    logging.debug('scipy:\t\t' + str(scipy_version))
-    logging.debug('sympy:\t\t' + str(sympy_version))
+    logging.beluga('beluga:\t\t' + str(beluga_version))
+    logging.beluga('llvmlite:\t' + str(llvmlite_version))
+    logging.beluga('numba:\t\t' + str(numba_version))
+    logging.beluga('numpy:\t\t' + str(numpy_version))
+    logging.beluga('python:\t\t'
+                   + str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]))
+    logging.beluga('scipy:\t\t' + str(scipy_version))
+    logging.beluga('sympy:\t\t' + str(sympy_version))
+    logging.beluga('\n')
 
     """
     Error checking
@@ -291,19 +301,18 @@ def solve(
 
     f_ocp = compile_problem(ocp, use_control_arg=True)
 
-    logging.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
+    logging.beluga('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
-        # bvp, ocp_map, ocp_map_inverse = ocp2bvp(ocp, method=method, optim_options=optim_options)
-        logging.debug("Computing the necessary conditions of optimality")
+        logging.beluga('Resulting BVP problem:')
         if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
             bvp = compile_indirect(copy.copy(ocp), **optim_options)
         elif method == 'direct':
             bvp = compile_direct(copy.copy(ocp), **optim_options)
         else:
             raise NotImplementedError
-        logging.debug('Resulting BVP problem:')
-        logging.debug(bvp.__repr__())
+        logging.beluga('Resulting BVP problem:')
+        logging.beluga(bvp.__repr__())
 
         ocp_map = bvp.map_sol
         ocp_map_inverse = bvp.inv_map_sol

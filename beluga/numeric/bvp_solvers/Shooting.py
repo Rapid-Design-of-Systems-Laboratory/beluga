@@ -1,3 +1,4 @@
+import beluga
 import cloudpickle as pickle
 import copy
 import logging
@@ -317,15 +318,15 @@ class Shooting(BaseAlgorithm):
 
         # Make a copy of sol and format inputs
         sol = copy.deepcopy(solinit)
-        sol.t = np.array(sol.t, dtype=np.float64)
-        sol.y = np.array(sol.y, dtype=np.float64)
+        sol.t = np.array(sol.t, dtype=beluga.DTYPE)
+        sol.y = np.array(sol.y, dtype=beluga.DTYPE)
         if np.issubdtype(sol.y.dtype, np.complexfloating):
             dtype = complex
         else:
             dtype = float
-        sol.q = np.array(sol.q, dtype=np.float64)
-        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=np.float64)
-        sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=np.float64)
+        sol.q = np.array(sol.q, dtype=beluga.DTYPE)
+        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=beluga.DTYPE)
+        sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=beluga.DTYPE)
 
         n = sol.y[0].shape[0]
         k = sol.dynamical_parameters.shape[0]
@@ -336,9 +337,6 @@ class Shooting(BaseAlgorithm):
             self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
 
         pool = kwargs.get('pool', None)
-
-        if sol.u.size > 0:
-            raise NotImplementedError('Shooting cannot directly handle control variables.')
 
         # Extract some info from the guess structure
         y0g = sol.y[0, :]
@@ -623,9 +621,9 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
                 if is_sparse:
-                    logging.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
+                    logging.beluga('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac.toarray())))
                 else:
-                    logging.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac)))
+                    logging.beluga('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'.format(n_iter, err, np.linalg.cond(jac)))
         elif self.algorithm.lower() == 'npnlp':
             from npnlp import minimize as mini
             opt = mini(cost, x_init, method='sqp', tol=self.tolerance,

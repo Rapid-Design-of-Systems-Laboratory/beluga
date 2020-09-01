@@ -56,15 +56,14 @@ ocp.constant('eps', 2.5e2, 'm/s')
 ocp.terminal_cost('-x', 'm')
 
 # Define constraints
-ocp\
-    .initial_constraint('x - x_0', 'm') \
-    .initial_constraint('y - y_0', 'm') \
-    .initial_constraint('vx - vx_0', 'm/s') \
-    .initial_constraint('vy - vy_0', 'm/s') \
-    .initial_constraint('t', 's') \
-    .terminal_constraint('y - y_f', 'm') \
-    .terminal_constraint('vx - vx_f', 'm/s') \
-    .terminal_constraint('vy - vy_f', 'm/s')
+ocp.initial_constraint('x - x_0', 'm')
+ocp.initial_constraint('y - y_0', 'm')
+ocp.initial_constraint('vx - vx_0', 'm/s')
+ocp.initial_constraint('vy - vy_0', 'm/s')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('y - y_f', 'm')
+ocp.terminal_constraint('vx - vx_f', 'm/s')
+ocp.terminal_constraint('vy - vy_f', 'm/s')
 
 ocp.path_constraint('u', 'rad', lower='CLmin', upper='CLmax', activator='eps', method='utm')
 

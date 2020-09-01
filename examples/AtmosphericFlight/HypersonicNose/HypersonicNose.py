@@ -28,11 +28,10 @@ ocp.constant('eps1', 1, '1')
 ocp.path_cost('4*r*u**3/(1+u**2)', 'm')
 
 # Define constraints
-ocp \
-    .initial_constraint('r - r_0', 'm') \
-    .initial_constraint('l - 0', 'm') \
-    .terminal_constraint('r', 'm') \
-    .terminal_constraint('l - 2', 'm')
+ocp.initial_constraint('r - r_0', 'm')
+ocp.initial_constraint('l - 0', 'm')
+ocp.terminal_constraint('r', 'm')
+ocp.terminal_constraint('l - 2', 'm')
 
 ocp.path_constraint('u', 'm/s', lower='-5', upper='5', method='utm', activator='eps1')
 

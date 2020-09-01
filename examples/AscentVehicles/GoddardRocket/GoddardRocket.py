@@ -70,13 +70,12 @@ ocp.constant('eps', 0.01, '1')
 ocp.terminal_cost('-h', '1')
 
 # Define constraints
-ocp.constraints() \
-    .initial_constraint('h - h_0', '1') \
-    .initial_constraint('v - v_0', '1') \
-    .initial_constraint('m - m_0', '1') \
-    .initial_constraint('t', 's') \
-    .terminal_constraint('v - v_f', '1') \
-    .terminal_constraint('m - m_f', '1')
+ocp.initial_constraint('h - h_0', '1')
+ocp.initial_constraint('v - v_0', '1')
+ocp.initial_constraint('m - m_0', '1')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('v - v_f', '1')
+ocp.terminal_constraint('m - m_f', '1')
 
 ocp.path_constraint('thrust', '1', lower='T_min', upper='T_max', activator='eps', method='epstrig')
 

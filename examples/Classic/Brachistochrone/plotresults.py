@@ -1,7 +1,7 @@
 from beluga.utils import load
 import matplotlib.pyplot as plt
 
-data = load('data.blg')
+data = load('data.beluga')
 sol_set = data['solutions']
 
 sol = sol_set[-1][-1]
