@@ -3,8 +3,9 @@ import logging
 import time
 import numpy as np
 import copy
-from beluga.numeric.ivp_solvers import Propagator
+
 import beluga
+from beluga.numeric.ivp_solvers import Propagator
 
 
 class GuessGenerator(object):

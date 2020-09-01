@@ -2,9 +2,9 @@ import numpy as np
 import copy
 from collections import Iterable
 
-from ..ivp_solvers.ivpsol import Trajectory
-from ..compilation import LocalCompiler, jit_compile_func, compile_control
-from ...symbolic.problem_classes.components_structures import extract_syms, getattr_from_list
+from beluga.numeric.ivp_solvers.ivpsol import Trajectory
+from beluga.numeric.compilation import LocalCompiler, jit_compile_func, compile_control
+from beluga.symbolic.data_classes.components_structures import extract_syms, getattr_from_list
 
 
 class FuncProblem:

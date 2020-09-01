@@ -1,10 +1,20 @@
-from .problem import Problem
-from .components_structures import *
-from ..differential_geometry import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
-from ...numeric.data_classes.traj_classes import MomentumShiftMapper, EpsTrigMapper, IdentityMapper, DualizeMapper,\
-    AlgebraicControlMapper, DifferentialControlMapper, SquashToBVPMapper, NormalizeTimeMapper
-from ...numeric.data_classes.functional_problem import FuncProblem
+import numpy as np
+import sympy
 import copy
+import logging
+
+from beluga.symbolic.data_classes.problem import Problem
+from beluga.symbolic.data_classes.components_structures import (extract_syms, combine_component_lists,
+                                                                getattr_from_list, sym_one,
+                                                                NamedDimensionalStruct, DynamicStruct,
+                                                                DimensionalExpressionStruct,
+                                                                NamedDimensionalExpressionStruct, SymmetryStruct)
+from beluga.symbolic.differential_geometry import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
+from beluga.numeric.data_classes.traj_classes import (MomentumShiftMapper, EpsTrigMapper, IdentityMapper, DualizeMapper,
+                                                      AlgebraicControlMapper, DifferentialControlMapper,
+                                                      SquashToBVPMapper, NormalizeTimeMapper)
+from beluga.numeric.data_classes.functional_problem import FuncProblem
+
 
 """
 Functional Maps    

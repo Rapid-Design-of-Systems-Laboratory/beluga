@@ -1,9 +1,10 @@
-from beluga.numeric.compilation import LocalCompiler
-from beluga.symbolic.special_functions import *
-import sympy
-from typing import Union, Callable, Collection, Iterable, List
-
 import numpy as np
+import sympy
+
+from typing import Union, Callable, Collection, List, Iterable
+
+from beluga.numeric.compilation import LocalCompiler, jit_compile_func
+from beluga.symbolic.special_functions import custom_functions, tables
 
 # default_tol = 1e-4
 sym_zero = sympy.Integer(0)

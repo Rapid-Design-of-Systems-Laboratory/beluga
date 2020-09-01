@@ -2,11 +2,10 @@ import numpy as np
 from abc import ABC
 import copy
 import sympy
-from numba import njit, float64
 
 from beluga.numeric.compilation import jit_compile_func, LocalCompiler
 from beluga.numeric.ivp_solvers import Trajectory as Solution
-from beluga.symbolic.problem_classes.mapping_functions import extract_syms
+from beluga.symbolic.data_classes.components_structures import extract_syms
 
 
 empty_array = np.array([])

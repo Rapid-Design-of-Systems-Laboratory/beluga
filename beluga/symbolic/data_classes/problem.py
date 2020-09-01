@@ -1,6 +1,10 @@
-from .components_structures import *
-from ...numeric.compilation import LocalCompiler
-from typing import Iterable
+from typing import Iterable, Union
+
+from beluga.numeric.compilation import LocalCompiler
+from .components_structures import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
+                                    NamedExpressionStruct, DimensionalExpressionStruct,
+                                    NamedDimensionalExpressionStruct, CostStruct, FunctionStruct, TableStruct,
+                                    SwitchStruct, SymmetryStruct, PathConstraintStruct)
 
 
 class Problem:
@@ -9,9 +13,9 @@ class Problem:
         self.prob_type = prob_type
 
         if name is None:
-            self.name = 'Beluga_Problem'
+            self.name = 'beluga_problem'
         else:
-            self.name = name
+            self.name = namee
 
         self.local_compiler = LocalCompiler()
         self.sol_map_chain = []
@@ -190,6 +194,7 @@ class Problem:
     """
     Sympify
     """
+
     def _sympify_struct(self, items: Union[Iterable, GenericStruct]):
         if isinstance(items, dict):
             for item in items.values():

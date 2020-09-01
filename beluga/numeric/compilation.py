@@ -3,7 +3,7 @@ import sympy
 from numba import njit, float64, complex128, errors
 from sympy import lambdify
 import numpy as np
-from collections.abc import Iterable, Collection
+from typing import Iterable, Collection
 
 
 def jit_lambdify(args, sym_func, complex_numbers=False):

@@ -6,7 +6,8 @@ import inspect
 import itertools
 import functools
 import sys
-from beluga.symbolic import getattr_from_list
+
+from beluga.symbolic.data_classes.components_structures import getattr_from_list
 
 
 def gamma_norm(const1, const2):

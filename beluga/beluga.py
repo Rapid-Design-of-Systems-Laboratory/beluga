@@ -3,22 +3,19 @@ import sys
 import warnings
 import copy
 import logging
-
-from tqdm import tqdm
-
+import time
+import pathos
 import numpy as np
+from tqdm import tqdm
 
 import beluga.numeric.bvp_solvers as bvpsol
 from beluga.release import __splash__
 from beluga.numeric.ivp_solvers import Trajectory
 from beluga.utils import save, init_logging
 from beluga.continuation import GuessGenerator
-from beluga.symbolic import Problem, getattr_from_list
-from .symbolic.problem_classes.mapping_functions import compile_problem, compile_direct, compile_indirect
-
-import time
-import pathos
-import scipy.integrate as integrate
+from beluga.symbolic import Problem
+from beluga.symbolic.data_classes.components_structures import getattr_from_list
+from beluga.symbolic.mapping_functions import compile_problem, compile_direct, compile_indirect
 
 config = dict(logfile='beluga.log', default_bvp_solver='Shooting')
 
