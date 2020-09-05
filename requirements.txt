@@ -1,10 +1,9 @@
-autograd>=1.2
 cloudpickle
 docopt>=0.6.2
 liepack>=0.1.1
 llvmlite>=0.28.0
 matplotlib>=2.2.2
-numba>0.40.1
+numba>=0.47.0
 numexpr>=2.6.8
 numpy>=1.16.3
 scipy>=1.2.0

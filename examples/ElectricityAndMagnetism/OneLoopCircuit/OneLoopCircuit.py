@@ -80,8 +80,8 @@ sol_set_indirect = beluga.solve(
     ocp=ocp,
     method='indirect',
     optim_options={'control_method': 'differential'},
-    bvp_algo=bvp_solver_indirect,
+    bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
-    guess_gen=guess_maker_indirect,
+    guess_generator=guess_maker_indirect,
     autoscale=False
 )

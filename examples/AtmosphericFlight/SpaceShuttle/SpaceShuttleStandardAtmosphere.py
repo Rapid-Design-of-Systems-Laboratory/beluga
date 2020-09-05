@@ -34,7 +34,7 @@ v_0 = 7802.88
 v_f = 762
 gam_f = -5*np.pi/180
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -56,7 +56,7 @@ ocp.quantity('L', '0.5*rho*v**2*Cl*aref')
 ocp.quantity('r', 're+h')
 ocp.quantity('alpha_star', 'alpha*180/pi')
 
-ocp.table('rho_table', 'spline', alt, dens, 'kg/m**3')
+ocp.table('rho_table', 'spline', alt, dens, 'kg/m**3', 'm')
 
 # Define controls
 ocp.control('alpha', 'rad')

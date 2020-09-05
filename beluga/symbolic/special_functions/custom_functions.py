@@ -4,7 +4,7 @@ from collections.abc import Iterable
 import inspect
 from beluga.utils.numerical_derivatives import gen_num_diff
 from beluga.numeric.compilation import jit_compile_func
-from numba import targets
+from numba.core.registry import CPUDispatcher
 
 
 class CustomFunctionGenerator(object):
@@ -25,7 +25,7 @@ class CustomFunctionGenerator(object):
         self.local_compiler = local_compiler
         self.num_deriv_type = num_deriv_type
 
-        if type(base_func) is targets.registry.CPUDispatcher:
+        if type(base_func) is CPUDispatcher:
             self.base_func = base_func
         else:
             self.base_func = jit_compile_func(base_func, self.arg_types, complex_numbers=False)
@@ -49,7 +49,7 @@ class CustomFunctionMeta(Function):
         obj.nargs = (len(arg_list),)
         obj.arg_list = tuple(arg_list)
         obj.base_name = base_name
-        if type(base_func) is targets.registry.CPUDispatcher:
+        if type(base_func) is CPUDispatcher:
             obj.base_func = base_func
         else:
             obj.base_func = jit_compile_func(base_func, arg_list)

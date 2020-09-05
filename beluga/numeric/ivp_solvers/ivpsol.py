@@ -126,7 +126,7 @@ class Propagator(Algorithm):
         else:
             raise NotImplementedError
 
-        if quad_func is not None and len(q0) is not 0:
+        if quad_func is not None and len(q0) != 0:
             if self.quick_reconstruct:
                 qf = integrate_quads(quad_func, tspan, gamma, *args)
                 gamma.q = np.vstack((q0, np.zeros((len(gamma.t)-2, len(q0))), qf+q0))

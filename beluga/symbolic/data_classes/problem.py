@@ -15,7 +15,7 @@ class Problem:
         if name is None:
             self.name = 'beluga_problem'
         else:
-            self.name = namee
+            self.name = name
 
         self.local_compiler = LocalCompiler()
         self.sol_map_chain = []

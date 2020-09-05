@@ -8,7 +8,7 @@ import logging
 import numpy as np
 from tqdm import tqdm
 
-import beluga.numeric.bvp_solvers as bvpsol
+# import beluga.numeric.bvp_solvers as bvpsol
 from beluga.release import __splash__
 from beluga.numeric.ivp_solvers import Trajectory
 from beluga.utils import save, init_logging
@@ -44,44 +44,11 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwarg
     init_logging(logging_level, display_level, config)
 
 
-# TODO: What's the point of this?
-def bvp_algorithm(name, **kwargs):
-    """
-    Helper method to load bvp algorithm by name.
-
-    :param name: The name of the bvp algorithm
-    :keywords: Additional keyword arguments passed into the bvp solver.
-    :return: An instance of the bvp solver.
-    """
-    # Load algorithm from the package
-    for N, obj in inspect.getmembers(bvpsol):
-        if inspect.isclass(obj):
-            if N.lower() == name.lower():
-                return obj(**kwargs)
-    else:
-        # Raise exception if the loop completes without finding an algorithm by the given name
-        raise ValueError('Algorithm ' + name + ' not found')
-
-
-# TODO: What's the point of this?
-def guess_generator(*args, **kwargs):
-    """
-    Helper for creating an initial guess generator.
-
-    :param method: The method used to generate the initial guess
-    :keywords: Additional keyword arguments passed into the guess generator.
-    :return: An instance of the guess generator.
-    """
-    guess_gen = GuessGenerator()
-    guess_gen.setup(*args, **kwargs)
-    return guess_gen
-
-
-def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale):
+def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
 
-    :param bvp_algo: BVP algorithm to be used.
+    :param bvp_algorithm_: BVP algorithm to be used.
     :param steps: The steps in a continuation set.
     :param solinit: Initial guess for the first problem in steps.
     :param bvp: The compiled boundary-value problem to solve.
@@ -99,15 +66,15 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
     compute_factors = functional_problem.compute_scale_factors
 
     # Load the derivative function into the bvp algorithm
-    bvp_algo.set_derivative_function(functional_problem.deriv_func)
-    bvp_algo.set_derivative_jacobian(functional_problem.deriv_func_jac)
-    bvp_algo.set_quadrature_function(functional_problem.quad_func)
-    bvp_algo.set_boundarycondition_function(functional_problem.bc_func)
-    bvp_algo.set_boundarycondition_jacobian(functional_problem.bc_func_jac)
-    # bvp_algo.set_initial_cost_function(functional_problem.initial_cost)
-    # bvp_algo.set_path_cost_function(functional_problem.path_cost)
-    # bvp_algo.set_terminal_cost_function(functional_problem.terminal_cost)
-    bvp_algo.set_inequality_constraint_function(functional_problem.ineq_constraints)
+    bvp_algorithm_.set_derivative_function(functional_problem.deriv_func)
+    bvp_algorithm_.set_derivative_jacobian(functional_problem.deriv_func_jac)
+    bvp_algorithm_.set_quadrature_function(functional_problem.quad_func)
+    bvp_algorithm_.set_boundarycondition_function(functional_problem.bc_func)
+    bvp_algorithm_.set_boundarycondition_jacobian(functional_problem.bc_func_jac)
+    # bvp_algorithm_.set_initial_cost_function(functional_problem.initial_cost)
+    # bvp_algorithm_.set_path_cost_function(functional_problem.path_cost)
+    # bvp_algorithm_.set_terminal_cost_function(functional_problem.terminal_cost)
+    bvp_algorithm_.set_inequality_constraint_function(functional_problem.ineq_constraints)
 
     sol_guess = solinit
     # sol = None
@@ -120,7 +87,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
         else:
             scale_factors = None
 
-        opt = bvp_algo.solve(sol_guess, pool=pool)
+        opt = bvp_algorithm_.solve(sol_guess, pool=pool)
         sol = opt['sol']
 
         if autoscale:
@@ -131,7 +98,6 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
             elapsed_time = time.time() - time0
             logging.beluga('Problem converged in %0.4f seconds\n' % elapsed_time)
         else:
-            elapsed_time = time.time() - time0
             logging.beluga('Problem failed to converge!\n')
     else:
         for step_idx, step in enumerate(steps):
@@ -164,7 +130,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
                 else:
                     scale_factors = None
 
-                opt = bvp_algo.solve(sol_guess, pool=pool)
+                opt = bvp_algorithm_.solve(sol_guess, pool=pool)
                 sol = opt['sol']
 
                 if autoscale:
@@ -190,7 +156,7 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
                 ndp = sol.nondynamical_parameters
                 k = sol.const
 
-                bc_residuals_unscaled = bvp_algo.boundarycondition_function(ya, qa, yb, qb, dp, ndp, k)
+                bc_residuals_unscaled = bvp_algorithm_.boundarycondition_function(ya, qa, yb, qb, dp, ndp, k)
 
                 step.add_gamma(sol)
 
@@ -213,8 +179,8 @@ def run_continuation_set(bvp_algo, steps, solinit, bvp: Problem, pool, autoscale
 def solve(
         autoscale=True,
         bvp=None,
-        bvp_algo=None,
-        guess_gen=None,
+        bvp_algorithm=None,
+        guess_generator=None,
         initial_helper=False,
         method='traditional',
         n_cpus=1,
@@ -270,7 +236,7 @@ def solve(
     from numba import __version__ as numba_version
     from numpy import __version__ as numpy_version
     from scipy import __version__ as scipy_version
-    from sympy import __version__ as sympy_version
+    from sympy.release import __version__ as sympy_version
 
     logging.beluga('beluga:\t\t' + str(beluga_version))
     logging.beluga('llvmlite:\t' + str(llvmlite_version))
@@ -324,7 +290,7 @@ def solve(
     solinit = Trajectory()
     solinit.const = np.array(getattr_from_list(bvp.constants, 'default_val'))
 
-    solinit = guess_gen.generate(bvp.functional_problem, solinit, ocp_map, ocp_map_inverse)
+    solinit = guess_generator.generate(bvp.functional_problem, solinit, ocp_map, ocp_map_inverse)
 
     sol_temp = copy.deepcopy(solinit)
 
@@ -377,10 +343,10 @@ def solve(
     Main continuation process
     """
     time0 = time.time()
-    continuation_set = run_continuation_set(bvp_algo, steps, solinit, bvp, pool, autoscale)
+    continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
     logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
-    bvp_algo.close()
+    bvp_algorithm.close()
 
     """
     Post processing and output

@@ -226,9 +226,11 @@ class DifferentialControlMapper(SolMapper):
         self.control_idxs = control_idxs
 
     def map(self, sol: Solution) -> Solution:
-        for idx, u in sorted(zip(self.control_idxs, sol.u.T)):
-            sol.y = np.insert(sol.y, idx, u, axis=1)
-            sol.u = np.delete(sol.u, np.where(sol.u[0, :] == u), axis=1)
+        idx_u_list = []
+        for idx_u, (idx_y, u) in enumerate(sorted(zip(self.control_idxs, sol.u.T))):
+            sol.y = np.insert(sol.y, idx_y, u, axis=1)
+            idx_u_list.append(idx_u)
+        sol.u = np.delete(sol.u, idx_u_list, axis=1)
         return sol
 
     def inv_map(self, sol: Solution) -> Solution:

@@ -145,9 +145,9 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    bvp_algo=bvp_solver,
+    bvp_algorithm=bvp_solver,
     steps=continuation_steps,
-    guess_gen=guess_maker,
+    guess_generator=guess_maker,
     optim_options={'control_method': 'differential'},
     initial_helper=True,
     save_sols='space_shuttle.beluga'

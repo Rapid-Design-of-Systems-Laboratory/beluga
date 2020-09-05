@@ -365,6 +365,7 @@ def ignore_quads(prob: Problem):
 
 
 def compute_analytical_jacobians(prob: Problem):
+
     states = sympy.Matrix(extract_syms(prob.states))
     parameters = sympy.Matrix(extract_syms(prob.parameters))
     quads = sympy.Matrix(extract_syms(prob.quads))
@@ -448,7 +449,7 @@ def compile_direct(prob: Problem, analytical_jacobian=True, reduction=False,
     compile_problem(prob)
 
 
-def compile_indirect(prob: Problem, analytical_jacobian=False, control_method='differential', method='traditional',
+def compile_indirect(prob: Problem, analytical_jacobian=True, control_method='differential', method='traditional',
                      reduction=False, do_momentum_shift=True, do_normalize_time=True):
 
     ensure_sympified(prob)

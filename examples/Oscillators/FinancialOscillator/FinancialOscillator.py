@@ -9,14 +9,14 @@ import beluga
 import numpy as np
 import logging
 
-ocp_indirect = beluga.OCP()
+ocp_indirect = beluga.Problem()
 
 # Define independent variables
 ocp_indirect.independent('t', 'nd')
 
 # Define equations of motion
 ocp_indirect.state('x1', 'T*x2', 'nd')
-ocp_indirect.state('x2', '-T*x1 + T*u - T**2*B*x2', 'nd') # 2*sin(u)
+ocp_indirect.state('x2', '-T*x1 + T*u - T**2*B*x2', 'nd')  # 2*sin(u)
 
 # Define controls
 ocp_indirect.control('u', 'rad')
@@ -37,6 +37,8 @@ ocp_indirect.initial_constraint('x2 - x2_0', 'nd')
 ocp_indirect.initial_constraint('t', 'nd')
 ocp_indirect.path_constraint('u', 'rad', lower='-2', upper='2', activator='epsilon1', method='epstrig')
 ocp_indirect.terminal_constraint('t - 1', 'nd')
+
+ocp_indirect.scale(rad=1, nd=1)
 
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
@@ -61,9 +63,9 @@ continuation_steps.add_step('bisection') \
 sol_set_indirect = beluga.solve(
     ocp=ocp_indirect,
     method='indirect',
-    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
+    optim_options={'analytical_jacobian': True, 'control_method': 'differential'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,
     autoscale=False,
-    save='indirect_data.blg')
+    save_sols='indirect_data.beluga')

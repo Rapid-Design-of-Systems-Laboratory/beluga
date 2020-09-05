@@ -65,9 +65,10 @@ continuation_steps.add_step('bisection') \
     .num_cases(30, 'log') \
     .const('epsilon1', 1e-5)
 
-sol_set = beluga.solve(ocp=ocp,
-                       method='indirect',
-                       optim_options={'analytical_jacobian': False, 'control_method': 'differential'},
-                       bvp_algo=bvp_solver,
-                       steps=continuation_steps,
-                       guess_gen=guess_maker)
+sol_set = beluga.solve(
+    ocp=ocp,
+    method='indirect',
+    optim_options={'analytical_jacobian': True, 'control_method': 'differential'},
+    bvp_algorithm=bvp_solver,
+    steps=continuation_steps,
+    guess_generator=guess_maker)

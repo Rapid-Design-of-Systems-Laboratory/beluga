@@ -3,7 +3,6 @@ import beluga.utils.numerical_derivatives.finite_diff
 import math
 import numba
 from numba import njit, float64, complex128, types, errors
-from numba.unsafe.ndarray import to_fixed_tuple
 import logging
 import inspect
 
@@ -12,12 +11,12 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
 
     if max(deriv_order) > 2:
         logging.beluga('Complex-step derivative not supported for order > 2.'
-                      ' Falling back to finite difference for {}'.format(func.__name__))
+                       ' Falling back to finite difference for {}'.format(func.__name__))
         return beluga.utils.numerical_derivatives.gen_fin_diff(func, deriv_order=deriv_order, step_size=step_size)
 
     if len(np.nonzero(deriv_order)[0]) > 1:
         logging.beluga('Complex-step derivative not supported for multivariate derivatives.'
-                      ' Falling back to finite difference for {}'.format(func.__name__))
+                       ' Falling back to finite difference for {}'.format(func.__name__))
         return beluga.utils.numerical_derivatives.gen_fin_diff(func, deriv_order=deriv_order, step_size=step_size)
     else:
         arg_idx = np.nonzero(deriv_order)[0][0]
@@ -76,8 +75,8 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
                 step = 1e-50
 
                 def csd(*args):
-                    args_k = np.array(args) + step*1j*arg_select
-                    return func_im(*to_fixed_tuple(args_k, arg_len)).imag/step
+                    args_k = tuple(np.array(args) + step*1j*arg_select)
+                    return func_im(args_k).imag/step
 
             else:
                 im_step_size = math.sqrt(3 + 2 * math.sqrt(2)) * step_size
@@ -86,10 +85,9 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
 
                 def csd(*args):
                     args_array = np.array(args)
-                    args_k_re = args_array + step_re
-                    args_k_im = args_array + step_im
-                    return 2 * (func_re(*to_fixed_tuple(args_k_re, arg_len)) -
-                                func_im(*to_fixed_tuple(args_k_im, arg_len))).real / im_step_size ** 2
+                    args_k_re = tuple(args_array + step_re, arg_len)
+                    args_k_im = tuple(args_array + step_im, arg_len)
+                    return 2 * (func_re(args_k_re) - func_im(args_k_im)).real / im_step_size ** 2
 
             csd = njit((types.UniTuple(arg_type, arg_len),))(csd)
 
@@ -100,8 +98,8 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
                 step = 1e-50
 
                 def csd(*args):
-                    args_k = np.array(args) + step * 1j * arg_select
-                    return func_im(*to_fixed_tuple(args_k, arg_len)) / step
+                    args_k = UniTuple(np.array(args) + step * 1j * arg_select, arg_len)
+                    return func_im(args_k) / step
 
             else:
                 im_step_size = math.sqrt(3 + 2 * math.sqrt(2)) * step_size

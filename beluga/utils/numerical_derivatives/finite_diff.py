@@ -1,7 +1,6 @@
 import numpy as np
-import numba
+from numba.core.registry import CPUDispatcher
 from numba import njit, float64, complex128, types, errors
-from numba.unsafe.ndarray import to_fixed_tuple
 import logging
 import inspect
 import itertools
@@ -10,11 +9,11 @@ import itertools
 def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='central', complex_arg=False):
     arg_len = len(inspect.signature(func).parameters)
 
-    if len(deriv_order) > arg_len:
-        raise SyntaxError('Argument index exceeds number of arguments')
-
     if deriv_order is None:
         deriv_order = tuple([1] + [0 for _ in range(1, arg_len)])
+
+    if len(deriv_order) > arg_len:
+        raise SyntaxError('Argument index exceeds number of arguments')
 
     if complex_arg:
         arg_type = complex128
@@ -24,7 +23,7 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
     try:
         arg_list = [arg_type] * arg_len
 
-        if type(func) is numba.targets.registry.CPUDispatcher:
+        if type(func) is CPUDispatcher:
             if complex_arg:
                 func.disable_compile(False)
                 func = func.compile(tuple(arg_list))
@@ -83,8 +82,8 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
                 diff = 0.
                 arg_array = np.array(args)
                 for coeff, step in zip(coeff_prod, step_prod):
-                    args_k = arg_array + np.array(step)
-                    diff += coeff * func(*to_fixed_tuple(args_k, arg_len))
+                    args_k = tuple(arg_array + np.array(step))
+                    diff += coeff * func(*args_k)
                 return diff / step_size ** total_deriv_order
 
             fin_diff = njit((types.UniTuple(arg_type, arg_len),))(fin_diff)

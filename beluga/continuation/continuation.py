@@ -109,10 +109,10 @@ class ContinuationStrategy(abc.ABC):
         self.constant_names = getattr_from_list(bvp.constants, 'name')
 
     def next(self, ignore_last_step=False):
-        if len(self.gammas) is 0:
+        if len(self.gammas) == 0:
             raise ValueError('No boundary value problem associated with this object')
 
-        if not ignore_last_step and len(self.gammas) is not 1 and not self.gammas[-1].converged:
+        if not ignore_last_step and len(self.gammas) != 1 and not self.gammas[-1].converged:
             logging.error('The last step did not converge!')
             raise RuntimeError('Solution diverged! Stopping.')
 

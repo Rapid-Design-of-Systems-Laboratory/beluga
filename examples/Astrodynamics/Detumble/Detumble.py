@@ -91,8 +91,8 @@ sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
     optim_options={'control_method': 'differential', 'analytical_jacobian': False},
-    bvp_algo=bvp_solver,
+    bvp_algorithm=bvp_solver,
     steps=continuation_steps,
-    guess_gen=guess_maker,
+    guess_generator=guess_maker,
     initial_helper=True
 )

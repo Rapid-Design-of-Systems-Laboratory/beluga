@@ -8,6 +8,19 @@ import beluga
 from beluga.numeric.ivp_solvers import Propagator
 
 
+def guess_generator(*args, **kwargs):
+    """
+    Helper for creating an initial guess generator.
+
+    :param method: The method used to generate the initial guess
+    :keywords: Additional keyword arguments passed into the guess generator.
+    :return: An instance of the guess generator.
+    """
+    guess_gen = GuessGenerator()
+    guess_gen.setup(*args, **kwargs)
+    return guess_gen
+
+
 class GuessGenerator(object):
     """Generates the initial guess from a variety of sources."""
     def __init__(self, **kwargs):
