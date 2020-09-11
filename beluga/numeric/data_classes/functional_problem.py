@@ -105,7 +105,7 @@ class FuncProblem:
 
         self._initialized = True
 
-    def compile_problem(self, use_time_arg=False, use_control_arg=False, use_quad_arg=True):
+    def compile_problem(self, use_time_arg=False, use_control_arg=False, use_quad_arg=False):
 
         self._initialize()
 
@@ -114,19 +114,16 @@ class FuncProblem:
 
         self.compile_control()
         self.compile_deriv_func(use_control_arg=use_control_arg)
-
         self.compile_bc(use_quad_arg=use_quad_arg)
-
         self.compile_cost(use_quad_arg=use_quad_arg, use_control_arg=use_control_arg)
-
+        self.compile_deriv_jac_func()
+        self.compile_bc_jac_func(use_quad_arg=False)
         self.compile_scaling()
 
         return self
 
     def compile_control(self):
-
         self.compute_u = compile_control(self.prob.control_law, self._dynamic_args, self.ham_func, self.lambdify)
-
         return self.compute_u
 
     def compile_deriv_func(self, use_control_arg=False):
@@ -140,32 +137,37 @@ class FuncProblem:
                 _args = self._dynamic_args
 
             self.compute_y_dot = self.lambdify(_args, sym_eom)
-            self.compute_q_dot = self.lambdify(_args, sym_eom_q)
+
+            if len(sym_eom_q) > 0:
+                self.compute_q_dot = self.lambdify(_args, sym_eom_q)
 
             self.deriv_func, self.quad_func = self.compute_y_dot, self.compute_q_dot
 
         else:
             self.compute_y_dot = self.lambdify(self._dynamic_args_w_controls, sym_eom)
-            self.compute_q_dot = self.lambdify(self._dynamic_args_w_controls, sym_eom_q)
 
             compute_u = self.compute_u
             compute_y_dot = self.compute_y_dot
-            compute_q_dot = self.compute_q_dot
 
             def deriv_func(_y, _p, _k):
                 _u = compute_u(_y, _p, _k)
                 return np.array(compute_y_dot(_y, _u, _p, _k))
 
-            def quad_func(_y, _p, _k):
-                _u = compute_u(_y, _p, _k)
-                return np.array(compute_q_dot(_y, _u, _p, _k))
-
             self.deriv_func = jit_compile_func(deriv_func, self._dynamic_args)
-            self.quad_func = jit_compile_func(quad_func, self._dynamic_args)
+
+            if len(sym_eom_q) > 0:
+                self.compute_q_dot = self.lambdify(self._dynamic_args_w_controls, sym_eom_q)
+                compute_q_dot = self.compute_q_dot
+
+                def quad_func(_y, _p, _k):
+                    _u = compute_u(_y, _p, _k)
+                    return np.array(compute_q_dot(_y, _u, _p, _k))
+
+                self.quad_func = jit_compile_func(quad_func, self._dynamic_args)
 
         return self.deriv_func, self.quad_func
 
-    def compile_bc(self, use_quad_arg=True):
+    def compile_bc(self, use_quad_arg=False):
 
         sym_initial_bc = getattr_from_list(self.prob.constraints['initial'], 'expr')
         sym_terminal_bc = getattr_from_list(self.prob.constraints['terminal'], 'expr')
@@ -217,7 +219,7 @@ class FuncProblem:
                     return np.concatenate((bc_0, bc_f))
 
             else:
-                _args = self._bc_args_w_quads
+                _args = self._bc_args
 
                 compute_initial_bc = self.lambdify(_args, sym_initial_bc)
                 compute_terminal_bc = self.lambdify(_args, sym_terminal_bc)
@@ -233,9 +235,8 @@ class FuncProblem:
                     bc_f = np.array(compute_terminal_bc(_yf, _uf, _p, _p_con, _k))
                     return np.concatenate((bc_0, bc_f))
 
-            _combined_args = \
-                ([self.prob.independent_variable.sym] + self._state_syms) * 2 \
-                + self._parameter_syms + self._constraint_parameters_syms + self._constant_syms
+            _combined_args = [self._state_syms] * 2 + [self._parameter_syms] + [self._constraint_parameters_syms] \
+                             + [self._constant_syms]
 
             self.bc_func = jit_compile_func(bc_func, _combined_args)
             self.compute_initial_bc, self.compute_terminal_bc = compute_initial_bc, compute_terminal_bc
@@ -244,12 +245,12 @@ class FuncProblem:
 
     def compile_deriv_jac_func(self, use_control_arg=False):
 
-        if any([item is None for item in self.prob.func_jac.items()]):
+        if self.prob.func_jac['df_dy'] is None:
             return None
 
         elif use_control_arg:
-            df_dy = self.lambdify(self._dynamic_args_w_controls, self.prob.func_jac['df_dy'])
-            df_dp = self.lambdify(self._dynamic_args_w_controls, self.prob.func_jac['df_dp'])
+            df_dy = self.lambdify(self._dynamic_args_w_controls, np.array(self.prob.func_jac['df_dy']))
+            df_dp = self.lambdify(self._dynamic_args_w_controls, np.array(self.prob.func_jac['df_dp']))
 
             def deriv_func_jac(_y, _u, _p, _k):
                 return np.array(df_dy(_y, _u, _p, _k)), np.array(df_dp(_y, _u, _p, _k))
@@ -258,8 +259,8 @@ class FuncProblem:
                                                    func_name='deriv_func_jac')
 
         elif self.compute_u is not None:
-            df_dy = self.lambdify(self._dynamic_args_w_controls, self.prob.func_jac['df_dy'])
-            df_dp = self.lambdify(self._dynamic_args_w_controls, self.prob.func_jac['df_dp'])
+            df_dy = self.lambdify(self._dynamic_args_w_controls, np.array(self.prob.func_jac['df_dy']))
+            df_dp = self.lambdify(self._dynamic_args_w_controls, np.array(self.prob.func_jac['df_dp']))
 
             compute_u = self.compute_u
 
@@ -271,8 +272,8 @@ class FuncProblem:
                                                    func_name='deriv_func_jac')
 
         else:
-            df_dy = self.lambdify(self._dynamic_args, self.prob.func_jac['df_dy'])
-            df_dp = self.lambdify(self._dynamic_args, self.prob.func_jac['df_dp'])
+            df_dy = self.lambdify(self._dynamic_args, np.array(self.prob.func_jac['df_dy']))
+            df_dp = self.lambdify(self._dynamic_args, np.array(self.prob.func_jac['df_dp']))
 
             def deriv_func_jac(_y, _p, _k):
                 return np.array(df_dy(_y, _p, _k)), np.array(df_dp(_y, _p, _k))
@@ -282,10 +283,9 @@ class FuncProblem:
 
         return self.deriv_func_jac
 
-    def compile_bc_jac_func(self, use_quad_arg=True):
+    def compile_bc_jac_func(self, use_quad_arg=False):
 
-        if all([item is None
-                for item in list(self.prob.bc_jac['initial'].values()) + list(self.prob.bc_jac['terminal'].values())]):
+        if self.prob.bc_jac['initial']['dbc_dy'] is None:
             return None
 
         elif use_quad_arg:
@@ -294,37 +294,53 @@ class FuncProblem:
         else:
             _args = self._bc_args
 
-        dbc_0_dy = self.lambdify(_args, self.prob.bc_jac['initial']['dbc_dy'])
-        dbc_f_dy = self.lambdify(_args, self.prob.bc_jac['terminal']['dbc_dp'])
-        dbc_0_dp = self.lambdify(_args, self.prob.bc_jac['initial']['dbc_dy'])
-        dbc_f_dp = self.lambdify(_args, self.prob.bc_jac['terminal']['dbc_dp'])
+        num_bc_0, num_states = self.prob.bc_jac['initial']['dbc_dy'].shape
+        num_bc_f, num_parameters = self.prob.bc_jac['terminal']['dbc_dp'].shape
+
+        calc_dbc_0_dy = self.lambdify(_args, np.array(self.prob.bc_jac['initial']['dbc_dy']))
+        calc_dbc_f_dy = self.lambdify(_args, np.array(self.prob.bc_jac['terminal']['dbc_dy']))
+        calc_dbc_0_dp = self.lambdify(_args, np.array(self.prob.bc_jac['initial']['dbc_dp']))
+        calc_dbc_f_dp = self.lambdify(_args, np.array(self.prob.bc_jac['terminal']['dbc_dp']))
+
+        empty_dbc_0_dy = np.zeros((num_bc_0, num_states))
+        empty_dbc_f_dy = np.zeros((num_bc_f, num_states))
 
         if use_quad_arg:
-            dbc_0_dq = self.lambdify(_args, self.prob.bc_jac['initial']['dbc_dq'])
-            dbc_f_dq = self.lambdify(_args, self.prob.bc_jac['terminal']['dbc_dq'])
+            _, num_quads = self.prob.bc_jac['initial']['dbc_dq'].shape
+
+            empty_dbc_0_dq = np.zeros((num_bc_0, num_quads))
+            empty_dbc_f_dq = np.zeros((num_bc_f, num_quads))
+
+            calc_dbc_0_dq = self.lambdify(_args, np.array(self.prob.bc_jac['initial']['dbc_dq']))
+            calc_dbc_f_dq = self.lambdify(_args, np.array(self.prob.bc_jac['terminal']['dbc_dq']))
 
             def bc_func_jac(_y0, _q0, _yf, _qf, _p, _p_con, _k):
-                return np.array(dbc_0_dy(_y0, _q0, _p, _p_con, _k)), \
-                       np.array(dbc_f_dy(_yf, _qf, _p, _p_con, _k)), \
-                       np.array(dbc_0_dq(_y0, _q0, _p, _p_con, _k)), \
-                       np.array(dbc_f_dq(_yf, _qf, _p, _p_con, _k)), \
-                       (np.array(dbc_0_dp(_y0, _q0, _p, _p_con, _k))
-                        + np.array(dbc_f_dp(_yf, _qf, _p, _p_con, _k)))
+                
+                dbc_dy0 = np.vstack((np.array(calc_dbc_0_dy(_y0, _p, _p_con, _k)), empty_dbc_f_dy))
+                dbc_dyf = np.vstack((empty_dbc_0_dy, np.array(calc_dbc_f_dy(_y0, _p, _p_con, _k))))
+                dbc_dp = np.vstack((np.array(calc_dbc_0_dp(_y0, _p, _p_con, _k)),
+                                    np.array(calc_dbc_f_dp(_y0, _p, _p_con, _k))))
+                dbc_dq0 = np.vstack((np.array(calc_dbc_0_dq(_y0, _p, _p_con, _k)), empty_dbc_f_dq))
+                dbc_dqf = np.vstack((empty_dbc_0_dq, np.array(calc_dbc_f_dq(_y0, _p, _p_con, _k))))
+
+                return dbc_dy0, dbc_dyf, dbc_dp, dbc_dq0, dbc_dqf
 
             _combined_args = \
                 ([self.prob.independent_variable.sym] + self._state_syms + self._quad_syms) * 2 \
                 + self._parameter_syms + self._constraint_parameters_syms + self._constant_syms
 
         else:
-            def bc_func_jac(_y0, _q0, _yf, _qf, _p, _p_con, _k):
-                return np.array(dbc_0_dy(_y0, _p, _p_con, _k)), \
-                       np.array(dbc_f_dy(_yf, _p, _p_con, _k)), \
-                       (np.array(dbc_0_dp(_y0, _p, _p_con, _k))
-                        + np.array(dbc_f_dp(_yf, _p, _p_con, _k)))
+            def bc_func_jac(_y0, _yf, _p, _p_con, _k):
 
-            _combined_args = \
-                ([self.prob.independent_variable.sym] + self._state_syms) * 2 \
-                + self._parameter_syms + self._constraint_parameters_syms + self._constant_syms
+                dbc_dy0 = np.vstack((np.array(calc_dbc_0_dy(_y0, _p, _p_con, _k)), empty_dbc_f_dy))
+                dbc_dyf = np.vstack((empty_dbc_0_dy, np.array(calc_dbc_f_dy(_y0, _p, _p_con, _k))))
+                dbc_dp = np.vstack((np.array(calc_dbc_0_dp(_y0, _p, _p_con, _k)),
+                                    np.array(calc_dbc_f_dp(_y0, _p, _p_con, _k))))
+
+                return dbc_dy0, dbc_dyf, dbc_dp
+
+            _combined_args = [self._state_syms, self._state_syms, self._parameter_syms,
+                              self._constraint_parameters_syms, self._constant_syms]
 
         self.bc_func_jac = jit_compile_func(bc_func_jac, _combined_args, func_name='bc_func_jac')
 

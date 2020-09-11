@@ -5,7 +5,7 @@ import numpy as np
 import copy
 
 
-class spbvp(BaseAlgorithm):
+class SPBVP(BaseAlgorithm):
     r"""
     Reduced dimensional sparse collocation for solving boundary value problems.
 
@@ -16,10 +16,6 @@ class spbvp(BaseAlgorithm):
     +========================+=================+=================+
 
     """
-    # def __new__(cls, *args, **kwargs):
-    #     obj = super(spbvp, cls).__new__(cls, *args, **kwargs)
-    #     obj.max_nodes = kwargs.get('max_nodes', 1000)
-    #     return obj
 
     def __init__(self, *args, **kwargs):
         BaseAlgorithm.__init__(self, *args, **kwargs)
@@ -32,8 +28,7 @@ class spbvp(BaseAlgorithm):
 
         nquads = 0
 
-        # TODO: Reimplement this
-        def return_nil(*args, **kwargs):
+        def return_nil(*_, **__):
             return np.array([])
 
         if solinit.q.size > 0:
@@ -45,17 +40,26 @@ class spbvp(BaseAlgorithm):
         ndyn = solinit.dynamical_parameters.size
         nnondyn = solinit.nondynamical_parameters.size
 
-        def _fun(t, y, params=np.array([]), const=solinit.const):
-            y = y.T
-            o1 = np.vstack([self.derivative_function(yi[:nstates], params[:ndyn], const) for yi in y])
-            o2 = np.vstack([self.quadrature_function(yi[:nstates], params[:ndyn], const) for yi in y])
-            return np.hstack((o1, o2)).T
+        empty_array = np.array([])
 
-        # TODO: The way parameters are used is inconsitent
-        def _bc(ya, yb, params=np.array([]), const=solinit.const):
-            return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], yb[:nstates],
-                                                   yb[nstates:nstates+nquads], params[:ndyn],
-                                                   params[ndyn:ndyn+nnondyn], const)
+        if nquads == 0:
+            # TODO: Try to vectorize
+            def _fun(t, y, params=empty_array, const=solinit.const):
+                return np.vstack([self.derivative_function(yi[:nstates], params[:ndyn], const) for yi in y.T]).T
+
+            def _bc(ya, yb, params=empty_array, const=solinit.const):
+                return self.boundarycondition_function(ya, yb, params[:ndyn], params[ndyn:ndyn + nnondyn], const)
+        else:
+            def _fun(t, y, params=empty_array, const=solinit.const):
+                y = y.T
+                o1 = np.vstack([self.derivative_function(yi[:nstates], params[:ndyn], const) for yi in y])
+                o2 = np.vstack([self.quadrature_function(yi[:nstates], params[:ndyn], const) for yi in y])
+                return np.hstack((o1, o2)).T
+
+            def _bc(ya, yb, params=np.array([]), const=solinit.const):
+                return self.boundarycondition_function(ya[:nstates], ya[nstates:nstates+nquads], yb[:nstates],
+                                                       yb[nstates:nstates+nquads], params[:ndyn],
+                                                       params[ndyn:ndyn+nnondyn], const)
 
         if self.derivative_function_jac is not None:
             def _fun_jac(t, y, params=np.array([]), const=solinit.const):
@@ -78,9 +82,18 @@ class spbvp(BaseAlgorithm):
             _fun_jac = None
 
         if self.boundarycondition_function_jac is not None:
-            def _bc_jac(ya, yb, params=np.array([]), const=solinit.const):
-                dbc_dya, dbc_dyb, dbc_dp = self.boundarycondition_function_jac(ya, yb, np.array([]), params, const)
-                return dbc_dya, dbc_dyb, dbc_dp
+            if nquads > 0:
+                def _bc_jac(ya, yb, params=np.array([]), const=solinit.const):
+                    dbc_dya, dbc_dyb, dbc_dp = \
+                        self.boundarycondition_function_jac(ya[:nstates], ya[nstates:nstates+nquads], yb[:nstates],
+                                                            yb[nstates:nstates+nquads], params[:ndyn],
+                                                            params[ndyn:ndyn+nnondyn], const)
+                    return dbc_dya, dbc_dyb, dbc_dp
+            else:
+                def _bc_jac(ya, yb, params=np.array([]), const=solinit.const):
+                    dbc_dya, dbc_dyb, dbc_dp = \
+                        self.boundarycondition_function_jac(ya, yb, params[:ndyn], params[ndyn:ndyn+nnondyn], const)
+                    return dbc_dya, dbc_dyb, dbc_dp
         else:
             _bc_jac = None
 

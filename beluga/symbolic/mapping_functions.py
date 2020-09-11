@@ -240,7 +240,6 @@ def dualize(prob: Problem, method='traditional'):
 def algebraic_control_law(prob: Problem):
     ensure_dualized(prob)
 
-    # control_syms = [control['sym'] for control in prob.controls]
     control_syms = extract_syms(prob.controls)
     prob.dh_du = [prob.hamiltonian.expr.diff(control_sym) for control_sym in control_syms]
     logging.debug("Solving dH/du...")
@@ -367,7 +366,8 @@ def ignore_quads(prob: Problem):
 def compute_analytical_jacobians(prob: Problem):
 
     states = sympy.Matrix(extract_syms(prob.states))
-    parameters = sympy.Matrix(extract_syms(prob.parameters))
+    dynamic_parameters = sympy.Matrix(extract_syms(prob.parameters))
+    parameters = sympy.Matrix(extract_syms(prob.parameters) + extract_syms(prob.constraint_parameters))
     quads = sympy.Matrix(extract_syms(prob.quads))
     eom = sympy.Matrix(getattr_from_list(prob.states, 'eom'))
     phi_0 = sympy.Matrix(getattr_from_list(prob.constraints['initial'], 'expr'))
@@ -378,7 +378,7 @@ def compute_analytical_jacobians(prob: Problem):
     prob.bc_jac['terminal']['dbc_dy'] = phi_f.jacobian(states)
 
     if len(parameters) > 0:
-        prob.func_jac.update({'df_dp': eom.jacobian(parameters)})
+        prob.func_jac.update({'df_dp': eom.jacobian(dynamic_parameters)})
         prob.bc_jac['initial']['dbc_dp'] = phi_0.jacobian(parameters)
         prob.bc_jac['terminal']['dbc_dp'] = phi_f.jacobian(parameters)
 
@@ -528,7 +528,7 @@ def compile_indirect(prob: Problem, analytical_jacobian=True, control_method='di
     """
     if analytical_jacobian:
         if control_method == 'algebraic':
-            pass
+            logging.info('Analytical Jacobians not available for algebraic control mode')
         else:
             compute_analytical_jacobians(prob)
 

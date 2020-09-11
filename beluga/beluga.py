@@ -138,12 +138,6 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
 
                 ya = sol.y[0, :]
                 yb = sol.y[-1, :]
-                if sol.q.size > 0:
-                    qa = sol.q[0, :]
-                    qb = sol.q[-1, :]
-                else:
-                    qa = np.array([])
-                    qb = np.array([])
 
                 # if sol.u.size > 0:
                 #     ua = sol.u[0, :]
@@ -156,7 +150,14 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
                 ndp = sol.nondynamical_parameters
                 k = sol.const
 
-                bc_residuals_unscaled = bvp_algorithm_.boundarycondition_function(ya, qa, yb, qb, dp, ndp, k)
+                if sol.q.size > 0:
+                    qa = sol.q[0, :]
+                    qb = sol.q[-1, :]
+
+                    bc_residuals_unscaled = bvp_algorithm_.boundarycondition_function(ya, qa, yb, qb, dp, ndp, k)
+
+                else:
+                    bc_residuals_unscaled = bvp_algorithm_.boundarycondition_function(ya, yb, dp, ndp, k)
 
                 step.add_gamma(sol)
 

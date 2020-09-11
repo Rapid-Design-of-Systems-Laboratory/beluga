@@ -13,7 +13,7 @@ References
 
 import pytest
 from beluga.numeric.ivp_solvers import Trajectory
-from beluga.numeric.bvp_solvers import spbvp
+from beluga.numeric.bvp_solvers import SPBVP
 import numpy as np
 from scipy.special import erf
 import copy
@@ -38,7 +38,7 @@ def test_T1(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -67,7 +67,7 @@ def test_T2(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -96,7 +96,7 @@ def test_T3(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] + 1, X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -123,7 +123,7 @@ def test_T4(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1 - np.exp(-2), Xf[0] - 1 - np.exp(-2 * (1 + const[0]) / const[0]), X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -155,7 +155,7 @@ def test_T5(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] + 1, X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -184,7 +184,7 @@ def test_T6():
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 2, Xf[0], X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -214,7 +214,7 @@ def test_T7(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] - 1, X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -247,7 +247,7 @@ def test_T8(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 2, X0[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -274,7 +274,7 @@ def test_T9(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1 / (1 + const[0]), Xf[0] - 1 / (1 + const[0]), X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -301,7 +301,7 @@ def test_T10(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 2, X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -330,7 +330,7 @@ def test_T11(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0] + 1, X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -358,7 +358,7 @@ def test_T12(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0], X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -386,7 +386,7 @@ def test_T13(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, Xf[0], X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -415,7 +415,7 @@ def test_T14(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0], X0[2]+1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -444,7 +444,7 @@ def test_T15(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 1, X0[2] + 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -467,7 +467,7 @@ def test_T16(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - np.sin(np.pi / (2 * np.sqrt(const[0]))), X0[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -494,7 +494,7 @@ def test_T17(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 0.1 / np.sqrt(const[0] + 0.01), Xf[0] - 0.1 / np.sqrt(const[0] + 0.01), X0[2] + 0.1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -521,7 +521,7 @@ def test_T18(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - np.exp(-1 / const[0]), X0[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -548,7 +548,7 @@ def test_T19(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0], X0[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -576,7 +576,7 @@ def test_T21(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - np.exp(-1 / np.sqrt(const[0])), X0[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -603,7 +603,7 @@ def test_T22(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 1 / 2
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
@@ -627,7 +627,7 @@ def test_T23(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 1
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -663,7 +663,7 @@ def test_T24(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const=None):
         return X0[0] - 0.9129, Xf[0] - 0.375, X0[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -691,7 +691,7 @@ def test_T25(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1 / 3, Xf[0] - 1 / 3
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -719,7 +719,7 @@ def test_T26(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] + 1/3
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -747,7 +747,7 @@ def test_T27(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 1/3
 
-    algo = spbvp(odefun, None, bcfun, max_nodes=1500)
+    algo = SPBVP(odefun, None, bcfun, max_nodes=1500)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -775,7 +775,7 @@ def test_T28(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] - 1, Xf[0] - 3/2
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -803,7 +803,7 @@ def test_T29(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0] - 3/2
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -831,7 +831,7 @@ def test_T30(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 7/6, Xf[0] - 3/2
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -860,7 +860,7 @@ def test_T31(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], X0[2], Xf[0], Xf[2]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -884,7 +884,7 @@ def test_T32(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], X0[1], Xf[0] - 1, Xf[1]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -912,7 +912,7 @@ def test_T33(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0] + 1, X0[2], X0[3], Xf[0] - 1, Xf[2], Xf[3]
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     algo.set_derivative_jacobian(odejac)
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
@@ -934,7 +934,7 @@ def test_R2(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return q0[0] - 1, qf[0]
 
-    algo = spbvp(odefun, quadfun, bcfun)
+    algo = SPBVP(odefun, quadfun, bcfun)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1], [1]])
@@ -959,7 +959,7 @@ def test_R8(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return q0[0] - 1, qf[0] - 2
 
-    algo = spbvp(odefun, quadfun, bcfun)
+    algo = SPBVP(odefun, quadfun, bcfun)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1], [1]])
@@ -984,7 +984,7 @@ def test_R18(const):
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return q0[0] - 1, qf[0] - np.exp(-1 / const[0])
 
-    algo = spbvp(odefun, quadfun, bcfun)
+    algo = SPBVP(odefun, quadfun, bcfun)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1], [1]])
@@ -1008,7 +1008,7 @@ def test_spbvp_1():
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, const):
         return X0[0], Xf[0]+2
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 4, 4)
     solinit.y = np.array([[0, 1], [0, 1], [0, 1], [0, 1]])
@@ -1060,7 +1060,7 @@ def test_spbvp_3():
     def bcfun(X0, q0, u0, Xf, qf, uf, p, ndp, aux):
         return X0[0] - 0, Xf[0] - 2
 
-    algo = spbvp(odefun, None, bcfun)
+    algo = SPBVP(odefun, None, bcfun)
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 4)
     solinit.y = np.array([[0], [0], [0], [0]])

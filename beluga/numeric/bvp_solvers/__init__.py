@@ -2,14 +2,14 @@ import inspect
 
 from .BaseAlgorithm import BaseAlgorithm, BVPResult
 from .Shooting import Shooting
-from .spbvp import spbvp
+from .SPBVP import SPBVP
 
 # import os
 # import glob
 # modules = glob.glob(os.path.dirname(__file__)+"/*.py")
 # __all__ = [os.path.basename(f)[:-3] for f in modules]
 
-available_algorithms = [Shooting, spbvp]
+available_algorithms = [Shooting, SPBVP]
 
 
 def bvp_algorithm(name, **kwargs):
@@ -22,7 +22,7 @@ def bvp_algorithm(name, **kwargs):
     """
     # Load algorithm from the package
     for algorithm in available_algorithms:
-        if name == algorithm.__name__:
+        if name.lower() == algorithm.__name__.lower():
             return algorithm(**kwargs)
     else:
         # Raise exception if the loop completes without finding an algorithm by the given name
