@@ -3,7 +3,7 @@ import sympy
 import copy
 import logging
 
-from beluga.symbolic.data_classes.problem import Problem
+from beluga.symbolic.data_classes.symbolic_problem import Problem
 from beluga.symbolic.data_classes.components_structures import (extract_syms, combine_component_lists,
                                                                 getattr_from_list, sym_one,
                                                                 NamedDimensionalStruct, DynamicStruct,
@@ -413,8 +413,7 @@ def compile_direct(prob: Problem, analytical_jacobian=True, reduction=False,
         elif path_constraint.method.lower() == 'utm':
             utm(prob)
         else:
-            raise NotImplementedError(
-                'Unknown path constraint method \"' + str(path_constraint.method) + '\"')
+            raise NotImplementedError('Unknown path constraint method \"' + str(path_constraint.method) + '\"')
 
     """
     Deal with staging, switches, and their substitutions.

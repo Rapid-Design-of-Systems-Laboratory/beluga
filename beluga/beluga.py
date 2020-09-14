@@ -139,13 +139,6 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
                 ya = sol.y[0, :]
                 yb = sol.y[-1, :]
 
-                # if sol.u.size > 0:
-                #     ua = sol.u[0, :]
-                #     ub = sol.u[-1, :]
-                # else:
-                #     ua = np.array([])
-                #     ub = np.array([])
-
                 dp = sol.dynamical_parameters
                 ndp = sol.nondynamical_parameters
                 k = sol.const
@@ -266,7 +259,7 @@ def solve(
     Main code
     """
 
-    f_ocp = compile_problem(ocp, use_control_arg=True)
+    # f_ocp = compile_direct(ocp)
 
     logging.beluga('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
@@ -322,24 +315,6 @@ def solve(
                 jj = getattr_from_list(bvp.constants, 'name').index(bcf + '_f')
                 solinit.const[jj] = terminal_bc[bcf]
 
-    # quad_names = bvp.raw['quads']
-    # n_quads = len(quad_names)
-    # if n_quads > 0:
-    #     initial_quads = solinit.q[0, :]
-    #     terminal_quads = solinit.q[-1, :]
-    #     initial_bc = dict(zip(quad_names, initial_quads))
-    #     terminal_bc = dict(zip(quad_names, terminal_quads))
-    #
-    #     for ii, bc0 in enumerate(initial_bc):
-    #         if bc0 + '_0' in bvp.raw['constants']:
-    #             jj = bvp.raw['constants'].index(bc0 + '_0')
-    #             solinit.k[str(ii) + '_0'] = initial_bc[bc0]
-    #
-    #     for ii, bcf in enumerate(terminal_bc):
-    #         if bcf + '_f' in bvp.raw['constants']:
-    #             jj = bvp.raw['constants'].index(bcf + '_f')
-    #             solinit.k[jj] = terminal_bc[bcf]
-
     """
     Main continuation process
     """
@@ -352,7 +327,7 @@ def solve(
     """
     Post processing and output
     """
-    out = postprocess(continuation_set, f_ocp, bvp, ocp_map_inverse)
+    out = postprocess(continuation_set, ocp_map_inverse)
 
     if pool is not None:
         pool.close()
@@ -368,7 +343,7 @@ def solve(
     return out
 
 
-def postprocess(continuation_set, ocp, bvp, ocp_map_inverse):
+def postprocess(continuation_set, ocp_map_inverse):
     """
     Post processes the data after the continuation process has run.
 

@@ -40,7 +40,7 @@ ocp.constant('y_f', 1.8e5, 'm')
 ocp.constant('v_y_f', 0, 'm/s')
 
 # Define costs
-ocp.path_cost('1', '1')
+ocp.path_cost('1', 's')
 
 # Define constraints
 ocp.initial_constraint('x - x_0', 'm')
@@ -82,6 +82,8 @@ sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
     bvp_algorithm=bvp_solver,
+    optim_options={'control_method': 'algebraic'},
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=True)
+    autoscale=True
+)

@@ -1,13 +1,6 @@
-import inspect
-
 from .BaseAlgorithm import BaseAlgorithm, BVPResult
 from .Shooting import Shooting
 from .SPBVP import SPBVP
-
-# import os
-# import glob
-# modules = glob.glob(os.path.dirname(__file__)+"/*.py")
-# __all__ = [os.path.basename(f)[:-3] for f in modules]
 
 available_algorithms = [Shooting, SPBVP]
 

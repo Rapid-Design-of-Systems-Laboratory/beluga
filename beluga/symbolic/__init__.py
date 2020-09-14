@@ -1,1 +1,1 @@
-from beluga.symbolic.data_classes.problem import Problem
+from beluga.symbolic.data_classes.symbolic_problem import Problem

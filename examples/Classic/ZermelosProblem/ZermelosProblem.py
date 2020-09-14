@@ -4,23 +4,23 @@ import logging
 ocp = beluga.Problem()
 
 
-def drift_x(x, y):
-    return 0.0
+# def drift_x(x, y):
+#     return 0.0
 
 
-def drift_y(x, y):
-    return ((x-5)**4 - 625)/625
+def drift_y(x):
+    return ((x - 5.)**4 - 625)/625
 
 
-ocp.custom_function('drift_x', ['x', 'y'], drift_x)
-ocp.custom_function('drift_y', ['x', 'y'], drift_y)
+# ocp.custom_function('drift_x', drift_x, 'm', ['m', 'm'])
+ocp.custom_function('drift_y', drift_y, 'm', ['m'])
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'V*cos(theta) + drift_x(x,y)', 'm')   \
-   .state('y', 'V*sin(theta) + drift_y(x,y)', 'm')
+ocp.state('x', 'V*cos(theta)', 'm')   \
+   .state('y', 'V*sin(theta) + drift_y(x)', 'm')
 
 # Define controls
 ocp.control('theta', 'rad')
@@ -35,19 +35,21 @@ ocp.constant('y_f', 0, 'm')
 ocp.path_cost('1', '1')
 
 # Define constraints
-ocp.initial('x', 'm')
-ocp.initial('y', 'm')
-ocp.initial('t', 's')
-ocp.terminal('x-x_f', 'm')
-ocp.terminal('y-y_f', 'm')
+ocp.initial_constraint('x', 'm')
+ocp.initial_constraint('y', 'm')
+ocp.initial_constraint('t', 's')
+ocp.terminal_constraint('x-x_f', 'm')
+ocp.terminal_constraint('y-y_f', 'm')
 
 ocp.scale(m='x', s='x/V', rad=1)
 
-bvp_solver = beluga.bvp_algorithm(
-    'Shooting',
-    derivative_method='fd',
-    tolerance=1e-4
-)
+# bvp_solver = beluga.bvp_algorithm(
+#     'Shooting',
+#     derivative_method='fd',
+#     tolerance=1e-4
+# )
+
+bvp_solver = beluga.bvp_algorithm('SPBVP')
 
 guess_maker = beluga.guess_generator(
     'auto',
@@ -65,7 +67,7 @@ continuation_steps.add_step('bisection') \
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
-                .const('y_f', 10)
+                .const('y_f', 0)
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
@@ -80,5 +82,6 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    initial_helper=True
+    initial_helper=True,
+    autoscale=False
 )

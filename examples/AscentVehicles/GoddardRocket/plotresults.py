@@ -19,7 +19,7 @@ c = 0.5 * sqrt(g_0 * h_0)
 d_c = 0.5 * v_c * m_0 / g_0
 thrust_max = t_c * g_0 * m_0
 
-data = load('data.blg')
+data = load('data.beluga')
 sol_set = data['solutions']
 
 sol = sol_set[-1][-1]
@@ -46,8 +46,8 @@ plt.title('Mass Profile')
 plt.grid(True)
 
 plt.figure()
-# plt.plot(sol.t, thrust_max*(np.sin(sol.u[:, 0]) + 1)/2, label='Thrust')
-plt.plot(sol.t, sol.u[:,0], label='Thrust')
+plt.plot(sol.t, thrust_max*(np.sin(sol.u[:, 0]) + 1)/2, label='Thrust')
+# plt.plot(sol.t, sol.u[:, 0], label='Thrust')
 plt.plot(sol.t, 1 * d_c * sol.y[:, 1]**2 * np.exp(-h_c * (sol.y[:, 0] - h_0) / h_0), label='Drag')
 plt.xlabel('Time [s]')
 plt.ylabel('Force [nd]')

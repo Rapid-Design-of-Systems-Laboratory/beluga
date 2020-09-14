@@ -64,7 +64,8 @@ class CustomFunctionMeta(Function):
         if argindex <= self.nargs[0]:
             order = list(self.order)
             order[argindex - 1] += 1
-            return CustomFunction(self.base_func, self.arg_list, order=tuple(order), local_compiler=self.local_compiler)
+            return CustomFunction(self.base_name, self.base_func, self.arg_list,
+                                  order=tuple(order), local_compiler=self.local_compiler)
         else:
             raise ArgumentIndexError(self, argindex)
 

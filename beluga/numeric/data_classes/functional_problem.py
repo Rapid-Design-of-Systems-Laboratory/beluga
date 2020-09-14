@@ -219,7 +219,7 @@ class FuncProblem:
                     return np.concatenate((bc_0, bc_f))
 
             else:
-                _args = self._bc_args
+                _args = self._bc_args_w_controls
 
                 compute_initial_bc = self.lambdify(_args, sym_initial_bc)
                 compute_terminal_bc = self.lambdify(_args, sym_terminal_bc)

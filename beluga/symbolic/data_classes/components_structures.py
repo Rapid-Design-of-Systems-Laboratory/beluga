@@ -201,6 +201,9 @@ class FunctionStruct(CallableStruct):
             self.sym = custom_functions.CustomFunctionGenerator(
                 self.func, name=name, arg_types=self.arg_types, local_compiler=local_compiler)
 
+        local_compiler.add_symbolic_local(name, self.sym)
+        # local_compiler.add_function_local(name, self.func)
+
         super(FunctionStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent,
                                              local_compiler=local_compiler)
 
@@ -226,7 +229,7 @@ class TableStruct(CallableStruct):
             self.sym = tables.SymTableGenerator(self.table, local_compiler=local_compiler)
 
         local_compiler.add_symbolic_local(name, self.sym)
-        local_compiler.add_function_local(name, self.table)
+        # local_compiler.add_function_local(name, self.table)
 
         super(TableStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent,
                                           local_compiler=local_compiler)

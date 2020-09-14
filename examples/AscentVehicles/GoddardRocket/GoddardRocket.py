@@ -105,11 +105,12 @@ continuation_steps.add_step() \
     .num_cases(10, spacing='log') \
     .const('eps', 0.000005)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
+    optim_options={'control_method': 'algebraic'},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,

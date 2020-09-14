@@ -78,6 +78,7 @@ def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='ce
 
     else:
         try:
+            # TODO: Get this to reliably compile
             def fin_diff(*args):
                 diff = 0.
                 arg_array = np.array(args)
