@@ -1,10 +1,12 @@
 from beluga.numeric.bvp_solvers import BaseAlgorithm, BVPResult
 from beluga.numeric.ivp_solvers import Trajectory
-from ._bvp import *
+from scipy.integrate import solve_bvp
+# from ._bvp import *
 import numpy as np
 import copy
 
 
+# noinspection PyTypeChecker
 class SPBVP(BaseAlgorithm):
     r"""
     Reduced dimensional sparse collocation for solving boundary value problems.
