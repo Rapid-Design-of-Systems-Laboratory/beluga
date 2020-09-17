@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from collections import Iterable
+from collections.abc import Iterable
 
 from beluga.numeric.ivp_solvers.ivpsol import Trajectory
 from beluga.numeric.compilation import LocalCompiler, jit_compile_func, compile_control

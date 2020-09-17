@@ -441,7 +441,7 @@ class Shooting(BaseAlgorithm):
         sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=beluga.DTYPE)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=beluga.DTYPE)
 
-        n = sol.y[0].shape[0]
+        # n = sol.y[0].shape[0]
         k = sol.dynamical_parameters.shape[0]
         # sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.nondynamical_parameters))
         # sol.nondynamical_parameters = np.empty((0,))

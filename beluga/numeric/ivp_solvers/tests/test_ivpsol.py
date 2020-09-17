@@ -8,7 +8,7 @@ tol = 1e-3
 def test_propagator_1():
     k = [-0.5, -0.2]
 
-    def odefn(x, p, const):
+    def odefn(x, _, __):
         return np.array([k[0]*x[0], k[1]*x[1]])
 
     y0 = np.array([10, -50])
@@ -23,10 +23,10 @@ def test_propagator_1():
 
 
 def test_propagator_2():
-    def odefun(x, p, const):
+    def odefun(x, _, __):
         return -x[1], x[0]
 
-    def quadfun(x, p, const):
+    def quadfun(x, _, __):
         return x[0]
 
     y0 = np.array([1, 0])
@@ -40,7 +40,7 @@ def test_propagator_2():
     assert ((solout.y[:, 1] - solout.q[:, 0]) < tol).all()
 
 
-def test_Trajectory():
+def test_trajectory():
     t = np.array([0, 1, 2, 3])
     y1 = t ** 2
 
@@ -74,7 +74,7 @@ def test_integrate_quads():
     t = np.linspace(0, 10, 100)
     y1 = np.sin(t)
 
-    def quadfun(t, y):
+    def quadfun(_, y):
         return y[0]
 
     gam = Trajectory(t, y1)
@@ -89,7 +89,7 @@ def test_integrate_quads():
     y1 = np.sin(t)
     y2 = np.cos(t)
 
-    def quadfun(t, y):
+    def quadfun(_, y):
         return y[0]*y[1]
 
     gam = Trajectory(t, np.vstack((y1, y2)).T)
@@ -100,7 +100,7 @@ def test_integrate_quads():
     t = np.linspace(0, 10, 100)
     y1 = np.sin(t)
 
-    def quadfun(t, y):
+    def quadfun(_, y):
         return y[0], y[0]**2
 
     gam = Trajectory(t, y1)
@@ -112,7 +112,7 @@ def test_integrate_quads():
     y1 = np.sin(t)
     y2 = np.cos(t)
 
-    def quadfun(t, y):
+    def quadfun(_, y):
         return y[0], y[1]
 
     gam = Trajectory(t, np.vstack((y1, y2)).T)

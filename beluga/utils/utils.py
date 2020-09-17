@@ -1,14 +1,4 @@
-from collections import ChainMap
-from itertools import zip_longest
-import time
-import sympy
-import platform
-from fractions import Fraction as R
-from scipy.special import comb
-import signal
 import cloudpickle as pickle
-import beluga
-import sys
 
 
 def save(ocp=None, bvp=None, bvp_solver=None, sol_set=None, filename='data.beluga'):
