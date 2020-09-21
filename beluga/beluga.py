@@ -1,4 +1,3 @@
-import inspect
 import sys
 import warnings
 import copy
@@ -8,14 +7,12 @@ import logging
 import numpy as np
 from tqdm import tqdm
 
-# import beluga.numeric.bvp_solvers as bvpsol
 from beluga.release import __splash__
 from beluga.numeric.ivp_solvers import Trajectory
 from beluga.utils import save, init_logging
-from beluga.continuation import GuessGenerator
 from beluga.symbolic import Problem
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
-from beluga.symbolic.mapping_functions import compile_problem, compile_direct, compile_indirect
+from beluga.symbolic.mapping_functions import compile_direct, compile_indirect
 
 
 def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwargs):
@@ -71,13 +68,10 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
     bvp_algorithm_.set_quadrature_function(functional_problem.quad_func)
     bvp_algorithm_.set_boundarycondition_function(functional_problem.bc_func)
     bvp_algorithm_.set_boundarycondition_jacobian(functional_problem.bc_func_jac)
-    # bvp_algorithm_.set_initial_cost_function(functional_problem.initial_cost)
-    # bvp_algorithm_.set_path_cost_function(functional_problem.path_cost)
-    # bvp_algorithm_.set_terminal_cost_function(functional_problem.terminal_cost)
     bvp_algorithm_.set_inequality_constraint_function(functional_problem.ineq_constraints)
 
     sol_guess = solinit
-    # sol = None
+
     if steps is None:
         logging.info('Solving OCP...')
         time0 = time.time()
@@ -93,7 +87,7 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
         if autoscale:
             sol = scale(sol, scale_factors, inv=True)
 
-        solution_set = [[copy.deepcopy(sol)]]
+        solution_set = [[sol]]
         if sol.converged:
             elapsed_time = time.time() - time0
             logging.beluga('Problem converged in %0.4f seconds\n' % elapsed_time)
@@ -266,9 +260,9 @@ def solve(
     if bvp is None:
         logging.beluga('Resulting BVP problem:')
         if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
-            bvp = compile_indirect(copy.copy(ocp), **optim_options)
+            bvp = compile_indirect(copy.deepcopy(ocp), **optim_options)
         elif method == 'direct':
-            bvp = compile_direct(copy.copy(ocp), **optim_options)
+            bvp = compile_direct(copy.deepcopy(ocp), **optim_options)
         else:
             raise NotImplementedError
         logging.beluga('Resulting BVP problem:')
@@ -361,18 +355,5 @@ def postprocess(continuation_set, ocp_map_inverse):
         for sol_num, sol in enumerate(continuation_step):
             tempset.append(ocp_map_inverse(sol))
         out.append(tempset)
-
-    # Calculate the cost for each trajectory
-    # for cont_num, continuation_step in enumerate(out):
-    #     for sol_num, sol in enumerate(continuation_step):
-    #         c0 = ocp.initial_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
-    #         cf = ocp.terminal_cost(np.array([sol.t[-1]]), sol.y[-1], sol.u[-1], sol.p, sol.const)
-    #         cpath = ocp.path_cost(np.array([sol.t[0]]), sol.y[0], sol.u[0], sol.p, sol.const)
-    #         for ii in range(len(sol.t) - 1):
-    #             cpath = np.hstack(
-    #                 (cpath, ocp.path_cost(np.array([sol.t[ii+1]]), sol.y[ii+1], sol.u[ii+1], sol.p, sol.const)))
-    #
-    #         cpath = integrate.simps(cpath, sol.t)
-    #         sol.cost = c0 + cpath + cf
 
     return out

@@ -23,7 +23,7 @@ class GenericStruct:
         else:
             return [item]
 
-    def _sympify_internal(self, expr: Union[str, Iterable]) -> sympy.Basic:
+    def _sympify_internal(self, expr: Union[str, Iterable, sympy.Basic]) -> Union[Iterable, sympy.Basic]:
         if self.local_compiler is not None:
             return self.local_compiler.sympify(expr)
         else:
@@ -153,18 +153,22 @@ class NamedDimensionalExpressionStruct(NamedStruct, DimensionalStruct, Expressio
 
 
 class CostStruct(DimensionalStruct):
-    def __init__(self, initial: str = sym_zero, path: str = sym_zero, terminal: str = sym_zero, units: str = sym_one,
+    def __init__(self, initial: str = sym_zero, path: str = sym_zero, terminal: str = sym_zero,
+                 units: Union[str, sympy.Basic] = None, path_units: Union[str, sympy.Basic] = None,
                  local_compiler: LocalCompiler = None):
         super(CostStruct, self).__init__(units, local_compiler=local_compiler)
         self.initial = initial
         self.path = path
         self.terminal = terminal
 
+        self.path_units = path_units
+
     def sympify_self(self):
         super(CostStruct, self).sympify_self()
         self.initial = self._sympify_internal(self.initial)
         self.path = self._sympify_internal(self.path)
         self.terminal = self._sympify_internal(self.terminal)
+        self.path_units = self._sympify_internal(self.path_units)
 
     def subs_self(self, old, new):
         if not (hasattr(self.initial, 'subs_self') and hasattr(self.path, 'subs_self')
@@ -173,6 +177,24 @@ class CostStruct(DimensionalStruct):
         self.initial = self.initial.subs(old, new)
         self.path = self.path.subs(old, new)
         self.terminal = self.terminal.subs(old, new)
+
+    # noinspection PyUnresolvedReferences
+    def check_path_units(self, independent_units):
+
+        independent_units = self._sympify_internal(independent_units)
+        self.sympify_self()
+
+        if self.units is None and self.path_units is None:
+            return self
+        elif self.units is None:
+            self.units = self.path_units * independent_units
+        elif self.path_units is None:
+            self.path_units = self.units / independent_units
+        elif self.units != self.path_units * independent_units:
+            self.path_units = self.units / independent_units
+            raise RuntimeWarning('Path cost units do not match boundary cost units: Defaulting to boundary cost units')
+
+        return self
 
 
 class CallableStruct(NamedDimensionalStruct):

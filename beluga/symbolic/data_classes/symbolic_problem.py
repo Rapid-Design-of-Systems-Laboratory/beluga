@@ -1,4 +1,5 @@
 from typing import Iterable, Union
+import logging
 
 from beluga.numeric.compilation import LocalCompiler
 from .components_structures import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
@@ -22,7 +23,7 @@ class Problem:
         # self.solution_set = SolSet()
         self.solution_set = []
 
-        self.independent_variable = None
+        self.independent_variable = NamedDimensionalStruct('_t', '1', local_compiler=self.local_compiler)
 
         self.states = []
         self.costates = []
@@ -166,7 +167,6 @@ class Problem:
         return self
 
     def initial_cost(self, expr, units):
-        # TODO Add units check
         self.cost.initial = expr
         self.cost.units = units
         return self
@@ -284,6 +284,17 @@ class Problem:
             self._sympify_struct(struct)
 
         self.sympified = True
+        return self
+
+    def check_sufficient_problem(self):
+        if self.independent_variable is None:
+            logging.info('Independent variable not set: Using default')
+
+        if len(self.states) < 1:
+            raise RuntimeError('No state information given. Add state information to solve problem.')
+
+        self.cost.check_path_units()
+
         return self
 
     def map_sol(self, sol, inverse=False):
