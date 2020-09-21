@@ -1,8 +1,8 @@
 """
 References
 ----------
-.. [1] Aly, G. M. and Chan, W. C. "Application of a modified quasilinearization technique to totally singular optimal control problems."
-    International Journal of Control 17.4 (1973): 809-815.
+.. [1] Aly, G. M. and Chan, W. C. "Application of a modified quasilinearization technique to totally singular optimal
+      control problems." International Journal of Control 17.4 (1973): 809-815.
 """
 
 import beluga

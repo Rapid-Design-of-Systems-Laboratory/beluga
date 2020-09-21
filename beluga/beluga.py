@@ -338,7 +338,7 @@ def solve(
         else:
             filename = 'data.beluga'
 
-        save(ocp=ocp, bvp=bvp, bvp_solver=bvp_algorithm, sol_set=out, filename=filename)
+        save(out, filename=filename)
 
     return out
 

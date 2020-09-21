@@ -159,6 +159,8 @@ def rashs(prob: Problem):
 def dualize(prob: Problem, method='traditional'):
     ensure_sympified(prob)
 
+    ocp = copy.deepcopy(prob)
+
     for idx, constraint in enumerate(prob.constraints['initial']):
         nu_name = '_nu_0_{}'.format(idx)
         nu = NamedDimensionalStruct(
@@ -230,7 +232,7 @@ def dualize(prob: Problem, method='traditional'):
     prob.constraints['terminal'].append(DimensionalExpressionStruct(
         constraint_expr, prob.hamiltonian.units, local_compiler=prob.local_compiler))
 
-    prob.sol_map_chain.append(DualizeMapper(len(prob.costates), len(prob.constraint_adjoints)))
+    prob.sol_map_chain.append(DualizeMapper(len(prob.costates), len(prob.constraint_adjoints), ocp))
 
     prob.dualized = True
 

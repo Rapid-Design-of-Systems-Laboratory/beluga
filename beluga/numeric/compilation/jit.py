@@ -1,9 +1,9 @@
 import logging
-import sympy
 from numba import njit, float64, complex128, errors
 from sympy import lambdify
-import numpy as np
-from typing import Iterable, Collection
+from typing import Collection, Iterable
+
+from beluga.utils.utils import tuplefy
 
 
 def jit_lambdify(args, sym_func, complex_numbers=False):
@@ -82,89 +82,10 @@ def jit_compile_func_num_args(func, num_args, func_name=None, complex_numbers=Fa
         jit_func = njit(arg_types)(func)
         return jit_func
 
-    except errors.NumbaError as e:
+    except errors.NumbaError:
         logging.debug('Cannot Compile FunctionComponent: {}'.format(func_name))
         return func
 
     except TypeError:
         logging.debug('Cannot Compile FunctionComponent: {} (probably NoneType)'.format(func_name))
         return func
-
-
-def tuplefy(iter_var):
-
-    if isinstance(iter_var, Iterable):
-        iter_var = tuple([tuplefy(item) for item in iter_var])
-
-    return iter_var
-
-
-class LocalCompiler:
-    def __init__(self):
-        self.sym_locals = dict()
-        self.func_locals = dict()
-
-    def __repr__(self):
-        return 'LocalCompiler:\n\tSymbolic Locals: ' + str(self.sym_locals) \
-               + '\n\tFunctionComponent Locals: ' + str(self.func_locals)
-
-    def __deepcopy__(self, memodict=None):
-        return self
-
-    def add_symbolic_local(self, name, local=None):
-        if local is None:
-            local = sympy.Symbol(name)
-        self.sym_locals[name] = local
-        return self.sym_locals
-
-    def sympify(self, expr):
-        return sympy.sympify(expr, locals=self.sym_locals)
-
-    def add_function_local(self, name, function):
-        self.func_locals[name] = function
-        return self.func_locals
-
-    # noinspection PyTypeChecker
-    def lambdify(self, args, sym_func, additional_modules=None, complex_numbers=False):
-
-        default_modules = ['numpy', 'math']
-        if additional_modules is None:
-            modules = [self.func_locals] + default_modules
-        else:
-            modules = [{**self.func_locals, **additional_modules}] + default_modules
-
-        tup_func = tuplefy(sym_func)
-        lam_func = sympy.lambdify(args, tup_func, modules)
-        jit_func = jit_compile_func(lam_func, args, func_name=repr(sym_func), complex_numbers=complex_numbers)
-        return jit_func
-
-
-def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify):
-
-    num_options = len(control_options)
-
-    if num_options == 0:
-        return None
-
-    elif num_options == 1:
-        compiled_option = lambdify_func(args, control_options[0])
-
-        def calc_u(_t, _y, _p, _k):
-            return np.array(compiled_option(_t, _y, _p, _k))
-
-    else:
-        compiled_options = lambdify_func(args, control_options)
-
-        def calc_u(_y, _p, _k):
-            u_set = np.array(compiled_options(_y, _p, _k))
-
-            u = u_set[0, :]
-            ham = ham_func(_y, u, _p, _k)
-            for n in range(1, num_options):
-                ham_i = ham_func(_y, u_set[n, :], _p, _k)
-                if ham_i < ham:
-                    u = u_set[n, :]
-
-            return u
-
-    return jit_compile_func(calc_u, args, func_name='control_function')

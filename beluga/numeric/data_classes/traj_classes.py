@@ -4,7 +4,9 @@ import copy
 import sympy
 
 from beluga.numeric.compilation import jit_compile_func, LocalCompiler
+from beluga.numeric.compilation.component_compilation import compile_control, compile_cost
 from beluga.numeric.ivp_solvers import Trajectory as Solution
+from beluga.symbolic.data_classes.symbolic_problem import Problem
 from beluga.symbolic.data_classes.components_structures import extract_syms
 
 
@@ -120,9 +122,21 @@ class EpsTrigMapper(SolMapper):
 
 
 class DualizeMapper(SolMapper):
-    def __init__(self, dual_len, nu_len):
+    def __init__(self, dual_len, nu_len, ocp: Problem):
         self.dual_len = dual_len
         self.nu_len = nu_len
+
+        _state_syms = extract_syms(ocp.states)
+        _control_syms = extract_syms(ocp.controls)
+        _parameter_syms = extract_syms(ocp.parameters)
+        _constant_syms = extract_syms(ocp.constants)
+        _quad_syms = extract_syms(ocp.quads)
+        _constraint_parameters_syms = extract_syms(ocp.constraint_parameters)
+
+        _dynamic_args = [_state_syms, _control_syms, _parameter_syms, _constant_syms]
+        _bc_args = [_state_syms, _quad_syms, _parameter_syms, _constant_syms]
+
+        self.compute_cost = compile_cost(ocp.cost, _dynamic_args, _bc_args, ocp.lambdify)
 
     def map(self, sol: Solution, lam=empty_array, nu=empty_array) -> Solution:
 
@@ -137,6 +151,9 @@ class DualizeMapper(SolMapper):
         if not retain_dual:
             sol.dual = empty_array
             sol.nondynamical_parameters = empty_array
+
+        sol.cost = self.compute_cost(
+            sol.t, sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.const)
 
         return sol
 
@@ -171,7 +188,7 @@ class NormalizeTimeMapper(SolMapper):
 
 
 class AlgebraicControlMapper(SolMapper):
-    def __init__(self, prob):
+    def __init__(self, prob: Problem):
 
         num_options = len(prob.control_law)
 
@@ -181,6 +198,8 @@ class AlgebraicControlMapper(SolMapper):
 
         _args_w_control = copy.copy(_args)
         _args_w_control.insert(3, extract_syms(prob.controls))
+
+        self.compute_u = compile_control(prob.control_law, _args, prob.hamiltonian.expr, lambdify_func=prob.lambdify)
 
         if num_options == 0:
             raise RuntimeError
@@ -207,8 +226,6 @@ class AlgebraicControlMapper(SolMapper):
 
                 return u
 
-        # self.compute_u = calc_u
-        # self.compute_u = njit((float64, float64[:], float64[:], float64[:], float64[:]))(calc_u)
         self.compute_u = jit_compile_func(calc_u, _args, func_name='control_function')
 
     def map(self, sol: Solution) -> Solution:
@@ -265,6 +282,6 @@ class SquashToBVPMapper(SolMapper):
 
         sol.dual = sol.y[:, self.costate_idxs]
         sol.y = np.delete(sol.y, self.costate_idxs, axis=1)
-        # sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, self.constraint_adjoints_idxs)
+        sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, self.constraint_adjoints_idxs)
 
         return sol

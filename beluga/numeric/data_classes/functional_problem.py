@@ -86,23 +86,6 @@ class FuncProblem:
             [self.prob.independent_variable.sym, self._state_syms, self._quad_syms,
              self._parameter_syms, self._constraint_parameters_syms, self._constant_syms]
 
-        # self._dynamic_args = \
-        #     [self.prob.independent_variable.sym, self._state_syms, self._parameter_syms, self._constant_syms]
-        # self._dynamic_args_w_controls = \
-        #     [self.prob.independent_variable.sym, self._state_syms, self._control_syms,
-        #      self._parameter_syms, self._constant_syms]
-        #
-        # self._bc_args = \
-        #     [self.prob.independent_variable.sym, self._state_syms, self._parameter_syms,
-        #      self._constraint_parameters_syms, self._constant_syms]
-        # self._bc_args_w_quads = \
-        #     [self.prob.independent_variable.sym, self._state_syms, self._quad_syms, self._parameter_syms,
-        #      self._constraint_parameters_syms, self._constant_syms]
-        #
-        # self._units_args = \
-        #     [self.prob.independent_variable.sym, self._state_syms, self._quad_syms, self._control_syms,
-        #      self._parameter_syms, self._constant_syms]
-
         self._initialized = True
 
     def compile_problem(self, use_time_arg=False, use_control_arg=False, use_quad_arg=False):
@@ -405,8 +388,6 @@ class FuncProblem:
             ref_vals = tuple(
                 [max_mag(_arr) for _arr in [sol.t, sol.y, sol.q]]
                 + [np.fabs(_arr) for _arr in [sol.dynamical_parameters, sol.nondynamical_parameters, sol.const]])
-            # ref_vals = tuple([max_mag(_arr) for _arr in [sol.t, sol.y, sol.q, sol.u]]
-            #                  + [np.fabs(_arr) for _arr in [sol.dynamical_parameters, sol.const]])
 
             unit_factors = compute_unit_factors(*ref_vals)
 
