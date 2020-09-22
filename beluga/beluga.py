@@ -5,14 +5,13 @@ import time
 import pathos
 import logging
 import numpy as np
-from tqdm import tqdm
 
 from beluga.release import __splash__
 from beluga.numeric.ivp_solvers import Trajectory
 from beluga.utils import save, init_logging
-from beluga.symbolic import Problem
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
 from beluga.symbolic.mapping_functions import compile_direct, compile_indirect
+from beluga.continuation import run_continuation_set
 
 
 def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwargs):
@@ -39,129 +38,6 @@ def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwarg
 
     # Initialize logging system
     init_logging(logging_level, display_level, config)
-
-
-def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, autoscale):
-    """
-    Runs a continuation set for the BVP problem.
-
-    :param bvp_algorithm_: BVP algorithm to be used.
-    :param steps: The steps in a continuation set.
-    :param solinit: Initial guess for the first problem in steps.
-    :param bvp: The compiled boundary-value problem to solve.
-    :param pool: A processing pool, if available.
-    :param autoscale: Whether or not scaling is used.
-    :return: A set of solutions for the steps.
-    """
-    # Loop through all the continuation steps
-    solution_set = []
-
-    functional_problem = bvp.functional_problem
-
-    # Initialize scaling
-    scale = functional_problem.scale_sol
-    compute_factors = functional_problem.compute_scale_factors
-
-    # Load the derivative function into the bvp algorithm
-    bvp_algorithm_.set_derivative_function(functional_problem.deriv_func)
-    bvp_algorithm_.set_derivative_jacobian(functional_problem.deriv_func_jac)
-    bvp_algorithm_.set_quadrature_function(functional_problem.quad_func)
-    bvp_algorithm_.set_boundarycondition_function(functional_problem.bc_func)
-    bvp_algorithm_.set_boundarycondition_jacobian(functional_problem.bc_func_jac)
-    bvp_algorithm_.set_inequality_constraint_function(functional_problem.ineq_constraints)
-
-    sol_guess = solinit
-
-    if steps is None:
-        logging.info('Solving OCP...')
-        time0 = time.time()
-        if autoscale:
-            scale_factors = compute_factors(sol_guess)
-            sol_guess = scale(sol_guess, scale_factors)
-        else:
-            scale_factors = None
-
-        opt = bvp_algorithm_.solve(sol_guess, pool=pool)
-        sol = opt['sol']
-
-        if autoscale:
-            sol = scale(sol, scale_factors, inv=True)
-
-        solution_set = [[sol]]
-        if sol.converged:
-            elapsed_time = time.time() - time0
-            logging.beluga('Problem converged in %0.4f seconds\n' % elapsed_time)
-        else:
-            logging.beluga('Problem failed to converge!\n')
-    else:
-        for step_idx, step in enumerate(steps):
-            logging.beluga('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
-            # logging.beluga('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
-            solution_set.append([])
-            # Assign solution from last continuation set
-            step.reset()
-            step.init(sol_guess, bvp)
-            try:
-                log_level = logging.getLogger()._displayLevel
-            except AttributeError:
-                log_level = logging.getLogger().getEffectiveLevel()
-
-            step_len = len(step)
-            continuation_progress = tqdm(
-                step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
-                ascii=True, unit='trajectory')
-            for sol_guess in continuation_progress:
-                continuation_progress.total = len(step)
-                if step_len != continuation_progress.total:
-                    step_len = continuation_progress.total
-                    continuation_progress.refresh()
-
-                logging.beluga('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
-                time0 = time.time()
-                if autoscale:
-                    scale_factors = compute_factors(sol_guess)
-                    sol_guess = scale(sol_guess, scale_factors)
-                else:
-                    scale_factors = None
-
-                opt = bvp_algorithm_.solve(sol_guess, pool=pool)
-                sol = opt['sol']
-
-                if autoscale:
-                    sol = scale(sol, scale_factors, inv=True)
-
-                ya = sol.y[0, :]
-                yb = sol.y[-1, :]
-
-                dp = sol.dynamical_parameters
-                ndp = sol.nondynamical_parameters
-                k = sol.const
-
-                if sol.q.size > 0:
-                    qa = sol.q[0, :]
-                    qb = sol.q[-1, :]
-
-                    bc_residuals_unscaled = bvp_algorithm_.boundarycondition_function(ya, qa, yb, qb, dp, ndp, k)
-
-                else:
-                    bc_residuals_unscaled = bvp_algorithm_.boundarycondition_function(ya, yb, dp, ndp, k)
-
-                step.add_gamma(sol)
-
-                """
-                The following line is overwritten by the looping variable UNLESS it is the final iteration. It is
-                required when chaining continuation strategies together. DO NOT DELETE!
-                """
-                sol_guess = copy.deepcopy(sol)
-                elapsed_time = time.time() - time0
-                logging.beluga(
-                    'STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'
-                    .format(step.ctr, step.num_cases(), opt['niter'], max(bc_residuals_unscaled), elapsed_time))
-                solution_set[step_idx].append(copy.deepcopy(sol))
-                if not sol.converged:
-                    logging.beluga('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
-
-    return solution_set
 
 
 def solve(

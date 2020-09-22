@@ -1,5 +1,5 @@
 from beluga.utils.logging_helper import root
-from .beluga import run_continuation_set, solve, add_logger
+from .beluga import solve, add_logger
 from .numeric import bvp_solvers
 from .continuation import guess_generator, GuessGenerator
 from .continuation import ContinuationList as init_continuation
