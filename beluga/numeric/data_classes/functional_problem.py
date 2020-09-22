@@ -299,12 +299,12 @@ class FuncProblem:
 
             def bc_func_jac(_y0, _q0, _yf, _qf, _p, _p_con, _k):
                 
-                dbc_dy0 = np.vstack((np.array(calc_dbc_0_dy(_y0, _p, _p_con, _k)), empty_dbc_f_dy))
-                dbc_dyf = np.vstack((empty_dbc_0_dy, np.array(calc_dbc_f_dy(_y0, _p, _p_con, _k))))
-                dbc_dp = np.vstack((np.array(calc_dbc_0_dp(_y0, _p, _p_con, _k)),
-                                    np.array(calc_dbc_f_dp(_y0, _p, _p_con, _k))))
-                dbc_dq0 = np.vstack((np.array(calc_dbc_0_dq(_y0, _p, _p_con, _k)), empty_dbc_f_dq))
-                dbc_dqf = np.vstack((empty_dbc_0_dq, np.array(calc_dbc_f_dq(_y0, _p, _p_con, _k))))
+                dbc_dy0 = np.vstack((np.array(calc_dbc_0_dy(_y0, _q0, _p, _p_con, _k)), empty_dbc_f_dy))
+                dbc_dyf = np.vstack((empty_dbc_0_dy, np.array(calc_dbc_f_dy(_yf, _qf, _p, _p_con, _k))))
+                dbc_dp = np.vstack((np.array(calc_dbc_0_dp(_y0, _q0, _p, _p_con, _k)),
+                                    np.array(calc_dbc_f_dp(_yf, _qf, _p, _p_con, _k))))
+                dbc_dq0 = np.vstack((np.array(calc_dbc_0_dq(_y0, _q0, _p, _p_con, _k)), empty_dbc_f_dq))
+                dbc_dqf = np.vstack((empty_dbc_0_dq, np.array(calc_dbc_f_dq(_yf, _qf, _p, _p_con, _k))))
 
                 return dbc_dy0, dbc_dyf, dbc_dp, dbc_dq0, dbc_dqf
 
@@ -316,9 +316,9 @@ class FuncProblem:
             def bc_func_jac(_y0, _yf, _p, _p_con, _k):
 
                 dbc_dy0 = np.vstack((np.array(calc_dbc_0_dy(_y0, _p, _p_con, _k)), empty_dbc_f_dy))
-                dbc_dyf = np.vstack((empty_dbc_0_dy, np.array(calc_dbc_f_dy(_y0, _p, _p_con, _k))))
+                dbc_dyf = np.vstack((empty_dbc_0_dy, np.array(calc_dbc_f_dy(_yf, _p, _p_con, _k))))
                 dbc_dp = np.vstack((np.array(calc_dbc_0_dp(_y0, _p, _p_con, _k)),
-                                    np.array(calc_dbc_f_dp(_y0, _p, _p_con, _k))))
+                                    np.array(calc_dbc_f_dp(_yf, _p, _p_con, _k))))
 
                 return dbc_dy0, dbc_dyf, dbc_dp
 

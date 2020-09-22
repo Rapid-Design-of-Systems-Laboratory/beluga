@@ -45,7 +45,7 @@ ocp.constant('u_min', -1, 'rad**2/s**4')
 ocp.constant('u_max', 1, 'rad**2/s**4')
 
 # Define costs
-ocp.path_cost('1', 's')
+ocp.path_cost('1', '1')
 
 # Define constraints
 ocp.initial_constraint('t', 's')
@@ -90,9 +90,10 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method': 'differential', 'analytical_jacobian': False},
+    optim_options={'control_method': 'differential', 'analytical_jacobian': True},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    initial_helper=True
+    initial_helper=True,
+    autoscale=False
 )
