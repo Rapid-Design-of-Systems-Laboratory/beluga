@@ -56,6 +56,9 @@ class CustomFunctionMeta(Function):
 
         return obj
 
+    def __deepcopy__(self, memodict=None):
+        return self
+
     @property
     def _diff_wrt(self):
         return True

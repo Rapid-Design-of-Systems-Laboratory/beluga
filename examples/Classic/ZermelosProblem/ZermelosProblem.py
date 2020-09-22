@@ -43,12 +43,7 @@ ocp.terminal_constraint('y-y_f', 'm')
 
 ocp.scale(m='x', s='x/V', rad=1)
 
-# bvp_solver = beluga.bvp_algorithm(
-#     'Shooting',
-#     derivative_method='fd',
-#     tolerance=1e-4
-# )
-
+# bvp_solver = beluga.bvp_algorithm('Shooting')
 bvp_solver = beluga.bvp_algorithm('SPBVP')
 
 guess_maker = beluga.guess_generator(
