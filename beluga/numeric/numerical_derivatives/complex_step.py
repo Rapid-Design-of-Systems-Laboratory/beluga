@@ -1,8 +1,8 @@
 import numpy as np
-import beluga.utils.numerical_derivatives.finite_diff
+import beluga.numeric.numerical_derivatives.finite_diff
 import math
-import numba
 from numba import njit, float64, complex128, types, errors
+from numba.core.registry import CPUDispatcher
 import logging
 import inspect
 
@@ -12,12 +12,12 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
     if max(deriv_order) > 2:
         logging.beluga('Complex-step derivative not supported for order > 2.'
                        ' Falling back to finite difference for {}'.format(func.__name__))
-        return beluga.utils.numerical_derivatives.gen_fin_diff(func, deriv_order=deriv_order, step_size=step_size)
+        return beluga.numeric.numerical_derivatives.gen_fin_diff(func, deriv_order=deriv_order, step_size=step_size)
 
     if len(np.nonzero(deriv_order)[0]) > 1:
         logging.beluga('Complex-step derivative not supported for multivariate derivatives.'
                        ' Falling back to finite difference for {}'.format(func.__name__))
-        return beluga.utils.numerical_derivatives.gen_fin_diff(func, deriv_order=deriv_order, step_size=step_size)
+        return beluga.numeric.numerical_derivatives.gen_fin_diff(func, deriv_order=deriv_order, step_size=step_size)
     else:
         arg_idx = np.nonzero(deriv_order)[0][0]
         deriv_order = max(deriv_order)
@@ -35,7 +35,7 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
     try:
         arg_list_re = [float64] * arg_len
         arg_list_im = [complex128] * arg_len
-        if type(func) is numba.targets.registry.CPUDispatcher:
+        if type(func) is CPUDispatcher:
             func.disable_compile(False)
             func_re = func.compile(tuple(arg_list_re))
             func_im = func.compile(tuple(arg_list_im))
@@ -53,13 +53,16 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
             def csd(arg):
                 return func_im(arg + step*1j).imag/step
 
-        else:
+        elif deriv_order == 2:
             # On generalization of ... (94)
             im_step_size = math.sqrt(3 + 2*math.sqrt(2))*step_size
 
             def csd(arg):
                 return 2*(func_re(arg + step_size) - (func_im(arg + step_size - im_step_size * 1j)).real) \
                        / im_step_size**2
+
+        else:
+            raise RuntimeError('Cannot use complex step derivatives for orders greater than 2')
 
         try:
             csd = njit((arg_type,))(csd)
@@ -98,7 +101,7 @@ def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):
                 step = 1e-50
 
                 def csd(*args):
-                    args_k = UniTuple(np.array(args) + step * 1j * arg_select, arg_len)
+                    args_k = tuple(np.array(args) + step * 1j * arg_select, arg_len)
                     return func_im(args_k) / step
 
             else:

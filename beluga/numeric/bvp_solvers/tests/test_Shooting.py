@@ -13,7 +13,7 @@ References
 
 import pytest
 import itertools
-from beluga.numeric.ivp_solvers import Trajectory
+from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.numeric.bvp_solvers import Shooting
 import numpy as np
 import copy

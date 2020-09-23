@@ -1,4 +1,5 @@
-from .ivpsol import (Propagator, Algorithm, Trajectory, reconstruct, integrate_quads)
+from .ivpsol import (Propagator, Algorithm, reconstruct, integrate_quads)
+from ..data_classes.Trajectory import Trajectory
 
 import os
 import glob

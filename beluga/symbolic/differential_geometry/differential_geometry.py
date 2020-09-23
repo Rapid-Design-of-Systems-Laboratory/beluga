@@ -182,7 +182,6 @@ def noether(prob, quantity):
         is_symmetry = False
 
     if is_symmetry:
-        unit = 0
         omega = prob.omega.tomatrix()
         chi = sympy.Matrix(quantity.field)
         omega_chi = omega.LUsolve(chi)

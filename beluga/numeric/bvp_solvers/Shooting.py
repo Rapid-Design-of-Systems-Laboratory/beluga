@@ -6,7 +6,8 @@ from math import isclose
 import numpy as np
 
 from beluga.numeric.bvp_solvers import BaseAlgorithm, BVPResult
-from beluga.numeric.ivp_solvers import Propagator, Trajectory, reconstruct
+from beluga.numeric.ivp_solvers import Propagator, reconstruct
+from beluga.numeric.data_classes.Trajectory import Trajectory
 from scipy.sparse import coo_matrix, csc_matrix
 from scipy.sparse.linalg import splu
 from scipy.optimize.slsqp import approx_jacobian

@@ -10,10 +10,10 @@ from beluga.symbolic.data_classes.components_structures import (extract_syms, co
                                                                 DimensionalExpressionStruct,
                                                                 NamedDimensionalExpressionStruct, SymmetryStruct)
 from beluga.symbolic.differential_geometry import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
-from beluga.numeric.data_classes.traj_classes import (MomentumShiftMapper, EpsTrigMapper, IdentityMapper, DualizeMapper,
-                                                      AlgebraicControlMapper, DifferentialControlMapper,
-                                                      SquashToBVPMapper, NormalizeTimeMapper)
-from beluga.numeric.data_classes.functional_problem import FuncProblem
+from beluga.numeric.data_classes.trajectory_mappers import (MomentumShiftMapper, EpsTrigMapper, IdentityMapper, DualizeMapper,
+                                                            AlgebraicControlMapper, DifferentialControlMapper,
+                                                            SquashToBVPMapper, NormalizeTimeMapper)
+from beluga.numeric.data_classes.NumericProblem import NumericProblem
 
 
 """
@@ -62,7 +62,7 @@ def momentum_shift(prob: Problem, new_ind_name=None):
     prob.independent_variable.sympify_self()
 
     for symmetry in prob.symmetries:
-        symmetry['field'].append(sympy.Integer(0))
+        symmetry.field = np.append(symmetry.field, sympy.Integer(0))
 
     independent_symmetry = True
     for state in prob.states:
@@ -309,6 +309,8 @@ def mf(prob: Problem, com_index=0):
     constant_syms = getattr_from_list(prob.constants, 'sym')
 
 
+
+
 def squash_to_bvp(prob: Problem):
     costate_idxs = slice(len(prob.states), len(prob.states) + len(prob.costates))
     prob.states += prob.costates
@@ -541,7 +543,7 @@ def compile_indirect(prob: Problem, analytical_jacobian=True, control_method='di
 def compile_problem(prob: Problem, use_control_arg=False):
     ensure_sympified(prob)
 
-    prob.functional_problem = FuncProblem(prob, local_compiler=prob.local_compiler)
+    prob.functional_problem = NumericProblem(prob, local_compiler=prob.local_compiler)
 
     prob.functional_problem.compile_problem(use_control_arg=use_control_arg)
     prob.lambdified = True

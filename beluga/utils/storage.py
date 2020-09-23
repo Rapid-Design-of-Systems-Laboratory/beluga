@@ -1,5 +1,3 @@
-from typing import Iterable
-
 import cloudpickle as pickle
 
 
@@ -21,9 +19,3 @@ def load(filename):
     return save_dict
 
 
-def tuplefy(iter_var):
-
-    if isinstance(iter_var, Iterable):
-        iter_var = tuple([tuplefy(item) for item in iter_var])
-
-    return iter_var

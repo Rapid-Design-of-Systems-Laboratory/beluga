@@ -1,13 +1,13 @@
 import numpy as np
 import copy
-from collections.abc import Iterable
 
-from beluga.numeric.ivp_solvers.ivpsol import Trajectory
+from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.numeric.compilation import LocalCompiler, jit_compile_func, compile_control
 from beluga.symbolic.data_classes.components_structures import extract_syms, getattr_from_list
+from beluga.utils.helper_functions import max_mag
 
 
-class FuncProblem:
+class NumericProblem:
     def __init__(self, prob, local_compiler=None):
 
         if local_compiler is None:
@@ -136,7 +136,8 @@ class FuncProblem:
                 _u = compute_u(_y, _p, _k)
                 return np.array(compute_y_dot(_y, _u, _p, _k))
 
-            self.deriv_func = jit_compile_func(deriv_func, self._dynamic_args)
+            self.deriv_func = deriv_func
+            # self.deriv_func = jit_compile_func(deriv_func, self._dynamic_args)
 
             if len(sym_eom_q) > 0:
                 self.compute_q_dot = self.lambdify(self._dynamic_args_w_controls, sym_eom_q)
@@ -416,17 +417,3 @@ class FuncProblem:
         self.scale_sol = scale_sol
 
         return self
-
-
-def max_mag(arr: np.ndarray, axis=0):
-    if arr is None:
-        return np.array([])
-    elif not isinstance(arr, Iterable):
-        return abs(arr)
-    elif not isinstance(arr, np.ndarray):
-        arr = np.array(arr)
-
-    if arr.size == 0:
-        return np.array([])
-    else:
-        return np.max(np.fabs(arr), axis=axis)

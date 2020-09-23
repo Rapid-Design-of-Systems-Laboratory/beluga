@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -20,8 +20,8 @@ ocp.quantity('Tf', 'T/m')
 ocp.control('alpha', 'rad')
 
 # Define constants
-ocp.constant('mu', 1, 'L^3/s^2')
-ocp.constant('T', 0.1, 'M*L/s^2')
+ocp.constant('mu', 1, 'L**3/s**2')
+ocp.constant('T', 0.1, 'M*L/s**2')
 ocp.constant('r_0', 1, 'L')
 ocp.constant('theta_0', 0, 'rad')
 ocp.constant('v_r_0', 0, 'L/s')
@@ -33,7 +33,7 @@ ocp.constant('mdot', 0.05, 'M/s')
 
 
 # Define costs
-ocp.terminal_cost('-r^2', 'L')
+ocp.terminal_cost('-r**2', 'L')
 
 # Define constraints
 ocp.initial_constraint('r-r_0', 'L')
@@ -65,7 +65,7 @@ continuation_steps.add_step('bisection') \
                 .const('v_r_f', 0) \
                 .const('t_f', 4)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.INFO, display_level=logging.INFO)
 
 sol_set_collocation = beluga.solve(
     ocp=ocp,
@@ -73,7 +73,8 @@ sol_set_collocation = beluga.solve(
     bvp_algorithm=bvp_solver_collocation,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    save='highthrust_collocation_data.blg'
+    save_sols='highthrust_collocation_data.beluga',
+    optim_options={'control_method': 'algebraic'}
 )
 
 sol_set_shooting = beluga.solve(
@@ -82,5 +83,6 @@ sol_set_shooting = beluga.solve(
     bvp_algorithm=bvp_solver_shooting,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    save='highthrust_shooting_data.blg'
+    save_sols='highthrust_shooting_data.beluga',
+    optim_options={'control_method': 'algebraic'}
 )

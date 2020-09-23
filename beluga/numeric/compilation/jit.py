@@ -3,7 +3,7 @@ from numba import njit, float64, complex128, errors
 from sympy import lambdify
 from typing import Collection, Iterable
 
-from beluga.utils.utils import tuplefy
+from beluga.utils.helper_functions import tuplefy
 
 
 def jit_lambdify(args, sym_func, complex_numbers=False):

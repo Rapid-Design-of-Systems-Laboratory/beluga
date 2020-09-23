@@ -1,7 +1,7 @@
 import sympy
 
 from beluga.numeric.compilation.jit import jit_compile_func
-from beluga.utils.utils import tuplefy
+from beluga.utils.helper_functions import tuplefy
 
 
 class LocalCompiler:

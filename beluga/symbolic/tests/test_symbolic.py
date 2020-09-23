@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 
 from beluga import Problem
-from beluga.symbolic.mapping_functions import compile_indirect
-from beluga.numeric.ivp_solvers import Trajectory
+from beluga.symbolic.data_classes.mapping_functions import compile_indirect
+from beluga.numeric.data_classes.Trajectory import Trajectory
 
 METHODS = ['indirect', 'diffyg']
 tol = 1e-8

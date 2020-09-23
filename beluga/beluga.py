@@ -7,10 +7,10 @@ import logging
 import numpy as np
 
 from beluga.release import __splash__
-from beluga.numeric.ivp_solvers import Trajectory
+from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.utils import save, init_logging
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
-from beluga.symbolic.mapping_functions import compile_direct, compile_indirect
+from beluga.symbolic.data_classes.mapping_functions import compile_direct, compile_indirect
 from beluga.continuation import run_continuation_set
 
 
@@ -135,8 +135,10 @@ def solve(
 
     if bvp is None:
         logging.beluga('Resulting BVP problem:')
-        if method == 'indirect' or method == 'traditional' or method == 'brysonho' or method == 'diffyg':
-            bvp = compile_indirect(copy.deepcopy(ocp), **optim_options)
+        if method.lower() in ['indirect', 'traditional', 'brysonho']:
+            method = 'traditional'
+        if method == 'traditional' or method == 'diffyg':
+            bvp = compile_indirect(copy.deepcopy(ocp), method=method, **optim_options)
         elif method == 'direct':
             bvp = compile_direct(copy.deepcopy(ocp), **optim_options)
         else:

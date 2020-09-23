@@ -5,7 +5,7 @@ import sympy
 
 from beluga.numeric.compilation import jit_compile_func, LocalCompiler
 from beluga.numeric.compilation.component_compilation import compile_control, compile_cost
-from beluga.numeric.ivp_solvers import Trajectory as Solution
+from beluga.numeric.data_classes.Trajectory import Trajectory as Solution
 from beluga.symbolic.data_classes.symbolic_problem import Problem
 from beluga.symbolic.data_classes.components_structures import extract_syms
 
@@ -14,6 +14,9 @@ empty_array = np.array([])
 
 
 class SolMapper(ABC):
+    """
+
+    """
     def map(self, sol: Solution) -> Solution:
         pass
 

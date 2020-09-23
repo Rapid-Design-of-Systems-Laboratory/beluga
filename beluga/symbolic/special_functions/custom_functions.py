@@ -2,7 +2,7 @@ from sympy import Function
 from sympy.core.function import ArgumentIndexError
 from collections.abc import Iterable
 import inspect
-from beluga.utils.numerical_derivatives import gen_num_diff
+from beluga.numeric.numerical_derivatives import gen_num_diff
 from beluga.numeric.compilation import jit_compile_func
 from numba.core.registry import CPUDispatcher
 
