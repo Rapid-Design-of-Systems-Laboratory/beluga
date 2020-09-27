@@ -376,7 +376,10 @@ class Shooting(BaseAlgorithm):
             yf, qf, uf = gamma_set[-1](tf)
             bc1 = np.asarray(
                 [gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
-            bc2 = np.asarray(bc_func(y0, yf, p_d, p_n, k)).flatten()
+            if len(q0) > 0:
+                bc2 = np.asarray(bc_func(y0, q0, yf, qf, p_d, p_n, k)).flatten()
+            else:
+                bc2 = np.asarray(bc_func(y0, yf, p_d, p_n, k)).flatten()
             bc = np.hstack((bc1, bc2))
             return bc
 

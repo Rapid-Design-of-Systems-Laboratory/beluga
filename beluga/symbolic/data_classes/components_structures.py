@@ -160,7 +160,6 @@ class CostStruct(DimensionalStruct):
         self.initial = initial
         self.path = path
         self.terminal = terminal
-
         self.path_units = path_units
 
     def sympify_self(self):

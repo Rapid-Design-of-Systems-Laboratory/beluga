@@ -173,7 +173,7 @@ class Problem:
 
     def path_cost(self, expr, units):
         self.cost.path = expr
-        self.cost.units = units
+        self.cost.path_units = units
         return self
 
     def terminal_cost(self, expr, units):
@@ -284,6 +284,8 @@ class Problem:
             self._sympify_struct(struct)
 
         self.sympified = True
+        self.check_sufficient_problem()
+
         return self
 
     def check_sufficient_problem(self):
@@ -293,7 +295,7 @@ class Problem:
         if len(self.states) < 1:
             raise RuntimeError('No state information given. Add state information to solve problem.')
 
-        self.cost.check_path_units()
+        self.cost.check_path_units(self.independent_variable.units)
 
         return self
 

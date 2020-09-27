@@ -92,6 +92,9 @@ class NumericProblem:
 
         self._initialize()
 
+        if len(self.prob.quads) > 0:
+            use_quad_arg = True
+
         if hasattr(self.prob.hamiltonian, 'expr'):
             self.ham_func = self.lambdify(self._dynamic_args_w_controls, self.prob.hamiltonian.expr)
 
@@ -100,7 +103,7 @@ class NumericProblem:
         self.compile_bc(use_quad_arg=use_quad_arg)
         self.compile_cost(use_quad_arg=use_quad_arg, use_control_arg=use_control_arg)
         self.compile_deriv_jac_func()
-        self.compile_bc_jac_func(use_quad_arg=False)
+        self.compile_bc_jac_func(use_quad_arg=use_quad_arg)
         self.compile_scaling()
 
         return self

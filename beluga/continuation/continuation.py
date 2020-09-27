@@ -106,7 +106,7 @@ class ContinuationStrategy(abc.ABC):
     def init(self, gamma, bvp):
         self.bvp = bvp
         # for var_name in self.var_iterator():
-        #     if var_name not in [str(s['symbol']) for s in self.bvp.get_constants()]:
+        #     if var_name not in [str(s['symbol']) for s in self.prob.get_constants()]:
         #         raise ValueError('Variable ' + var_name + ' not found in boundary value problem')
         gamma_in = copy.deepcopy(gamma)
         gamma_in.converged = False
@@ -517,7 +517,7 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
     scale = functional_problem.scale_sol
     compute_factors = functional_problem.compute_scale_factors
 
-    # Load the derivative function into the bvp algorithm
+    # Load the derivative function into the prob algorithm
     bvp_algorithm_.set_derivative_function(functional_problem.deriv_func)
     bvp_algorithm_.set_derivative_jacobian(functional_problem.deriv_func_jac)
     bvp_algorithm_.set_quadrature_function(functional_problem.quad_func)

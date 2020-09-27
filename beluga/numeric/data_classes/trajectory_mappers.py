@@ -2,6 +2,7 @@ import numpy as np
 from abc import ABC
 import copy
 import sympy
+from typing import Iterable, Union
 
 from beluga.numeric.compilation import jit_compile_func, LocalCompiler
 from beluga.numeric.compilation.component_compilation import compile_control, compile_cost
@@ -259,9 +260,105 @@ class DifferentialControlMapper(SolMapper):
         return sol
 
 
+class DifferentialControlMapperDiffyG(SolMapper):
+    def __init__(self, control_idxs):
+        self.control_idxs = control_idxs
+
+    def map(self, sol: Solution, control_costate: Union[float, np.ndarray] = 0.) -> Solution:
+        idx_u_list = []
+
+        for idx_u, (idx_y, u) in enumerate(sorted(zip(self.control_idxs, sol.u.T))):
+            sol.y = np.insert(sol.y, idx_y, u, axis=1)
+
+            if isinstance(control_costate, Iterable):
+                if not isinstance(control_costate, np.ndarray):
+                    control_costate = np.array(control_costate)
+                costate_insert = control_costate[idx_u] * np.ones_like(sol.t)
+            else:
+                costate_insert = control_costate * np.ones_like(sol.t)
+
+            sol.dual = np.insert(sol.dual, -1, costate_insert, axis=1)
+            if len(sol.dual_u) == 0:
+                sol.dual_u = np.array([costate_insert])
+            else:
+                sol.dual_u = np.insert(sol.dual_u, -1, costate_insert, axis=1)
+
+            idx_u_list.append(idx_u)
+
+        sol.u = np.delete(sol.u, idx_u_list, axis=1)
+        return sol
+
+    def inv_map(self, sol: Solution) -> Solution:
+        sol.u = sol.y[:, self.control_idxs]
+        sol.y = np.delete(sol.y, self.control_idxs, axis=1)
+        sol.dual = np.delete(sol.dual, self.control_idxs, axis=1)
+        return sol
+
+
 class MF(SolMapper):
-    def __init__(self):
-        pass
+    def __init__(self, remove_parameter_dict, remove_symmetry_dict, fn_p, fn_q, fn_p_inv, fn_q_inv):
+
+        self.remove_parameter_dict = remove_parameter_dict
+        self.remove_symmetry_dict = remove_symmetry_dict
+
+        self.fn_p = fn_p
+        self.fn_q = fn_q
+
+        self.fn_p_inv = fn_p_inv
+        self.fn_q_inv = fn_q_inv
+
+    def map(self, sol: Solution) -> Solution:
+        cval = self.fn_p(sol.y[0], sol.dual[0], sol.dynamical_parameters, sol.const)
+        qval = np.ones_like(sol.t)
+
+        sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, cval))
+        for ii, t in enumerate(sol.t):
+            qval[ii] = self.fn_q(sol.y[ii], sol.dual[ii], sol.dynamical_parameters, sol.const)
+
+        if self.remove_parameter_dict['location'] == 'states':
+            sol.y = np.delete(sol.y, np.s_[self.remove_parameter_dict['index']], axis=1)
+        elif self.remove_parameter_dict['location'] == 'costates':
+            sol.dual = np.delete(sol.dual, np.s_[self.remove_parameter_dict['index']], axis=1)
+
+        if self.remove_symmetry_dict['location'] == 'states':
+            sol.y = np.delete(sol.y, np.s_[self.remove_symmetry_dict['index']], axis=1)
+        elif self.remove_symmetry_dict['location'] == 'costates':
+            sol.dual = np.delete(sol.dual, np.s_[self.remove_symmetry_dict['index']], axis=1)
+
+        sol.q = np.column_stack((sol.q, qval))
+
+        return sol
+
+    def inv_map(self, sol: Solution) -> Solution:
+        qinv = np.ones_like(sol.t)
+        pinv = np.ones_like(sol.t)
+        for ii, t in enumerate(sol.t):
+            qinv[ii] = self.fn_q_inv(sol.y[ii], sol.dual[ii], sol.q[ii], sol.dynamical_parameters, sol.const)
+            pinv[ii] = self.fn_p_inv(sol.y[ii], sol.dual[ii], sol.dynamical_parameters, sol.const)
+
+        state = pinv
+        qval = qinv
+        if self.remove_parameter_dict['location'] == 'states':
+            sol.y = np.column_stack(
+                (sol.y[:, :self.remove_parameter_dict['index']], state,
+                 sol.y[:, self.remove_parameter_dict['index']:]))
+        elif self.remove_parameter_dict['location'] == 'costates':
+            sol.dual = np.column_stack(
+                (sol.dual[:, :self.remove_parameter_dict['index']], state,
+                 sol.dual[:, self.remove_parameter_dict['index']:]))
+
+        if self.remove_symmetry_dict['location'] == 'states':
+            sol.y = np.column_stack(
+                (sol.y[:, :self.remove_symmetry_dict['index']], qval,
+                 sol.y[:, self.remove_symmetry_dict['index']:]))
+        elif self.remove_symmetry_dict['location'] == 'costates':
+            sol.dual = np.column_stack(
+                (sol.dual[:, :self.remove_symmetry_dict['index']], qval,
+                 sol.dual[:, self.remove_symmetry_dict['index']:]))
+
+        sol.q = np.delete(sol.q, np.s_[-1], axis=1)
+        sol.dynamical_parameters = sol.dynamical_parameters[:-1]
+        return sol
 
 
 class SquashToBVPMapper(SolMapper):
@@ -274,10 +371,6 @@ class SquashToBVPMapper(SolMapper):
 
         if len(sol.dual) > 0:
             sol.y = np.concatenate((sol.y, sol.dual), axis=1)
-
-        sol.dual = empty_array
-        sol.dual_t = empty_array
-        sol.dual_u = empty_array
 
         return sol
 

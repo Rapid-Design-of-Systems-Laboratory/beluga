@@ -7,11 +7,11 @@ available_algorithms = [Shooting, SPBVP]
 
 def bvp_algorithm(name, **kwargs):
     """
-    Helper method to load bvp algorithm by name.
+    Helper method to load prob algorithm by name.
 
-    :param name: The name of the bvp algorithm
-    :keywords: Additional keyword arguments passed into the bvp solver.
-    :return: An instance of the bvp solver.
+    :param name: The name of the prob algorithm
+    :keywords: Additional keyword arguments passed into the prob solver.
+    :return: An instance of the prob solver.
     """
     # Load algorithm from the package
     for algorithm in available_algorithms:

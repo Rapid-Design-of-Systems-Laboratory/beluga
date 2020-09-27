@@ -63,9 +63,9 @@ def solve(
     +========================+=================+=======================================+
     | autoscale              | True            | bool                                  |
     +------------------------+-----------------+---------------------------------------+
-    | bvp                    | None            | codegen'd BVPs                        |
+    | prob                    | None            | codegen'd BVPs                        |
     +------------------------+-----------------+---------------------------------------+
-    | bvp_algorithm          | None            | bvp algorithm                         |
+    | bvp_algorithm          | None            | prob algorithm                         |
     +------------------------+-----------------+---------------------------------------+
     | guess_generator        | None            | guess generator                       |
     +------------------------+-----------------+---------------------------------------+
@@ -176,16 +176,35 @@ def solve(
     initial_bc = dict(zip(state_names, initial_states))
     terminal_bc = dict(zip(state_names, terminal_states))
 
+    constant_names = getattr_from_list(bvp.constants, 'name')
     if steps is not None and initial_helper:
         for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in getattr_from_list(bvp.constants, 'name'):
+            if bc0 + '_0' in constant_names:
                 jj = getattr_from_list(bvp.constants, 'name').index(bc0 + '_0')
                 solinit.const[jj] = initial_bc[bc0]
 
         for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in getattr_from_list(bvp.constants, 'name'):
+            if bcf + '_f' in constant_names:
                 jj = getattr_from_list(bvp.constants, 'name').index(bcf + '_f')
                 solinit.const[jj] = terminal_bc[bcf]
+
+    # quad_names = getattr_from_list(bvp.quads, 'name')
+    # n_quads = len(quad_names)
+    # if n_quads > 0:
+    #     initial_quads = solinit.q[0, :]
+    #     terminal_quads = solinit.q[-1, :]
+    #     initial_bc = dict(zip(quad_names, initial_quads))
+    #     terminal_bc = dict(zip(quad_names, terminal_quads))
+    #
+    #     for ii, bc0 in enumerate(initial_bc):
+    #         if bc0 + '_0' in bvp.raw['constants']:
+    #             jj = bvp.raw['constants'].index(bc0 + '_0')
+    #             solinit.const[ii + '_0'] = initial_bc[bc0]
+    #
+    #     for ii, bcf in enumerate(terminal_bc):
+    #         if bcf + '_f' in bvp.raw['constants']:
+    #             jj = bvp.raw['constants'].index(bcf + '_f')
+    #             solinit.const[jj] = terminal_bc[bcf]
 
     """
     Main continuation process
@@ -221,7 +240,7 @@ def postprocess(continuation_set, ocp_map_inverse):
 
     :param continuation_set: The set of all continuation processes.
     :param ocp: The compiled OCP.
-    :param bvp: The compiled BVP.
+    :param prob: The compiled BVP.
     :param ocp_map_inverse: A mapping converting BVP solutions to OCP solutions.
     :return: Set of trajectories to be returned to the user.
     """

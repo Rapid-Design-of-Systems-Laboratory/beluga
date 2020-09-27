@@ -146,20 +146,20 @@ def is_symplectic(form):
     return out
 
 
-def pb(f, g, bvp):
+def pb(f, g, prob):
     r"""
 
     :param f:
     :param g:
-    :param bvp:
+    :param prob:
     :return:
     """
     if f is None and g is not None:
-        o = bvp.the_omega().tomatrix()
-        h = sympy.MutableDenseNDimArray([0] * o.shape[0])
-        for ii, s in enumerate(bvp.states()):
-            for jj, t in enumerate(bvp.states()):
-                h[ii] += o[ii, jj]*total_derivative(g['function'], t['symbol'])
+        omega = prob.omega.tomatrix()
+        h = sympy.MutableDenseNDimArray([0] * omega.shape[0])
+        for i, states_i in enumerate(prob.states + prob.costates):
+            for j, states_j in enumerate(prob.states + prob.costates):
+                h[(i,)] += omega[i, j]*total_derivative(g.expr, states_j.sym)
 
         return h
     raise NotImplementedError
@@ -186,7 +186,7 @@ def noether(prob, quantity):
         chi = sympy.Matrix(quantity.field)
         omega_chi = omega.LUsolve(chi)
         gstar = 0
-        for jj, state in enumerate(prob.states):
+        for jj, state in enumerate(prob.states + prob.costates):
             gstar += sympy.integrate(omega_chi[jj], state.sym)
 
         unit = prob.constants_of_motion[0].units / quantity.units
@@ -204,34 +204,34 @@ def noether(prob, quantity):
         return g, unit
 
 
-# def F_MF(bvp, com_index):
+# def F_MF(prob, com_index):
 #     r"""
 #
-#     :param bvp:
+#     :param prob:
 #     :param com_index:
 #     :return:
 #     """
-#     bvp = copy.deepcopy(bvp)
-#     # hamiltonian = bvp.get_constants_of_motion()[0]['function']
-#     # O = bvp.the_omega()
-#     # X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in bvp.states()], total_derivative)
+#     prob = copy.deepcopy(prob)
+#     # hamiltonian = prob.get_constants_of_motion()[0]['function']
+#     # O = prob.the_omega()
+#     # X_H = make_hamiltonian_vector_field(hamiltonian, O, [s['symbol'] for s in prob.states()], total_derivative)
 #
-#     com = bvp.get_constants_of_motion()[com_index]
+#     com = prob.get_constants_of_motion()[com_index]
 #
-#     # states = [str(s['symbol']) for s in bvp.states()]
-#     # parameters = [str(s['symbol']) for s in bvp.parameters()]
-#     # constants = [str(s['symbol']) for s in bvp.get_constants()]
+#     # states = [str(s['symbol']) for s in prob.states()]
+#     # parameters = [str(s['symbol']) for s in prob.parameters()]
+#     # constants = [str(s['symbol']) for s in prob.get_constants()]
 #     # fn_p = make_jit_fn(states + parameters + constants, str(com['function']))
 #
-#     states = [(s['symbol']) for s in bvp.states()]
-#     parameters = [(s['symbol']) for s in bvp.parameters()]
-#     constants = [(s['symbol']) for s in bvp.get_constants()]
+#     states = [(s['symbol']) for s in prob.states()]
+#     parameters = [(s['symbol']) for s in prob.parameters()]
+#     constants = [(s['symbol']) for s in prob.get_constants()]
 #     fn_p = jit_lambdify([states, parameters, constants], com['function'])
 #
 #     atoms = com['function'].atoms()
 #     atoms2 = set()
 #     for a in atoms:
-#         if isinstance(a, Symbol) and (a not in {s['symbol'] for s in bvp.parameters() + bvp.get_constants()}):
+#         if isinstance(a, Symbol) and (a not in {s['symbol'] for s in prob.parameters() + prob.get_constants()}):
 #             atoms2.add(a)
 #
 #     atoms = atoms2
@@ -242,107 +242,107 @@ def noether(prob, quantity):
 #         raise ValueError
 #
 #     for parameter in solve_for_p[0].keys():
-#         the_symmetry, symmetry_unit = noether(bvp, com)
+#         the_symmetry, symmetry_unit = noether(prob, com)
 #         replace_p = parameter
-#         for ii, s in enumerate(bvp.states()):
+#         for ii, s in enumerate(prob.states()):
 #             if s['symbol'] == parameter:
 #                 parameter_index = ii
-#                 bvp.parameter(com['symbol'], com['unit'])
+#                 prob.parameter(com['symbol'], com['unit'])
 #
-#     symmetry_index = parameter_index - int(len(bvp.states())/2)
+#     symmetry_index = parameter_index - int(len(prob.states())/2)
 #
 #     # Derive the quad
 #     # Evaluate int(pdq) = int(PdQ)
-#     n = len(bvp.quads())
+#     n = len(prob.quads())
 #     symmetry_symbol = Symbol('_q' + str(n))
 #     _lhs = com['function']/com['symbol']*the_symmetry
 #     lhs = 0
-#     for ii, s in enumerate(bvp.states()):
+#     for ii, s in enumerate(prob.states()):
 #         lhs += sympy.integrate(_lhs[ii], s['symbol'])
 #
 #     lhs, _ = recursive_sub(lhs, solve_for_p[0])
 #
-#     # states = [str(s['symbol']) for s in bvp.states()]
-#     # parameters = [str(s['symbol']) for s in bvp.parameters()]
-#     # constants = [str(s['symbol']) for s in bvp.get_constants()]
+#     # states = [str(s['symbol']) for s in prob.states()]
+#     # parameters = [str(s['symbol']) for s in prob.parameters()]
+#     # constants = [str(s['symbol']) for s in prob.get_constants()]
 #     # the_p = [str(com['symbol'])]
 #     # fn_q = make_jit_fn(states + parameters + constants, str(lhs))
 #
-#     states = [s['symbol'] for s in bvp.states()]
-#     parameters = [s['symbol'] for s in bvp.parameters()]
-#     constants = [s['symbol'] for s in bvp.get_constants()]
+#     states = [s['symbol'] for s in prob.states()]
+#     parameters = [s['symbol'] for s in prob.parameters()]
+#     constants = [s['symbol'] for s in prob.get_constants()]
 #     the_p = [com['symbol']]
 #     fn_q = jit_lambdify([states, parameters, constants], lhs)
 #
-#     replace_q = bvp.states()[symmetry_index]['symbol']
+#     replace_q = prob.states()[symmetry_index]['symbol']
 #     solve_for_q = sympy.solve(lhs - symmetry_symbol, replace_q, dict=True, simplify=False)
 #
 #     # Evaluate X_H(pi(., c)), pi = O^sharp
-#     O = bvp.the_omega().tomatrix()
-#     rvec = sympy.Matrix(([0]*len(bvp.states())))
-#     for ii, s1 in enumerate(bvp.states()):
-#         for jj, s2 in enumerate(bvp.states()):
+#     O = prob.the_omega().tomatrix()
+#     rvec = sympy.Matrix(([0]*len(prob.states())))
+#     for ii, s1 in enumerate(prob.states()):
+#         for jj, s2 in enumerate(prob.states()):
 #             rvec[ii] += O[ii,jj]*total_derivative(com['function'], s2['symbol'])
 #
 #     symmetry_eom = 0
-#     for ii, s in enumerate(bvp.states()):
+#     for ii, s in enumerate(prob.states()):
 #         symmetry_eom += s['eom']*rvec[ii]
 #
 #     # TODO: Figure out how to find units of the quads. This is only works in some specialized cases.
-#     symmetry_unit = bvp.states()[symmetry_index]['unit']
+#     symmetry_unit = prob.states()[symmetry_index]['unit']
 #
-#     bvp.quad(symmetry_symbol, symmetry_eom, symmetry_unit)
+#     prob.quad(symmetry_symbol, symmetry_eom, symmetry_unit)
 #
-#     for ii, s in enumerate(bvp.states()):
+#     for ii, s in enumerate(prob.states()):
 #         s['eom'], _ = recursive_sub(s['eom'], solve_for_p[0])
 #         s['eom'], _ = recursive_sub(s['eom'], solve_for_q[0])
 #
-#     for ii, s in enumerate(bvp.all_bcs()):
+#     for ii, s in enumerate(prob.all_bcs()):
 #         s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
 #         s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
 #
-#     for ii, law in enumerate(bvp._control_law):
+#     for ii, law in enumerate(prob._control_law):
 #         for jj, symbol in enumerate(law.keys()):
-#             bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_p[0])
-#             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
-#             bvp._control_law[ii][symbol], _ = recursive_sub(sympify(bvp._control_law[ii][symbol]), solve_for_q[0])
-#             bvp._control_law[ii][symbol] = str(bvp._control_law[ii][symbol])
+#             prob._control_law[ii][symbol], _ = recursive_sub(sympify(prob._control_law[ii][symbol]), solve_for_p[0])
+#             prob._control_law[ii][symbol] = str(prob._control_law[ii][symbol])
+#             prob._control_law[ii][symbol], _ = recursive_sub(sympify(prob._control_law[ii][symbol]), solve_for_q[0])
+#             prob._control_law[ii][symbol] = str(prob._control_law[ii][symbol])
 #
-#     for ii, s in enumerate(bvp.get_constants_of_motion()):
+#     for ii, s in enumerate(prob.get_constants_of_motion()):
 #         if ii != com_index:
 #             s['function'], _ = recursive_sub(s['function'], solve_for_p[0])
 #             s['function'], _ = recursive_sub(s['function'], solve_for_q[0])
 #
-#     O = bvp.the_omega().tomatrix()
+#     O = prob.the_omega().tomatrix()
 #     if parameter_index > symmetry_index:
-#         del bvp.states()[parameter_index]
-#         del bvp.states()[symmetry_index]
+#         del prob.states()[parameter_index]
+#         del prob.states()[symmetry_index]
 #         O.row_del(parameter_index)
 #         O.col_del(parameter_index)
 #         O.row_del(symmetry_index)
 #         O.col_del(symmetry_index)
 #     else:
-#         del bvp.states()[symmetry_index]
-#         del bvp.states()[parameter_index]
+#         del prob.states()[symmetry_index]
+#         del prob.states()[parameter_index]
 #         O.row_del(symmetry_index)
 #         O.col_del(symmetry_index)
 #         O.row_del(parameter_index)
 #         O.col_del(parameter_index)
 #
-#     bvp.omega(sympy.MutableDenseNDimArray(O))
+#     prob.omega(sympy.MutableDenseNDimArray(O))
 #
-#     del bvp.get_constants_of_motion()[com_index]
+#     del prob.get_constants_of_motion()[com_index]
 #
-#     # states = [str(s['symbol']) for s in bvp.states()]
-#     # quads = [str(s['symbol']) for s in bvp.quads()]
-#     # parameters = [str(s['symbol']) for s in bvp.parameters()]
-#     # constants = [str(s['symbol']) for s in bvp.get_constants()]
+#     # states = [str(s['symbol']) for s in prob.states()]
+#     # quads = [str(s['symbol']) for s in prob.quads()]
+#     # parameters = [str(s['symbol']) for s in prob.parameters()]
+#     # constants = [str(s['symbol']) for s in prob.get_constants()]
 #     # fn_q_inv = make_jit_fn(states + quads + parameters + constants, str(solve_for_q[0][replace_q]))
 #
-#     states = [s['symbol'] for s in bvp.states()]
-#     quads = [s['symbol'] for s in bvp.quads()]
-#     parameters = [s['symbol'] for s in bvp.parameters()]
-#     constants = [s['symbol'] for s in bvp.get_constants()]
+#     states = [s['symbol'] for s in prob.states()]
+#     quads = [s['symbol'] for s in prob.quads()]
+#     parameters = [s['symbol'] for s in prob.parameters()]
+#     constants = [s['symbol'] for s in prob.get_constants()]
 #     fn_q_inv = jit_lambdify([states, quads, parameters, constants], solve_for_q[0][replace_q])
 #
 #     fn_p_inv = jit_lambdify([states, parameters, constants], solve_for_p[0][replace_p])
@@ -388,4 +388,4 @@ def noether(prob, quantity):
 #         gamma.p = gamma.p[:-1]
 #         return gamma
 #
-#     return bvp, gamma_map, gamma_map_inverse
+#     return prob, gamma_map, gamma_map_inverse
