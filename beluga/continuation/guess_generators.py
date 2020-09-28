@@ -6,6 +6,9 @@ import copy
 
 import beluga
 from beluga.numeric.ivp_solvers import Propagator
+from beluga.numeric.data_classes import Trajectory
+from beluga.symbolic.data_classes.symbolic_problem import Problem
+from beluga.symbolic.data_classes.components_structures import getattr_from_list
 
 
 def guess_generator(*args, **kwargs):
@@ -221,3 +224,26 @@ class GuessGenerator(object):
         logging.debug(str(solout.y[-1, :]))
 
         return solout
+
+
+def match_constants_to_states(prob: Problem, sol: Trajectory):
+    state_names = getattr_from_list(prob.states, 'name')
+
+    initial_states = np.hstack((sol.y[0, :], sol.t[0]))
+    terminal_states = np.hstack((sol.y[-1, :], sol.t[-1]))
+
+    initial_bc = dict(zip(state_names, initial_states))
+    terminal_bc = dict(zip(state_names, terminal_states))
+
+    constant_names = getattr_from_list(prob.constants, 'name')
+    for ii, bc0 in enumerate(initial_bc):
+        if bc0 + '_0' in constant_names:
+            jj = getattr_from_list(prob.constants, 'name').index(bc0 + '_0')
+            sol.const[jj] = initial_bc[bc0]
+
+    for ii, bcf in enumerate(terminal_bc):
+        if bcf + '_f' in constant_names:
+            jj = getattr_from_list(prob.constants, 'name').index(bcf + '_f')
+            sol.const[jj] = terminal_bc[bcf]
+
+    return sol

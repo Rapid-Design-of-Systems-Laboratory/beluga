@@ -11,7 +11,7 @@ from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.utils import save, init_logging
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
 from beluga.symbolic.data_classes.mapping_functions import compile_direct, compile_indirect
-from beluga.continuation import run_continuation_set
+from beluga.continuation import run_continuation_set, match_constants_to_states
 
 
 def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwargs):
@@ -155,56 +155,12 @@ def solve(
 
     solinit = Trajectory()
     solinit.const = np.array(getattr_from_list(bvp.constants, 'default_val'))
-
     solinit = guess_generator.generate(bvp.functional_problem, solinit, ocp_map, ocp_map_inverse)
 
-    sol_temp = copy.deepcopy(solinit)
-
-    if bvp.functional_problem.compute_u is not None:
-        u = np.array([bvp.functional_problem.compute_u(sol_temp.y[0], sol_temp.dynamical_parameters, sol_temp.const)])
-        for ii in range(len(sol_temp.t) - 1):
-            u = np.vstack((u, bvp.functional_problem.compute_u(sol_temp.y[ii + 1],
-                                                               sol_temp.dynamical_parameters, sol_temp.const)))
-        sol_temp.u = u
-
-    state_names = getattr_from_list(bvp.states, 'name')
-    traj = ocp_map_inverse(sol_temp)
-
-    initial_states = np.hstack((traj.y[0, :], traj.t[0]))
-    terminal_states = np.hstack((traj.y[-1, :], traj.t[-1]))
-
-    initial_bc = dict(zip(state_names, initial_states))
-    terminal_bc = dict(zip(state_names, terminal_states))
-
-    constant_names = getattr_from_list(bvp.constants, 'name')
-    if steps is not None and initial_helper:
-        for ii, bc0 in enumerate(initial_bc):
-            if bc0 + '_0' in constant_names:
-                jj = getattr_from_list(bvp.constants, 'name').index(bc0 + '_0')
-                solinit.const[jj] = initial_bc[bc0]
-
-        for ii, bcf in enumerate(terminal_bc):
-            if bcf + '_f' in constant_names:
-                jj = getattr_from_list(bvp.constants, 'name').index(bcf + '_f')
-                solinit.const[jj] = terminal_bc[bcf]
-
-    # quad_names = getattr_from_list(bvp.quads, 'name')
-    # n_quads = len(quad_names)
-    # if n_quads > 0:
-    #     initial_quads = solinit.q[0, :]
-    #     terminal_quads = solinit.q[-1, :]
-    #     initial_bc = dict(zip(quad_names, initial_quads))
-    #     terminal_bc = dict(zip(quad_names, terminal_quads))
-    #
-    #     for ii, bc0 in enumerate(initial_bc):
-    #         if bc0 + '_0' in bvp.raw['constants']:
-    #             jj = bvp.raw['constants'].index(bc0 + '_0')
-    #             solinit.const[ii + '_0'] = initial_bc[bc0]
-    #
-    #     for ii, bcf in enumerate(terminal_bc):
-    #         if bcf + '_f' in bvp.raw['constants']:
-    #             jj = bvp.raw['constants'].index(bcf + '_f')
-    #             solinit.const[jj] = terminal_bc[bcf]
+    if initial_helper:
+        sol_ocp = copy.deepcopy(solinit)
+        sol_ocp = match_constants_to_states(ocp, ocp_map_inverse(sol_ocp))
+        solinit.const = sol_ocp.const
 
     """
     Main continuation process
