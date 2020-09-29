@@ -163,7 +163,8 @@ class Problem:
         return self
 
     def constant_of_motion(self, name, expr, units):
-        self.constants_of_motion.append(NamedDimensionalExpressionStruct(name, expr, units))
+        self.constants_of_motion.append(
+            NamedDimensionalExpressionStruct(name, expr, units, local_compiler=self.local_compiler))
         return self
 
     def initial_cost(self, expr, units):

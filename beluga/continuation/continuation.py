@@ -343,7 +343,7 @@ class ProductStrategy(ContinuationStrategy):
         num_vars = len(self.vars)
         self.num_cases(self.num_subdivisions() ** num_vars)
         for var_name in self.vars.keys():
-            jj = bvp.raw['constants'].index(var_name)
+            jj = getattr_from_list(bvp.constants, 'name').index(var_name)
             self.vars[var_name].value = sol.const[jj]
 
         ls_set = [np.linspace(self.vars[var_name].value, self.vars[var_name].target,
@@ -434,7 +434,7 @@ class SparseProductStrategy(ContinuationStrategy):
 
         num_vars = len(self.vars)
         for var_name in self.vars.keys():
-            jj = bvp.raw['constants'].index(var_name)
+            jj = getattr_from_list(bvp.constants, 'name').index(var_name)
             self.vars[var_name].value = sol.const[jj]
             lower_bounds.append(sol.const[jj])
             upper_bounds.append(self.vars[var_name].target)
@@ -496,13 +496,13 @@ class SparseProductStrategy(ContinuationStrategy):
             return self
 
 
-def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, autoscale):
+def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
 
     :param bvp_algorithm_: BVP algorithm to be used.
     :param steps: The steps in a continuation set.
-    :param solinit: Initial guess for the first problem in steps.
+    :param sol_guess: Initial guess for the first problem in steps.
     :param bvp: The compiled boundary-value problem to solve.
     :param pool: A processing pool, if available.
     :param autoscale: Whether or not scaling is used.
@@ -524,8 +524,6 @@ def run_continuation_set(bvp_algorithm_, steps, solinit, bvp: Problem, pool, aut
     bvp_algorithm_.set_boundarycondition_function(functional_problem.bc_func)
     bvp_algorithm_.set_boundarycondition_jacobian(functional_problem.bc_func_jac)
     bvp_algorithm_.set_inequality_constraint_function(functional_problem.ineq_constraints)
-
-    sol_guess = solinit
 
     if steps is None:
         logging.info('Solving OCP...')

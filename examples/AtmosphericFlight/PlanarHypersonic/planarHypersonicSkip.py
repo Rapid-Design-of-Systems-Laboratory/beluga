@@ -18,9 +18,9 @@ ocp.independent('t', 's')
 
 # Define equations of motion
 ocp.state('h', 'v*sin(gam)', 'm')   \
-   .state('theta', 'v*cos(gam)/r', 'rd')  \
+   .state('theta', 'v*cos(gam)/r', 'rad')  \
    .state('v', '-D/mass - mu*sin(gam)/r**2', 'm/s') \
-   .state('gam', 'L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)', 'rd')
+   .state('gam', 'L/(mass*v) + (v/r - mu/(v*r^2))*cos(gam)', 'rad')
 
 
 # Define quantities used in the problem
@@ -32,7 +32,7 @@ ocp.quantity('L', '0.5*rho*v^2*Cl*Aref')
 ocp.quantity('r', 're+h')
 
 # Define controls
-ocp.control('alfa', 'rd')
+ocp.control('alfa', 'rad')
 
 # Define constants
 ocp.constant('mu', 3.986e5*1e9, 'm^3/s^2')  # Gravitational parameter, m^3/s^2
@@ -43,9 +43,9 @@ ocp.constant('re', 6378000, 'm')  # rdius of planet, m
 ocp.constant('Aref', pi*(24*.0254/2)**2, 'm^2')  # Reference area of vehicle, m^2
 ocp.constant('h_0', 80000, 'm')
 ocp.constant('v_0', 4000, 'm/s')
-ocp.constant('gam_0', (-90)*pi/180, 'rd')
+ocp.constant('gam_0', (-90)*pi/180, 'rad')
 ocp.constant('h_f', 80000, 'm')
-ocp.constant('theta_f', 0, 'rd')
+ocp.constant('theta_f', 0, 'rad')
 
 # Define costs
 ocp.terminal_cost('-v^2', 'm^2/s^2')
@@ -59,7 +59,7 @@ ocp.initial_constraint('t', 's')
 ocp.terminal_constraint('h-h_f', 'm')
 ocp.terminal_constraint('theta-theta_f', 'rad')
 
-ocp.scale(m='h', s='h/v', kg='mass', rd=1)
+ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
@@ -105,9 +105,9 @@ sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
     optim_options={'control_method': 'differential'},
-    bvp_algo=bvp_solver,
+    bvp_algorithm=bvp_solver,
     steps=continuation_steps,
-    guess_gen=guess_maker,
+    guess_generator=guess_maker,
     initial_helper=True,
     autoscale=False
 )

@@ -148,7 +148,7 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    optim_options={'control_method': 'differential'},
+    optim_options={'control_method': 'differential', 'analytical_jacobian': False},
     initial_helper=True,
     save_sols='space_shuttle.beluga'
 )

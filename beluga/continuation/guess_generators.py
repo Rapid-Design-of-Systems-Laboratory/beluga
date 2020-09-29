@@ -227,7 +227,7 @@ class GuessGenerator(object):
 
 
 def match_constants_to_states(prob: Problem, sol: Trajectory):
-    state_names = getattr_from_list(prob.states, 'name')
+    state_names = getattr_from_list(prob.states + [prob.independent_variable], 'name')
 
     initial_states = np.hstack((sol.y[0, :], sol.t[0]))
     terminal_states = np.hstack((sol.y[-1, :], sol.t[-1]))

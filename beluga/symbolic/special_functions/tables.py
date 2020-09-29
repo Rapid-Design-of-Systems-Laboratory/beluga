@@ -40,6 +40,9 @@ class SymTableMeta(Function):
         else:
             raise ArgumentIndexError(self, argindex)
 
+    def __deepcopy__(self, memodict=None):
+        return self
+
 
 class SymTable(SymTableMeta):
     def __new__(cls, table, arg, local_compiler=None, order=0):

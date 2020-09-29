@@ -134,7 +134,6 @@ def solve(
     logging.beluga('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
-        logging.beluga('Resulting BVP problem:')
         if method.lower() in ['indirect', 'traditional', 'brysonho']:
             method = 'traditional'
         if method == 'traditional' or method == 'diffyg':
@@ -143,6 +142,7 @@ def solve(
             bvp = compile_direct(copy.deepcopy(ocp), **optim_options)
         else:
             raise NotImplementedError
+
         logging.beluga('Resulting BVP problem:')
         logging.beluga(bvp.__repr__())
 
@@ -161,6 +161,13 @@ def solve(
         sol_ocp = copy.deepcopy(solinit)
         sol_ocp = match_constants_to_states(ocp, ocp_map_inverse(sol_ocp))
         solinit.const = sol_ocp.const
+
+    if bvp.functional_problem.compute_u is not None:
+        u = np.array([bvp.functional_problem.compute_u(solinit.y[0], solinit.dynamical_parameters, solinit.const)])
+        for ii in range(len(solinit.t) - 1):
+            u = np.vstack(
+                (u, bvp.functional_problem.compute_u(solinit.y[ii + 1], solinit.dynamical_parameters, solinit.const)))
+        solinit.u = u
 
     """
     Main continuation process

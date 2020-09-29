@@ -79,48 +79,32 @@ class EpsTrigMapper(SolMapper):
         else:
             self.local_compiler = local_compiler
 
-        self.map_func = None
-        self.inv_map_func = None
+        u = sympy.Symbol('_u')
+        u_trig = sympy.Symbol('_u_trig')
+
+        u_min = self.lower_expr
+        u_max = self.upper_expr
+
+        u_range = (u_max - u_min)
+        u_offset = (u_max + u_min) / 2
+
+        u_trig_expr = sympy.asin((u - u_offset) / u_range)
+        u_expr = u_range / 2 * sympy.sin(u_trig) + u_offset
+
+        self.map_func = self.local_compiler.lambdify([u] + self.args, u_trig_expr)
+        self.inv_map_func = self.local_compiler.lambdify([u_trig] + self.args, u_expr)
 
     def map(self, sol: Solution) -> Solution:
-        sol = copy.deepcopy(sol)
-
-        if self.map_func is None:
-            u = sympy.Symbol('_u')
-
-            u_min = self.lower_expr
-            u_max = self.upper_expr
-
-            u_range = u_max - u_min
-            u_offset = (u_max + u_min)/2
-
-            u_trig_expr = sympy.asin((u - u_offset)/u_range)
-
-            self.map_func = self.local_compiler.lambdify([u] + self.args, u_trig_expr)
-
-        for idx, t_i, y_i, p_i in enumerate(zip(sol.t, sol.y, sol.dynamical_parameters)):
-            sol.u[idx, self.control_idx] = self.map_func(sol.u[idx, self.control_idx], t_i, y_i, p_i, sol.const)
+        for idx, (t_i, y_i) in enumerate(zip(sol.t, sol.y)):
+            sol.u[idx, self.control_idx] = self.map_func(
+                sol.u[idx, self.control_idx], t_i, y_i, sol.dynamical_parameters, sol.const)
 
         return sol
 
     def inv_map(self, sol: Solution) -> Solution:
-        sol = copy.deepcopy(sol)
-
-        if self.inv_map_func is None:
-            u_trig = sympy.Symbol('_u_trig')
-
-            u_min = self.lower_expr
-            u_max = self.upper_expr
-
-            u_range = u_max - u_min
-            u_offset = (u_max + u_min) / 2
-
-            u_expr = u_range*sympy.sin(u_trig) + u_offset
-
-            self.inv_map_func = self.local_compiler.lambdify([u_trig] + self.args, u_expr)
-
-        for idx, t_i, y_i, p_i in enumerate(zip(sol.t, sol.y, sol.dynamical_parameters)):
-            sol.u[idx, self.control_idx] = self.inv_map_func(sol.u[idx, self.control_idx], t_i, y_i, p_i, sol.const)
+        for idx, (t_i, y_i) in enumerate(zip(sol.t, sol.y)):
+            sol.u[idx, self.control_idx] = self.inv_map_func(
+                sol.u[idx, self.control_idx], t_i, y_i, sol.dynamical_parameters, sol.const)
 
         return sol
 
@@ -203,13 +187,13 @@ class AlgebraicControlMapper(SolMapper):
         _args_w_control = copy.copy(_args)
         _args_w_control.insert(3, extract_syms(prob.controls))
 
-        self.compute_u = compile_control(prob.control_law, _args, prob.hamiltonian.expr, lambdify_func=prob.lambdify)
+        # self.compute_u = compile_control(prob.control_law, _args, prob.hamiltonian.expr, lambdify_func=prob.lambdify)
 
         if num_options == 0:
             raise RuntimeError
 
         elif num_options == 1:
-            compiled_option = prob.lambdify(_args, prob.control_law[0])
+            compiled_option = prob.lambdify(_args, [*prob.control_law.values()])
 
             def calc_u(_t, _y, _lam, _p, _k):
                 return np.array(compiled_option(_t, _y, _lam, _p, _k))
@@ -233,7 +217,6 @@ class AlgebraicControlMapper(SolMapper):
         self.compute_u = jit_compile_func(calc_u, _args, func_name='control_function')
 
     def map(self, sol: Solution) -> Solution:
-        sol.u = empty_array
         return sol
 
     def inv_map(self, sol: Solution) -> Solution:

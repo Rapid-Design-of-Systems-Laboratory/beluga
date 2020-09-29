@@ -68,16 +68,14 @@ ocp.constant('phi_f', 0, 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-# bvp_solver = beluga.bvp_algorithm(
-#     'Shooting',
-#     derivative_method='fd',
-#     tolerance=1e-4,
-#     max_iterations=100,
-#     max_error=400,
-#     algorithm='SLSQP'
-# )
-
-bvp_solver = beluga.bvp_algorithm('spbvp')
+bvp_solver = beluga.bvp_algorithm(
+    'Shooting',
+    derivative_method='fd',
+    tolerance=1e-4,
+    max_iterations=100,
+    max_error=400,
+    algorithm='SLSQP'
+)
 
 guess_maker = beluga.guess_generator(
     'auto',
@@ -86,7 +84,7 @@ guess_maker = beluga.guess_generator(
     costate_guess=-0.1,
     control_guess=[0.0, 0.0],
     use_control_guess=True,
-    time_integrate=0.5
+    time_integrate=0.5,
 )
 
 continuation_steps = beluga.init_continuation()
@@ -115,9 +113,10 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
-    method='indirect',
-    bvp_algo=bvp_solver,
+    method='traditional',
+    bvp_algorithm=bvp_solver,
+    optim_options={'control_method': 'algebraic', 'analytical_jacobian': False},
     steps=continuation_steps,
-    guess_gen=guess_maker,
+    guess_generator=guess_maker,
     initial_helper=True
 )

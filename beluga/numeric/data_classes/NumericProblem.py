@@ -139,8 +139,7 @@ class NumericProblem:
                 _u = compute_u(_y, _p, _k)
                 return np.array(compute_y_dot(_y, _u, _p, _k))
 
-            self.deriv_func = deriv_func
-            # self.deriv_func = jit_compile_func(deriv_func, self._dynamic_args)
+            self.deriv_func = jit_compile_func(deriv_func, self._dynamic_args)
 
             if len(sym_eom_q) > 0:
                 self.compute_q_dot = self.lambdify(self._dynamic_args_w_controls, sym_eom_q)
@@ -409,7 +408,8 @@ class NumericProblem:
             sol.t = op(sol.t, scale_factors[0])
             sol.y = op(sol.y, scale_factors[1])
             sol.q = op(sol.q, scale_factors[2])
-            sol.u = op(sol.u, scale_factors[3])
+            if sol.u.size > 0:
+                sol.u = op(sol.u, scale_factors[3])
             sol.dynamical_parameters = op(sol.dynamical_parameters, scale_factors[4])
             sol.nondynamical_parameters = op(sol.nondynamical_parameters, scale_factors[5])
             sol.const = op(sol.const, scale_factors[6])

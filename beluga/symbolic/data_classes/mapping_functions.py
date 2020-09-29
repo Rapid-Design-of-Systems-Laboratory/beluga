@@ -249,7 +249,7 @@ def algebraic_control_law(prob: Problem):
     control_syms = extract_syms(prob.controls)
     prob.dh_du = [prob.hamiltonian.expr.diff(control_sym) for control_sym in control_syms]
     logging.debug("Solving dH/du...")
-    control_options = sympy.solve(prob.dh_du, control_syms, minimal=True, simplify=True)
+    control_options = sympy.solve(prob.dh_du, control_syms, minimal=True, simplify=False)
     logging.debug('Control found')
 
     # TODO Use algebraic equations and custom functions in future

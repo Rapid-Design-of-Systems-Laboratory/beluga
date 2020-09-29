@@ -58,11 +58,11 @@ bvp_solver = beluga.bvp_algorithm('spbvp')
 beluga.solve(ocp=ocp,
              method='indirect',
              optim_options={'control_method': 'differential', 'analytical_jacobian': True},
-             bvp_algo=bvp_solver,
+             bvp_algorithm=bvp_solver,
              steps=continuation_steps,
-             guess_gen=guess_maker,
+             guess_generator=guess_maker,
              autoscale=False,
-             save_sols='indirect_data.blg')
+             save_sols='indirect_data.beluga')
 
 # bvp_solver = beluga.bvp_algorithm('Collocation', num_nodes=60)
 
