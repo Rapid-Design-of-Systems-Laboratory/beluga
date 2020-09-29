@@ -1,14 +1,14 @@
 """
 References
 ----------
-.. [1] Aly, G. M. and Chan, W. C. "Application of a modified quasilinearization technique to totally singular optimal control problems."
-    International Journal of Control 17.4 (1973): 809-815.
+.. [1] Aly, G. M. and Chan, W. C. "Application of a modified quasilinearization technique to totally singular optimal
+      control problems." International Journal of Control 17.4 (1973): 809-815.
 """
 
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -46,7 +46,7 @@ bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 
 guess_maker_indirect = beluga.guess_generator(
     'auto',
-    start=[0, 0],
+    start=[0, 0, 0],
     direction='forward',
     costate_guess=-0.1,
     control_guess=[0.0],
@@ -55,7 +55,7 @@ guess_maker_indirect = beluga.guess_generator(
 )
 
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(logging_level=logging.INFO, display_level=logging.INFO)
 
 continuation_steps = beluga.init_continuation()
 
@@ -66,7 +66,7 @@ continuation_steps.add_step('bisection') \
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
+    optim_options={'analytical_jacobian': True, 'control_method': 'differential'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,

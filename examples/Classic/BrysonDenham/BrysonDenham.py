@@ -4,14 +4,14 @@
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem('Bryson-Denham')
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v', 'm') \
-   .state('v', 'u', 'm/s')
+ocp.state('x', 'v', 'm')
+ocp.state('v', 'u', 'm/s')
 
 # Define controls
 ocp.control('u', 'rad')
@@ -25,7 +25,7 @@ ocp.constant('epsilon1', 10, 'rad**2')
 ocp.constant('x_max', 0.3, 'm')
 
 # Define costs
-ocp.path_cost('u**2', 'rad**2')
+ocp.path_cost('u**2', 'rad**2*s')
 
 # Define constraints
 ocp.initial_constraint('x - x_0', 'm')
@@ -74,9 +74,9 @@ continuation_steps.add_step('bisection') \
 sol_set_indirect = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'analytical_jacobian': True, 'control_method': 'icrm'},
+    optim_options={'analytical_jacobian': False, 'control_method': 'differential'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,
     autoscale=False,
-    save='indirect_data.blg')
+    save_sols='indirect_data.blg')

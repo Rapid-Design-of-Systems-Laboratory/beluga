@@ -17,7 +17,7 @@ v_0 = 7802.88
 v_f = 762
 gam_f = -5*np.pi/180
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -148,7 +148,7 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    optim_options={'control_method': 'icrm'},
+    optim_options={'control_method': 'differential', 'analytical_jacobian': False},
     initial_helper=True,
-    save='space_shuttle.beluga'
+    save_sols='space_shuttle.beluga'
 )

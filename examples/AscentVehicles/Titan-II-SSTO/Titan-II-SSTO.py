@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -40,7 +40,7 @@ ocp.constant('y_f', 1.8e5, 'm')
 ocp.constant('v_y_f', 0, 'm/s')
 
 # Define costs
-ocp.path_cost('1', '1')
+ocp.path_cost('1', 's')
 
 # Define constraints
 ocp.initial_constraint('x - x_0', 'm')
@@ -57,11 +57,12 @@ ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
-guess_maker = beluga.guess_generator('auto',
-                start=[0, 0, 0, 0.01, 60880],          # Starting values for states in order
-                costate_guess = -0.1,
-                control_guess=[0],
-                use_control_guess=False
+guess_maker = beluga.guess_generator(
+    'auto',
+    start=[0, 0, 0, 0.01, 60880],          # Starting values for states in order
+    costate_guess=-0.1,
+    control_guess=[0],
+    use_control_guess=False
 )
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
@@ -77,8 +78,12 @@ continuation_steps.add_step('bisection') \
                 .num_cases(10) \
                 .const('rho_ref', 1.225)
 
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker, autoscale=True)
+sol_set = beluga.solve(
+    ocp=ocp,
+    method='indirect',
+    bvp_algorithm=bvp_solver,
+    optim_options={'control_method': 'algebraic'},
+    steps=continuation_steps,
+    guess_generator=guess_maker,
+    autoscale=True
+)

@@ -23,17 +23,17 @@ bfr_massflow1 = -615.8468*7
 Step 1
 """
 
-ocp = beluga.OCP()
+ocp = beluga.Problem(name='BFR')
 
 # Define independent variables
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v_x', 'm') \
-   .state('y', 'v_y', 'm') \
-   .state('v_x', 'Thrust/mass*cos(theta) - D/mass*v_x/sqrt(v_x**2 + v_y**2)', 'm/s') \
-   .state('v_y', 'Thrust/mass*sin(theta) - D/mass*v_y/sqrt(v_x**2 + v_y**2) - g', 'm/s') \
-   .state('mass', 'mass_flow*eps', 'kg')
+ocp.state('x', 'v_x', 'm')
+ocp.state('y', 'v_y', 'm')
+ocp.state('v_x', 'Thrust/mass*cos(theta) - D/mass*v_x/sqrt(v_x**2 + v_y**2)', 'm/s')
+ocp.state('v_y', 'Thrust/mass*sin(theta) - D/mass*v_y/sqrt(v_x**2 + v_y**2) - g', 'm/s')
+ocp.state('mass', 'mass_flow*eps', 'kg')
 
 # Define controls
 ocp.control('theta', 'rad')
@@ -71,14 +71,11 @@ ocp.constant('v_y_0', 0.01, 'm/s')
 ocp.constant('mass_0', 60880, 'kg')
 ocp.constant('mass_0f', 0, 'kg')
 ocp.constant('drop_mass', 2000, 'kg')
-
-
-
 ocp.constant('y_f', 1.5e5, 'm')
 ocp.constant('v_y_f', 0, 'm/s')
 
 # Define costs
-ocp.path_cost('1', '1')
+ocp.path_cost('1', 's')
 
 # Define constraints
 ocp.initial_constraint('x - x_0', 'm')
@@ -91,15 +88,16 @@ ocp.terminal_constraint('y - y_f', 'm')
 ocp.terminal_constraint('v_x - sqrt(mu/(y_f+Re))', 'm/s')
 ocp.terminal_constraint('v_y - v_y_f', 'm/s')
 
-ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x^2/y', rad=1)
+ocp.scale(m='y', s='y/v_x', kg='mass', newton='mass*v_x**2/y', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
-guess_maker = beluga.guess_generator('auto',
-                start=[0, 0, 0, 0.01, 60880],          # Starting values for states in order
-                costate_guess = -0.1,
-                control_guess=[0],
-                use_control_guess=False
+guess_maker = beluga.guess_generator(
+    'auto',
+    start=[0., 0., 0., 0.01, 60880.],          # Starting values for states in order
+    costate_guess=-0.1,
+    control_guess=[0.001],
+    use_control_guess=True
 )
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
@@ -128,8 +126,11 @@ continuation_steps.add_step('bisection') \
                 .num_cases(20, 'log') \
                 .const('stage_tol', 1e-3)
 
-sol_set = beluga.solve(ocp=ocp,
-             method='indirect',
-             bvp_algorithm=bvp_solver,
-             steps=continuation_steps,
-             guess_generator=guess_maker, autoscale=True)
+sol_set = beluga.solve(
+    ocp=ocp,
+    method='indirect',
+    optim_options={'control_method': 'algebraic', 'analytical_jacobian': False},
+    bvp_algorithm=bvp_solver,
+    steps=continuation_steps,
+    guess_generator=guess_maker,
+    autoscale=True)

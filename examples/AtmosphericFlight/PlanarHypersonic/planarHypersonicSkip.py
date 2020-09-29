@@ -10,7 +10,7 @@ from math import *
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -36,10 +36,10 @@ ocp.control('alfa', 'rad')
 
 # Define constants
 ocp.constant('mu', 3.986e5*1e9, 'm^3/s^2')  # Gravitational parameter, m^3/s^2
-ocp.constant('rho0', 0.0001*1.2, 'kg/m^3')  # Sea-level atmospheric density, kg/m^3
+ocp.constant('rho0', 1.2, 'kg/m^3')  # Sea-level atmospheric density, kg/m^3
 ocp.constant('H', 7500, 'm')  # Scale height for atmosphere of Earth, m
 ocp.constant('mass', 750/2.2046226, 'kg')  # Mass of vehicle, kg
-ocp.constant('re', 6378000, 'm')  # Radius of planet, m
+ocp.constant('re', 6378000, 'm')  # rdius of planet, m
 ocp.constant('Aref', pi*(24*.0254/2)**2, 'm^2')  # Reference area of vehicle, m^2
 ocp.constant('h_0', 80000, 'm')
 ocp.constant('v_0', 4000, 'm/s')
@@ -61,20 +61,14 @@ ocp.terminal_constraint('theta-theta_f', 'rad')
 
 ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
-bvp_solver = beluga.bvp_algorithm(
-    'Shooting',
-    algorithm='Armijo',
-    derivative_method='fd',
-    tolerance=1e-6,
-    max_iterations=100,
-    max_error=100
-)
+bvp_solver = beluga.bvp_algorithm('spbvp')
 
 guess_maker = beluga.guess_generator(
     'auto',
     start=[40000, 0, 4000, (-90)*pi/180],
     direction='forward',
-    costate_guess=-0.1
+    costate_guess=-0.1,
+    control_guess=[0]
 )
 
 continuation_steps = beluga.init_continuation()
@@ -84,10 +78,10 @@ continuation_steps.add_step('bisection') \
                 .num_cases(11) \
                 .const('h_f', 0)
 
-# Slowly turn up the density
-continuation_steps.add_step('bisection') \
-                .num_cases(11) \
-                .const('rho0', 1.2)
+# # Slowly turn up the density
+# continuation_steps.add_step('bisection') \
+#                 .num_cases(11) \
+#                 .const('rho0', 1.2)
 
 # Move downrange out a tad
 continuation_steps.add_step('bisection') \
@@ -110,8 +104,10 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
+    optim_options={'control_method': 'differential'},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    initial_helper=True
+    initial_helper=True,
+    autoscale=False
 )

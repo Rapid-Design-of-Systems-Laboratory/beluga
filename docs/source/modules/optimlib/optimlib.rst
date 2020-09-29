@@ -76,7 +76,7 @@ Base Class Reference
 
 .. autofunction:: utm_path
 
-.. autofunction:: rash_mult
+.. autofunction:: rashs_mult
 
 .. autofunction:: F_momentumshift
 
@@ -88,7 +88,7 @@ Base Class Reference
 
 .. autofunction:: F_UTM
 
-.. autofunction:: Dualize
+.. autofunction:: DualizeMapper
 
 .. autofunction:: F_PMP
 

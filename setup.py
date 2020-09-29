@@ -2,6 +2,8 @@ from setuptools import find_packages, setup
 import os
 import sys
 
+from beluga.release import __version__
+
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
@@ -10,32 +12,25 @@ with open('requirements_dev.txt') as f:
 
 long_description = '''beluga is a general purpose indirect trajectory optimization framework.'''
 
-modules = ['beluga.bvpsol',
-           'beluga.bvpsol._bvp',
-           'beluga.bvpsol._shooting',
-           'beluga.codegen',
-           'beluga.continuation',
-           'beluga.ivpsol',
-           'beluga.optimlib',
+modules = ['beluga.continuation',
+           'beluga.numeric',
+           'beluga.symbolic',
            'beluga.utils']
 
-tests = ['beluga.bvpsol.tests',
-         'beluga.ivpsol.tests',
-         'beluga.optimlib.tests']
+# tests = ['beluga.bvp_solvers.tests',
+#          'beluga.ivp_solvers.tests',
+#          'beluga.optimlib.tests']
+
+tests = []
 
 dir_setup = os.path.dirname(os.path.realpath(__file__))
-
-__version__ = None
-with open(os.path.join(dir_setup, 'beluga', 'release.py')) as f:
-    # Defines __version__
-    exec(f.read())
 
 setup(name="beluga",
       version=__version__,
       description="A general purpose indirect trajectory optimization framework.",
       long_description=long_description,
-      author="Michael Sparapany",
-      author_email='msparapa@purdue.edu',
+      author="Sean Nolan",
+      author_email='nolans@pudue.edu',
       platforms=["any"],  # or more specific, e.g. "win32", "cygwin", "osx"
       python_requires='>3.5',
       license="MIT",
@@ -61,6 +56,7 @@ setup(name="beluga",
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Physics'

@@ -4,11 +4,13 @@ those who explicitly didn't want to be mentioned. People with a * next
 to their names are not found in the metadata of the git history. This
 file is generated automatically by running `./bin/authors_update.py`.
 
-There are a total of 6 authors.
+There are a total of 8 authors.
 
 Thomas Antony <tantony@purdue.edu>
 Michael Grant <mjgrant@purdue.edu>
-Michael Sparapany <msparapa@purdue.edu>
+Michael Sparapany <mjspara@sandia.gov>
 Sean M Nolan <nolans@purdue.edu>
 Justin Mansell <jmansell@purdue.edu>
 *Kshitij Mall <horizonkind@gmail.com>
+David A. Hannasch <David.A.Hannasch@gmail.com>
+Casey Ryan Heidrich <crheidr@sandia.gov>

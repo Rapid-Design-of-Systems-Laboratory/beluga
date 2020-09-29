@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', '1')
@@ -22,6 +22,7 @@ ocp.constant('y2_0', -5, 'm')
 ocp.constant('y1_f', 0, 'm')
 ocp.constant('y2_f', 0, 'm')
 ocp.constant('t_f', 4.5, '1')
+ocp.constant('k', 6, 'm')
 
 ocp.constant('epsilon1', 1e3, 'm**2')
 ocp.constant('path_min', -10, 'm')
@@ -36,7 +37,7 @@ ocp.initial_constraint('y2 - y2_0', 'm')
 ocp.initial_constraint('t', '1')
 ocp.terminal_constraint('t - t_f', '1')
 
-ocp.path_constraint('u + y1/6', 'm', lower='path_min', upper='path_max', activator='epsilon1', method='utm')
+ocp.path_constraint('u + y1/k', 'm', lower='path_min', upper='path_max', activator='epsilon1', method='utm')
 
 ocp.scale(m='y1')
 
@@ -72,9 +73,10 @@ beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method': 'icrm', 'analytical_jacobian': True},
+    optim_options={'control_method': 'differential', 'analytical_jacobian': True},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    initial_helper=True
+    initial_helper=True,
+    autoscale=False
 )

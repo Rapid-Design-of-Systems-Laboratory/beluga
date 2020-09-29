@@ -8,7 +8,7 @@ import beluga
 import logging
 from math import pi, sqrt
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', '1')
@@ -25,7 +25,7 @@ ocp.state('h', 'v', 'm') \
 # Define controls
 ocp.control('thrust', '1')
 
-# Define constants' numerical values
+# Define constants' numeric values
 g_0 = 1.0
 
 h_0 = 1.0
@@ -81,7 +81,7 @@ ocp.path_constraint('thrust', '1', lower='T_min', upper='T_max', activator='eps'
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 
-bvp_solver = beluga.bvp_algorithm('spbvp', algorithm='armijo', num_arcs=4)
+bvp_solver = beluga.bvp_algorithm('spbvp')
 
 guess_maker = beluga.guess_generator(
     'auto',
@@ -105,11 +105,12 @@ continuation_steps.add_step() \
     .num_cases(10, spacing='log') \
     .const('eps', 0.000005)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
     method='indirect',
+    optim_options={'control_method': 'algebraic'},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,

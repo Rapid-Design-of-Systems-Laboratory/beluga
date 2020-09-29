@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -76,7 +76,8 @@ sol_set_collocation = beluga.solve(
     bvp_algorithm=bvp_solver_collocation,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    save='lowthrust_collocation_data.blg'
+    save_sols='lowthrust_collocation_data.beluga',
+    optim_options={'control_method': 'algebraic'}
 )
 
 sol_set_shooting = beluga.solve(
@@ -85,5 +86,6 @@ sol_set_shooting = beluga.solve(
     bvp_algorithm=bvp_solver_shooting,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    save='lowthrust_shooting_data.blg'
+    save_sols='lowthrust_shooting_data.beluga',
+    optim_options={'control_method': 'algebraic'}
 )

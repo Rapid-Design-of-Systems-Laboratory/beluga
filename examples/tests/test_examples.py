@@ -11,52 +11,54 @@ Oscillators = [r'FinancialOscillator', r'MallsOscillator', r'Rayleigh']
 
 
 @pytest.mark.parametrize("file", AscentVehicles)
-def test_AscentVehicles(file):
+def test_ascent_vehicles(file):
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/AscentVehicles/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
+
 @pytest.mark.parametrize("file", Astrodynamics)
-def test_Astrodynamics(file):
+def test_astrodynamics(file):
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/Astrodynamics/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
-def test_AstrodynamicsHT():
+
+def test_astrodynamics_ht():
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/Astrodynamics/OrbitRaising/HighThrust.py')
     assert subprocess.call(['python', path]) == 0
 
 
-def test_AstrodynamicsLT():
+def test_astrodynamics_lt():
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/Astrodynamics/OrbitRaising/LowThrust.py')
     assert subprocess.call(['python', path]) == 0
 
 
 @pytest.mark.parametrize("file", AtmosphericFlight)
-def test_AtmosphericFlight(file):
+def test_atmospheric_flight(file):
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/AtmosphericFlight/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
 
 @pytest.mark.parametrize("file", Classic)
-def test_Classic(file):
+def test_classic(file):
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/Classic/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
 
 @pytest.mark.parametrize("file", ElectricityAndMagnetism)
-def test_ElectricityAndMagnetism(file):
+def test_electricity_and_magnetism(file):
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/ElectricityAndMagnetism/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0
 
 
 @pytest.mark.parametrize("file", Oscillators)
-def test_Oscillators(file):
+def test_oscillators(file):
     fpath = os.path.dirname(__file__)
     path = os.path.realpath(fpath + r'/../../examples/Oscillators/' + file + '/' + file + '.py')
     assert subprocess.call(['python', path]) == 0

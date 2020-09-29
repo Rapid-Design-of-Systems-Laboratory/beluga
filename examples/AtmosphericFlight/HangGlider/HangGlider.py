@@ -8,7 +8,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -16,8 +16,8 @@ ocp.independent('t', 's')
 # Define equations of motion
 ocp.state('x', 'vx', 'm')   \
    .state('y', 'vy', 'm')  \
-   .state('vx', '1/m*(-L*(Vy/vr) - D*(vx/vr))', 'm/s') \
-   .state('vy', '1/m*(L*(vx/vr) - D*(Vy/vr) - W)', 'm/s')
+   .state('vx', '1/mass*(-L*(Vy/vr) - D*(vx/vr))', 'm/s') \
+   .state('vy', '1/mass*(L*(vx/vr) - D*(Vy/vr) - W)', 'm/s')
 
 # Define quantities used in the problem
 ocp.quantity('vr', 'sqrt(vx**2 + Vy**2)')
@@ -38,7 +38,7 @@ ocp.constant('CLmax', 1.4, '1')
 ocp.constant('C0', 0.034, '1')
 ocp.constant('k', 0.069662, '1')
 ocp.constant('W', 100*9.80665, '1')
-ocp.constant('m', 100, 'kg')
+ocp.constant('mass', 100, 'kg')
 ocp.constant('rho', 1.3, 'kg/m^3')  # Sea-level atmospheric density, kg/m^3
 ocp.constant('Aref', 14, 'm^2')  # Reference area of vehicle, m^2
 
@@ -67,7 +67,7 @@ ocp.terminal_constraint('vy - vy_f', 'm/s')
 
 ocp.path_constraint('u', 'rad', lower='CLmin', upper='CLmax', activator='eps', method='utm')
 
-ocp.scale(m='h', s='h/v', kg='mass', rad=1)
+ocp.scale(m='y', s='y/vy', kg='mass', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
@@ -105,12 +105,12 @@ continuation_steps.add_step('bisection') \
 #                 .num_cases(15, 'log') \
 #                 .const('eps', 1e1)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(logging_level=logging.INFO, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
-    method='indirect',
-    optim_options={'control_method': 'icrm', 'analytical_jacobian': False},
+    method='traditional',
+    optim_options={'control_method': 'differential', 'analytical_jacobian': False},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,

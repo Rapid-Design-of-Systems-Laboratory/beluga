@@ -12,7 +12,7 @@ i_0 = 1
 lu = 1
 lq = 1e5
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -79,7 +79,7 @@ continuation_steps.add_step('bisection') \
 sol_set_indirect = beluga.solve(
     ocp=ocp,
     method='indirect',
-    optim_options={'control_method': 'icrm'},
+    optim_options={'control_method': 'differential'},
     bvp_algorithm=bvp_solver_indirect,
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,

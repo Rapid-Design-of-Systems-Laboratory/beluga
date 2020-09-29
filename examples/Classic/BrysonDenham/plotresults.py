@@ -1,6 +1,5 @@
 from beluga.utils import load
 import matplotlib.pyplot as plt
-import numpy as np
 
 data = load('indirect_data.blg')
 sol_set = data['solutions']

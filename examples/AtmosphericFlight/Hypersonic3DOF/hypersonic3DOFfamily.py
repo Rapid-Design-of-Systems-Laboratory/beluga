@@ -9,7 +9,7 @@ from math import pi
 import beluga
 import logging
 
-ocp = beluga.OCP()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -109,12 +109,13 @@ continuation_steps.add_step('productspace') \
     .const('theta_f', 2 ** -10 * pi / 180) \
     .const('phi_f', 2 ** -6 * pi / 180)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.DEBUG)
+beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
-    method='indirect',
+    method='traditional',
     bvp_algorithm=bvp_solver,
+    optim_options={'control_method': 'algebraic', 'analytical_jacobian': False},
     steps=continuation_steps,
     guess_generator=guess_maker,
     initial_helper=True
