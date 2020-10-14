@@ -86,26 +86,32 @@ class Problem:
     default_tol = 1e-4
 
     def independent(self, name, units):
+        self.check_for_duplicate(name)
         self.independent_variable = NamedDimensionalStruct(name, units, local_compiler=self.local_compiler)
         return self
 
     def state(self, name, eom, units):
+        self.check_for_duplicate(name)
         self.states.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
         return self
 
     def costate(self, name, eom, units):
+        self.check_for_duplicate(name)
         self.costates.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
         return self
 
     def parameter(self, name, units):
+        self.check_for_duplicate(name)
         self.parameters.append(NamedDimensionalStruct(name, units, local_compiler=self.local_compiler))
         return self
 
     def coparameter(self, name, eom, units):
+        self.check_for_duplicate(name)
         self.coparameters.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
         return self
 
     def control(self, name, units):
+        self.check_for_duplicate(name)
         self.controls.append(NamedDimensionalStruct(name, units, local_compiler=self.local_compiler))
         return self
 
@@ -130,31 +136,37 @@ class Problem:
         return self
 
     def constant(self, name, default_value, units):
+        self.check_for_duplicate(name)
         self.constants.append(Constant(name, default_value, units, local_compiler=self.local_compiler))
         return self
 
     def quantity(self, name, expr):
+        self.check_for_duplicate(name)
         self.quantities.append(NamedExpressionStruct(name, expr, local_compiler=self.local_compiler))
         return self
 
     def custom_function(self, name, func, func_units, arg_units):
+        self.check_for_duplicate(name)
         self.custom_functions.append(
             FunctionStruct(name, func, func_units, arg_units,
                            local_compiler=self.local_compiler, dim_consistent=True))
         return self
 
     def table(self, name, kind, ret_data, arg_data, table_units, arg_units):
+        self.check_for_duplicate(name)
         self.tables.append(
             TableStruct(name, kind, ret_data, arg_data, table_units, arg_units,
                         local_compiler=self.local_compiler, dim_consistent=True))
         return self
 
     def switch(self, name, functions, conditions, activator):
+        self.check_for_duplicate(name)
         self.switches.append(
             SwitchStruct(name, functions, conditions, activator, local_compiler=self.local_compiler))
         return self
 
     def quad(self, name, eom, units):
+        self.check_for_duplicate(name)
         self.quads.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
         return self
 
@@ -163,6 +175,7 @@ class Problem:
         return self
 
     def constant_of_motion(self, name, expr, units):
+        self.check_for_duplicate(name)
         self.constants_of_motion.append(
             NamedDimensionalExpressionStruct(name, expr, units, local_compiler=self.local_compiler))
         return self
@@ -189,6 +202,7 @@ class Problem:
 
     def scale(self, **kwargs):
         for name in kwargs.keys():
+            self.check_for_duplicate(name)
             self.units.append(NamedExpressionStruct(name, kwargs[name], local_compiler=self.local_compiler))
         return self
 
@@ -299,6 +313,10 @@ class Problem:
         self.cost.check_path_units(self.independent_variable.units)
 
         return self
+
+    def check_for_duplicate(self, name):
+        if name in self.local_compiler.sym_locals.keys():
+            raise RuntimeWarning('\"{}\" already used. Variable not added'.format(name))
 
     def map_sol(self, sol, inverse=False):
         if inverse:
