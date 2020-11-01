@@ -192,7 +192,7 @@ def solve(
         else:
             filename = 'data.beluga'
 
-        save(out, filename=filename)
+        save(out, ocp, bvp, filename=filename)
 
     return out
 
