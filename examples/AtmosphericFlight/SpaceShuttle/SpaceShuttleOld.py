@@ -5,17 +5,17 @@ References
     Vol. 19. Siam, 2010.
 """
 
+from math import *
+
 import beluga
 import logging
 import numpy as np
 
-h_0 = 260000
-h_f = 80000
-v_0 = 25600
-v_f = 2500
-gam_0 = -1*np.pi/180
+h_0 = 79248
+h_f = 24384
+v_0 = 7802.88
+v_f = 762
 gam_f = -5*np.pi/180
-psi_0 = np.pi/2
 
 ocp = beluga.Problem()
 
@@ -23,12 +23,12 @@ ocp = beluga.Problem()
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('h', 'v*sin(gam)', 'ft') \
-    .state('phi', 'v*cos(gam)*sin(psi)/(r*cos(theta))', 'rad') \
-    .state('theta', 'v*cos(gam)*cos(psi)/r', 'rad') \
-    .state('v', '-D/mass - mu*sin(gam)/r**2', 'ft/s') \
+ocp.state('h', 'v*sin(gam)', 'm') \
+    .state('theta', 'v*cos(gam)*sin(psi)/(r*cos(phi))', 'rad') \
+    .state('phi', 'v*cos(gam)*cos(psi)/r', 'rad') \
+    .state('v', '-D/mass - mu*sin(gam)/r**2', 'm/s') \
     .state('gam', 'L*cos(bank)/(mass*v) - mu/(v*r**2)*cos(gam) + v/r*cos(gam)', 'rad') \
-    .state('psi', 'L*sin(bank)/(mass*cos(gam)*v) + v/r*cos(gam)*sin(psi)*tan(theta)', 'rad')
+    .state('psi', 'L*sin(bank)/(mass*cos(gam)*v) + v/r*cos(gam)*sin(psi)*tan(phi)', 'rad')
 
 # Define quantities used in the problem
 ocp.quantity('rho', 'rho0*exp(-h/H)')
@@ -44,12 +44,12 @@ ocp.control('alpha', 'rad')
 ocp.control('bank', 'rad')
 
 # Define constants
-ocp.constant('mu', 0.14076539e17, 'ft**3/s**2')  # Gravitational parameter, ft**3/s**2
-ocp.constant('rho0', 0.002378, 'slug/ft**3')  # Sea-level atmospheric density, slug/ft**3
-ocp.constant('H', 23800, 'ft')  # Scale height for atmosphere of Earth, ft
-ocp.constant('mass', 203000/32.174, 'slug')  # Mass of vehicle, slug
-ocp.constant('re', 20902900, 'ft')  # Radius of planet, ft
-ocp.constant('aref', 2690, 'ft**2')  # Reference area of vehicle, ft**2
+ocp.constant('mu', 3.986e5*1e9, 'm**3/s**2')  # Gravitational parameter, m**3/s**2
+ocp.constant('rho0', 1.2, 'kg/m**3')  # Sea-level atmospheric density, kg/m**3
+ocp.constant('H', 7500, 'm')  # Scale height for atmosphere of Earth, m
+ocp.constant('mass', 92079.2511, 'kg')  # Mass of vehicle, kg
+ocp.constant('re', 6378000, 'm')  # Radius of planet, m
+ocp.constant('aref', 249.9092, 'm**2')  # Reference area of vehicle, m**2
 
 ocp.constant('cl0', -0.20704, '1')
 ocp.constant('cl1', 0.029244, '1')
@@ -59,77 +59,86 @@ ocp.constant('cd1', -0.61592e-2, '1')
 ocp.constant('cd2', 0.621408e-3, '1')
 ocp.constant('cd3', -0.323, '1')
 
-ocp.constant('h_0', h_0, 'ft')
-ocp.constant('phi_0', 0, 'rad')
-ocp.constant('theta_0', 0, 'rad')
-ocp.constant('v_0', v_0, 'ft/s')
-ocp.constant('gam_0', 0, 'rad')
-ocp.constant('psi_0', 0, 'rad')
-ocp.constant('h_f', h_f, 'ft')
-ocp.constant('v_f', v_f, 'ft/s')
-ocp.constant('gam_f', -5*np.pi/180, 'rad')
+ocp.constant('amax', 20 * pi / 180, 'rad')
+ocp.constant('bmax', 89 * pi / 180, 'rad')
+ocp.constant('eps', 0.00001, 'rad**2/s')
 
-ocp.constant('pi', np.pi, 'rad')
-ocp.constant('amax', 89*np.pi/180, 'rad')
-ocp.constant('bmax', 89*np.pi/180, 'rad')
-ocp.constant('eps', 1e-5, 'rad/s')
-ocp.constant('xi', 0, 'rad')
+ocp.constant('h_0', 60000, 'm')
+ocp.constant('phi_0', 0, 'rad')
+ocp.constant('v_0', 4000, 'm/s')
+ocp.constant('gam_0', 0, 'rad')
+ocp.constant('h_f', 0, 'm')
+ocp.constant('gam_f', -5*np.pi/180, 'rad')
+ocp.constant('fpa', 1e-4, '1')
+
+ocp.constant('psi_0', 0, 'rad')
+
+ocp.constant('theta_0', 0, 'rad')
+ocp.constant('phi_f', 0, 'rad')
 
 # Define costs
-ocp.terminal_cost('-theta*sin(xi) - phi*cos(xi)', 'rad')
+ocp.terminal_cost('-phi**2 + fpa*(gam - gam_f)**2', 'rad**2')
 
 # Define constraints
-ocp.initial_constraint('h-h_0', 'ft')
-ocp.initial_constraint('phi-phi_0', 'rad')
+ocp.initial_constraint('h-h_0', 'm')
 ocp.initial_constraint('theta-theta_0', 'rad')
-ocp.initial_constraint('v-v_0', 'ft/s')
+ocp.initial_constraint('phi-phi_0', 'rad')
+ocp.initial_constraint('v-v_0', 'm/s')
 ocp.initial_constraint('gam-gam_0', 'rad')
 ocp.initial_constraint('psi-psi_0', 'rad')
 ocp.initial_constraint('t', 's')
-ocp.terminal_constraint('h-h_f', 'ft')
-ocp.terminal_constraint('v-v_f', 'ft/s')
-ocp.terminal_constraint('gam-gam_f', 'rad')
+ocp.terminal_constraint('h-h_f', 'm')
 
 ocp.path_constraint('alpha', 'rad', lower='-amax', upper='amax', activator='eps', method='utm')
 ocp.path_constraint('bank', 'rad', lower='-bmax', upper='bmax', activator='eps', method='utm')
 
-ocp.scale(ft='theta*re', s='theta*re/v', slug='mass', rad=1)
+ocp.scale(m='h', s='h/v', kg='mass', rad=1)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
 guess_maker = beluga.guess_generator(
     'auto',
-    start=[(h_0-h_f)*0.5 + h_f, 1, 1, v_0*0.25, gam_0, psi_0],
-    direction='forward',
-    costate_guess=[-1.30487794e-07, -1.00000000e+00, 0, -5.71719036e-06, -7.16743700e-03, 0.],
-    control_guess=[18./180*np.pi, 0],
-    time_integrate=25
+    start=[0, 0, 100, 200, -80*pi/180, 0*pi/180],
+    direction='reverse',
+    costate_guess=-0.00001,
+    time_integrate=0.1,
+    control_guess=[0, 0]
 )
 
 continuation_steps = beluga.init_continuation()
 
 continuation_steps.add_step('bisection') \
-    .num_cases(20) \
-    .const('theta_0', 0) \
-    .const('phi_0', 0) \
-
-continuation_steps.add_step('bisection') \
-    .num_cases(201) \
-    .const('h_f', h_f) \
-    .const('v_f', v_f)
-
-continuation_steps.add_step('bisection') \
-    .num_cases(101) \
+    .num_cases(10) \
+    .const('v_0', 200) \
+    .const('h_0', 1000) \
     .const('gam_f', gam_f)
 
 continuation_steps.add_step('bisection') \
-    .num_cases(101) \
-    .const('h_0', h_0) \
-    .const('v_0', v_0)
+    .num_cases(10) \
+    .const('phi_0', 0) \
 
 continuation_steps.add_step('bisection') \
-    .num_cases(361) \
-    .const('xi', np.pi/2)
+    .num_cases(10) \
+    .const('amax', 89*pi/180)
+
+continuation_steps.add_step('bisection') \
+    .num_cases(10) \
+    .const('gam_0', -1*np.pi/180)
+
+continuation_steps.add_step('bisection') \
+    .num_cases(80) \
+    .const('h_0', h_0) \
+    .const('v_0', v_0 - 1000)
+
+continuation_steps.add_step('bisection') \
+    .num_cases(20) \
+    .const('psi_0', 90*pi/180)
+
+continuation_steps.add_step('bisection') \
+    .num_cases(30) \
+    .const('fpa', 1) \
+    .const('v_0', v_0) \
+    .const('eps', 1e-5)
 
 beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
 
@@ -141,6 +150,5 @@ sol_set = beluga.solve(
     guess_generator=guess_maker,
     optim_options={'control_method': 'differential', 'analytical_jacobian': False},
     initial_helper=True,
-    save_sols='space_shuttle.beluga',
-    autoscale=True
+    save_sols='space_shuttle.beluga'
 )
