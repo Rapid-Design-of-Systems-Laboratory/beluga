@@ -206,7 +206,7 @@ def dualize(prob: Problem, method='traditional'):
         state_syms = extract_syms(prob.states + prob.parameters)
         costate_syms = extract_syms(prob.costates + prob.coparameters)
         omega = make_standard_symplectic_form(state_syms, costate_syms)
-        chi_h = make_hamiltonian_vector_field(prob.hamiltonian.expr, omega, state_syms + costate_syms, sympy.diff)
+        chi_h = make_hamiltonian_vector_field(prob.hamiltonian.expr, omega, state_syms + costate_syms)
         costate_rates = chi_h[-len(prob.states):]
         for costate, rate in zip(prob.costates, costate_rates):
             costate.eom = rate
@@ -320,7 +320,7 @@ def differential_control_law(prob: Problem, method='traditional'):
 
         prob.omega = omega_new
         chi_h = make_hamiltonian_vector_field(prob.hamiltonian.expr, omega_new,
-                                              extract_syms(prob.states + prob.costates), sympy.diff)
+                                              extract_syms(prob.states + prob.costates))
 
         for idx, state in enumerate(prob.states + prob.costates):
             state.eom = chi_h[idx]

@@ -2,7 +2,7 @@ import copy
 import pytest
 import numpy as np
 
-from sympy import Symbol
+import sympy
 
 from beluga import Problem
 from beluga.symbolic.data_classes.mapping_functions import compile_indirect
@@ -77,15 +77,15 @@ def test_composable_functors(method):
 
 
 def test_exterior_derivative():
-    basis = [Symbol('x'), Symbol('y')]
+    basis = [sympy.Symbol('x'), sympy.Symbol('y')]
 
     f = basis[0]**2 + basis[1]**2
-    df = exterior_derivative(f, basis, derivative_fn)
+    df = exterior_derivative(f, basis)
 
     assert df[0] == 2*basis[0]
     assert df[1] == 2*basis[1]
 
-    ddf = exterior_derivative(df, basis, derivative_fn)
+    ddf = exterior_derivative(df, basis)
 
     assert ddf[0, 0] == 0
     assert ddf[0, 1] == 0
@@ -93,7 +93,7 @@ def test_exterior_derivative():
     assert ddf[1, 1] == 0
 
     f = sympy.Array([basis[0]*basis[1], 0])
-    df = exterior_derivative(f, basis, derivative_fn)
+    df = exterior_derivative(f, basis)
 
     assert df[0, 0] == 0
     assert df[0, 1] == -basis[0]
@@ -102,7 +102,7 @@ def test_exterior_derivative():
 
 
 def test_make_standard_symplectic_form():
-    basis = [Symbol('x'), Symbol('y')]
+    basis = [sympy.Symbol('x'), sympy.Symbol('y')]
     omega = make_standard_symplectic_form([basis[0]], [basis[1]])
 
     assert len(omega.shape) == 2
@@ -111,38 +111,8 @@ def test_make_standard_symplectic_form():
     assert abs(omega[1,0]) == 1
 
 
-def test_init_workspace():
-    class emptyobj(object):
-        def __new__(cls):
-            obj = super(emptyobj, cls).__new__(cls)
-            obj.dae_num_states = 0
-            return obj
-
-    guess = emptyobj()
-    problem = Problem()
-
-    # Throw an error with no independent variable defined.
-    with pytest.raises(Exception):
-        init_workspace(problem)
-
-    problem.independent('t', 's')
-    problem.state('x', 'v', 'm')
-    problem.state('v', 'g + u', 'm/s')
-    problem.control('u', 'N')
-    problem.constant('g', 9.80665, 'm/s^2')
-    problem.path_cost('1', 's')
-    problem.constraints().initial('x-x_0', 'm')
-    problem.constraints().initial('v-v_0', 'm/s')
-    problem.constraints().terminal('x-x_f', 'm')
-    problem.scale(m='x', s='x/v', N=1)
-
-    ws = init_workspace(problem)
-
-    assert isinstance(ws, dict)
-
-
 def test_is_symplectic():
-    basis = [Symbol('x'), Symbol('y')]
+    basis = [sympy.Symbol('x'), sympy.Symbol('y')]
     make_standard_symplectic_form([basis[0]], [basis[1]])
 
     omega = make_standard_symplectic_form([basis[0]], [basis[1]])

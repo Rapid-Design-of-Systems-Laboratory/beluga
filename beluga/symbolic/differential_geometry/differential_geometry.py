@@ -8,13 +8,12 @@ import sympy
 
 # TODO Implement Full Units Check
 
-def exterior_derivative(f, basis, derivative_fn):
+def exterior_derivative(f, basis):
 
     r"""
 
     :param f:
     :param basis:
-    :param derivative_fn:
     :return:
     """
 
@@ -25,11 +24,11 @@ def exterior_derivative(f, basis, derivative_fn):
         n = len(basis)
         df = [0]*len(basis)
         for ii in range(n):
-            df[ii] = derivative_fn(f, basis[ii])
+            df[ii] = sympy.diff(f, basis[ii])
         df = sympy.MutableDenseNDimArray(df)
 
     # Handle the (1+)-grade cases
-    if isinstance(f, sympy.Array) or isinstance(f, sympy.Matrix):
+    if isinstance(f, sympy.Array) or isinstance(f, sympy.Matrix) or isinstance(f, sympy.MutableDenseNDimArray):
         n = (len(basis),) + f.shape
         df = sympy.MutableDenseNDimArray(sympy.zeros(*n))
         if len(n) == 2:
@@ -39,10 +38,10 @@ def exterior_derivative(f, basis, derivative_fn):
                         df[ii, jj] = 0
 
                     if ii < jj:
-                        df[ii, jj] += derivative_fn(f[jj], basis[ii])
-                        df[ii, jj] += -derivative_fn(f[ii], basis[jj])
-                        df[jj, ii] += -derivative_fn(f[jj], basis[ii])
-                        df[jj, ii] += derivative_fn(f[ii], basis[jj])
+                        df[ii, jj] += sympy.diff(f[jj], basis[ii])
+                        df[ii, jj] += -sympy.diff(f[ii], basis[jj])
+                        df[jj, ii] += -sympy.diff(f[jj], basis[ii])
+                        df[jj, ii] += sympy.diff(f[ii], basis[jj])
 
         # TODO Check if this is valid statement
         if len(n) > 2:
@@ -51,7 +50,7 @@ def exterior_derivative(f, basis, derivative_fn):
     return df
 
 
-def make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn):
+def make_hamiltonian_vector_field(hamiltonian, omega, basis):
     r"""
     Makes a Hamiltonian vector field.
 
@@ -65,7 +64,7 @@ def make_hamiltonian_vector_field(hamiltonian, omega, basis, derivative_fn):
     if omega.shape[0] % 2 != 0:
         raise ValueError('omega must be even-dimensional.')
 
-    dh = exterior_derivative(hamiltonian, basis, derivative_fn)
+    dh = exterior_derivative(hamiltonian, basis)
     dh = sympy.Matrix(dh)
     o = omega.tomatrix()
     x_h = -o.LUsolve(dh)
