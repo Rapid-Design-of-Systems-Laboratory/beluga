@@ -410,8 +410,8 @@ def test_t13(const):
     solinit.const = np.array([const])
     sol = algo.solve(solinit)['sol']
 
-    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
-    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0]))
+    e2 = -np.exp(-(sol.y[:, 2] + 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
@@ -1105,4 +1105,4 @@ def test_spbvp_3():
     solinit.dynamical_parameters = np.array([1])
     solinit.const = np.array([])
     out = algo.solve(solinit)['sol']
-    assert abs(out.p - 2) < tol
+    assert abs(out.dynamical_parameters - 2) < tol
