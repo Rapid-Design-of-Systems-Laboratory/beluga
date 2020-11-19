@@ -2,7 +2,10 @@ from setuptools import find_packages, setup
 import os
 import sys
 
-from beluga.release import __version__
+dir_setup = os.path.dirname(os.path.realpath(__file__))
+
+with open(os.path.join(dir_setup, 'beluga', 'release.py')) as f:
+    exec(f.read())
 
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
