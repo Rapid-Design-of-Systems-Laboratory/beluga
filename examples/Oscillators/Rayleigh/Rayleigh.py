@@ -8,7 +8,7 @@ ocp.independent('t', '1')
 
 # Define equations of motion
 ocp.state('y1', 'y2', 'm') \
-   .state('y2', '-y1 + y2*(gam - p*y2**2) + m*u', 'm')
+   .state('y2', '-y1 + y2*(gam - p*y2**2) + mc*u', 'm')
 
 # Define controls
 ocp.control('u', 'm')
@@ -16,7 +16,7 @@ ocp.control('u', 'm')
 # Define constants
 ocp.constant('gam', 1.4, '1')
 ocp.constant('p', 0.14, '1/m**2')
-ocp.constant('m', 4, '1')
+ocp.constant('mc', 4, '1')
 ocp.constant('y1_0', -5, 'm')
 ocp.constant('y2_0', -5, 'm')
 ocp.constant('y1_f', 0, 'm')
