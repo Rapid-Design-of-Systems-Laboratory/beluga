@@ -134,9 +134,7 @@ def solve(
     logging.beluga('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
-        if method.lower() in ['indirect', 'traditional', 'brysonho']:
-            method = 'traditional'
-        if method == 'traditional' or method == 'diffyg':
+        if method.lower() in ['indirect', 'traditional', 'brysonho', 'diffyg']:
             bvp = compile_indirect(copy.deepcopy(ocp), method=method, **optim_options)
         elif method == 'direct':
             bvp = compile_direct(copy.deepcopy(ocp), **optim_options)

@@ -628,6 +628,9 @@ def compile_indirect(prob: Problem, analytical_jacobian=False, control_method='d
 
     ensure_sympified(prob)
 
+    if method.lower() in ['indirect', 'traditional', 'brysonho']:
+        method = 'traditional'
+
     """
     Substitute Quantities
     """
