@@ -304,28 +304,31 @@ class SymmetryStruct(DimensionalStruct):
         self.field = self.field.subs(old, new)
 
 
-class PathConstraintStruct(DimensionalExpressionStruct):
+class ConstraintStruct(DimensionalExpressionStruct):
     def __init__(self, expr: str, units: str, lower: str, upper: str, activator: str, method: str = 'utm',
                  local_compiler: LocalCompiler = None):
-        super(PathConstraintStruct, self).__init__(expr, units, local_compiler=local_compiler)
+        super(ConstraintStruct, self).__init__(expr, units, local_compiler=local_compiler)
         self.lower = lower
         self.upper = upper
         self.activator = activator
         self.method = method
 
     def sympify_self(self):
-        super(PathConstraintStruct, self).sympify_self()
-        self.lower = self._sympify_internal(self.lower)
-        self.upper = self._sympify_internal(self.upper)
-        self.activator = self._sympify_internal(self.activator)
+        super(ConstraintStruct, self).sympify_self()
+        if self.lower is not None:
+            self.lower = self._sympify_internal(self.lower)
+        if self.upper is not None:
+            self.upper = self._sympify_internal(self.upper)
+        if self.activator is not None:
+            self.activator = self._sympify_internal(self.activator)
 
     def subs_self(self, old, new):
-        if not (hasattr(self.expr, 'subs_self')
-                and hasattr(self.lower, 'subs_self') and hasattr(self.upper, 'subs_self')):
-            self.sympify_self()
+        self.sympify_self()
         self.expr = self.expr.subs(old, new)
-        self.lower = self.lower.subs(old, new)
-        self.upper = self.upper.subs(old, new)
+        if self.lower is not None:
+            self.lower = self.lower.subs(old, new)
+        if self.upper is not None:
+            self.upper = self.upper.subs(old, new)
 
 
 def extract_syms(structs: Union[List[NamedStruct], NamedStruct]):

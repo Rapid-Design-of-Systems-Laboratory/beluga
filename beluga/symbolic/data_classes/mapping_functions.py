@@ -121,11 +121,26 @@ def epstrig(prob: Problem):
 
 def utm(prob: Problem):
     ensure_sympified(prob)
+    location = -1
 
-    for constraint_idx, constraint in enumerate(prob.constraints['path']):
-        if constraint.method.lower() == 'utm':
+    for constraint_idx, constraint in enumerate(prob.constraints['initial']):
+        if constraint.method.lower() == 'utm' and (constraint.lower is not None and constraint.upper is not None):
+            location = 0
             break
-    else:
+    
+    if location == -1:
+        for constraint_idx, constraint in enumerate(prob.constraints['path']):
+            if constraint.method.lower() == 'utm' and (constraint.lower is not None and constraint.upper is not None):
+                location = 1
+                break
+    
+    if location == -1:
+        for constraint_idx, constraint in enumerate(prob.constraints['terminal']):
+            if constraint.method.lower() == 'utm' and (constraint.lower is not None and constraint.upper is not None):
+                location = 2
+                break
+
+    if location == -1:
         raise RuntimeWarning('No path constraint using utm method found\nReturning problem unchanged')
         # return prob
 
@@ -138,11 +153,26 @@ def utm(prob: Problem):
         raise Exception('Activator \'' + str(constraint['activator']) + '\' not found in constants.')
 
     expr, activator, upper, lower = constraint.expr, constraint.activator, constraint.upper, constraint.lower
-    prob.cost.path += activator * (1 / (sympy.cos(sympy.pi / 2 * (2 * expr - upper - lower) / (upper - lower))) - 1)
+
+    if location == 0:
+        prob.cost.initial += activator * (1 / (sympy.cos(sympy.pi / 2 * (2 * expr - upper - lower) / (upper - lower))) - 1)
+    
+    if location == 1:
+        prob.cost.path += activator * (1 / (sympy.cos(sympy.pi / 2 * (2 * expr - upper - lower) / (upper - lower))) - 1)
+    
+    if location == 2:
+        prob.cost.terminal += activator * (1 / (sympy.cos(sympy.pi / 2 * (2 * expr - upper - lower) / (upper - lower))) - 1)
 
     prob.sol_map_chain.append(IdentityMapper())
 
-    prob.constraints['path'].pop(constraint_idx)
+    if location == 0:
+        prob.constraints['initial'].pop(constraint_idx)
+    
+    if location == 1:
+        prob.constraints['path'].pop(constraint_idx)
+    
+    if location == 2:
+        prob.constraints['terminal'].pop(constraint_idx)
 
     return prob
 
@@ -643,16 +673,19 @@ def compile_indirect(prob: Problem, analytical_jacobian=False, control_method='d
         momentum_shift(prob)
 
     """
-    Deal with path constraints
+    Deal with constraints inequality constraints
     """
-    for path_constraint in copy.copy(prob.constraints['path']):
-        if path_constraint.method.lower() == 'epstrig':
-            epstrig(prob)
-        elif path_constraint.method.lower() == 'utm':
-            utm(prob)
-        else:
-            raise NotImplementedError(
-                'Unknown path constraint method \"' + str(path_constraint.method) + '\"')
+    
+    for constraint in copy.copy(prob.constraints['initial'] + prob.constraints['path']
+                                + prob.constraints['terminal']):
+        if (constraint.lower is not None and constraint.upper is not None):
+            if constraint.method.lower() == 'epstrig':
+                epstrig(prob)
+            elif constraint.method.lower() == 'utm':
+                utm(prob)
+            else:
+                raise NotImplementedError(
+                    'Unknown path constraint method \"' + str(constraint.method) + '\"')
 
     """
     Deal with staging, switches, and their substitutions.
