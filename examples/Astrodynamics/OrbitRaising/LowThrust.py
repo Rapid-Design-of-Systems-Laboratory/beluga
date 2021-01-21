@@ -68,7 +68,7 @@ continuation_steps.add_step('bisection') \
                 .num_cases(40) \
                 .const('t_f', 80)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set_collocation = beluga.solve(
     ocp=ocp,

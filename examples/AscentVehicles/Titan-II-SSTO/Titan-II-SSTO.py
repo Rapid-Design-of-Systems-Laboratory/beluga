@@ -65,7 +65,7 @@ guess_maker = beluga.guess_generator(
     use_control_guess=False
 )
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 continuation_steps = beluga.init_continuation()
 

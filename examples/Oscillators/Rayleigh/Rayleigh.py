@@ -68,7 +68,7 @@ continuation_steps.add_step('bisection') \
                 .num_cases(100, 'log') \
                 .const('epsilon1', 1e-5)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,

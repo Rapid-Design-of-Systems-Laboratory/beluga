@@ -56,11 +56,11 @@ def jit_compile_func(func, args, func_name=None, complex_numbers=False):
         return jit_func
 
     except errors.NumbaError as e:
-        logging.beluga('Cannot Compile FunctionComponent: {}\n\tError: {}'.format(func_name, e))
+        logging.debug('Cannot Compile FunctionComponent: {}\n\tError: {}'.format(func_name, e))
         return func
 
     except TypeError:
-        logging.beluga('Cannot Compile FunctionComponent: {} (probably NoneType)'.format(func_name))
+        logging.debug('Cannot Compile FunctionComponent: {} (probably NoneType)'.format(func_name))
         return func
 
 

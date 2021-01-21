@@ -6,6 +6,7 @@ import pathos
 import logging
 import numpy as np
 
+from beluga.utils.logging import logger
 from beluga.release import __splash__
 from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.utils import save, init_logging
@@ -14,30 +15,26 @@ from beluga.symbolic.data_classes.mapping_functions import compile_direct, compi
 from beluga.continuation import run_continuation_set, match_constants_to_states
 
 
-def add_logger(logging_level=logging.ERROR, display_level=logging.ERROR, **kwargs):
+def add_logger(display_level=logging.INFO, file_level=logging.DEBUG, filename='beluga.log'):
     """
     Attaches a logger to beluga's main process.
 
-    :keyword logging_level: The level at which logging is written to the output file.
     :keyword display_level: The level at which logging is displayed to stdout.
+    :keyword file_level: The level at which logging is written to the output file.
     :keyword filename: Name of the log file. Default is `beluga.log`.
-    :keyword mode: File mode. Default is 'w' (overwrite).
-    :keyword encoding: Log file encoding.
-    :keyword delay: Delays opening log file until first call to emit().
     :return: None
 
     .. seealso::
             logging.FileHandler
     """
     # Suppress warnings
-    warnings.filterwarnings("ignore")
+    # warnings.filterwarnings("ignore")
+    #
+    # # logfile options for logging.FileHandler
+    # config = {'filename': 'beluga.log', 'mode': 'w'}
+    # config.update(kwargs)
 
-    # logfile options for logging.FileHandler
-    config = {'filename': 'beluga.log', 'mode': 'w'}
-    config.update(kwargs)
-
-    # Initialize logging system
-    init_logging(logging_level, display_level, config)
+    init_logging(display_level=display_level, file_level=file_level, filename=filename)
 
 
 def solve(
@@ -94,7 +91,7 @@ def solve(
         optim_options = {}
 
     # Display useful info about the environment to debug logger.
-    logging.beluga('\n'+__splash__+'\n')
+    logger.debug('\n'+__splash__+'\n')
     from beluga import __version__ as beluga_version
     from llvmlite import __version__ as llvmlite_version
     from numba import __version__ as numba_version
@@ -102,15 +99,14 @@ def solve(
     from scipy import __version__ as scipy_version
     from sympy.release import __version__ as sympy_version
 
-    logging.beluga('beluga:\t\t' + str(beluga_version))
-    logging.beluga('llvmlite:\t' + str(llvmlite_version))
-    logging.beluga('numba:\t\t' + str(numba_version))
-    logging.beluga('numpy:\t\t' + str(numpy_version))
-    logging.beluga('python:\t\t'
-                   + str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]))
-    logging.beluga('scipy:\t\t' + str(scipy_version))
-    logging.beluga('sympy:\t\t' + str(sympy_version))
-    logging.beluga('\n')
+    logger.debug('beluga:\t\t' + str(beluga_version))
+    logger.debug('llvmlite:\t' + str(llvmlite_version))
+    logger.debug('numba:\t\t' + str(numba_version))
+    logger.debug('numpy:\t\t' + str(numpy_version))
+    logger.debug('python:\t\t'
+                 + str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]))
+    logger.debug('scipy:\t\t' + str(scipy_version))
+    logger.debug('sympy:\t\t' + str(sympy_version) + '\n\n')
 
     """
     Error checking
@@ -131,7 +127,7 @@ def solve(
 
     # f_ocp = compile_direct(ocp)
 
-    logging.beluga('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
+    logger.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
         if method.lower() in ['indirect', 'traditional', 'brysonho', 'diffyg']:
@@ -141,8 +137,8 @@ def solve(
         else:
             raise NotImplementedError
 
-        logging.beluga('Resulting BVP problem:')
-        logging.beluga(bvp.__repr__())
+        logger.debug('Resulting BVP problem:')
+        logger.debug(bvp.__repr__())
 
         ocp_map = bvp.map_sol
         ocp_map_inverse = bvp.inv_map_sol
@@ -173,7 +169,7 @@ def solve(
     time0 = time.time()
     continuation_set = run_continuation_set(bvp_algorithm, steps, solinit, bvp, pool, autoscale)
     total_time = time.time() - time0
-    logging.info('Continuation process completed in %0.4f seconds.\n' % total_time)
+    logger.info('Continuation process completed in %0.4f seconds.\n' % total_time)
     bvp_algorithm.close()
 
     """

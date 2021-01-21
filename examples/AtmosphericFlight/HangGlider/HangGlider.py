@@ -105,7 +105,7 @@ continuation_steps.add_step('bisection') \
 #                 .num_cases(15, 'log') \
 #                 .const('eps', 1e1)
 
-beluga.add_logger(logging_level=logging.INFO, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.INFO, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
