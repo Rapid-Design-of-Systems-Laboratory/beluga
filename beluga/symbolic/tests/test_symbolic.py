@@ -1,8 +1,12 @@
+import copy
 import pytest
 import numpy as np
 
+import sympy
+
 from beluga import Problem
 from beluga.symbolic.data_classes.mapping_functions import compile_indirect
+from beluga.symbolic.differential_geometry import exterior_derivative, make_standard_symplectic_form, is_symplectic
 from beluga.numeric.data_classes.Trajectory import Trajectory
 
 METHODS = ['indirect', 'diffyg']
@@ -34,7 +38,11 @@ def test_composable_functors(method):
     problem.terminal_constraint('x - x_f', 'm')
     problem.terminal_constraint('y - y_f', 'm')
 
-    bvp, mapper, mapper_inv = compile_indirect(problem, method=method)
+    problem.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
+
+    bvp = compile_indirect(problem, method=method)
+    mapper = bvp.map_sol
+    mapper_inv = bvp.inv_map_sol
 
     gamma = Trajectory()
     gamma.t = np.linspace(0, 1, num=10)
@@ -43,8 +51,8 @@ def test_composable_functors(method):
     gamma.u = -np.pi / 2 * np.ones((10, 1))
     gamma.const = np.array([-9.81, 1, -1])
 
-    g1 = mapper(gamma)
-    g2 = mapper_inv(g1)
+    g1 = mapper(copy.deepcopy(gamma))
+    g2 = mapper_inv(copy.deepcopy(g1))
 
     assert g2.y.shape == gamma.y.shape
     assert (g2.y - gamma.y < tol).all()
@@ -69,15 +77,15 @@ def test_composable_functors(method):
 
 
 def test_exterior_derivative():
-    basis = [Symbol('x'), Symbol('y')]
+    basis = [sympy.Symbol('x'), sympy.Symbol('y')]
 
     f = basis[0]**2 + basis[1]**2
-    df = exterior_derivative(f, basis, derivative_fn)
+    df = exterior_derivative(f, basis)
 
     assert df[0] == 2*basis[0]
     assert df[1] == 2*basis[1]
 
-    ddf = exterior_derivative(df, basis, derivative_fn)
+    ddf = exterior_derivative(df, basis)
 
     assert ddf[0, 0] == 0
     assert ddf[0, 1] == 0
@@ -85,7 +93,7 @@ def test_exterior_derivative():
     assert ddf[1, 1] == 0
 
     f = sympy.Array([basis[0]*basis[1], 0])
-    df = exterior_derivative(f, basis, derivative_fn)
+    df = exterior_derivative(f, basis)
 
     assert df[0, 0] == 0
     assert df[0, 1] == -basis[0]
@@ -94,7 +102,7 @@ def test_exterior_derivative():
 
 
 def test_make_standard_symplectic_form():
-    basis = [Symbol('x'), Symbol('y')]
+    basis = [sympy.Symbol('x'), sympy.Symbol('y')]
     omega = make_standard_symplectic_form([basis[0]], [basis[1]])
 
     assert len(omega.shape) == 2
@@ -103,39 +111,8 @@ def test_make_standard_symplectic_form():
     assert abs(omega[1,0]) == 1
 
 
-def test_init_workspace():
-    class emptyobj(object):
-        def __new__(cls):
-            obj = super(emptyobj, cls).__new__(cls)
-            obj.dae_num_states = 0
-            return obj
-
-    guess = emptyobj()
-    from beluga.problem import OCP
-    problem = OCP()
-
-    # Throw an error with no independent variable defined.
-    with pytest.raises(Exception):
-        init_workspace(problem)
-
-    problem.independent('t', 's')
-    problem.state('x', 'v', 'm')
-    problem.state('v', 'g + u', 'm/s')
-    problem.control('u', 'N')
-    problem.constant('g', 9.80665, 'm/s^2')
-    problem.path_cost('1', 's')
-    problem.constraints().initial('x-x_0', 'm')
-    problem.constraints().initial('v-v_0', 'm/s')
-    problem.constraints().terminal('x-x_f', 'm')
-    problem.scale(m='x', s='x/v', N=1)
-
-    ws = init_workspace(problem)
-
-    assert isinstance(ws, dict)
-
-
 def test_is_symplectic():
-    basis = [Symbol('x'), Symbol('y')]
+    basis = [sympy.Symbol('x'), sympy.Symbol('y')]
     make_standard_symplectic_form([basis[0]], [basis[1]])
 
     omega = make_standard_symplectic_form([basis[0]], [basis[1]])
@@ -149,43 +126,42 @@ def test_is_symplectic():
     assert not is_symplectic(omega)
 
 
-def test_ocp_units():
-    from beluga.problem import OCP
-    sigma = OCP()
+# def test_ocp_units():
+#     sigma = Problem()
 
-    sigma.independent('t', 's')
-    sigma.initial_cost('x', 'm')
-    sigma.path_cost('x', 'm/s')
-    sigma.terminal_cost('x', 'm')
-    assert check_ocp_units(sigma)
+#     sigma.independent('t', 's')
+#     sigma.initial_cost('x', 'm')
+#     sigma.path_cost('x', 'm/s')
+#     sigma.terminal_cost('x', 'm')
+#     assert check_ocp_units(sigma)
 
-    sigma.independent('t', '1')
-    sigma.initial_cost('x', 'm')
-    sigma.path_cost('x', 'm/s')
-    sigma.terminal_cost('x', 'm')
-    with pytest.raises(Exception):
-        check_ocp_units(sigma)
+#     sigma.independent('t', '1')
+#     sigma.initial_cost('x', 'm')
+#     sigma.path_cost('x', 'm/s')
+#     sigma.terminal_cost('x', 'm')
+#     with pytest.raises(Exception):
+#         check_ocp_units(sigma)
 
-    sigma.independent('t', 's')
-    sigma.initial_cost('x', 'm/s')
-    sigma.path_cost('x', 'm/s')
-    sigma.terminal_cost('x', 'm')
-    with pytest.raises(Exception):
-        check_ocp_units(sigma)
+#     sigma.independent('t', 's')
+#     sigma.initial_cost('x', 'm/s')
+#     sigma.path_cost('x', 'm/s')
+#     sigma.terminal_cost('x', 'm')
+#     with pytest.raises(Exception):
+#         check_ocp_units(sigma)
 
-    sigma.independent('t', 's')
-    sigma.initial_cost('x', 'm')
-    sigma.path_cost('x', 'm')
-    sigma.terminal_cost('x', 'm')
-    with pytest.raises(Exception):
-        check_ocp_units(sigma)
+#     sigma.independent('t', 's')
+#     sigma.initial_cost('x', 'm')
+#     sigma.path_cost('x', 'm')
+#     sigma.terminal_cost('x', 'm')
+#     with pytest.raises(Exception):
+#         check_ocp_units(sigma)
 
-    sigma.independent('t', 's')
-    sigma.initial_cost('x', 'm')
-    sigma.path_cost('x', 'm/s')
-    sigma.terminal_cost('x', 'm/s')
-    with pytest.raises(Exception):
-        check_ocp_units(sigma)
+#     sigma.independent('t', 's')
+#     sigma.initial_cost('x', 'm')
+#     sigma.path_cost('x', 'm/s')
+#     sigma.terminal_cost('x', 'm/s')
+#     with pytest.raises(Exception):
+#         check_ocp_units(sigma)
 
 
 # def test_make_augmented_cost():

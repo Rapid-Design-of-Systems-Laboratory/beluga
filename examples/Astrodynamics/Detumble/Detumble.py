@@ -85,7 +85,7 @@ continuation_steps.add_step('bisection') \
                 .const('epsilon1', 1e-6)
 
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,

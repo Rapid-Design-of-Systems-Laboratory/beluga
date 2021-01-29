@@ -54,10 +54,10 @@ class MomentumShiftMapper(SolMapper):
             self.ind_state_idx = np.shape(sol.y)[1] - 1
 
         sol.t = sol.y[:, self.ind_state_idx]
-        np.delete(sol.y, self.ind_state_idx, axis=1)
+        sol.y = np.delete(sol.y, self.ind_state_idx, axis=1)
 
         sol.dual_t = sol.dual[:, self.ind_state_idx]
-        np.delete(sol.dual, self.ind_state_idx, axis=1)
+        sol.dual = np.delete(sol.dual, self.ind_state_idx, axis=1)
 
         return sol
 
@@ -138,8 +138,9 @@ class DualizeMapper(SolMapper):
 
         if not retain_dual:
             sol.dual = empty_array
-            sol.nondynamical_parameters = empty_array
-
+        
+        sol.nondynamical_parameters = empty_array
+        
         sol.cost = self.compute_cost(
             sol.t, sol.y, sol.q, sol.u, sol.dynamical_parameters, sol.const)
 
@@ -351,14 +352,12 @@ class SquashToBVPMapper(SolMapper):
         self.constraint_adjoints_idxs = constraint_adjoints_idxs
 
     def map(self, sol: Solution) -> Solution:
-
         if len(sol.dual) > 0:
             sol.y = np.concatenate((sol.y, sol.dual), axis=1)
 
         return sol
 
     def inv_map(self, sol: Solution) -> Solution:
-
         sol.dual = sol.y[:, self.costate_idxs]
         sol.y = np.delete(sol.y, self.costate_idxs, axis=1)
         sol.nondynamical_parameters = np.delete(sol.nondynamical_parameters, self.constraint_adjoints_idxs)

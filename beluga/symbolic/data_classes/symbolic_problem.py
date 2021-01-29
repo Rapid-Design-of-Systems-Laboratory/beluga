@@ -5,7 +5,7 @@ from beluga.numeric.compilation import LocalCompiler
 from .components_structures import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
                                     NamedExpressionStruct, DimensionalExpressionStruct,
                                     NamedDimensionalExpressionStruct, CostStruct, FunctionStruct, TableStruct,
-                                    SwitchStruct, SymmetryStruct, PathConstraintStruct)
+                                    SwitchStruct, SymmetryStruct, ConstraintStruct)
 
 
 class Problem:
@@ -114,21 +114,23 @@ class Problem:
         self.check_for_duplicate(name)
         self.controls.append(NamedDimensionalStruct(name, units, local_compiler=self.local_compiler))
         return self
-
-    def initial_constraint(self, expr, units):
+    
+    def initial_constraint(self, expr, units, lower=None, upper=None, activator=None, method='utm'):
         self.constraints['initial'].append(
-            DimensionalExpressionStruct(expr, units, local_compiler=self.local_compiler))
+            ConstraintStruct(expr, units, lower, upper, activator,
+                                 method=method, local_compiler=self.local_compiler))
         return self
 
     def path_constraint(self, expr, units, lower, upper, activator, method='utm'):
         self.constraints['path'].append(
-            PathConstraintStruct(expr, units, lower, upper, activator,
+            ConstraintStruct(expr, units, lower, upper, activator,
                                  method=method, local_compiler=self.local_compiler))
         return self
-
-    def terminal_constraint(self, expr, units):
+    
+    def terminal_constraint(self, expr, units, lower=None, upper=None, activator=None, method='utm'):
         self.constraints['terminal'].append(
-            DimensionalExpressionStruct(expr, units, local_compiler=self.local_compiler))
+            ConstraintStruct(expr, units, lower, upper, activator,
+                                 method=method, local_compiler=self.local_compiler))
         return self
 
     def constraint_parameter(self, name, units):

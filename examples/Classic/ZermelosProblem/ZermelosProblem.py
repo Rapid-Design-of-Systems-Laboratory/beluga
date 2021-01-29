@@ -27,9 +27,10 @@ ocp.control('theta', 'rad')
 
 # Define constants
 ocp.constant('V', 10, 'm/s')
-ocp.constant('epsilon', 0.001, '1')
 ocp.constant('x_f', 0, 'm')
 ocp.constant('y_f', 0, 'm')
+ocp.constant('y_f_width', 2, 'm')
+ocp.constant('epsilon', 1e-2, '1')
 
 # Define costs
 ocp.path_cost('1', '1')
@@ -39,11 +40,10 @@ ocp.initial_constraint('x', 'm')
 ocp.initial_constraint('y', 'm')
 ocp.initial_constraint('t', 's')
 ocp.terminal_constraint('x-x_f', 'm')
-ocp.terminal_constraint('y-y_f', 'm')
+ocp.terminal_constraint('y-y_f', 'm', lower='-y_f_width', upper='y_f_width', activator='epsilon', method='utm')
 
 ocp.scale(m='x', s='x/V', rad=1)
 
-# bvp_solver = beluga.bvp_algorithm('Shooting')
 bvp_solver = beluga.bvp_algorithm('SPBVP')
 
 guess_maker = beluga.guess_generator(
@@ -66,9 +66,13 @@ continuation_steps.add_step('bisection') \
 
 continuation_steps.add_step('bisection') \
                 .num_cases(10) \
-                .const('epsilon', 1)
+                .const('y_f_width', 0.25)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+continuation_steps.add_step('bisection') \
+                .num_cases(20, 'log') \
+                .const('epsilon', 1e-8)
+
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,

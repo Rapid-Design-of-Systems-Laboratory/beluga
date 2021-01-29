@@ -8,6 +8,7 @@ import numpy as np
 from beluga.numeric.bvp_solvers import BaseAlgorithm, BVPResult
 from beluga.numeric.ivp_solvers import Propagator, reconstruct
 from beluga.numeric.data_classes.Trajectory import Trajectory
+from beluga.utils.logging import logger
 from scipy.sparse import coo_matrix, csc_matrix
 from scipy.sparse.linalg import splu
 from scipy.optimize.slsqp import approx_jacobian
@@ -738,11 +739,11 @@ class Shooting(BaseAlgorithm):
                 if err <= self.tolerance:
                     converged = True
                 if is_sparse:
-                    logging.beluga('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'
-                                   .format(n_iter, err, np.linalg.cond(jac.toarray())))
+                    logger.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'
+                                 .format(n_iter, err, np.linalg.cond(jac.toarray())))
                 else:
-                    logging.beluga('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'
-                                   .format(n_iter, err, np.linalg.cond(jac)))
+                    logger.debug('BVP Iter {}\tResidual {:13.8E}\tJacobian condition {:13.8E}'
+                                 .format(n_iter, err, np.linalg.cond(jac)))
 
         else:
             raise NotImplementedError('Method \'' + self.algorithm + '\' is not implemented.')
@@ -760,17 +761,17 @@ class Shooting(BaseAlgorithm):
                 gamma_set[ii].q[0] = q
         gamma_set = _gamma_maker(pick_deriv, pick_quad, gamma_set, parameter_guess, sol, prop, pool, n_quads)
 
-        if n_iter > self.max_iterations:
-            message = 'Max iterations exceeded.'
-
-        if err > self.max_error:
-            message = 'Error exceeded max_error.'
-
         if err < self.tolerance and converged:
             if n_iter == -1:
                 message = "Converged in an unknown number of iterations."
             else:
                 message = "Converged in " + str(n_iter) + " iterations."
+        elif n_iter > self.max_iterations:
+            message = 'Max iterations exceeded.'
+        elif err > self.max_error:
+            message = 'Error exceeded max_error.'
+        else:
+            message = 'Solver stopped for unspecified reason'
 
         # Stitch the arcs together to make a single trajectory, removing the boundary points inbetween each arc
         t_out = gamma_set[0].t

@@ -122,7 +122,7 @@ class GuessGenerator(object):
         elif len(param_guess) < len(solinit.dynamical_parameters):
             param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
         elif len(param_guess) > len(solinit.dynamical_parameters):
-            raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
+            raise ValueError('param_guess too big. Maximum width allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
         logging.debug('Generating initial guess by propagating: ')
@@ -201,7 +201,7 @@ class GuessGenerator(object):
         elif len(param_guess) < len(solinit.dynamical_parameters):
             param_guess += np.ones(len(solinit.dynamical_parameters) - len(param_guess))
         elif len(param_guess) > len(solinit.dynamical_parameters):
-            raise ValueError('param_guess too big. Maximum length allowed is ' + str(len(solinit.aux['parameters'])))
+            raise ValueError('param_guess too big. Maximum width allowed is ' + str(len(solinit.aux['parameters'])))
         nondynamical_param_guess = np.ones(len(solinit.nondynamical_parameters))
 
         logging.debug('Generating initial guess by propagating: ')
