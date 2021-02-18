@@ -194,7 +194,7 @@ class AlgebraicControlMapper(SolMapper):
             raise RuntimeError
 
         elif num_options == 1:
-            compiled_option = prob.lambdify(_args, [*prob.control_law.values()])
+            compiled_option = prob.lambdify(_args, prob.control_law[0])
 
             def calc_u(_t, _y, _lam, _p, _k):
                 return np.array(compiled_option(_t, _y, _lam, _p, _k))
