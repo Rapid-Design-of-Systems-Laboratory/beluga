@@ -212,6 +212,7 @@ class AlgebraicControlMapper(SolMapper):
                     ham_i = ham_func(_t, _y, _lam, u_set[n, :], _p, _k)
                     if ham_i < ham:
                         u = u_set[n, :]
+                        ham = ham_i
 
                 return u
 

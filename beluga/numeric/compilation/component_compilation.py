@@ -30,6 +30,7 @@ def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify)
                 ham_i = ham_func(_y, u_set[n, :], _p, _k)
                 if ham_i < ham:
                     u = u_set[n, :]
+                    ham = ham_i
 
             return u
 
