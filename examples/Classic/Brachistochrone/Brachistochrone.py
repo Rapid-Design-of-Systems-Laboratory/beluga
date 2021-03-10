@@ -9,9 +9,9 @@ ocp = beluga.Problem()
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v*cos(theta)', 'm') \
-   .state('y', 'v*sin(theta)', 'm') \
-   .state('v', 'g*sin(theta)', 'm/s')
+ocp.state('x', 'v*cos(theta)', 'm')
+ocp.state('y', 'v*sin(theta)', 'm')
+ocp.state('v', 'g*sin(theta)', 'm/s')
 
 ocp.symmetry(['1', '0', '0'], 'm')
 ocp.symmetry(['0', '1', '0'], 'm')
