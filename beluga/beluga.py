@@ -1,40 +1,16 @@
+import logging
 import sys
-import warnings
 import copy
 import time
 import pathos
-import logging
 import numpy as np
 
-from beluga.utils.logging import logger
-from beluga.release import __splash__
+from beluga.utils.logging import logger, make_a_splash
 from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
-from beluga.utils import save, init_logging
+from beluga.utils import save
 from beluga.symbolic_manipulation.data_classes.components_structures import getattr_from_list
 from beluga.symbolic_manipulation.data_classes.mapping_functions import compile_direct, compile_indirect
 from beluga.continuation import run_continuation_set, match_constants_to_states
-
-
-def add_logger(display_level=logging.INFO, file_level=logging.DEBUG, filename='beluga.log'):
-    """
-    Attaches a logger to beluga's main process.
-
-    :keyword display_level: The level at which logging is displayed to stdout.
-    :keyword file_level: The level at which logging is written to the output file.
-    :keyword filename: Name of the log file. Default is `beluga.log`.
-    :return: None
-
-    .. seealso::
-            logging.FileHandler
-    """
-    # Suppress warnings
-    # warnings.filterwarnings("ignore")
-    #
-    # # logfile options for logging.FileHandler
-    # config = {'filename': 'beluga.log', 'mode': 'w'}
-    # config.update(kwargs)
-
-    init_logging(display_level=display_level, file_level=file_level, filename=filename)
 
 
 def solve(
@@ -52,61 +28,11 @@ def solve(
         steps=None,
         save_sols=True):
 
-    """
-    Solves the OCP using specified method
-
-    +------------------------+-----------------+---------------------------------------+
-    | Valid kwargs           | Default Value   | Valid Values                          |
-    +========================+=================+=======================================+
-    | autoscale              | True            | bool                                  |
-    +------------------------+-----------------+---------------------------------------+
-    | prob                    | None            | codegen'd BVPs                        |
-    +------------------------+-----------------+---------------------------------------+
-    | bvp_algorithm          | None            | prob algorithm                         |
-    +------------------------+-----------------+---------------------------------------+
-    | guess_generator        | None            | guess generator                       |
-    +------------------------+-----------------+---------------------------------------+
-    | initial_helper         | False           | bool                                  |
-    +------------------------+-----------------+---------------------------------------+
-    | method                 | 'traditional'   | string                                |
-    +------------------------+-----------------+---------------------------------------+
-    | n_cpus                 | 1               | integer                               |
-    +------------------------+-----------------+---------------------------------------+
-    | ocp                    | None            | :math:`\\Sigma`                       |
-    +------------------------+-----------------+---------------------------------------+
-    | ocp_map                | None            | :math:`\\gamma \rightarrow \\gamma`   |
-    +------------------------+-----------------+---------------------------------------+
-    | ocp_map_inverse        | None            | :math:`\\gamma \rightarrow \\gamma`   |
-    +------------------------+-----------------+---------------------------------------+
-    | optim_options          | None            | dict()                                |
-    +------------------------+-----------------+---------------------------------------+
-    | steps                  | None            | continuation_strategy                 |
-    +------------------------+-----------------+---------------------------------------+
-    | save                   | False           | bool, str                             |
-    +------------------------+-----------------+---------------------------------------+
-
-    """
-
     if optim_options is None:
         optim_options = {}
 
-    # Display useful info about the environment to debug logger.
-    logger.debug('\n'+__splash__+'\n')
-    from beluga import __version__ as beluga_version
-    from llvmlite import __version__ as llvmlite_version
-    from numba import __version__ as numba_version
-    from numpy import __version__ as numpy_version
-    from scipy import __version__ as scipy_version
-    from sympy.release import __version__ as sympy_version
-
-    logger.debug('beluga:\t\t' + str(beluga_version))
-    logger.debug('llvmlite:\t' + str(llvmlite_version))
-    logger.debug('numba:\t\t' + str(numba_version))
-    logger.debug('numpy:\t\t' + str(numpy_version))
-    logger.debug('python:\t\t'
-                 + str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]))
-    logger.debug('scipy:\t\t' + str(scipy_version))
-    logger.debug('sympy:\t\t' + str(sympy_version) + '\n\n')
+    if logger.level <= logging.DEBUG:
+        logger.debug(make_a_splash())
 
     """
     Error checking
