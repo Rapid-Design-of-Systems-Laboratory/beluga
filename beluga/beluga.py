@@ -8,10 +8,10 @@ import numpy as np
 
 from beluga.utils.logging import logger
 from beluga.release import __splash__
-from beluga.numeric.data_classes.Trajectory import Trajectory
+from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
 from beluga.utils import save, init_logging
-from beluga.symbolic.data_classes.components_structures import getattr_from_list
-from beluga.symbolic.data_classes.mapping_functions import compile_direct, compile_indirect
+from beluga.symbolic_manipulation.data_classes.components_structures import getattr_from_list
+from beluga.symbolic_manipulation.data_classes.mapping_functions import compile_direct, compile_indirect
 from beluga.continuation import run_continuation_set, match_constants_to_states
 
 

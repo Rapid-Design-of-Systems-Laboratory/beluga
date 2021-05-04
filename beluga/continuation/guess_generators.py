@@ -5,10 +5,10 @@ import numpy as np
 import copy
 
 import beluga
-from beluga.numeric.ivp_solvers import Propagator
-from beluga.numeric.data_classes import Trajectory
-from beluga.symbolic.data_classes.symbolic_problem import Problem
-from beluga.symbolic.data_classes.components_structures import getattr_from_list
+from beluga.numeric_solvers.ivp_solvers import Propagator
+from beluga.numeric_solvers.data_classes import Trajectory
+from beluga.symbolic_manipulation.data_classes.symbolic_problem import Problem
+from beluga.symbolic_manipulation.data_classes.components_structures import getattr_from_list
 
 
 def guess_generator(*args, **kwargs):

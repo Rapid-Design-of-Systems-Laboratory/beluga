@@ -16,8 +16,8 @@ with open('requirements_dev.txt') as f:
 long_description = '''beluga is a general purpose indirect trajectory optimization framework.'''
 
 modules = ['beluga.continuation',
-           'beluga.numeric',
-           'beluga.symbolic',
+           'beluga.compilation',
+           'beluga.symbolic_manipulation',
            'beluga.utils']
 
 # tests = ['beluga.bvp_solvers.tests',

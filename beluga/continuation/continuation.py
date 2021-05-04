@@ -11,8 +11,8 @@ import sys
 
 from tqdm import tqdm
 
-from beluga.symbolic import Problem
-from beluga.symbolic.data_classes.components_structures import getattr_from_list
+from beluga.symbolic_manipulation import Problem
+from beluga.symbolic_manipulation.data_classes.components_structures import getattr_from_list
 from beluga.utils.logging import logger, fit_string
 
 
