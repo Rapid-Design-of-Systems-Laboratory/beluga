@@ -33,7 +33,10 @@ def add_logger(display_level: int = logging.INFO, file_level: int = logging.NOTS
     if suppress_warinings:
         warnings.filterwarnings("ignore")
 
-    logging_level = min(display_level, file_level)
+    if display_level > logging.NOTSET and file_level > logging.NOTSET:
+        logging_level = min(display_level, file_level)
+    else:
+        logging_level = max(display_level, file_level, logging.NOTSET)
 
     beluga_logger = logging.getLogger('beluga')
     beluga_logger.setLevel(logging_level)
@@ -42,11 +45,12 @@ def add_logger(display_level: int = logging.INFO, file_level: int = logging.NOTS
 
     beluga_logger.handlers = []
 
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(display_level)
-    ch_formatter = logging.Formatter('%(filename)s:%(lineno)d: %(message)s')
-    ch.setFormatter(ch_formatter)
-    beluga_logger.addHandler(ch)
+    if display_level > logging.NOTSET:
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(display_level)
+        ch_formatter = logging.Formatter('%(filename)s:%(lineno)d: %(message)s')
+        ch.setFormatter(ch_formatter)
+        beluga_logger.addHandler(ch)
 
     if file_level > logging.NOTSET:
         config = {'filename': filename, 'mode': 'w', 'delay': True}
