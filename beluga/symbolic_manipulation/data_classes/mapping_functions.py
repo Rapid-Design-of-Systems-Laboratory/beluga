@@ -2,6 +2,7 @@ import numpy as np
 import sympy
 import copy
 import logging
+from itertools import permutations
 
 from beluga.utils import recursive_sub
 from beluga.symbolic_manipulation.data_classes.symbolic_problem import Problem
@@ -34,14 +35,26 @@ def ensure_dualized(prob):
 def apply_quantities(prob: Problem):
     ensure_sympified(prob)
 
-    # TODO Find a more elegant solution to this
-    for quantity_i in prob.quantities:
-        for quantity_j in prob.quantities:
-            if quantity_i.sym in quantity_j.free_symbols:
-                quantity_j.subs_self(quantity_i.sym, quantity_i.expr)
+    ensure_sympified(prob)
 
-    for quantity in prob.quantities:
+    if len(prob.quantities) == 0:
+        return prob
+
+    quantities = prob.quantities
+
+    dependencies = []
+    for quantity_i, quantity_j in permutations(quantities, 2):
+        if quantity_i.expr.has(quantity_j.sym):
+            dependencies.append((quantity_i, quantity_j))
+
+    try:
+        ordered_quantities = sympy.topological_sort((quantities, dependencies), key=lambda _q: _q.name)
+    except ValueError:
+        raise ValueError('Cycle found in dependencies in quantities.')
+
+    for quantity in ordered_quantities:
         prob.subs_all(quantity.sym, quantity.expr)
+        prob.quantities.remove(quantity)
 
     # TODO add quantity calculation to Trajectory class
 
