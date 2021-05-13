@@ -1,11 +1,10 @@
 from typing import Iterable, Union
 import logging
 
-from beluga.compilation import LocalCompiler
+from beluga.compilation import set_compiler
 from .components_structures import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
-                                    NamedExpressionStruct, DimensionalExpressionStruct,
-                                    NamedDimensionalExpressionStruct, CostStruct, FunctionStruct, TableStruct,
-                                    SwitchStruct, SymmetryStruct, ConstraintStruct)
+                                    NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct,
+                                    TableStruct, SwitchStruct, SymmetryStruct, ConstraintStruct)
 
 
 class Problem:
@@ -18,12 +17,11 @@ class Problem:
         else:
             self.name = name
 
-        self.local_compiler = LocalCompiler()
+        self.local_compiler = set_compiler(name)
         self.sol_map_chain = []
-        # self.solution_set = SolSet()
         self.solution_set = []
 
-        self.independent_variable = NamedDimensionalStruct('_t', '1', local_compiler=self.local_compiler)
+        self.independent_variable = NamedDimensionalStruct('_t', '1')
 
         self.states = []
         self.costates = []
@@ -37,7 +35,7 @@ class Problem:
         self.constraints = {'initial': [], 'path': [], 'terminal': []}
         self.constraint_parameters = []
         self.constraint_adjoints = []
-        self.cost = CostStruct(local_compiler=self.local_compiler)
+        self.cost = CostStruct()
 
         self.constants = []
         self.quantities = []
@@ -87,99 +85,97 @@ class Problem:
 
     def independent(self, name, units):
         self.check_for_duplicate(name)
-        self.independent_variable = NamedDimensionalStruct(name, units, local_compiler=self.local_compiler)
+        self.independent_variable = NamedDimensionalStruct(name, units)
         return self
 
     def state(self, name, eom, units):
         self.check_for_duplicate(name)
-        self.states.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
+        self.states.append(DynamicStruct(name, eom, units))
         return self
 
     def costate(self, name, eom, units):
         self.check_for_duplicate(name)
-        self.costates.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
+        self.costates.append(DynamicStruct(name, eom, units))
         return self
 
     def parameter(self, name, units):
         self.check_for_duplicate(name)
-        self.parameters.append(NamedDimensionalStruct(name, units, local_compiler=self.local_compiler))
+        self.parameters.append(NamedDimensionalStruct(name, units))
         return self
 
     def coparameter(self, name, eom, units):
         self.check_for_duplicate(name)
-        self.coparameters.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
+        self.coparameters.append(DynamicStruct(name, eom, units))
         return self
 
     def control(self, name, units):
         self.check_for_duplicate(name)
-        self.controls.append(NamedDimensionalStruct(name, units, local_compiler=self.local_compiler))
+        self.controls.append(NamedDimensionalStruct(name, units))
         return self
     
     def initial_constraint(self, expr, units, lower=None, upper=None, activator=None, method='utm'):
         self.constraints['initial'].append(
             ConstraintStruct(expr, units, lower, upper, activator,
-                                 method=method, local_compiler=self.local_compiler))
+                                 method=method))
         return self
 
     def path_constraint(self, expr, units, lower, upper, activator, method='utm'):
         self.constraints['path'].append(
             ConstraintStruct(expr, units, lower, upper, activator,
-                                 method=method, local_compiler=self.local_compiler))
+                                 method=method))
         return self
     
     def terminal_constraint(self, expr, units, lower=None, upper=None, activator=None, method='utm'):
         self.constraints['terminal'].append(
             ConstraintStruct(expr, units, lower, upper, activator,
-                                 method=method, local_compiler=self.local_compiler))
+                                 method=method))
         return self
 
     def constraint_parameter(self, name, units):
-        self.constraint_parameters.append(NamedDimensionalStruct(name, units, local_compiler=self.local_compiler))
+        self.constraint_parameters.append(NamedDimensionalStruct(name, units))
         return self
 
     def constant(self, name, default_value, units):
         self.check_for_duplicate(name)
-        self.constants.append(Constant(name, default_value, units, local_compiler=self.local_compiler))
+        self.constants.append(Constant(name, default_value, units))
         return self
 
     def quantity(self, name, expr):
         self.check_for_duplicate(name)
-        self.quantities.append(NamedExpressionStruct(name, expr, local_compiler=self.local_compiler))
+        self.quantities.append(NamedExpressionStruct(name, expr))
         return self
 
     def custom_function(self, name, func, func_units, arg_units):
         self.check_for_duplicate(name)
         self.custom_functions.append(
-            FunctionStruct(name, func, func_units, arg_units,
-                           local_compiler=self.local_compiler, dim_consistent=True))
+            FunctionStruct(name, func, func_units, arg_units, dim_consistent=True))
         return self
 
     def table(self, name, kind, ret_data, arg_data, table_units, arg_units):
         self.check_for_duplicate(name)
         self.tables.append(
-            TableStruct(name, kind, ret_data, arg_data, table_units, arg_units,
-                        local_compiler=self.local_compiler, dim_consistent=True))
+            TableStruct(name, kind, ret_data, arg_data, table_units, arg_units, dim_consistent=True))
         return self
 
     def switch(self, name, functions, conditions, activator):
         self.check_for_duplicate(name)
         self.switches.append(
-            SwitchStruct(name, functions, conditions, activator, local_compiler=self.local_compiler))
+            SwitchStruct(name, functions, conditions, activator))
         return self
 
     def quad(self, name, eom, units):
         self.check_for_duplicate(name)
-        self.quads.append(DynamicStruct(name, eom, units, local_compiler=self.local_compiler))
+        self.quads.append(DynamicStruct(name, eom, units))
         return self
 
     def symmetry(self, field, units, remove=True):
-        self.symmetries.append(SymmetryStruct(field, units, remove=remove, local_compiler=self.local_compiler))
+        self.symmetries.append(SymmetryStruct(field, units, remove=remove))
         return self
 
     def constant_of_motion(self, name, expr, units):
         self.check_for_duplicate(name)
         self.constants_of_motion.append(
-            NamedDimensionalExpressionStruct(name, expr, units, local_compiler=self.local_compiler))
+            NamedDimensionalExpressionStruct(name, expr, units))
         return self
 
     def initial_cost(self, expr, units):
@@ -199,13 +195,12 @@ class Problem:
 
     # TODO Rename cost
     def set_cost(self, initial=None, path=None, terminal=None, units=None):
-        self.cost = CostStruct(initial=initial, path=path, terminal=terminal, units=units,
-                               local_compiler=self.local_compiler)
+        self.cost = CostStruct(initial=initial, path=path, terminal=terminal, units=units)
 
     def scale(self, **kwargs):
         for name in kwargs.keys():
             self.check_for_duplicate(name)
-            self.units.append(NamedExpressionStruct(name, kwargs[name], local_compiler=self.local_compiler))
+            self.units.append(NamedExpressionStruct(name, kwargs[name]))
         return self
 
     """

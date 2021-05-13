@@ -2,13 +2,13 @@ from sympy import Function
 from sympy.core.function import ArgumentIndexError
 from collections.abc import Iterable
 import inspect
+from beluga.compilation.compiler import jit_compile_func, add_function_local
 from beluga.utils.numerical_derivatives import gen_num_diff
-from beluga.compilation.component_compilation import jit_compile_func
 from numba.core.registry import CPUDispatcher
 
 
 class CustomFunctionGenerator(object):
-    def __init__(self, base_func, name=None, arg_types=None, local_compiler=None, deriv_list=None, order=None,
+    def __init__(self, base_func, name=None, arg_types=None, deriv_list=None, order=None,
                  num_deriv_type='c_diff'):
 
         if arg_types is None:
@@ -22,7 +22,6 @@ class CustomFunctionGenerator(object):
             self.order = order
 
         self.deriv_list = deriv_list
-        self.local_compiler = local_compiler
         self.num_deriv_type = num_deriv_type
 
         if type(base_func) is CPUDispatcher:
@@ -36,8 +35,7 @@ class CustomFunctionGenerator(object):
             self.name = name
 
     def __call__(self, *args):
-        return CustomFunction(self.name, self.base_func, args, local_compiler=self.local_compiler, order=self.order,
-                              deriv_method=self.num_deriv_type)
+        return CustomFunction(self.name, self.base_func, args, order=self.order, deriv_method=self.num_deriv_type)
 
     def __repr__(self):
         return self.name
@@ -67,14 +65,13 @@ class CustomFunctionMeta(Function):
         if argindex <= self.nargs[0]:
             order = list(self.order)
             order[argindex - 1] += 1
-            return CustomFunction(self.base_name, self.base_func, self.arg_list,
-                                  order=tuple(order), local_compiler=self.local_compiler)
+            return CustomFunction(self.base_name, self.base_func, self.arg_list, order=tuple(order))
         else:
             raise ArgumentIndexError(self, argindex)
 
 
 class CustomFunction(Function):
-    def __new__(cls, base_name, base_func, arg_list, local_compiler=None, order=None, deriv_method='c_diff'):
+    def __new__(cls, base_name, base_func, arg_list, order=None, deriv_method='c_diff'):
 
         cls.check_args(arg_list, base_func)
 
@@ -87,9 +84,8 @@ class CustomFunction(Function):
             obj.eval_func = base_func
         else:
             obj.eval_func = gen_num_diff(base_func, order=order, method=deriv_method)
-        obj.local_compiler = local_compiler
-        if obj.local_compiler is not None:
-            obj.local_compiler.add_function_local(name, obj.eval_func)
+
+        add_function_local(name, obj.eval_func)
         obj.order = order
         return obj
 

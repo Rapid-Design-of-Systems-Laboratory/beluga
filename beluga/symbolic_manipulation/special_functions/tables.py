@@ -4,13 +4,14 @@ from sympy.core.function import ArgumentIndexError
 from numba import njit, float64, errors
 import logging
 
+from beluga.compilation.compiler import add_function_local
+
 
 # TODO Extend to N-dim tables
 class SymTableGenerator(object):
-    def __init__(self, table, local_compiler=None, order=None):
+    def __init__(self, table, order=None):
 
         self.table = table
-        self.local_compiler = local_compiler
 
         if order is None:
             self.order = 0
@@ -18,16 +19,15 @@ class SymTableGenerator(object):
             self.order = order
 
     def __call__(self, *args):
-        return SymTable(self.table, *args, local_compiler=self.local_compiler, order=self.order)
+        return SymTable(self.table, *args, order=self.order)
 
 
 class SymTableMeta(Function):
-    def __new__(cls, table, arg, local_compiler=None):
+    def __new__(cls, table, arg):
         obj = super(SymTableMeta, cls).__new__(cls, arg)
         obj.nargs = (1,)
         obj.order = 0
         obj.table = table
-        obj.local_compiler = local_compiler
         return obj
 
     @property
@@ -36,7 +36,7 @@ class SymTableMeta(Function):
 
     def fdiff(self, argindex=1):
         if argindex == 1:
-            return SymTable(self.table, self.args[0], order=self.order + 1, local_compiler=self.local_compiler)
+            return SymTable(self.table, self.args[0], order=self.order + 1)
         else:
             raise ArgumentIndexError(self, argindex)
 
@@ -45,13 +45,13 @@ class SymTableMeta(Function):
 
 
 class SymTable(SymTableMeta):
-    def __new__(cls, table, arg, local_compiler=None, order=0):
+    def __new__(cls, table, arg, order=0):
         name = cls.construct_name(str(table), str(arg), order)
-        obj = type(name, (SymTableMeta,), {})(table, arg, local_compiler=local_compiler)
+        obj = type(name, (SymTableMeta,), {})(table, arg)
         obj.table_func = table.form_eval_function(order)
-        obj.local_compiler = local_compiler
-        if obj.local_compiler is not None:
-            obj.local_compiler.add_function_local(name, obj.table_func)
+
+        add_function_local(name, obj.table_func)
+
         obj.order = order
         return obj
 

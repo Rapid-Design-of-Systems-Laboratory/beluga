@@ -3,7 +3,8 @@ import sympy
 
 from typing import Union, Callable, Collection, List, Iterable
 
-from beluga.compilation.LocalCompiler import LocalCompiler, jit_compile_func
+
+from beluga.compilation.compiler import sympify, jit_compile_func, add_symbolic_local, add_function_local
 from beluga.symbolic_manipulation.special_functions import custom_functions, tables
 
 # default_tol = 1e-4
@@ -12,9 +13,8 @@ sym_one = sympy.Integer(1)
 
 
 class GenericStruct:
-    def __init__(self, local_compiler: LocalCompiler = None):
-        if not(hasattr(self, 'local_compiler') and local_compiler is None):
-            self.local_compiler = local_compiler
+    def __init__(self):
+        pass
 
     @staticmethod
     def _ensure_list(item):
@@ -22,12 +22,6 @@ class GenericStruct:
             return list(item)
         else:
             return [item]
-
-    def _sympify_internal(self, expr: Union[str, Iterable, sympy.Basic]) -> Union[Iterable, sympy.Basic]:
-        if self.local_compiler is not None:
-            return self.local_compiler.sympify(expr)
-        else:
-            return sympy.sympify(expr)
 
     def sympify_self(self):
         return self
@@ -37,35 +31,34 @@ class GenericStruct:
 
 
 class NamedStruct(GenericStruct):
-    def __init__(self, name: str, local_compiler: LocalCompiler = None):
+    def __init__(self, name: str):
         # super(NamedParameter, self).__init__(local_compiler=local_compiler)
-        GenericStruct.__init__(self, local_compiler=local_compiler)
+        GenericStruct.__init__(self)
         self.name = name
 
         if not hasattr(self, 'sym'):
             self.sym = sympy.Symbol(self.name)
 
-            if self.local_compiler is not None:
-                self.local_compiler.add_symbolic_local(self.name, local=self.sym)
+            add_symbolic_local(self.name, local=self.sym)
 
     def __repr__(self):
         return self.name
 
 
 class DimensionalStruct(GenericStruct):
-    def __init__(self, units: str, local_compiler: LocalCompiler = None):
-        GenericStruct.__init__(self, local_compiler=local_compiler)
+    def __init__(self, units: str):
+        GenericStruct.__init__(self)
         self.units = units
 
     def sympify_self(self):
         GenericStruct.sympify_self(self)
-        self.units = self._sympify_internal(self.units)
+        self.units = sympify(self.units)
         return self
 
 
 class NamedDimensionalStruct(NamedStruct, DimensionalStruct):
-    def __init__(self, name: str, units: Union[str, sympy.Basic], local_compiler: LocalCompiler = None):
-        NamedStruct.__init__(self, name, local_compiler=local_compiler)
+    def __init__(self, name: str, units: Union[str, sympy.Basic]):
+        NamedStruct.__init__(self, name)
         DimensionalStruct.__init__(self, units)
 
     def sympify_self(self):
@@ -75,19 +68,19 @@ class NamedDimensionalStruct(NamedStruct, DimensionalStruct):
 
 
 class Constant(NamedDimensionalStruct):
-    def __init__(self, name: str, default_val: float, units: str, local_compiler: LocalCompiler = None):
-        super(Constant, self).__init__(name, units, local_compiler=local_compiler)
+    def __init__(self, name: str, default_val: float, units: str):
+        super(Constant, self).__init__(name, units)
         self.default_val = float(default_val)
 
 
 class DynamicStruct(NamedDimensionalStruct):
-    def __init__(self, name: str, eom: str, units: str, local_compiler: LocalCompiler = None):
-        super(DynamicStruct, self).__init__(name, units, local_compiler=local_compiler)
+    def __init__(self, name: str, eom: str, units: str):
+        super(DynamicStruct, self).__init__(name, units)
         self.eom = eom
 
     def sympify_self(self):
         super(DynamicStruct, self).sympify_self()
-        self.eom = self._sympify_internal(self.eom)
+        self.eom = sympify(self.eom)
         return self
 
     def subs_self(self, old, new):
@@ -97,14 +90,14 @@ class DynamicStruct(NamedDimensionalStruct):
 
 
 class ExpressionStruct(GenericStruct):
-    def __init__(self, expr: str, local_compiler: LocalCompiler = None):
-        GenericStruct.__init__(self, local_compiler=local_compiler)
+    def __init__(self, expr: str):
+        GenericStruct.__init__(self)
         self.expr = expr
         self.free_symbols = None
 
     def sympify_self(self):
         super(ExpressionStruct, self).sympify_self()
-        self.expr = self._sympify_internal(self.expr)
+        self.expr = sympify(self.expr)
         self.free_symbols = self.expr.free_symbols
         return self
 
@@ -118,8 +111,8 @@ class ExpressionStruct(GenericStruct):
 
 
 class NamedExpressionStruct(NamedStruct, ExpressionStruct):
-    def __init__(self, name: str, expr: str, local_compiler: LocalCompiler = None):
-        NamedStruct.__init__(self, name, local_compiler=local_compiler)
+    def __init__(self, name: str, expr: str):
+        NamedStruct.__init__(self, name)
         ExpressionStruct.__init__(self, expr)
 
     def sympify_self(self):
@@ -129,8 +122,8 @@ class NamedExpressionStruct(NamedStruct, ExpressionStruct):
 
 
 class DimensionalExpressionStruct(ExpressionStruct, DimensionalStruct):
-    def __init__(self, expr: str, units: str, local_compiler: LocalCompiler = None):
-        DimensionalStruct.__init__(self, units, local_compiler=local_compiler)
+    def __init__(self, expr: str, units: str):
+        DimensionalStruct.__init__(self, units)
         ExpressionStruct.__init__(self, expr)
 
     def sympify_self(self):
@@ -140,8 +133,8 @@ class DimensionalExpressionStruct(ExpressionStruct, DimensionalStruct):
 
 
 class NamedDimensionalExpressionStruct(NamedStruct, DimensionalStruct, ExpressionStruct):
-    def __init__(self, name: str, expr: str, units: str, local_compiler: LocalCompiler = None):
-        NamedStruct.__init__(self, name, local_compiler=local_compiler)
+    def __init__(self, name: str, expr: str, units: str):
+        NamedStruct.__init__(self, name, )
         DimensionalStruct.__init__(self, units)
         ExpressionStruct.__init__(self, expr)
 
@@ -154,9 +147,8 @@ class NamedDimensionalExpressionStruct(NamedStruct, DimensionalStruct, Expressio
 
 class CostStruct(DimensionalStruct):
     def __init__(self, initial: str = sym_zero, path: str = sym_zero, terminal: str = sym_zero,
-                 units: Union[str, sympy.Basic] = None, path_units: Union[str, sympy.Basic] = None,
-                 local_compiler: LocalCompiler = None):
-        super(CostStruct, self).__init__(units, local_compiler=local_compiler)
+                 units: Union[str, sympy.Basic] = None, path_units: Union[str, sympy.Basic] = None):
+        super(CostStruct, self).__init__(units, )
         self.initial = initial
         self.path = path
         self.terminal = terminal
@@ -164,10 +156,10 @@ class CostStruct(DimensionalStruct):
 
     def sympify_self(self):
         super(CostStruct, self).sympify_self()
-        self.initial = self._sympify_internal(self.initial)
-        self.path = self._sympify_internal(self.path)
-        self.terminal = self._sympify_internal(self.terminal)
-        self.path_units = self._sympify_internal(self.path_units)
+        self.initial = sympify(self.initial)
+        self.path = sympify(self.path)
+        self.terminal = sympify(self.terminal)
+        self.path_units = sympify(self.path_units)
 
     def subs_self(self, old, new):
         if not (hasattr(self.initial, 'subs_self') and hasattr(self.path, 'subs_self')
@@ -179,8 +171,7 @@ class CostStruct(DimensionalStruct):
 
     # noinspection PyUnresolvedReferences
     def check_path_units(self, independent_units):
-
-        independent_units = self._sympify_internal(independent_units)
+        independent_units = sympify(independent_units)
         self.sympify_self()
 
         if self.units is None and self.path_units is None:
@@ -197,8 +188,8 @@ class CostStruct(DimensionalStruct):
 
 
 class CallableStruct(NamedDimensionalStruct):
-    def __init__(self, name: str, units: str, arg_units: Collection, dim_consistent=False, local_compiler=None):
-        super(CallableStruct, self).__init__(name, units, local_compiler=local_compiler)
+    def __init__(self, name: str, units: str, arg_units: Collection, dim_consistent=False):
+        super(CallableStruct, self).__init__(name, units, )
 
         self.dim_consistent = dim_consistent
         self.arg_units = arg_units
@@ -206,12 +197,12 @@ class CallableStruct(NamedDimensionalStruct):
 
     def sympify_self(self):
         super(CallableStruct, self).sympify_self()
-        self.arg_units = self._sympify_internal(self.arg_units)
+        self.arg_units = sympify(self.arg_units)
 
 
 class FunctionStruct(CallableStruct):
     def __init__(self, name: str, func: Callable, units: str, arg_units: Collection,
-                 dim_consistent=False, local_compiler=None):
+                 dim_consistent=False):
 
         self.arg_types = ['scalar' for _ in arg_units]
 
@@ -220,18 +211,17 @@ class FunctionStruct(CallableStruct):
         else:
             self.func = jit_compile_func(func, self.arg_types)
             self.sym = custom_functions.CustomFunctionGenerator(
-                self.func, name=name, arg_types=self.arg_types, local_compiler=local_compiler)
+                self.func, name=name, arg_types=self.arg_types, )
 
-        local_compiler.add_symbolic_local(name, self.sym)
+        add_symbolic_local(name, self.sym)
         # local_compiler.add_function_local(name, self.func)
 
-        super(FunctionStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent,
-                                             local_compiler=local_compiler)
+        super(FunctionStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent)
 
 
 class TableStruct(CallableStruct):
     def __init__(self, name: str, table_type: str, data, arg_data, units: str, arg_units: Collection,
-                 dim_consistent=False, local_compiler=None):
+                 dim_consistent=False):
 
         self.table_type = table_type
         self.data = np.array(data, dtype=np.float)
@@ -247,19 +237,18 @@ class TableStruct(CallableStruct):
         if not self.dim_consistent:
             raise NotImplementedError('Dimensionally inconsistant tables not yet implemented')
         else:
-            self.sym = tables.SymTableGenerator(self.table, local_compiler=local_compiler)
+            self.sym = tables.SymTableGenerator(self.table, )
 
-        local_compiler.add_symbolic_local(name, self.sym)
+        add_symbolic_local(name, self.sym)
         # local_compiler.add_function_local(name, self.table)
 
-        super(TableStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent,
-                                          local_compiler=local_compiler)
+        super(TableStruct, self).__init__(name, units, arg_units, dim_consistent=dim_consistent)
 
 
 # TODO Refine the switch class with metaclass like tables and custom functions
 class SwitchStruct(NamedStruct):
-    def __init__(self, name: str, functions: Collection, conditions: Collection, tol_param: str, local_compiler=None):
-        super(SwitchStruct, self).__init__(name, local_compiler=local_compiler)
+    def __init__(self, name: str, functions: Collection, conditions: Collection, tol_param: str):
+        super(SwitchStruct, self).__init__(name, )
         self.functions = self._ensure_list(functions)
         self.conditions = self._ensure_list(conditions)
         self.tol_param = tol_param
@@ -268,9 +257,9 @@ class SwitchStruct(NamedStruct):
     def sympify_self(self):
         super(SwitchStruct, self).sympify_self()
 
-        self.functions = self._sympify_internal(self.functions)
-        self.conditions = self._sympify_internal(self.conditions)
-        self.tol_param = self._sympify_internal(self.tol_param)
+        self.functions = sympify(self.functions)
+        self.conditions = sympify(self.conditions)
+        self.tol_param = sympify(self.tol_param)
 
         # Make switching function using RASHS
         self.sym_func = sympy.Integer(0)
@@ -289,14 +278,14 @@ class SwitchStruct(NamedStruct):
 
 
 class SymmetryStruct(DimensionalStruct):
-    def __init__(self, field: Iterable[str], units, remove=True, local_compiler=None):
-        super(SymmetryStruct, self).__init__(units, local_compiler=local_compiler)
+    def __init__(self, field: Iterable[str], units, remove=True):
+        super(SymmetryStruct, self).__init__(units, )
         self.field = field
         self.remove = remove
 
     def sympify_self(self):
         super(SymmetryStruct, self).sympify_self()
-        self.field = self._sympify_internal(np.array(self.field))
+        self.field = sympify(np.array(self.field))
 
     def subs_self(self, old, new):
         if not hasattr(self.field, 'subs_self'):
@@ -305,9 +294,8 @@ class SymmetryStruct(DimensionalStruct):
 
 
 class ConstraintStruct(DimensionalExpressionStruct):
-    def __init__(self, expr: str, units: str, lower: str, upper: str, activator: str, method: str = 'utm',
-                 local_compiler: LocalCompiler = None):
-        super(ConstraintStruct, self).__init__(expr, units, local_compiler=local_compiler)
+    def __init__(self, expr: str, units: str, lower: str, upper: str, activator: str, method: str = 'utm'):
+        super(ConstraintStruct, self).__init__(expr, units)
         self.lower = lower
         self.upper = upper
         self.activator = activator
@@ -316,11 +304,11 @@ class ConstraintStruct(DimensionalExpressionStruct):
     def sympify_self(self):
         super(ConstraintStruct, self).sympify_self()
         if self.lower is not None:
-            self.lower = self._sympify_internal(self.lower)
+            self.lower = sympify(self.lower)
         if self.upper is not None:
-            self.upper = self._sympify_internal(self.upper)
+            self.upper = sympify(self.upper)
         if self.activator is not None:
-            self.activator = self._sympify_internal(self.activator)
+            self.activator = sympify(self.activator)
 
     def subs_self(self, old, new):
         self.sympify_self()

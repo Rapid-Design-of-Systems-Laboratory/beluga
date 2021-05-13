@@ -64,14 +64,13 @@ def momentum_shift(prob: Problem, new_ind_name=None):
 
     ind_var = prob.independent_variable
     new_state = DynamicStruct(
-        ind_var.name, sympy.Integer(1), ind_var.units, local_compiler=prob.local_compiler).sympify_self()
+        ind_var.name, sympy.Integer(1), ind_var.units).sympify_self()
     prob.states.append(new_state)
 
     if new_ind_name is None:
         new_ind_name = '_' + prob.independent_variable.name
 
-    prob.independent_variable = NamedDimensionalStruct(new_ind_name, ind_var.units,
-                                                       local_compiler=prob.local_compiler)
+    prob.independent_variable = NamedDimensionalStruct(new_ind_name, ind_var.units,)
     prob.independent_variable.sympify_self()
 
     for symmetry in prob.symmetries:
@@ -85,7 +84,7 @@ def momentum_shift(prob: Problem, new_ind_name=None):
     if independent_symmetry:
         prob.symmetries.append(
             SymmetryStruct([sympy.Integer(0)] * (len(prob.states) - 1) + [sympy.Integer(1)], new_state.units,
-                           remove=True, local_compiler=prob.local_compiler))
+                           remove=True))
 
     # Set solution mapper
     ind_state_idx = len(prob.states) - 1
@@ -110,7 +109,7 @@ def epstrig(prob: Problem):
         control_idx = control_syms.index(constraint.expr)
         new_control_name = '_' + str(constraint.expr) + '_trig'
         new_control = \
-            NamedDimensionalStruct(new_control_name, '1', local_compiler=prob.local_compiler).sympify_self()
+            NamedDimensionalStruct(new_control_name, '1').sympify_self()
         prob.controls[control_idx] = new_control
 
     else:
@@ -207,14 +206,14 @@ def dualize(prob: Problem, method='traditional'):
     for idx, constraint in enumerate(prob.constraints['initial']):
         nu_name = '_nu_0_{}'.format(idx)
         nu = NamedDimensionalStruct(
-            nu_name, prob.cost.units / constraint.units, local_compiler=prob.local_compiler).sympify_self()
+            nu_name, prob.cost.units / constraint.units).sympify_self()
         prob.constraint_adjoints.append(nu)
         prob.cost.initial += nu.sym * constraint.expr
 
     for idx, constraint in enumerate(prob.constraints['terminal']):
         nu_name = '_nu_f_{}'.format(idx)
         nu = NamedDimensionalStruct(
-            nu_name, prob.cost.units / constraint.units, local_compiler=prob.local_compiler).sympify_self()
+            nu_name, prob.cost.units / constraint.units).sympify_self()
         prob.constraint_adjoints.append(nu)
         prob.cost.terminal += nu.sym * constraint.expr
 
@@ -224,8 +223,7 @@ def dualize(prob: Problem, method='traditional'):
                                     / prob.independent_variable.units).sympify_self()
     for state in prob.states:
         lam_name = '_lam_{}'.format(state.name)
-        lam = DynamicStruct(lam_name, '0', prob.cost.units / state.units,
-                            local_compiler=prob.local_compiler).sympify_self()
+        lam = DynamicStruct(lam_name, '0', prob.cost.units / state.units).sympify_self()
         prob.costates.append(lam)
         prob.hamiltonian.expr += lam.sym * state.eom
 
@@ -239,8 +237,7 @@ def dualize(prob: Problem, method='traditional'):
         prob.coparameters.append(DynamicStruct(lam_name, '0', prob.cost.units / parameter.units))
 
     prob.constants_of_motion.append(
-        NamedDimensionalExpressionStruct('hamiltonian', prob.hamiltonian.expr, prob.hamiltonian.units,
-                                         local_compiler=prob.local_compiler).sympify_self())
+        NamedDimensionalExpressionStruct('hamiltonian', prob.hamiltonian.expr, prob.hamiltonian.units).sympify_self())
 
     if method.lower() == 'traditional':
         for state, costate in zip(prob.states + prob.parameters, prob.costates + prob.coparameters):
@@ -263,21 +260,21 @@ def dualize(prob: Problem, method='traditional'):
     for state, costate in zip(prob.states + prob.parameters, prob.costates + prob.coparameters):
         constraint_expr = costate.sym + prob.cost.initial.diff(state.sym)
         prob.constraints['initial'].append(
-            DimensionalExpressionStruct(constraint_expr, costate.units, local_compiler=prob.local_compiler))
+            DimensionalExpressionStruct(constraint_expr, costate.units))
 
         constraint_expr = costate.sym - prob.cost.terminal.diff(state.sym)
         prob.constraints['terminal'].append(
-            DimensionalExpressionStruct(constraint_expr, costate.units, local_compiler=prob.local_compiler))
+            DimensionalExpressionStruct(constraint_expr, costate.units))
 
     # TODO: Check Placement of Hamiltonian Constraint Placement
     # Make time/Hamiltonian constraints
     # constraint_expr = prob.cost.initial.diff(prob.independent_variable.sym) - prob.hamiltonian.expr
     # prob.constraints['initial'].append(DimensionalExpressionStruct(
-    #         constraint_expr, prob.hamiltonian.units, local_compiler=prob.local_compiler))
+    #         constraint_expr, prob.hamiltonian.units))
 
     constraint_expr = prob.cost.terminal.diff(prob.independent_variable.sym) + prob.hamiltonian.expr
     prob.constraints['terminal'].append(DimensionalExpressionStruct(
-        constraint_expr, prob.hamiltonian.units, local_compiler=prob.local_compiler))
+        constraint_expr, prob.hamiltonian.units))
 
     prob.sol_map_chain.append(DualizeMapper(len(prob.costates), len(prob.constraint_adjoints), ocp))
 
@@ -325,7 +322,7 @@ def differential_control_law(prob: Problem, method='traditional'):
 
     for g_k, control in zip(g, prob.controls):
         constraint = DimensionalExpressionStruct(
-            g_k, prob.hamiltonian.units / control.units, local_compiler=prob.local_compiler)
+            g_k, prob.hamiltonian.units / control.units)
         prob.constraints['terminal'].append(constraint)
 
     control_idxs = []
@@ -333,8 +330,7 @@ def differential_control_law(prob: Problem, method='traditional'):
         for control_rate in u_dot:
             control = prob.controls.pop(0)
             control_idxs.append(len(prob.states))
-            prob.states.append(DynamicStruct(control.name, control_rate, control.units,
-                                             local_compiler=prob.local_compiler).sympify_self())
+            prob.states.append(DynamicStruct(control.name, control_rate, control.units).sympify_self())
 
         prob.sol_map_chain.append(DifferentialControlMapper(control_idxs=control_idxs))
 
@@ -343,11 +339,9 @@ def differential_control_law(prob: Problem, method='traditional'):
         control_costates = []
         for control, control_rate in zip(prob.controls, u_dot):
             control_idxs.append(len(prob.states))
-            prob.states.append(DynamicStruct(control.name, control_rate, control.units,
-                                             local_compiler=prob.local_compiler).sympify_self())
+            prob.states.append(DynamicStruct(control.name, control_rate, control.units).sympify_self())
             lam_name = '_lam_{}'.format(control.name)
-            lam = DynamicStruct(lam_name, '0', prob.cost.units / control.units,
-                                local_compiler=prob.local_compiler).sympify_self()
+            lam = DynamicStruct(lam_name, '0', prob.cost.units / control.units).sympify_self()
             prob.costates.append(lam)
             control_costates.append(lam)
 
@@ -370,7 +364,7 @@ def differential_control_law(prob: Problem, method='traditional'):
 
         for lam_u in control_costates:
             prob.constraints['initial'].append(
-                DimensionalExpressionStruct(lam_u.sym, lam_u.units, local_compiler=prob.local_compiler))
+                DimensionalExpressionStruct(lam_u.sym, lam_u.units))
 
         prob.controls = []
 
@@ -457,7 +451,7 @@ def mf(prob: Problem, com_index):
     symmetry_unit = states_and_costates[symmetry_index].units
 
     prob.quads.append(
-        DynamicStruct(str(symmetry_symbol), symmetry_eom, symmetry_unit, local_compiler=prob.local_compiler))
+        DynamicStruct(str(symmetry_symbol), symmetry_eom, symmetry_unit))
 
     for idx, state in enumerate(states_and_costates):
         state.eom, _ = recursive_sub(state.eom, solve_for_p[0])
@@ -553,8 +547,7 @@ def normalize_time(prob: Problem, new_ind_name=None):
     ensure_sympified(prob)
 
     delta_t_name = '_delta' + prob.independent_variable.name
-    delta_t = NamedDimensionalStruct(delta_t_name, prob.independent_variable.units,
-                                     local_compiler=prob.local_compiler).sympify_self()
+    delta_t = NamedDimensionalStruct(delta_t_name, prob.independent_variable.units).sympify_self()
     prob.parameters.append(delta_t)
 
     _dynamic_structs = [prob.states, prob.costates]
@@ -567,7 +560,7 @@ def normalize_time(prob: Problem, new_ind_name=None):
     if new_ind_name is None:
         new_ind_name = '_tau'
     prob.independent_variable = \
-        NamedDimensionalStruct(new_ind_name, sym_one, local_compiler=prob.local_compiler).sympify_self()
+        NamedDimensionalStruct(new_ind_name, sym_one).sympify_self()
 
     # Set solution mapper
     delta_t_idx = len(prob.parameters) - 1
@@ -691,7 +684,7 @@ def compile_indirect(prob: Problem, analytical_jacobian=False, control_method='d
     
     for constraint in copy.copy(prob.constraints['initial'] + prob.constraints['path']
                                 + prob.constraints['terminal']):
-        if (constraint.lower is not None and constraint.upper is not None):
+        if constraint.lower is not None and constraint.upper is not None:
             if constraint.method.lower() == 'epstrig':
                 epstrig(prob)
             elif constraint.method.lower() == 'utm':
@@ -761,7 +754,7 @@ def compile_indirect(prob: Problem, analytical_jacobian=False, control_method='d
 def compile_problem(prob: Problem, use_control_arg=False):
     ensure_sympified(prob)
 
-    prob.functional_problem = NumericProblem(prob, local_compiler=prob.local_compiler)
+    prob.functional_problem = NumericProblem(prob)
 
     prob.functional_problem.compile_problem(use_control_arg=use_control_arg)
     prob.lambdified = True

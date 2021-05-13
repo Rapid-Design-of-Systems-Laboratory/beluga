@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.integrate import simps
 
-from beluga.compilation.jit import jit_lambdify, jit_compile_func
-from beluga.symbolic_manipulation.data_classes.components_structures import CostStruct
+from .jit import jit_lambdify, jit_compile_func
+from ..symbolic_manipulation.data_classes.components_structures import CostStruct
 
 
 def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify):

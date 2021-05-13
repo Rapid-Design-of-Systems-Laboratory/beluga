@@ -2,20 +2,15 @@ import numpy as np
 import copy
 
 from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
-from beluga.compilation import LocalCompiler, jit_compile_func, compile_control
+from beluga.compilation import jit_compile_func, compile_control, lambdify
 from beluga.symbolic_manipulation.data_classes.components_structures import extract_syms, getattr_from_list
 from beluga.utils.helper_functions import max_mag
 
 
 class NumericProblem:
-    def __init__(self, prob, local_compiler=None):
+    def __init__(self, prob):
 
-        if local_compiler is None:
-            self.local_compiler = LocalCompiler()
-        else:
-            self.local_compiler = local_compiler
-
-        self.lambdify = self.local_compiler.lambdify
+        self.lambdify = lambdify
 
         self.prob = prob
 
@@ -364,8 +359,6 @@ class NumericProblem:
         return self.initial_cost_func, self.path_cost_func, self.terminal_cost_func
 
     def compile_scaling(self):
-
-        lambdify = self.lambdify
 
         units = self.prob.units
         units_syms = getattr_from_list(units, 'sym')
