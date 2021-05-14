@@ -5,17 +5,20 @@ import logging
 from itertools import permutations
 
 from beluga.utils import recursive_sub
-from beluga.symbolic_manipulation.data_classes.symbolic_problem import Problem
-from beluga.symbolic_manipulation.data_classes.components_structures \
-    import (extract_syms, combine_component_lists, getattr_from_list, sym_one, sym_zero, NamedDimensionalStruct,
-            DynamicStruct, DimensionalExpressionStruct, NamedDimensionalExpressionStruct, SymmetryStruct)
-from beluga.symbolic_manipulation.differential_geometry \
+from beluga.data_classes.symbolic_problem import Problem
+from beluga.data_classes.compiled_problem import NumericProblem
+from beluga.data_classes.problem_components \
+    import extract_syms, combine_component_lists, getattr_from_list, sym_one, sym_zero, NamedDimensionalStruct,\
+    DynamicStruct, DimensionalExpressionStruct, NamedDimensionalExpressionStruct, SymmetryStruct
+from beluga.symbolic.differential_geometry \
     import make_standard_symplectic_form, make_hamiltonian_vector_field, noether, is_symplectic
-from beluga.numeric_solvers.data_classes.trajectory_mappers \
+from beluga.transforms.solution_functions.trajectory_mappers \
     import (MomentumShiftMapper, EpsTrigMapper, IdentityMapper, DualizeMapper, AlgebraicControlMapper, MF,
             DifferentialControlMapper, DifferentialControlMapperDiffyG, SquashToBVPMapper, NormalizeTimeMapper)
-from beluga.numeric_solvers.data_classes.NumericProblem import NumericProblem
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    pass
 
 """
 Functional Maps    

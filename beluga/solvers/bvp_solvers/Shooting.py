@@ -5,9 +5,9 @@ import logging
 from math import isclose
 import numpy as np
 
-from beluga.numeric_solvers.bvp_solvers import BaseAlgorithm, BVPResult
-from beluga.numeric_solvers.ivp_solvers import Propagator, reconstruct
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
+from beluga.solvers.bvp_solvers import BaseAlgorithm, BVPResult
+from beluga.solvers.ivp_solvers import Propagator, reconstruct
+from beluga.data_classes.trajectory import Trajectory
 from beluga.utils.logging import logger
 from scipy.sparse import coo_matrix, csc_matrix
 from scipy.sparse.linalg import splu
@@ -749,7 +749,7 @@ class Shooting(BaseAlgorithm):
             raise NotImplementedError('Method \'' + self.algorithm + '\' is not implemented.')
 
         """
-        Post symbolic_manipulation checks and formatting
+        Post symbolic checks and formatting
         """
 
         # Unwrap the solution from the solver to put in a readable format

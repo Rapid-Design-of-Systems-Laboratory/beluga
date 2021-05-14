@@ -2,9 +2,9 @@ from typing import Iterable, Union
 import logging
 
 from beluga.compilation import set_compiler
-from .components_structures import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
-                                    NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct,
-                                    TableStruct, SwitchStruct, SymmetryStruct, ConstraintStruct)
+from .problem_components import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
+                                 NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct,
+                                 TableStruct, SwitchStruct, SymmetryStruct, ConstraintStruct)
 
 
 class Problem:

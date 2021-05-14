@@ -1,5 +1,5 @@
-from beluga.numeric_solvers.bvp_solvers import BaseAlgorithm, BVPResult
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
+from beluga.solvers.bvp_solvers import BaseAlgorithm, BVPResult
+from beluga.data_classes.trajectory import Trajectory
 from scipy.integrate import solve_bvp
 # from ._bvp import *
 import numpy as np

@@ -1,5 +1,4 @@
 from .ivpsol import (Propagator, Algorithm, reconstruct, integrate_quads)
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
 
 import os
 import glob

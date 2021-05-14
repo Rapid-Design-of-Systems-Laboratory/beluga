@@ -1,4 +1,4 @@
-from beluga.numeric_solvers.ivp_solvers import Method
+from beluga.solvers.ivp_solvers import Method
 import numpy as np
 
 m = Method()

@@ -1,15 +1,14 @@
 import logging
-import sys
 import copy
 import time
 import pathos
 import numpy as np
 
 from beluga.utils.logging import logger, make_a_splash
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
+from beluga.data_classes.trajectory import Trajectory
 from beluga.utils import save
-from beluga.symbolic_manipulation.data_classes.components_structures import getattr_from_list
-from beluga.symbolic_manipulation.data_classes.mapping_functions import compile_direct, compile_indirect
+from beluga.data_classes.problem_components import getattr_from_list
+from beluga.transforms.problem_functions.problem_functions import compile_direct, compile_indirect
 from beluga.continuation import run_continuation_set, match_constants_to_states
 
 

@@ -2,7 +2,6 @@ import numpy as np
 from scipy.integrate import simps
 
 from .jit import jit_lambdify, jit_compile_func
-from ..symbolic_manipulation.data_classes.components_structures import CostStruct
 
 
 def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify):
@@ -36,7 +35,7 @@ def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify)
     return jit_compile_func(calc_u, args, func_name='control_function')
 
 
-def compile_cost(symbolic_cost: CostStruct, dynamic_args, bc_args, lambdify_func=jit_lambdify):
+def compile_cost(symbolic_cost, dynamic_args, bc_args, lambdify_func=jit_lambdify):
 
     compute_initial_cost = lambdify_func(bc_args, symbolic_cost.initial)
     compute_terminal_cost = lambdify_func(bc_args, symbolic_cost.terminal)

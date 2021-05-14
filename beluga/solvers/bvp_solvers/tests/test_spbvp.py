@@ -13,7 +13,7 @@ References
 
 import pytest
 from beluga.numeric.data_classes.Trajectory import Trajectory
-from beluga.numeric_solvers.bvp_solvers import SPBVP
+from beluga.solvers.bvp_solvers import SPBVP
 import numpy as np
 from scipy.special import erf
 import copy

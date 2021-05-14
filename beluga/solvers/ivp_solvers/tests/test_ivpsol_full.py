@@ -1,4 +1,4 @@
-from beluga.numeric_solvers.ivp_solvers import Propagator
+from beluga.solvers.ivp_solvers import Propagator
 import numpy as np
 from math import sin, cos, acos, sqrt
 

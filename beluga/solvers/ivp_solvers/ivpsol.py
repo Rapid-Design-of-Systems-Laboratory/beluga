@@ -10,7 +10,7 @@ from liepack.domain.liealgebras import rn
 from liepack import exp
 from liepack.field import VectorField
 
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
+from beluga.data_classes.trajectory import Trajectory
 
 
 class Algorithm(object):

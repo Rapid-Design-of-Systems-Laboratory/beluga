@@ -1,9 +1,9 @@
 import numpy as np
 import copy
 
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory
+from beluga.data_classes.trajectory import Trajectory
 from beluga.compilation import jit_compile_func, compile_control, lambdify
-from beluga.symbolic_manipulation.data_classes.components_structures import extract_syms, getattr_from_list
+from beluga.data_classes.problem_components import extract_syms, getattr_from_list
 from beluga.utils.helper_functions import max_mag
 
 

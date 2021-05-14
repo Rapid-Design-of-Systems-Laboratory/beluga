@@ -5,7 +5,7 @@ from typing import Union, Callable, Collection, List, Iterable
 
 
 from beluga.compilation.compiler import sympify, jit_compile_func, add_symbolic_local, add_function_local
-from beluga.symbolic_manipulation.special_functions import custom_functions, tables
+from beluga.symbolic.special_functions import custom_functions, tables
 
 # default_tol = 1e-4
 sym_zero = sympy.Integer(0)

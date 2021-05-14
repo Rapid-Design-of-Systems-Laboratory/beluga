@@ -17,7 +17,7 @@ long_description = '''beluga is a general purpose indirect trajectory optimizati
 
 modules = ['beluga.continuation',
            'beluga.compilation',
-           'beluga.symbolic_manipulation',
+           'beluga.symbolic',
            'beluga.utils']
 
 # tests = ['beluga.bvp_solvers.tests',

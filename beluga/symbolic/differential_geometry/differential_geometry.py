@@ -1,5 +1,5 @@
 """
-Base functions shared by all symbolic_manipulation methods.
+Base functions shared by all symbolic methods.
 """
 
 import numpy as np

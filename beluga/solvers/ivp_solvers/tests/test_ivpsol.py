@@ -1,4 +1,4 @@
-from beluga.numeric_solvers.ivp_solvers import Propagator, integrate_quads
+from beluga.solvers.ivp_solvers import Propagator, integrate_quads
 from beluga.numeric.data_classes.Trajectory import Trajectory
 import numpy as np
 from math import pi

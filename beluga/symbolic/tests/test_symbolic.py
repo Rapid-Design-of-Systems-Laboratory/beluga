@@ -5,7 +5,7 @@ import numpy as np
 import sympy
 
 from beluga import Problem
-from beluga.symbolic.data_classes.mapping_functions import compile_indirect
+from beluga.transforms.problem_functions.problem_functions import compile_indirect
 from beluga.symbolic.differential_geometry import exterior_derivative, make_standard_symplectic_form, is_symplectic
 from beluga.numeric.data_classes.Trajectory import Trajectory
 

@@ -4,11 +4,12 @@ import copy
 import sympy
 from typing import Iterable, Union
 
-from beluga.compilation import jit_compile_func, LocalCompiler
-from beluga.compilation.component_compilation import compile_control, compile_cost
-from beluga.numeric_solvers.data_classes.Trajectory import Trajectory as Solution
-from beluga.symbolic_manipulation.data_classes.symbolic_problem import Problem
-from beluga.symbolic_manipulation.data_classes.components_structures import extract_syms
+from beluga.compilation.jit import jit_compile_func
+from beluga.compilation.compilation_functions import compile_cost
+from beluga.compilation.compiler import get_active_compiler
+from beluga.data_classes.trajectory import Trajectory as Solution
+from beluga.data_classes.symbolic_problem import Problem
+from beluga.data_classes.problem_components import extract_syms
 
 
 empty_array = np.array([])
@@ -64,8 +65,7 @@ class MomentumShiftMapper(SolMapper):
 
 class EpsTrigMapper(SolMapper):
     def __init__(self, control_idx, lower_expr: sympy.Expr, upper_expr: sympy.Expr,
-                 ind_var_sym, state_syms, parameter_syms, constant_syms,
-                 local_compiler: LocalCompiler = None):
+                 ind_var_sym, state_syms, parameter_syms, constant_syms):
 
         self.control_idx = control_idx
 
@@ -74,10 +74,7 @@ class EpsTrigMapper(SolMapper):
 
         self.args = [ind_var_sym, state_syms, parameter_syms, constant_syms]
 
-        if local_compiler is None:
-            self.local_compiler = LocalCompiler()
-        else:
-            self.local_compiler = local_compiler
+        self.local_compiler = get_active_compiler()
 
         u = sympy.Symbol('_u')
         u_trig = sympy.Symbol('_u_trig')
