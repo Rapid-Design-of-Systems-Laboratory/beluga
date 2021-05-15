@@ -8,7 +8,7 @@ from beluga.utils.logging import logger, make_a_splash
 from beluga.data_classes.trajectory import Trajectory
 from beluga.utils import save
 from beluga.data_classes.problem_components import getattr_from_list
-from beluga.transforms.problem_functions.problem_functions import compile_direct, compile_indirect
+from beluga.mappings.recipes import compile_direct, compile_indirect
 from beluga.continuation import run_continuation_set, match_constants_to_states
 
 

@@ -6,13 +6,12 @@ from itertools import permutations
 
 from beluga.utils import recursive_sub
 from beluga.data_classes.symbolic_problem import Problem
-from beluga.data_classes.compiled_problem import NumericProblem
 from beluga.data_classes.problem_components \
     import extract_syms, combine_component_lists, getattr_from_list, sym_one, sym_zero, NamedDimensionalStruct,\
     DynamicStruct, DimensionalExpressionStruct, NamedDimensionalExpressionStruct, SymmetryStruct
 from beluga.symbolic.differential_geometry \
-    import make_standard_symplectic_form, make_hamiltonian_vector_field, noether, is_symplectic
-from beluga.transforms.solution_functions.trajectory_mappers \
+    import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
+from beluga.mappings.trajectory_mappings \
     import (MomentumShiftMapper, EpsTrigMapper, IdentityMapper, DualizeMapper, AlgebraicControlMapper, MF,
             DifferentialControlMapper, DifferentialControlMapperDiffyG, SquashToBVPMapper, NormalizeTimeMapper)
 
@@ -36,8 +35,6 @@ def ensure_dualized(prob):
 
 
 def apply_quantities(prob: Problem):
-    ensure_sympified(prob)
-
     ensure_sympified(prob)
 
     if len(prob.quantities) == 0:
@@ -601,165 +598,5 @@ def compute_analytical_jacobians(prob: Problem):
     if len(quads) > 0:
         prob.bc_jac['initial']['dbc_dq'] = phi_0.jacobian(quads)
         prob.bc_jac['terminal']['dbc_dq'] = phi_f.jacobian(quads)
-
-    return prob
-
-
-def compile_direct(prob: Problem, analytical_jacobian=True, reduction=False,
-                   do_momentum_shift=False, do_normalize_time=False):
-    ensure_sympified(prob)
-
-    """
-    Substitute Quantities
-    """
-    apply_quantities(prob)
-
-    """
-    Make time a state.
-    """
-    if do_momentum_shift:
-        momentum_shift(prob)
-
-    """
-    Deal with path constraints
-    """
-    for path_constraint in copy.copy(prob.constraints['path']):
-        if path_constraint.method.lower() == 'epstrig':
-            epstrig(prob)
-        elif path_constraint.method.lower() == 'utm':
-            utm(prob)
-        else:
-            raise NotImplementedError('Unknown path constraint method \"' + str(path_constraint.method) + '\"')
-
-    """
-    Deal with staging, switches, and their substitutions.
-    """
-    if len(prob.switches) > 0:
-        rashs(prob)
-
-    """
-    Scale eom to final time
-    """
-    if do_normalize_time:
-        normalize_time(prob)
-
-    """
-    Reduce if needed
-    """
-    if is_symplectic(prob.omega) and reduction:
-        while len(prob.constants_of_motion) > 1:
-            mf(prob, 1)
-
-    elif not is_symplectic(prob.omega) and reduction:
-        logging.warning('BVP is not symplectic. Skipping reduction.')
-
-    """
-    Form analytical jacobians
-    """
-    if analytical_jacobian:
-        compute_analytical_jacobians(prob)
-
-    compile_problem(prob)
-
-
-def compile_indirect(prob: Problem, analytical_jacobian=False, control_method='differential', method='traditional',
-                     reduction=False, do_momentum_shift=True, do_normalize_time=True):
-
-    ensure_sympified(prob)
-
-    if method.lower() in ['indirect', 'traditional', 'brysonho']:
-        method = 'traditional'
-
-    """
-    Substitute Quantities
-    """
-    apply_quantities(prob)
-
-    """
-    Make time a state.
-    """
-    if do_momentum_shift:
-        momentum_shift(prob)
-
-    """
-    Deal with constraints inequality constraints
-    """
-    
-    for constraint in copy.copy(prob.constraints['initial'] + prob.constraints['path']
-                                + prob.constraints['terminal']):
-        if constraint.lower is not None and constraint.upper is not None:
-            if constraint.method.lower() == 'epstrig':
-                epstrig(prob)
-            elif constraint.method.lower() == 'utm':
-                utm(prob)
-            else:
-                raise NotImplementedError(
-                    'Unknown path constraint method \"' + str(constraint.method) + '\"')
-
-    """
-    Deal with staging, switches, and their substitutions.
-    """
-    if len(prob.switches) > 0:
-        rashs(prob)
-
-    """
-    Dualize Problem
-    """
-    dualize(prob, method=method)
-
-    """
-    Form Control Law
-    """
-    if control_method.lower() == 'algebraic':
-        algebraic_control_law(prob)
-    elif control_method.lower() == 'differential':
-        differential_control_law(prob, method=method)
-    elif control_method.lower() == 'compilation':
-        raise NotImplementedError('Numerical control method not yet implemented')
-    else:
-        raise NotImplementedError('{} control method not implemented. Try differential or algebraic')
-
-    """
-    Scale eom to final time
-    """
-    if do_normalize_time:
-        normalize_time(prob)
-
-    """
-    Reduce if needed
-    """
-    if is_symplectic(prob.omega) and reduction:
-        while len(prob.constants_of_motion) > 1:
-            mf(prob, 1)
-
-    elif not is_symplectic(prob.omega) and reduction:
-        logging.warning('BVP is not symplectic. Skipping reduction.')
-
-    """
-    Squash dual problem to normal BVP
-    """
-    squash_to_bvp(prob)
-
-    """
-    Form analytical jacobians
-    """
-    if analytical_jacobian:
-        if control_method == 'algebraic':
-            logging.info('Analytical Jacobians not available for algebraic control mode')
-        else:
-            compute_analytical_jacobians(prob)
-
-    compile_problem(prob)
-
-    return prob
-
-
-def compile_problem(prob: Problem, use_control_arg=False):
-    ensure_sympified(prob)
-
-    prob.functional_problem = NumericProblem(prob)
-
-    prob.functional_problem.compile_problem(use_control_arg=use_control_arg)
-    prob.lambdified = True
 
     return prob
