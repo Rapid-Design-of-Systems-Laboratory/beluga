@@ -150,8 +150,8 @@ class NumericProblem:
 
     def compile_bc(self, use_quad_arg=False):
 
-        sym_initial_bc = getattr_from_list(self.prob.constraints['initial'], 'expr')
-        sym_terminal_bc = getattr_from_list(self.prob.constraints['terminal'], 'expr')
+        sym_initial_bc = getattr_from_list(self.prob.equality_constraints['initial'], 'expr')
+        sym_terminal_bc = getattr_from_list(self.prob.equality_constraints['terminal'], 'expr')
 
         if use_quad_arg:
             if self.compute_u is None:

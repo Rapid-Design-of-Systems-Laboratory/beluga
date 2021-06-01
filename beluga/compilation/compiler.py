@@ -18,14 +18,13 @@ class Compiler:
         if local is None:
             local = sympy.Symbol(name)
         self.sym_locals[name] = local
-        return self.sym_locals
+        return local
 
     def sympify(self, expr):
         return sympy.sympify(expr, locals=self.sym_locals)
 
     def add_function_local(self, name, function):
         self.func_locals[name] = function
-        return self.func_locals
 
     # noinspection PyTypeChecker
     def lambdify(self, args, sym_func, additional_modules=None, complex_numbers=False):

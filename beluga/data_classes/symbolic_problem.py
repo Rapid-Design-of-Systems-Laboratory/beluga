@@ -2,13 +2,13 @@ from typing import Iterable, Union
 import logging
 
 from beluga.compilation import set_compiler
-from .problem_components import (GenericStruct, NamedDimensionalStruct, Constant, DynamicStruct,
-                                 NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct,
-                                 TableStruct, SwitchStruct, SymmetryStruct, ConstraintStruct)
+from .problem_components import GenericStruct, DimensionalExpressionStruct, NamedDimensionalStruct, Constant,\
+    DynamicStruct, NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct,\
+    TableStruct, SwitchStruct, SymmetryStruct, InequalityConstraintStruct
 
 
 class Problem:
-    def __init__(self, name=None, prob_type='ocp'):
+    def __init__(self, name=None, prob_type='prob'):
 
         self.prob_type = prob_type
 
@@ -32,7 +32,8 @@ class Problem:
         self.controls = []
         self.control_law = []
 
-        self.constraints = {'initial': [], 'path': [], 'terminal': []}
+        self.equality_constraints = {'initial': [], 'path': [], 'terminal': []}
+        self.inequality_constraints = {'initial': [], 'path': [], 'control': [], 'terminal': []}
         self.constraint_parameters = []
         self.constraint_adjoints = []
         self.cost = CostStruct()
@@ -56,6 +57,8 @@ class Problem:
         self.func_jac = {'df_dy': None, 'df_dp': None}
         self.bc_jac = {'initial': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None},
                        'terminal': {'dbc_dy': None, 'dbc_dp': None, 'dbc_dq': None}}
+
+        self.aux = {}
 
         self.sympify = self.local_compiler.sympify
         self.lambdify = self.local_compiler.lambdify
@@ -114,21 +117,35 @@ class Problem:
         return self
     
     def initial_constraint(self, expr, units, lower=None, upper=None, activator=None, method='utm'):
-        self.constraints['initial'].append(
-            ConstraintStruct(expr, units, lower, upper, activator,
-                                 method=method))
+        if lower is None and upper is None:
+            self.equality_constraints['initial'].append(DimensionalExpressionStruct(expr, units))
+        else:
+            self.inequality_constraints['initial'].append(
+                    InequalityConstraintStruct(expr, units, lower, upper, activator, method=method))
+
         return self
 
     def path_constraint(self, expr, units, lower, upper, activator, method='utm'):
-        self.constraints['path'].append(
-            ConstraintStruct(expr, units, lower, upper, activator,
-                                 method=method))
+        if lower is None and upper is None:
+            self.equality_constraints['path'].append(DimensionalExpressionStruct(expr, units))
+        else:
+            self.inequality_constraints['path'].append(
+                    InequalityConstraintStruct(expr, units, lower, upper, activator, method=method))
+
+        return self
+
+    def control_constraint(self, control, units, lower, upper, activator, method='trig'):
+        self.inequality_constraints['control'].append(
+            InequalityConstraintStruct(control, units, lower, upper, activator, method=method))
         return self
     
     def terminal_constraint(self, expr, units, lower=None, upper=None, activator=None, method='utm'):
-        self.constraints['terminal'].append(
-            ConstraintStruct(expr, units, lower, upper, activator,
-                                 method=method))
+        if lower is None and upper is None:
+            self.equality_constraints['terminal'].append(DimensionalExpressionStruct(expr, units))
+        else:
+            self.inequality_constraints['terminal'].append(
+                    InequalityConstraintStruct(expr, units, lower, upper, activator, method=method))
+
         return self
 
     def constraint_parameter(self, name, units):
@@ -233,7 +250,7 @@ class Problem:
         elif items is None:
             pass
         else:
-            raise RuntimeWarning('Tried to sympy {} which does not have method "subs_self"'.format(items))
+            raise RuntimeWarning('Tried to sympify {} which does not have method "subs_self"'.format(items))
 
     def subs_all(self, old, new):
         if not self.sympified:
@@ -244,7 +261,8 @@ class Problem:
             self.costates,
             self.coparameters,
             self.controls,
-            self.constraints,
+            self.equality_constraints,
+            self.inequality_constraints,
             self.cost,
             self.quantities,
             self.custom_functions,
@@ -276,7 +294,8 @@ class Problem:
             self.parameters,
             self.coparameters,
             self.controls,
-            self.constraints,
+            self.equality_constraints,
+            self.inequality_constraints,
             self.constraint_parameters,
             self.constraint_adjoints,
             self.cost,

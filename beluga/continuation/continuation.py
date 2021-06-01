@@ -120,7 +120,7 @@ class ContinuationStrategy(abc.ABC):
 
         if not ignore_last_step and len(self.gammas) != 1 and not self.gammas[-1].converged:
             logging.error('The last step did not converge!')
-            raise RuntimeError('Solution diverged! Stopping.')
+            raise RuntimeError('Trajectory diverged! Stopping.')
 
         if self.ctr >= self.num_cases():
             raise StopIteration
@@ -259,7 +259,7 @@ class BisectionStrategy(ManualStrategy):
             # return self.gammas[-1]
 
         if self.division_ctr > self.max_divisions:
-            logging.error('Solution does not without exceeding max_divisions : '+str(self.max_divisions))
+            logging.error('Trajectory does not without exceeding max_divisions : '+str(self.max_divisions))
             raise RuntimeError('Exceeded max_divisions')
 
         # If previous step did not converge, move back a half step
@@ -536,7 +536,7 @@ def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, a
             scale_factors = None
 
         opt = bvp_algorithm_.solve(sol_guess, pool=pool)
-        sol = opt['sol']
+        sol = opt['traj']
 
         if autoscale:
             sol = scale(sol, scale_factors, inv=True)
@@ -550,7 +550,7 @@ def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, a
     else:
         for step_idx, step in enumerate(steps):
             logger.debug('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
-            # logger.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
+            # logger.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Trajectory')
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()

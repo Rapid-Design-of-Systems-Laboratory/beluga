@@ -77,7 +77,7 @@ ocp.initial_constraint('t', 's')
 ocp.terminal_constraint('v - v_f', '1')
 ocp.terminal_constraint('mass - mass_f', '1')
 
-ocp.path_constraint('thrust', '1', lower='T_min', upper='T_max', activator='eps', method='epstrig')
+ocp.control_constraint('thrust', '1', lower='T_min', upper='T_max', activator='eps', method='trig')
 
 ocp.scale(m=1, s=1, kg=1, rad=1, nd=1)
 

@@ -25,7 +25,7 @@ sol_set = data['solutions']
 sol = sol_set[-1][-1]
 
 plt.figure()
-plt.plot(sol.y[:,0]/1000, sol.y[:,1]/1000)
+plt.plot(sol.y[:, 0]/1000, sol.y[:, 1]/1000)
 plt.xlabel('Downrange [km]')
 plt.ylabel('Altitude [km]')
 plt.title('Time Optimal Launch of a BFR Trajectory')

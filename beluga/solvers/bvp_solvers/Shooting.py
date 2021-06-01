@@ -434,7 +434,7 @@ class Shooting(BaseAlgorithm):
         :return: A solution to the BVP.
         """
 
-        # Make a copy of sol and format inputs
+        # Make a copy of traj and format inputs
         sol = copy.deepcopy(solinit)
         sol.t = np.array(sol.t, dtype=beluga.DTYPE)
         sol.y = np.array(sol.y, dtype=beluga.DTYPE)
@@ -446,10 +446,10 @@ class Shooting(BaseAlgorithm):
         sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=beluga.DTYPE)
         sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=beluga.DTYPE)
 
-        # n = sol.y[0].shape[0]
+        # n = traj.y[0].shape[0]
         k = sol.dynamical_parameters.shape[0]
-        # sol.dynamical_parameters = np.hstack((sol.dynamical_parameters, sol.nondynamical_parameters))
-        # sol.nondynamical_parameters = np.empty((0,))
+        # traj.dynamical_parameters = np.hstack((traj.dynamical_parameters, traj.nondynamical_parameters))
+        # traj.nondynamical_parameters = np.empty((0,))
 
         fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
             self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
@@ -480,7 +480,7 @@ class Shooting(BaseAlgorithm):
         if self.bc_func_ms is None:
             self.bc_func_ms = self._bc_func_multiple_shooting(bc_func=self.boundarycondition_function)
 
-        # Build each of the separate arcs for multiple shooting. Uses sol's interpolation style
+        # Build each of the separate arcs for multiple shooting. Uses traj's interpolation style
         gamma_set = []
         t0 = sol.t[0]
         tf = sol.t[-1]

@@ -44,7 +44,7 @@ def test_t1(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = (np.exp(-sol.t / np.sqrt(sol.const)) - np.exp((sol.t - 2) / np.sqrt(sol.const))) / (
                 1 - np.exp(-2.e0 / np.sqrt(sol.const)))
@@ -73,7 +73,7 @@ def test_t2(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
@@ -107,7 +107,7 @@ def test_t3(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -134,7 +134,7 @@ def test_t4(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.const[0]) * (1 + sol.y[:, 2]) / sol.const[0]))
     e2 = np.exp(sol.y[:, 2] - 1) - (sol.const[0] + 1) / (
@@ -166,7 +166,7 @@ def test_t5(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -197,7 +197,7 @@ def test_t6():
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([1])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
     e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
@@ -230,7 +230,7 @@ def test_t7(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + sol.y[:, 2] + (
                 sol.y[:, 2] * erf(sol.y[:, 2] / np.sqrt(2.0e0 * sol.const[0]))
@@ -263,7 +263,7 @@ def test_t8(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = (2 - np.exp(-1 / sol.const[0]) - np.exp(-sol.y[:, 2] / sol.const[0])) / (1 - np.exp(-1 / sol.const[0]))
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]) * (1 / np.exp(1 / sol.const[0]) - 1))
@@ -293,7 +293,7 @@ def test_t9(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = 1 / (sol.const[0] + sol.y[:, 2] ** 2)
     e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
@@ -320,7 +320,7 @@ def test_t10(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = 1 + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
     e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
@@ -350,7 +350,7 @@ def test_t11(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
     e2 = -np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -379,7 +379,7 @@ def test_t12(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
     e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -408,7 +408,7 @@ def test_t13(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0]))
     e2 = -np.exp(-(sol.y[:, 2] + 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
@@ -437,7 +437,7 @@ def test_t14(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0])) + np.exp(
         -(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
@@ -466,7 +466,7 @@ def test_t15(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
     assert sol.converged
 
 
@@ -489,7 +489,7 @@ def test_t16(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.sin(np.pi * sol.y[:, 2] / (2 * np.sqrt(sol.const[0])))
     e2 = (np.pi * np.cos((np.pi * sol.y[:, 2]) / (2 * np.sqrt(sol.const[0])))) / (2 * np.sqrt(sol.const[0]))
@@ -518,7 +518,7 @@ def test_t17(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = sol.y[:, 2]/np.sqrt(sol.const[0] + sol.y[:, 2] ** 2)
     e2 = 1 / np.sqrt(sol.y[:, 2] ** 2 + sol.const[0]) - sol.y[:, 2] ** 2 / (sol.y[:, 2] ** 2 + sol.const[0]) ** (3 / 2)
@@ -545,7 +545,7 @@ def test_t18(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.exp(-sol.y[:, 2] / sol.const[0])
     e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
@@ -576,7 +576,7 @@ def test_t19(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -602,7 +602,7 @@ def test_t21(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.exp(-sol.y[:, 2] / np.sqrt(const))
     e2 = -np.exp(-sol.y[:, 2] / np.sqrt(const)) / np.sqrt(const)
@@ -629,7 +629,7 @@ def test_t22(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0], [0, 0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     assert sol.converged
 
@@ -657,7 +657,7 @@ def test_t23(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -704,7 +704,7 @@ def test_t24(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -732,7 +732,7 @@ def test_t25(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -760,7 +760,7 @@ def test_t26(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -788,7 +788,7 @@ def test_t27(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -816,7 +816,7 @@ def test_t28(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -844,7 +844,7 @@ def test_t29(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -872,7 +872,7 @@ def test_t30(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -901,7 +901,7 @@ def test_t31(const):
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
     sol.const = np.array([const])
-    sol = algo.solve(sol)['sol']
+    sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -930,7 +930,7 @@ def test_t32(const):
     for c in cc:
         sol = copy.deepcopy(sol)
         sol.const = np.array([c])
-        sol = algo.solve(sol)['sol']
+        sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -956,7 +956,7 @@ def test_t33(const):
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-1, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]])
     sol.const = np.array([const])
-    sol = algo.solve(sol)['sol']
+    sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
@@ -978,7 +978,7 @@ def test_r2(const):
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
@@ -1003,7 +1003,7 @@ def test_r8(const):
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
     e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
@@ -1028,7 +1028,7 @@ def test_r18(const):
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
     solinit.const = np.array([const])
-    sol = algo.solve(solinit)['sol']
+    sol = algo.solve(solinit)['traj']
 
     e1 = np.exp(-sol.t / sol.const[0])
     e2 = -1 / (sol.const[0] * np.exp(sol.t / sol.const[0]))
@@ -1051,7 +1051,7 @@ def test_spbvp_1():
     solinit.t = np.linspace(0, 4, 4)
     solinit.y = np.array([[0, 1], [0, 1], [0, 1], [0, 1]])
     solinit.const = np.array([])
-    out = algo.solve(solinit)['sol']
+    out = algo.solve(solinit)['traj']
     assert out.y[0][0] < tol
     assert out.y[0][1] - 2.06641646 < tol
     assert out.y[-1][0] + 2 < tol
@@ -1079,7 +1079,7 @@ def test_spbvp_1():
 #     solinit.dynamical_parameters = np.array([np.pi, 15])
 #     solinit.const = np.array([])
 #
-#     out = algo.solve(solinit)['sol']
+#     out = algo.solve(solinit)['traj']
 #     assert abs(out.y[-1][2] - np.pi) < tol
 #     assert abs(out.y[0][0] - 1) < tol
 #     assert abs(out.y[0][1]) < tol
@@ -1104,5 +1104,5 @@ def test_spbvp_3():
     solinit.y = np.array([[0], [0], [0], [0]])
     solinit.dynamical_parameters = np.array([1])
     solinit.const = np.array([])
-    out = algo.solve(solinit)['sol']
+    out = algo.solve(solinit)['traj']
     assert abs(out.dynamical_parameters - 2) < tol

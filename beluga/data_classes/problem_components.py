@@ -4,7 +4,7 @@ import sympy
 from typing import Union, Callable, Collection, List, Iterable
 
 
-from beluga.compilation.compiler import sympify, jit_compile_func, add_symbolic_local, add_function_local
+from beluga.compilation.compiler import sympify, jit_compile_func, add_symbolic_local
 from beluga.symbolic.special_functions import custom_functions, tables
 
 # default_tol = 1e-4
@@ -247,12 +247,11 @@ class TableStruct(CallableStruct):
 
 # TODO Refine the switch class with metaclass like tables and custom functions
 class SwitchStruct(NamedStruct):
-    def __init__(self, name: str, functions: Collection, conditions: Collection, tol_param: str):
+    def __init__(self, name: str, functions: Iterable, conditions: Iterable, tol_param: str):
         super(SwitchStruct, self).__init__(name, )
         self.functions = self._ensure_list(functions)
         self.conditions = self._ensure_list(conditions)
-        self.tol_param = tol_param
-        self.sym_func = None
+        self.tol_param = sympify(tol_param)
 
     def sympify_self(self):
         super(SwitchStruct, self).sympify_self()
@@ -261,20 +260,11 @@ class SwitchStruct(NamedStruct):
         self.conditions = sympify(self.conditions)
         self.tol_param = sympify(self.tol_param)
 
-        # Make switching function using RASHS
-        self.sym_func = sympy.Integer(0)
-        for function, conditions_for_function in zip(self.functions, self.conditions):
-            rashs_mult = sympy.Integer(0)
-            for condition in conditions_for_function:
-                rashs_mult += 1/(1 + sympy.exp(condition / self.tol_param))
-            self.sym_func += rashs_mult*function
-
-        return self
-
     def subs_self(self, old, new):
-        if self.sym_func is None:
-            self.sympify_self()
-        self.sym_func = self.sym_func.subs(old, new)
+        self.functions = [function.subs(old, new) for function in self.functions]
+        self.conditions = [[condition.subs(old, new) for condition in condition_set]
+                           for condition_set in self.conditions]
+        self.tol_param.subs(old, new)
 
 
 class SymmetryStruct(DimensionalStruct):
@@ -293,16 +283,16 @@ class SymmetryStruct(DimensionalStruct):
         self.field = self.field.subs(old, new)
 
 
-class ConstraintStruct(DimensionalExpressionStruct):
+class InequalityConstraintStruct(DimensionalExpressionStruct):
     def __init__(self, expr: str, units: str, lower: str, upper: str, activator: str, method: str = 'utm'):
-        super(ConstraintStruct, self).__init__(expr, units)
+        super(InequalityConstraintStruct, self).__init__(expr, units)
         self.lower = lower
         self.upper = upper
         self.activator = activator
         self.method = method
 
     def sympify_self(self):
-        super(ConstraintStruct, self).sympify_self()
+        super(InequalityConstraintStruct, self).sympify_self()
         if self.lower is not None:
             self.lower = sympify(self.lower)
         if self.upper is not None:
@@ -319,15 +309,6 @@ class ConstraintStruct(DimensionalExpressionStruct):
             self.upper = self.upper.subs(old, new)
 
 
-def extract_syms(structs: Union[List[NamedStruct], NamedStruct]):
-    if isinstance(structs, Iterable):
-        return [struct.sym for struct in structs]
-    elif hasattr(structs, 'sym'):
-        return [structs.sym]
-    else:
-        raise RuntimeError('{} has no attribute "sym"'.format(structs))
-
-
 def getattr_from_list(structs: Union[List[NamedStruct], NamedStruct], attr: str):
     if isinstance(structs, Iterable):
         return [getattr(struct, attr) for struct in structs]
@@ -335,6 +316,10 @@ def getattr_from_list(structs: Union[List[NamedStruct], NamedStruct], attr: str)
         return [getattr(structs, attr)]
     else:
         raise RuntimeError('{} has no attribute "{}"'.format(structs, attr))
+
+
+def extract_syms(structs: Union[List[NamedStruct], NamedStruct]):
+    return getattr_from_list(structs, 'sym')
 
 
 def combine_component_lists(items):

@@ -9,7 +9,7 @@ def save(sol_set=None, ocp=None, bvp=None, filename='data.beluga'):
         save_dict['solutions'] = sol_set
 
     if ocp is not None:
-        save_dict['ocp'] = ocp
+        save_dict['prob'] = ocp
 
     if bvp is not None:
         save_dict['bvp'] = bvp

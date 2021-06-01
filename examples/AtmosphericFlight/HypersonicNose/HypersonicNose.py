@@ -66,7 +66,7 @@ beluga.solve(ocp=ocp,
 
 # bvp_solver = beluga.bvp_algorithm('Collocation', num_nodes=60)
 
-# beluga.solve(ocp=ocp,
+# beluga.solve(prob=prob,
 #              method='direct',
 #              bvp_algo=bvp_solver,
 #              steps=None,

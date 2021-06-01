@@ -8,8 +8,8 @@ from beluga.utils.logging import logger, make_a_splash
 from beluga.data_classes.trajectory import Trajectory
 from beluga.utils import save
 from beluga.data_classes.problem_components import getattr_from_list
-from beluga.mappings.recipes import compile_direct, compile_indirect
 from beluga.continuation import run_continuation_set, match_constants_to_states
+from beluga.mappings.recipes import OptimOptionsRecipe, Direct
 
 
 def solve(
@@ -44,29 +44,29 @@ def solve(
         pool = None
 
     if ocp is None:
-        raise NotImplementedError('\"ocp\" must be defined.')
+        raise NotImplementedError('\"prob\" must be defined.')
 
     """
     Main code
     """
 
-    # f_ocp = compile_direct(ocp)
+    # f_ocp = compile_direct(prob)
 
     logger.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
         if method.lower() in ['indirect', 'traditional', 'brysonho', 'diffyg']:
-            bvp = compile_indirect(copy.deepcopy(ocp), method=method, **optim_options)
+            bvp, traj_mapper = OptimOptionsRecipe(method=method, **optim_options)(copy.deepcopy(ocp))
         elif method == 'direct':
-            bvp = compile_direct(copy.deepcopy(ocp), **optim_options)
+            bvp, traj_mapper = Direct()(copy.deepcopy(ocp))
         else:
             raise NotImplementedError
 
         logger.debug('Resulting BVP problem:')
         logger.debug(bvp.__repr__())
 
-        ocp_map = bvp.map_sol
-        ocp_map_inverse = bvp.inv_map_sol
+        ocp_map = traj_mapper.map
+        ocp_map_inverse = traj_mapper.inv_map
 
     else:
         if ocp_map is None or ocp_map_inverse is None:
@@ -121,9 +121,7 @@ def postprocess(continuation_set, ocp_map_inverse):
     Post processes the data after the continuation process has run.
 
     :param continuation_set: The set of all continuation processes.
-    :param ocp: The compiled OCP.
-    :param prob: The compiled BVP.
-    :param ocp_map_inverse: A mapping converting BVP solutions to OCP solutions.
+    :param ocp_map_inverse: A mapper converting BVP solutions to OCP solutions.
     :return: Set of trajectories to be returned to the user.
     """
     out = []
