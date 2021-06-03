@@ -2,7 +2,7 @@ import sympy
 from itertools import permutations
 
 from beluga.data_classes.trajectory import Trajectory as Solution
-from beluga.mappings.trajectory_mapper import TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 from beluga.utils.logging import logger
 from beluga.data_classes.symbolic_problem import Problem
 
@@ -12,11 +12,11 @@ def ensure_sympified(prob):
         prob.sympify_self()
 
 
-class QuantityCalculator(TrajectoryMapper):
-    def map(self, traj: Solution) -> Solution:
+class QuantityCalculator(TrajectoryTransformer):
+    def transform(self, traj: Solution) -> Solution:
         return traj
 
-    def inv_map(self, traj: Solution) -> Solution:
+    def inv_transform(self, traj: Solution) -> Solution:
         return traj
 
 

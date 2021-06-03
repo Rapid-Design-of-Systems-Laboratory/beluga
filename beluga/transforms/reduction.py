@@ -7,12 +7,12 @@ from beluga.data_classes.trajectory import Trajectory
 from beluga.data_classes.problem_components import extract_syms, sym_zero, DynamicStruct, NamedDimensionalStruct
 from beluga.symbolic.differential_geometry.differential_geometry import noether, is_symplectic
 from beluga.utils.helper_functions import recursive_sub
-from beluga.mappings.trajectory_mapper import TrajectoryMapper, TrajectoryMapperList
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer, TrajectoryTransformerList
 
 
-class MFMapper(TrajectoryMapper):
+class MFTransformer(TrajectoryTransformer):
     def __init__(self, remove_parameter_dict, remove_symmetry_dict, fn_p, fn_q, fn_p_inv, fn_q_inv):
-        super(MFMapper, self).__init__()
+        super(MFTransformer, self).__init__()
 
         self.remove_parameter_dict = remove_parameter_dict
         self.remove_symmetry_dict = remove_symmetry_dict
@@ -23,7 +23,7 @@ class MFMapper(TrajectoryMapper):
         self.fn_p_inv = fn_p_inv
         self.fn_q_inv = fn_q_inv
 
-    def map(self, traj: Trajectory) -> Trajectory:
+    def transform(self, traj: Trajectory) -> Trajectory:
         cval = self.fn_p(traj.y[0], traj.dual[0], traj.dynamical_parameters, traj.const)
         qval = np.ones_like(traj.t)
 
@@ -45,7 +45,7 @@ class MFMapper(TrajectoryMapper):
 
         return traj
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         qinv = np.ones_like(traj.t)
         pinv = np.ones_like(traj.t)
         for ii, t in enumerate(traj.t):
@@ -217,7 +217,7 @@ def mf_com(prob: Problem, com_index=0):
                              solve_for_q[0][replace_q])
     fn_p_inv = prob.lambdify([state_syms, costates_syms, parameter_syms, constant_syms], solve_for_p[0][replace_p])
 
-    traj_mapper = MFMapper(remove_parameter_dict, remove_symmetry_dict, fn_p, fn_q, fn_p_inv, fn_q_inv)
+    traj_mapper = MFTransformer(remove_parameter_dict, remove_symmetry_dict, fn_p, fn_q, fn_p_inv, fn_q_inv)
 
     return prob, traj_mapper
 
@@ -229,7 +229,7 @@ def mf_all(prob: Problem):
         traj_mapper = None
 
     elif prob.constants_of_motion[1:]:
-        traj_mapper = TrajectoryMapperList()
+        traj_mapper = TrajectoryTransformerList()
 
         for _ in range(len(prob.constants_of_motion[1:])):
             prob, traj_mapper_i = mf_com(prob, com_index=1)

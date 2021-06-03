@@ -5,7 +5,7 @@ from beluga.compilation.compiler import lambdify, add_symbolic_local
 from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import NamedDimensionalStruct, extract_syms
 from beluga.data_classes.trajectory import Trajectory
-from beluga.mappings.trajectory_mapper import TrajectoryMapperList, TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformerList, TrajectoryTransformer
 
 
 def normalize_constraint(expr, lower, upper):
@@ -64,7 +64,7 @@ def make_control_reg_func(u_sym, eps_sym, lower, upper, method='atan', reg_u_sym
     return reg_func, err_ctrl, inv_func
 
 
-class ControlConstraintMapper(TrajectoryMapper):
+class ControlConstraintTransformer(TrajectoryTransformer):
     def __init__(self, control_idx, control_expr, inv_control_expr, u_sym, reg_u_sym, map_args):
         super().__init__()
 
@@ -74,13 +74,13 @@ class ControlConstraintMapper(TrajectoryMapper):
         self.inv_map_func = lambdify([reg_u_sym] + map_args, control_expr)
 
     # TODO: "Vectorize" this
-    def map(self, traj: Trajectory) -> Trajectory:
+    def transform(self, traj: Trajectory) -> Trajectory:
         for idx, (t_i, y_i) in enumerate(zip(traj.t, traj.y)):
             traj.u[idx, self.control_idx] = self.map_func(
                 traj.u[idx, self.control_idx], t_i, y_i, traj.dynamical_parameters, traj.const)
         return traj
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         for idx, (t_i, y_i) in enumerate(zip(traj.t, traj.y)):
             traj.u[idx, self.control_idx] = self.inv_map_func(
                 traj.u[idx, self.control_idx], t_i, y_i, traj.dynamical_parameters, traj.const)
@@ -117,7 +117,7 @@ def regularize_control_constraint(prob: Problem, constraint_idx: int = 0, reg_u_
                 np.array(extract_syms(prob.parameters)),
                 np.array(extract_syms(prob.constants))]
 
-    traj_mapper = ControlConstraintMapper(control_idx, reg_func, inv_func, u_sym, reg_u_sym, map_args)
+    traj_mapper = ControlConstraintTransformer(control_idx, reg_func, inv_func, u_sym, reg_u_sym, map_args)
 
     return prob, traj_mapper
 
@@ -125,7 +125,7 @@ def regularize_control_constraint(prob: Problem, constraint_idx: int = 0, reg_u_
 def regularize_control_constraints(prob: Problem):
 
     if prob.inequality_constraints['control']:
-        traj_mapper = TrajectoryMapperList()
+        traj_mapper = TrajectoryTransformerList()
 
         for _ in prob.inequality_constraints['control']:
             prob, traj_mapper_i = regularize_control_constraint(prob)

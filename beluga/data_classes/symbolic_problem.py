@@ -337,7 +337,7 @@ class Problem:
     def map_sol(self, sol, inverse=False):
         if inverse:
             for sol_map in reversed(self.sol_map_chain):
-                sol = sol_map.inv_map(sol)
+                sol = sol_map.inv_transform(sol)
         else:
             for sol_map in self.sol_map_chain:
                 sol = sol_map.map(sol)

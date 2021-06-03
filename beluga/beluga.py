@@ -9,7 +9,7 @@ from beluga.data_classes.trajectory import Trajectory
 from beluga.utils import save
 from beluga.data_classes.problem_components import getattr_from_list
 from beluga.continuation import run_continuation_set, match_constants_to_states
-from beluga.mappings.recipes import OptimOptionsRecipe, Direct
+from beluga.transforms.recipes import OptimOptionsRecipe, Direct
 
 
 def solve(
@@ -21,8 +21,8 @@ def solve(
         method='traditional',
         n_cpus=1,
         ocp=None,
-        ocp_map=None,
-        ocp_map_inverse=None,
+        ocp_transform=None,
+        ocp_inv_transform=None,
         optim_options=None,
         steps=None,
         save_sols=True):
@@ -65,20 +65,20 @@ def solve(
         logger.debug('Resulting BVP problem:')
         logger.debug(bvp.__repr__())
 
-        ocp_map = traj_mapper.map
-        ocp_map_inverse = traj_mapper.inv_map
+        ocp_transform = traj_mapper.transform
+        ocp_inv_transform = traj_mapper.inv_transform
 
     else:
-        if ocp_map is None or ocp_map_inverse is None:
+        if ocp_transform is None or ocp_inv_transform is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
     solinit = Trajectory()
     solinit.const = np.array(getattr_from_list(bvp.constants, 'default_val'))
-    solinit = guess_generator.generate(bvp.functional_problem, solinit, ocp_map, ocp_map_inverse)
+    solinit = guess_generator.generate(bvp.functional_problem, solinit, ocp_transform, ocp_inv_transform)
 
     if initial_helper:
         sol_ocp = copy.deepcopy(solinit)
-        sol_ocp = match_constants_to_states(ocp, ocp_map_inverse(sol_ocp))
+        sol_ocp = match_constants_to_states(ocp, ocp_inv_transform(sol_ocp))
         solinit.const = sol_ocp.const
 
     if bvp.functional_problem.compute_u is not None:
@@ -100,7 +100,7 @@ def solve(
     """
     Post processing and output
     """
-    out = postprocess(continuation_set, ocp_map_inverse)
+    out = postprocess(continuation_set, ocp_inv_transform)
 
     if pool is not None:
         pool.close()

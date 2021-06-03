@@ -7,15 +7,15 @@ from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import NamedDimensionalStruct, DimensionalExpressionStruct, DynamicStruct,\
     NamedDimensionalExpressionStruct, extract_syms
 from beluga.data_classes.trajectory import Trajectory
-from beluga.mappings.trajectory_mapper import TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
 sym_zero = sympy.Integer(0)
 empty_array = np.array([])
 
 
-class DualizeMapper(TrajectoryMapper):
+class DualizeTransformer(TrajectoryTransformer):
     def __init__(self, prob, num_costates, num_adjoints):
-        super(DualizeMapper, self).__init__()
+        super(DualizeTransformer, self).__init__()
         self.num_costates = num_costates
         self.num_adjoints = num_adjoints
 
@@ -34,7 +34,7 @@ class DualizeMapper(TrajectoryMapper):
 
         self.compute_cost = compile_cost(prob.cost, _dynamic_args, _bc_args, prob.lambdify)
 
-    def map(self, traj: Trajectory, lam=None, nu=None) -> Trajectory:
+    def transform(self, traj: Trajectory, lam=None, nu=None) -> Trajectory:
         if len(traj.dual) == 0:
             traj.dual = self.default_costate_values
 
@@ -43,7 +43,7 @@ class DualizeMapper(TrajectoryMapper):
 
         return traj
 
-    def inv_map(self, traj: Trajectory, retain_dual=True) -> Trajectory:
+    def inv_transform(self, traj: Trajectory, retain_dual=True) -> Trajectory:
         if not retain_dual:
             traj.dual = empty_array
             traj.nondynamical_parameters = empty_array
@@ -134,7 +134,7 @@ def dualize(prob: Problem, method='traditional'):
     prob.dualized = True
     prob.prob_type = 'prob'
 
-    traj_mapper = DualizeMapper(prob, len(prob.costates), len(prob.constraint_adjoints))
+    traj_mapper = DualizeTransformer(prob, len(prob.costates), len(prob.constraint_adjoints))
 
     return prob, traj_mapper
 

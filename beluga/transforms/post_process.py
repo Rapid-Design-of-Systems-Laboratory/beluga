@@ -4,24 +4,24 @@ import sympy
 from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import getattr_from_list, extract_syms
 from beluga.data_classes.trajectory import Trajectory
-from beluga.mappings.trajectory_mapper import TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
 
-class SquashToBVPMapper(TrajectoryMapper):
+class SquashToBVPTransformer(TrajectoryTransformer):
     def __init__(self, costate_idxs, coparameter_idxs, constraint_adjoints_idxs):
-        super(SquashToBVPMapper, self).__init__()
+        super(SquashToBVPTransformer, self).__init__()
 
         self.costate_idxs = costate_idxs
         self.coparameter_idxs = coparameter_idxs
         self.constraint_adjoints_idxs = constraint_adjoints_idxs
 
-    def map(self, traj: Trajectory) -> Trajectory:
+    def transform(self, traj: Trajectory) -> Trajectory:
         if len(traj.dual) > 0:
             traj.y = np.concatenate((traj.y, traj.dual), axis=1)
 
         return traj
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         traj.dual = traj.y[:, self.costate_idxs]
         traj.y = np.delete(traj.y, self.costate_idxs, axis=1)
         traj.nondynamical_parameters = np.delete(traj.nondynamical_parameters, self.constraint_adjoints_idxs)
@@ -46,7 +46,7 @@ def squash_to_bvp(prob: Problem):
 
     prob.dualized = False
 
-    traj_mapper = SquashToBVPMapper(costate_idxs, coparameter_idxs, constraint_adjoints_idxs)
+    traj_mapper = SquashToBVPTransformer(costate_idxs, coparameter_idxs, constraint_adjoints_idxs)
 
     return prob, traj_mapper
 

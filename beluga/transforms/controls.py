@@ -10,16 +10,16 @@ from beluga.data_classes.problem_components import extract_syms, combine_compone
 from beluga.data_classes.symbolic_problem import Problem
 from beluga.symbolic.differential_geometry import make_hamiltonian_vector_field, make_standard_symplectic_form
 from beluga.data_classes.trajectory import Trajectory
-from beluga.mappings.trajectory_mapper import TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 from beluga.utils.logging import logger
 
 sym_zero = sympy.Integer(0)
 empty_array = np.array([])
 
 
-class AlgebraicControlMapper(TrajectoryMapper):
+class AlgebraicControlTransformer(TrajectoryTransformer):
     def __init__(self, prob: Problem):
-        super(AlgebraicControlMapper, self).__init__()
+        super(AlgebraicControlTransformer, self).__init__()
 
         num_options = len(prob.control_law)
 
@@ -59,10 +59,10 @@ class AlgebraicControlMapper(TrajectoryMapper):
 
         self.compute_u = jit_compile_func(calc_u, _args, func_name='control_function')
 
-    def map(self, traj: Trajectory) -> Trajectory:
+    def transform(self, traj: Trajectory) -> Trajectory:
         return traj
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         # TODO Vectorize
         traj.u = np.array([self.compute_u(_t, _y, _lam, traj.dynamical_parameters, traj.const) for _t, _y, _lam,
                            in zip(traj.t, traj.y, traj.dual)])
@@ -79,19 +79,19 @@ def algebraic_control_law(prob: Problem):
     # TODO Use algebraic equations and custom functions in future
     prob.control_law = control_options
 
-    traj_mapper = AlgebraicControlMapper(prob)
+    traj_mapper = AlgebraicControlTransformer(prob)
 
     prob.prob_type = 'prob'
 
     return prob, traj_mapper
 
 
-class DifferentialControlMapper(TrajectoryMapper):
+class DifferentialControlTransformer(TrajectoryTransformer):
     def __init__(self, control_idxs):
-        super(DifferentialControlMapper, self).__init__()
+        super(DifferentialControlTransformer, self).__init__()
         self.control_idxs = control_idxs
 
-    def map(self, sol: Trajectory) -> Trajectory:
+    def transform(self, sol: Trajectory) -> Trajectory:
         idx_u_list = []
         for idx_u, (idx_y, u) in enumerate(sorted(zip(self.control_idxs, sol.u.T))):
             sol.y = np.insert(sol.y, idx_y, u, axis=1)
@@ -99,18 +99,18 @@ class DifferentialControlMapper(TrajectoryMapper):
         sol.u = np.delete(sol.u, idx_u_list, axis=1)
         return sol
 
-    def inv_map(self, sol: Trajectory) -> Trajectory:
+    def inv_transform(self, sol: Trajectory) -> Trajectory:
         sol.u = sol.y[:, self.control_idxs]
         sol.y = np.delete(sol.y, self.control_idxs, axis=1)
         return sol
 
 
-class DifferentialControlMapperDiffyG(TrajectoryMapper):
+class DifferentialControlTransformerDiffyG(TrajectoryTransformer):
     def __init__(self, control_idxs):
-        super(DifferentialControlMapperDiffyG, self).__init__()
+        super(DifferentialControlTransformerDiffyG, self).__init__()
         self.control_idxs = control_idxs
 
-    def map(self, sol: Trajectory, control_costate: Union[float, np.ndarray] = 0.) -> Trajectory:
+    def transform(self, sol: Trajectory, control_costate: Union[float, np.ndarray] = 0.) -> Trajectory:
         idx_u_list = []
 
         for idx_u, (idx_y, u) in enumerate(sorted(zip(self.control_idxs, sol.u.T))):
@@ -134,7 +134,7 @@ class DifferentialControlMapperDiffyG(TrajectoryMapper):
         sol.u = np.delete(sol.u, idx_u_list, axis=1)
         return sol
 
-    def inv_map(self, sol: Trajectory) -> Trajectory:
+    def inv_transform(self, sol: Trajectory) -> Trajectory:
         sol.u = sol.y[:, self.control_idxs]
         sol.y = np.delete(sol.y, self.control_idxs, axis=1)
         sol.dual = np.delete(sol.dual, self.control_idxs, axis=1)
@@ -169,7 +169,7 @@ def differential_control_law(prob: Problem, method='traditional'):
             control_idxs.append(len(prob.states))
             prob.states.append(DynamicStruct(control.name, control_rate, control.units).sympify_self())
 
-        traj_mapper = DifferentialControlMapper(control_idxs=control_idxs)
+        traj_mapper = DifferentialControlTransformer(control_idxs=control_idxs)
 
     elif method == 'diffyg':
         independent_index = len(prob.states) - 1
@@ -205,7 +205,7 @@ def differential_control_law(prob: Problem, method='traditional'):
 
         prob.controls = []
 
-        traj_mapper = DifferentialControlMapperDiffyG(control_idxs=control_idxs)
+        traj_mapper = DifferentialControlTransformerDiffyG(control_idxs=control_idxs)
 
     else:
         raise NotImplementedError('Method {} not implemented for differential control'.format(method))

@@ -5,14 +5,14 @@ from beluga.data_classes.problem_components import combine_component_lists, Name
     SymmetryStruct, sym_one
 from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.trajectory import Trajectory
-from beluga.mappings.trajectory_mapper import TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
 
-class MomentumShiftMapper(TrajectoryMapper):
+class MomentumShiftTransformer(TrajectoryTransformer):
     """
     Class for applying a momentum shift (making the independent variable a state variable) to solutions
     """
-    def map(self, traj: Trajectory) -> Trajectory:
+    def transform(self, traj: Trajectory) -> Trajectory:
         if len(traj.dual_t) == 0:
             traj.dual_t = np.zeros_like(traj.t)
 
@@ -21,7 +21,7 @@ class MomentumShiftMapper(TrajectoryMapper):
 
         return traj
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         traj.t = traj.y[:, -1]
         traj.y = np.delete(traj.y, -1, axis=1)
 
@@ -58,17 +58,17 @@ def momentum_shift(prob: Problem):
                            remove=True))
 
     # Set trajectory mapper
-    traj_mapper = MomentumShiftMapper()
+    traj_mapper = MomentumShiftTransformer()
 
     return prob, traj_mapper
 
 
-class NormalizeIndependentMapper(TrajectoryMapper):
+class NormalizeIndependentTransformer(TrajectoryTransformer):
     def __init__(self, delta_ind_idx=None):
-        super(NormalizeIndependentMapper, self).__init__()
+        super(NormalizeIndependentTransformer, self).__init__()
         self.delta_ind_idx = delta_ind_idx
 
-    def map(self, traj: Trajectory) -> Trajectory:
+    def transform(self, traj: Trajectory) -> Trajectory:
 
         if self.delta_ind_idx is None:
             self.delta_ind_idx = np.shape(traj.dynamical_parameters)[0]
@@ -80,7 +80,7 @@ class NormalizeIndependentMapper(TrajectoryMapper):
 
         return traj
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         if self.delta_ind_idx is None:
             self.delta_ind_idx = np.shape(traj.dynamical_parameters)[0] - 1
 
@@ -107,7 +107,7 @@ def normalize_independent(prob: Problem):
 
     # Set trajectory mapper
     delta_ind_idx = len(prob.parameters) - 1
-    traj_mapper = NormalizeIndependentMapper(delta_ind_idx=delta_ind_idx)
+    traj_mapper = NormalizeIndependentTransformer(delta_ind_idx=delta_ind_idx)
 
     return prob, traj_mapper
 

@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import sympy
 
@@ -7,13 +5,13 @@ from beluga.compilation.compiler import lambdify
 from beluga.data_classes.problem_components import extract_syms, combine_component_lists
 from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.trajectory import Trajectory
-from beluga.mappings.trajectory_mapper import TrajectoryMapper
+from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
 sym_zero = sympy.Integer(0)
 empty_array = np.array([])
 
 
-class HamiltonianSensitivityCalculator(TrajectoryMapper):
+class HamiltonianSensitivityCalculator(TrajectoryTransformer):
     def __init__(self, prob: Problem, dh_dux, dh_duu):
         super(HamiltonianSensitivityCalculator, self).__init__()
 
@@ -24,9 +22,9 @@ class HamiltonianSensitivityCalculator(TrajectoryMapper):
         self.dh_dux_func = lambdify(_args, dh_dux)
         self.dh_duu_func = lambdify(_args, dh_duu)
 
-    map = None
+    transform = None
 
-    def inv_map(self, traj: Trajectory) -> Trajectory:
+    def inv_transform(self, traj: Trajectory) -> Trajectory:
         # TODO Vectorize
         traj.u = np.array([self.dh_dux_func(_t, _y, _lam, traj.dynamical_parameters, traj.const) for _t, _y, _u, _lam,
                            in zip(traj.t, traj.y, traj.u, traj.dual)])
@@ -47,6 +45,6 @@ def hamiltonian_sensitivity_handler(prob: Problem):
     prob.aux['H_ux'] = ham_ux
     prob.aux['H_uu'] = ham_uu
 
-    traj_mapper = None
+    traj_mapper = HamiltonianSensitivityCalculator(ham_ux, ham_uu)
 
     return prob, traj_mapper
