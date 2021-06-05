@@ -1,10 +1,11 @@
-import sympy
 from itertools import permutations
 
+import sympy
+
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory as Solution
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 from beluga.utils.logging import logger
-from beluga.data_classes.symbolic_problem import Problem
 
 
 def ensure_sympified(prob):
@@ -20,7 +21,7 @@ class QuantityCalculator(TrajectoryTransformer):
         return traj
 
 
-def apply_quantities(prob: Problem):
+def apply_quantities(prob: SymbolicProblem):
 
     if len(prob.quantities) == 0:
         return prob, None

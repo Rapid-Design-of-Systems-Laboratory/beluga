@@ -2,8 +2,8 @@ import numpy as np
 import sympy
 
 from beluga.compilation.compiler import lambdify, add_symbolic_local
-from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import NamedDimensionalStruct, extract_syms
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory
 from beluga.transforms.trajectory_transformer import TrajectoryTransformerList, TrajectoryTransformer
 
@@ -87,7 +87,7 @@ class ControlConstraintTransformer(TrajectoryTransformer):
         return traj
 
 
-def regularize_control_constraint(prob: Problem, constraint_idx: int = 0, reg_u_name: str = None):
+def regularize_control_constraint(prob: SymbolicProblem, constraint_idx: int = 0, reg_u_name: str = None):
 
     constraint = prob.inequality_constraints['control'].pop(constraint_idx)
 
@@ -122,7 +122,7 @@ def regularize_control_constraint(prob: Problem, constraint_idx: int = 0, reg_u_
     return prob, traj_mapper
 
 
-def regularize_control_constraints(prob: Problem):
+def regularize_control_constraints(prob: SymbolicProblem):
 
     if prob.inequality_constraints['control']:
         traj_mapper = TrajectoryTransformerList()
@@ -157,7 +157,7 @@ def make_penalty_func(expr, eps_sym, lower, upper, method='utm'):
     return penalty_func
 
 
-def apply_penatly_method(prob: Problem, location, constraint_idx: int = 0):
+def apply_penatly_method(prob: SymbolicProblem, location, constraint_idx: int = 0):
     if location not in ['initial', 'path', 'terminal']:
         raise NotImplementedError(
                 'Invalid location {} given. Location must be initial, path, or terminal.'.format(location))
@@ -175,19 +175,19 @@ def apply_penatly_method(prob: Problem, location, constraint_idx: int = 0):
     return prob, None, None
 
 
-def apply_penatly_method_initial(prob: Problem, constraint_idx: int = 0):
+def apply_penatly_method_initial(prob: SymbolicProblem, constraint_idx: int = 0):
     return apply_penatly_method(prob, 'initial', constraint_idx=constraint_idx)
 
 
-def apply_penatly_method_path(prob: Problem, constraint_idx: int = 0):
+def apply_penatly_method_path(prob: SymbolicProblem, constraint_idx: int = 0):
     return apply_penatly_method(prob, 'path', constraint_idx=constraint_idx)
 
 
-def apply_penatly_method_terminal(prob: Problem, constraint_idx: int = 0):
+def apply_penatly_method_terminal(prob: SymbolicProblem, constraint_idx: int = 0):
     return apply_penatly_method(prob, 'terminal', constraint_idx=constraint_idx)
 
 
-def apply_penatly_method_all(prob: Problem):
+def apply_penatly_method_all(prob: SymbolicProblem):
     for location in ['initial', 'path', 'terminal']:
         for _ in range(len(prob.inequality_constraints[location])):
             apply_penatly_method(prob, location, constraint_idx=0)

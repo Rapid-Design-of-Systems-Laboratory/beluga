@@ -1,10 +1,10 @@
+from typing import Union, Callable, Collection, List, Iterable
+
 import numpy as np
 import sympy
 
-from typing import Union, Callable, Collection, List, Iterable
-
-
-from beluga.compilation.compiler import sympify, jit_compile_func, add_symbolic_local
+from beluga.compilation.compiler import sympify, add_symbolic_local
+from beluga.compilation import jit_compile_func
 from beluga.symbolic.special_functions import custom_functions, tables
 
 # default_tol = 1e-4

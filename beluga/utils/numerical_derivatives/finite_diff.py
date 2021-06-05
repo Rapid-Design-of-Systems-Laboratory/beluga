@@ -1,9 +1,10 @@
-import logging
 import inspect
 import itertools
+import logging
+
 import numpy as np
-from numba.core.registry import CPUDispatcher
 from numba import njit, float64, complex128, types, errors
+from numba.core.registry import CPUDispatcher
 
 
 def gen_fin_diff(func, deriv_order=None, step_size=1e-6, acc_order=1, method='central', complex_arg=False):

@@ -1,10 +1,12 @@
-import numpy as np
-import beluga.utils.numerical_derivatives.finite_diff
+import inspect
+import logging
 import math
+
+import numpy as np
 from numba import njit, float64, complex128, types, errors
 from numba.core.registry import CPUDispatcher
-import logging
-import inspect
+
+import beluga.utils.numerical_derivatives.finite_diff
 
 
 def gen_csd(func, deriv_order=None, step_size=1e-6, complex_arg=False):

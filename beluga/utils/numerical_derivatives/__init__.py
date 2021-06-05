@@ -1,5 +1,5 @@
-from .finite_diff import gen_fin_diff
 from .complex_step import gen_csd
+from .finite_diff import gen_fin_diff
 
 
 def gen_num_diff(func, order=(1,), method='c_diff', step_size=1e-6):

@@ -1,8 +1,9 @@
+import logging
+
 import numpy as np
+from numba import njit, float64, errors
 from sympy import Function
 from sympy.core.function import ArgumentIndexError
-from numba import njit, float64, errors
-import logging
 
 from beluga.compilation.compiler import add_function_local
 

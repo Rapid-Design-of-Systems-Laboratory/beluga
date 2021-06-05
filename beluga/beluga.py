@@ -1,15 +1,16 @@
-import logging
 import copy
+import logging
 import time
-import pathos
-import numpy as np
 
-from beluga.utils.logging import logger, make_a_splash
-from beluga.data_classes.trajectory import Trajectory
-from beluga.utils import save
-from beluga.data_classes.problem_components import getattr_from_list
+import numpy as np
+import pathos
+
 from beluga.continuation import run_continuation_set, match_constants_to_states
+from beluga.data_classes.problem_components import getattr_from_list
+from beluga.data_classes.trajectory import Trajectory
 from beluga.transforms.recipes import OptimOptionsRecipe, Direct
+from beluga.utils import save
+from beluga.utils.logging import logger, make_a_splash
 
 
 def solve(

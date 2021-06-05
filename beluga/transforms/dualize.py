@@ -2,11 +2,11 @@ import numpy as np
 import sympy
 
 from beluga.compilation.compilation_functions import compile_cost
-from beluga.symbolic.differential_geometry import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
-from beluga.data_classes.symbolic_problem import Problem
-from beluga.data_classes.problem_components import NamedDimensionalStruct, DimensionalExpressionStruct, DynamicStruct,\
+from beluga.data_classes.problem_components import NamedDimensionalStruct, DimensionalExpressionStruct, DynamicStruct, \
     NamedDimensionalExpressionStruct, extract_syms
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory
+from beluga.symbolic.differential_geometry import make_standard_symplectic_form, make_hamiltonian_vector_field, noether
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
 sym_zero = sympy.Integer(0)
@@ -53,7 +53,7 @@ class DualizeTransformer(TrajectoryTransformer):
         return traj
 
 
-def dualize(prob: Problem, method='traditional'):
+def dualize(prob: SymbolicProblem, method='traditional'):
     # TODO Maybe pull is apart a little more (or not)
 
     for idx, constraint in enumerate(prob.equality_constraints['initial']):
@@ -139,9 +139,9 @@ def dualize(prob: Problem, method='traditional'):
     return prob, traj_mapper
 
 
-def dualize_traditional(prob: Problem):
+def dualize_traditional(prob: SymbolicProblem):
     return dualize(prob, method='traditional')
 
 
-def dualize_diffyg(prob: Problem):
+def dualize_diffyg(prob: SymbolicProblem):
     return dualize(prob, method='diffyg')

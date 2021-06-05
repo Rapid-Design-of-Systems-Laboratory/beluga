@@ -1,10 +1,13 @@
+import inspect
+from collections.abc import Iterable
+
+from numba.core.registry import CPUDispatcher
 from sympy import Function
 from sympy.core.function import ArgumentIndexError
-from collections.abc import Iterable
-import inspect
-from beluga.compilation.compiler import jit_compile_func, add_function_local
+
+from beluga.compilation import jit_compile_func
+from beluga.compilation.compiler import add_function_local
 from beluga.utils.numerical_derivatives import gen_num_diff
-from numba.core.registry import CPUDispatcher
 
 
 class CustomFunctionGenerator(object):

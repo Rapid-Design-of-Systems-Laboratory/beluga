@@ -17,7 +17,7 @@ gam_0 = -1*np.pi/180
 gam_f = -5*np.pi/180
 psi_0 = np.pi/2
 
-ocp = beluga.Problem()
+ocp = beluga.SymbolicProblem()
 
 # Define independent variables
 ocp.independent('t', 's')

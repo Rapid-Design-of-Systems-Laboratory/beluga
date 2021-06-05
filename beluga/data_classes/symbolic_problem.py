@@ -1,13 +1,13 @@
-from typing import Iterable, Union
 import logging
+from typing import Iterable, Union
 
 from beluga.compilation import set_compiler
-from .problem_components import GenericStruct, DimensionalExpressionStruct, NamedDimensionalStruct, Constant,\
-    DynamicStruct, NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct,\
+from .problem_components import GenericStruct, DimensionalExpressionStruct, NamedDimensionalStruct, Constant, \
+    DynamicStruct, NamedExpressionStruct, NamedDimensionalExpressionStruct, CostStruct, FunctionStruct, \
     TableStruct, SwitchStruct, SymmetryStruct, InequalityConstraintStruct
 
 
-class Problem:
+class SymbolicProblem:
     def __init__(self, name=None, prob_type='prob'):
 
         self.prob_type = prob_type

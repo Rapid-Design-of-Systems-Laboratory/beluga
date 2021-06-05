@@ -3,7 +3,7 @@ import sympy
 
 from beluga.compilation.compiler import lambdify
 from beluga.data_classes.problem_components import extract_syms, combine_component_lists
-from beluga.data_classes.symbolic_problem import Problem
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
@@ -12,7 +12,7 @@ empty_array = np.array([])
 
 
 class HamiltonianSensitivityCalculator(TrajectoryTransformer):
-    def __init__(self, prob: Problem, dh_dux, dh_duu):
+    def __init__(self, prob: SymbolicProblem, dh_dux, dh_duu):
         super(HamiltonianSensitivityCalculator, self).__init__()
 
         _args = \
@@ -31,7 +31,7 @@ class HamiltonianSensitivityCalculator(TrajectoryTransformer):
         return traj
 
 
-def hamiltonian_sensitivity_handler(prob: Problem):
+def hamiltonian_sensitivity_handler(prob: SymbolicProblem):
     _dynamic_structs = [prob.states, prob.costates]
 
     state_syms = sympy.Matrix(extract_syms(combine_component_lists(_dynamic_structs)))

@@ -1,6 +1,6 @@
 from .BaseAlgorithm import BaseAlgorithm, BVPResult
-from .Shooting import Shooting
 from .SPBVP import SPBVP
+from .Shooting import Shooting
 
 available_algorithms = [Shooting, SPBVP]
 

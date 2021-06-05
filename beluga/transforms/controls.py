@@ -5,11 +5,11 @@ import numpy as np
 import sympy
 
 from beluga.compilation import jit_compile_func
-from beluga.data_classes.problem_components import extract_syms, combine_component_lists, DimensionalExpressionStruct,\
+from beluga.data_classes.problem_components import extract_syms, combine_component_lists, DimensionalExpressionStruct, \
     DynamicStruct
-from beluga.data_classes.symbolic_problem import Problem
-from beluga.symbolic.differential_geometry import make_hamiltonian_vector_field, make_standard_symplectic_form
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory
+from beluga.symbolic.differential_geometry import make_hamiltonian_vector_field, make_standard_symplectic_form
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 from beluga.utils.logging import logger
 
@@ -18,7 +18,7 @@ empty_array = np.array([])
 
 
 class AlgebraicControlTransformer(TrajectoryTransformer):
-    def __init__(self, prob: Problem):
+    def __init__(self, prob: SymbolicProblem):
         super(AlgebraicControlTransformer, self).__init__()
 
         num_options = len(prob.control_law)
@@ -69,7 +69,7 @@ class AlgebraicControlTransformer(TrajectoryTransformer):
         return traj
 
 
-def algebraic_control_law(prob: Problem):
+def algebraic_control_law(prob: SymbolicProblem):
     control_syms = extract_syms(prob.controls)
     prob.dh_du = [prob.hamiltonian.expr.diff(control_sym) for control_sym in control_syms]
     logger.debug("Solving dH/du...")
@@ -141,7 +141,7 @@ class DifferentialControlTransformerDiffyG(TrajectoryTransformer):
         return sol
 
 
-def differential_control_law(prob: Problem, method='traditional'):
+def differential_control_law(prob: SymbolicProblem, method='traditional'):
     _dynamic_structs = [prob.states, prob.costates]
 
     state_syms = sympy.Matrix(extract_syms(combine_component_lists(_dynamic_structs)))
@@ -215,9 +215,9 @@ def differential_control_law(prob: Problem, method='traditional'):
     return prob, traj_mapper
 
 
-def differential_control_law_traditional(prob: Problem):
+def differential_control_law_traditional(prob: SymbolicProblem):
     return differential_control_law(prob, method='traditional')
 
 
-def differential_control_law_diffy_g(prob: Problem):
+def differential_control_law_diffy_g(prob: SymbolicProblem):
     return differential_control_law(prob, method='diffyg')

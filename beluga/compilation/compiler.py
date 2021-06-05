@@ -1,8 +1,9 @@
-import sympy
 from collections import OrderedDict
 from typing import Hashable, Union
 
-from .jit import jit_compile_func
+import sympy
+
+from . import jit_compile_func
 from ..utils.helper_functions import tuplefy
 
 

@@ -1,9 +1,11 @@
-from beluga.solvers.bvp_solvers import BaseAlgorithm, BVPResult
-from beluga.data_classes.trajectory import Trajectory
-from scipy.integrate import solve_bvp
+import copy
+
 # from ._bvp import *
 import numpy as np
-import copy
+from scipy.integrate import solve_bvp
+
+from beluga.data_classes.trajectory import Trajectory
+from beluga.solvers.bvp_solvers import BaseAlgorithm, BVPResult
 
 
 # noinspection PyTypeChecker

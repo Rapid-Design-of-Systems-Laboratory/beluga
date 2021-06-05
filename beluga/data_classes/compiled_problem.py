@@ -1,13 +1,14 @@
-import numpy as np
 import copy
 
-from beluga.data_classes.trajectory import Trajectory
+import numpy as np
+
 from beluga.compilation import jit_compile_func, compile_control, lambdify
 from beluga.data_classes.problem_components import extract_syms, getattr_from_list
+from beluga.data_classes.trajectory import Trajectory
 from beluga.utils.helper_functions import max_mag
 
 
-class NumericProblem:
+class CompiledProblem:
     def __init__(self, prob):
 
         self.lambdify = lambdify

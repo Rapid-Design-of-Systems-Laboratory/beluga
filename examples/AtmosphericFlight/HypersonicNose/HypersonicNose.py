@@ -9,7 +9,7 @@ import beluga
 import logging
 import matplotlib.pyplot as plt
 
-ocp = beluga.Problem()
+ocp = beluga.SymbolicProblem()
 
 # Define independent variables
 ocp.independent('l', 'm')

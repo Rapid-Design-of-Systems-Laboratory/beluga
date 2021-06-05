@@ -1,18 +1,17 @@
 import abc
 import copy
+import functools
+import inspect
+import itertools
+import logging
+import sys
 import time
 
 import numpy as np
-import logging
-import inspect
-import itertools
-import functools
-import sys
-
 from tqdm import tqdm
 
-from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import getattr_from_list
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.utils.logging import logger, fit_string
 
 
@@ -497,7 +496,7 @@ class SparseProductStrategy(ContinuationStrategy):
             return self
 
 
-def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, autoscale):
+def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: SymbolicProblem, pool, autoscale):
     """
     Runs a continuation set for the BVP problem.
 

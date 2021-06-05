@@ -1,13 +1,13 @@
 import numpy as np
 import sympy
 
-from beluga.utils.logging import logger
-from beluga.data_classes.symbolic_problem import Problem
-from beluga.data_classes.trajectory import Trajectory
 from beluga.data_classes.problem_components import extract_syms, sym_zero, DynamicStruct, NamedDimensionalStruct
+from beluga.data_classes.symbolic_problem import SymbolicProblem
+from beluga.data_classes.trajectory import Trajectory
 from beluga.symbolic.differential_geometry.differential_geometry import noether, is_symplectic
-from beluga.utils.helper_functions import recursive_sub
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer, TrajectoryTransformerList
+from beluga.utils.helper_functions import recursive_sub
+from beluga.utils.logging import logger
 
 
 class MFTransformer(TrajectoryTransformer):
@@ -77,7 +77,7 @@ class MFTransformer(TrajectoryTransformer):
         return traj
 
 
-def mf_com(prob: Problem, com_index=0):
+def mf_com(prob: SymbolicProblem, com_index=0):
     constant_of_motion = prob.constants_of_motion[com_index]
 
     state_syms = extract_syms(prob.states)
@@ -222,7 +222,7 @@ def mf_com(prob: Problem, com_index=0):
     return prob, traj_mapper
 
 
-def mf_all(prob: Problem):
+def mf_all(prob: SymbolicProblem):
 
     if not is_symplectic(prob.omega):
         logger.warning('BVP is not symplectic. Skipping reduction.')

@@ -1,18 +1,19 @@
-import beluga
-import cloudpickle as pickle
 import copy
 import logging
 from math import isclose
-import numpy as np
 
-from beluga.solvers.bvp_solvers import BaseAlgorithm, BVPResult
-from beluga.solvers.ivp_solvers import Propagator, reconstruct
-from beluga.data_classes.trajectory import Trajectory
-from beluga.utils.logging import logger
+import cloudpickle as pickle
+import numpy as np
+from scipy.optimize import minimize, root, fsolve
+from scipy.optimize.slsqp import approx_jacobian
 from scipy.sparse import coo_matrix, csc_matrix
 from scipy.sparse.linalg import splu
-from scipy.optimize.slsqp import approx_jacobian
-from scipy.optimize import minimize, root, fsolve
+
+import beluga
+from beluga.data_classes.trajectory import Trajectory
+from beluga.solvers.bvp_solvers import BaseAlgorithm, BVPResult
+from beluga.solvers.ivp_solvers import Propagator, reconstruct
+from beluga.utils.logging import logger
 
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
                              'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'}

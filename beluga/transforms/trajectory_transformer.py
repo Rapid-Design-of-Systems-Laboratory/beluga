@@ -1,9 +1,8 @@
-from typing import Iterable
 from abc import ABC, abstractmethod
-import copy
+from typing import Iterable
 
-from beluga.utils.noneless_list import NonelessList
 from beluga.data_classes.trajectory import Trajectory
+from beluga.utils.noneless_list import NonelessList
 
 
 class TrajectoryTransformer(ABC):

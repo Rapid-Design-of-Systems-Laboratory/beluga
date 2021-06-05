@@ -11,13 +11,15 @@ References
     Dimensional Manifolds." AIAA Aviation 2019 Forum. 2019.
 """
 
-import pytest
-import itertools
-from beluga.numeric.data_classes.Trajectory import Trajectory
-from beluga.solvers.bvp_solvers import Shooting
-import numpy as np
 import copy
+import itertools
+
+import numpy as np
+import pytest
+from beluga.numeric.data_classes.Trajectory import Trajectory
 from scipy.special import erf
+
+from beluga.solvers.bvp_solvers import Shooting
 
 # Test the shooting solver for each algorithm listed below
 ALGORITHMS = ['Armijo', 'SLSQP']

@@ -1,15 +1,15 @@
-import beluga
-import numpy as np
-from scipy.integrate import solve_ivp, simps
 import copy
 
-from liepack.flow import RKMK, Flow
-from liepack.domain.hspaces import HManifold
-from liepack.domain.liegroups import RN
-from liepack.domain.liealgebras import rn
+import numpy as np
 from liepack import exp
+from liepack.domain.hspaces import HManifold
+from liepack.domain.liealgebras import rn
+from liepack.domain.liegroups import RN
 from liepack.field import VectorField
+from liepack.flow import RKMK, Flow
+from scipy.integrate import solve_ivp, simps
 
+import beluga
 from beluga.data_classes.trajectory import Trajectory
 
 

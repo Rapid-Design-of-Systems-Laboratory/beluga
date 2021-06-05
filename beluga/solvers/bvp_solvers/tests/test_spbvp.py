@@ -11,12 +11,14 @@ References
     Dimensional Manifolds." AIAA Aviation 2019 Forum. 2019.
 """
 
+import copy
+
+import numpy as np
 import pytest
 from beluga.numeric.data_classes.Trajectory import Trajectory
-from beluga.solvers.bvp_solvers import SPBVP
-import numpy as np
 from scipy.special import erf
-import copy
+
+from beluga.solvers.bvp_solvers import SPBVP
 
 EASY = [1]
 MEDIUM = [1e-1]

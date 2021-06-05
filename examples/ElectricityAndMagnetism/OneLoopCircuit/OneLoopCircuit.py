@@ -12,7 +12,7 @@ i_0 = 1
 lu = 1
 lq = 1e5
 
-ocp = beluga.Problem()
+ocp = beluga.SymbolicProblem()
 
 # Define independent variables
 ocp.independent('t', 's')

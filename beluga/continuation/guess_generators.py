@@ -1,14 +1,15 @@
 """Generates the initial guess from a variety of sources."""
+import copy
 import logging
 import time
+
 import numpy as np
-import copy
 
 import beluga
-from beluga.solvers.ivp_solvers import Propagator
 from beluga.data_classes import trajectory
-from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import getattr_from_list
+from beluga.data_classes.symbolic_problem import SymbolicProblem
+from beluga.solvers.ivp_solvers import Propagator
 
 
 def guess_generator(*args, **kwargs):
@@ -226,7 +227,7 @@ class GuessGenerator(object):
         return solout
 
 
-def match_constants_to_states(prob: Problem, sol: trajectory):
+def match_constants_to_states(prob: SymbolicProblem, sol: trajectory):
     state_names = getattr_from_list(prob.states + [prob.independent_variable], 'name')
 
     initial_states = np.hstack((sol.y[0, :], sol.t[0]))

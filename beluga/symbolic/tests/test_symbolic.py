@@ -1,13 +1,13 @@
 import copy
-import pytest
+
 import numpy as np
-
+import pytest
 import sympy
-
-from beluga import Problem
-from beluga.transforms.recipes import compile_indirect
-from beluga.symbolic.differential_geometry import exterior_derivative, make_standard_symplectic_form, is_symplectic
 from beluga.numeric.data_classes.Trajectory import Trajectory
+
+from beluga import SymbolicProblem
+from beluga.symbolic.differential_geometry import exterior_derivative, make_standard_symplectic_form, is_symplectic
+from beluga.transforms.recipes import compile_indirect
 
 METHODS = ['indirect', 'diffyg']
 tol = 1e-8
@@ -16,7 +16,7 @@ tol = 1e-8
 @pytest.mark.parametrize("method", METHODS)
 def test_composable_functors(method):
 
-    problem = Problem()
+    problem = SymbolicProblem()
     problem.independent('t', 's')
     problem.state('x', 'v*cos(theta)', 'm')
     problem.state('y', 'v*sin(theta)', 'm')

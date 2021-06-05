@@ -1,8 +1,8 @@
 import numpy as np
 import sympy
 
-from beluga.data_classes.symbolic_problem import Problem
 from beluga.data_classes.problem_components import getattr_from_list, extract_syms
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
@@ -29,7 +29,7 @@ class SquashToBVPTransformer(TrajectoryTransformer):
         return traj
 
 
-def squash_to_bvp(prob: Problem):
+def squash_to_bvp(prob: SymbolicProblem):
     costate_idxs = slice(len(prob.states), len(prob.states) + len(prob.costates))
     prob.states += prob.costates
     prob.costates = []
@@ -51,14 +51,14 @@ def squash_to_bvp(prob: Problem):
     return prob, traj_mapper
 
 
-def ignore_quads(prob: Problem):
+def ignore_quads(prob: SymbolicProblem):
     prob.states += prob.quads
     prob.quads = []
 
     return prob, None
 
 
-def compute_analytical_jacobians(prob: Problem):
+def compute_analytical_jacobians(prob: SymbolicProblem):
     states = sympy.Matrix(extract_syms(prob.states))
     dynamic_parameters = sympy.Matrix(extract_syms(prob.parameters))
     parameters = sympy.Matrix(extract_syms(prob.parameters) + extract_syms(prob.constraint_parameters))

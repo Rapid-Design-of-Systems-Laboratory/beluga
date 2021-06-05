@@ -56,11 +56,11 @@ Help:
   https://github.rcac.purdue.edu/RDSL/beluga
 
 """
-import os
-import sys
-import logging
 # import importlib
 import builtins
+import logging
+import os
+import sys
 
 import docopt
 from yaml import load

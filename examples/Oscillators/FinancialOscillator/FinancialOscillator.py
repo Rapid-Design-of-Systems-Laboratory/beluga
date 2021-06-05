@@ -9,7 +9,7 @@ import beluga
 import numpy as np
 import logging
 
-ocp_indirect = beluga.Problem()
+ocp_indirect = beluga.SymbolicProblem()
 
 # Define independent variables
 ocp_indirect.independent('t', 'nd')

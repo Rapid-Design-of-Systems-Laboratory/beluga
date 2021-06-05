@@ -1,9 +1,8 @@
 import copy
 from abc import ABC
 
-from beluga.utils.logging import logger
-from beluga.data_classes.symbolic_problem import Problem
-from beluga.data_classes.compiled_problem import NumericProblem
+from beluga.data_classes.compiled_problem import CompiledProblem
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.transforms.constraints import regularize_control_constraints, apply_penatly_method_all
 from beluga.transforms.controls import algebraic_control_law, differential_control_law_traditional, \
     differential_control_law_diffy_g
@@ -14,11 +13,12 @@ from beluga.transforms.pre_process import ensure_sympified, apply_quantities
 from beluga.transforms.reduction import mf_all
 from beluga.transforms.switching import regularize_switches
 from beluga.transforms.trajectory_transformer import TrajectoryTransformerList
+from beluga.utils.logging import logger
 
 
-def compile_problem(prob: Problem, use_control_arg=False):
+def compile_problem(prob: SymbolicProblem, use_control_arg=False):
 
-    prob.functional_problem = NumericProblem(prob)
+    prob.functional_problem = CompiledProblem(prob)
 
     prob.functional_problem.compile_problem(use_control_arg=use_control_arg)
     prob.lambdified = True

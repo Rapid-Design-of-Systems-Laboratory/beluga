@@ -1,9 +1,9 @@
 import sympy
 
-from beluga.data_classes.symbolic_problem import Problem
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 
 
-def regularize_switch(prob: Problem, switch_idx: int = 0):
+def regularize_switch(prob: SymbolicProblem, switch_idx: int = 0):
     switch = prob.switches.pop(switch_idx)
 
     switch_fun = sum([function * sum([1 / (1 + sympy.exp(condition / switch.tol_param))
@@ -15,7 +15,7 @@ def regularize_switch(prob: Problem, switch_idx: int = 0):
     return prob, None
 
 
-def regularize_switches(prob: Problem):
+def regularize_switches(prob: SymbolicProblem):
     for _ in range(len(prob.switches)):
         regularize_switch(prob, switch_idx=0)
 

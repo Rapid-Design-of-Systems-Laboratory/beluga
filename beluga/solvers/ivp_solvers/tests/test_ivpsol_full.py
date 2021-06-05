@@ -1,6 +1,8 @@
-from beluga.solvers.ivp_solvers import Propagator
-import numpy as np
 from math import sin, cos, acos, sqrt
+
+import numpy as np
+
+from beluga.solvers.ivp_solvers import Propagator
 
 
 def compute_hamiltonian(y, _, aux, u):

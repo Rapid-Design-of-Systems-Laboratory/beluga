@@ -1,9 +1,9 @@
 import numpy as np
 import sympy
 
-from beluga.data_classes.problem_components import combine_component_lists, NamedDimensionalStruct, DynamicStruct,\
+from beluga.data_classes.problem_components import combine_component_lists, NamedDimensionalStruct, DynamicStruct, \
     SymmetryStruct, sym_one
-from beluga.data_classes.symbolic_problem import Problem
+from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.data_classes.trajectory import Trajectory
 from beluga.transforms.trajectory_transformer import TrajectoryTransformer
 
@@ -31,7 +31,7 @@ class MomentumShiftTransformer(TrajectoryTransformer):
         return traj
 
 
-def momentum_shift(prob: Problem):
+def momentum_shift(prob: SymbolicProblem):
 
     ind_var = prob.independent_variable
     new_state = DynamicStruct(
@@ -90,7 +90,7 @@ class NormalizeIndependentTransformer(TrajectoryTransformer):
         return traj
 
 
-def normalize_independent(prob: Problem):
+def normalize_independent(prob: SymbolicProblem):
     delta_t_name = '_delta' + prob.independent_variable.name
     delta_t = NamedDimensionalStruct(delta_t_name, prob.independent_variable.units).sympify_self()
     prob.parameters.append(delta_t)

@@ -3,7 +3,7 @@ import beluga
 import logging
 from math import pi
 
-ocp = beluga.Problem()
+ocp = beluga.SymbolicProblem()
 
 # Define independent variables
 ocp.independent('t', 's')
