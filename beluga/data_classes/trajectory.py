@@ -39,6 +39,8 @@ class Trajectory(object):
         obj.converged = False
         obj.cost = np.nan
 
+        obj.aux = dict()
+
         interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
         obj.interpolation_type = interpolation_type
 

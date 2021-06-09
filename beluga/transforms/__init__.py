@@ -5,7 +5,8 @@ from .controls import algebraic_control_law, differential_control_law_traditiona
     differential_control_law
 from .dualize import dualize_traditional, dualize_diffyg, dualize
 from .independent import momentum_shift, normalize_independent
-from .post_process import squash_to_bvp
+from .post_process import squash_to_bvp, compute_analytical_jacobians
 from .pre_process import ensure_sympified, apply_quantities
 from .reduction import mf_com, mf_all
 from .switching import regularize_switch, regularize_switches
+from .trajectory_transformer import TrajectoryTransformerList

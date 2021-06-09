@@ -3,16 +3,14 @@ from abc import ABC
 
 from beluga.data_classes.compiled_problem import CompiledProblem
 from beluga.data_classes.symbolic_problem import SymbolicProblem
-from beluga.transforms.constraints import regularize_control_constraints, apply_penatly_method_all
-from beluga.transforms.controls import algebraic_control_law, differential_control_law_traditional, \
-    differential_control_law_diffy_g
-from beluga.transforms.dualize import dualize, dualize_traditional, dualize_diffyg
-from beluga.transforms.independent import momentum_shift, normalize_independent
-from beluga.transforms.post_process import squash_to_bvp, compute_analytical_jacobians
-from beluga.transforms.pre_process import ensure_sympified, apply_quantities
-from beluga.transforms.reduction import mf_all
-from beluga.transforms.switching import regularize_switches
-from beluga.transforms.trajectory_transformer import TrajectoryTransformerList
+from beluga.transforms import TrajectoryTransformerList, \
+    regularize_control_constraints, apply_penatly_method_all, \
+    algebraic_control_law, differential_control_law_traditional, differential_control_law_diffy_g, \
+    dualize, dualize_traditional, dualize_diffyg, \
+    momentum_shift, normalize_independent,\
+    squash_to_bvp, compute_analytical_jacobians, \
+    ensure_sympified, apply_quantities, mf_all, regularize_switches
+
 from beluga.utils.logging import logger
 
 
@@ -106,7 +104,8 @@ class Direct(RecipeBase):
 
 
 class OptimOptionsRecipe(RecipeBase):
-    def __init__(self, analytical_jacobian=False, control_method='differential', method='traditional', reduction=False):
+    def __init__(self, analytical_jacobian=False, control_method='differential', method='traditional', reduction=False,
+                 calc_sensitivities=False):
         super().__init__()
 
         self.transforms = [
@@ -143,6 +142,9 @@ class OptimOptionsRecipe(RecipeBase):
 
         if reduction:
             self.transforms.append(mf_all)
+
+        if calc_sensitivities:
+            self.transforms.append(calc_sensitivities)
 
         self.transforms.append(squash_to_bvp)
 

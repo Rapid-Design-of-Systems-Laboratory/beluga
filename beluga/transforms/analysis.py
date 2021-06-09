@@ -26,8 +26,13 @@ class HamiltonianSensitivityCalculator(TrajectoryTransformer):
 
     def inv_transform(self, traj: Trajectory) -> Trajectory:
         # TODO Vectorize
-        traj.u = np.array([self.dh_dux_func(_t, _y, _lam, traj.dynamical_parameters, traj.const) for _t, _y, _u, _lam,
-                           in zip(traj.t, traj.y, traj.u, traj.dual)])
+        traj.aux['dH_dux'] = \
+            np.array([self.dh_dux_func(_t, _y, _lam, traj.dynamical_parameters, traj.const)
+                      for _t, _y,  _u, _lam, in zip(traj.t, traj.y, traj.u, traj.dual)])
+        traj.aux['dH_duu'] = \
+            np.array([self.dh_duu_func(_t, _y, _lam, traj.dynamical_parameters, traj.const)
+                      for _t, _y, _u, _lam, in zip(traj.t, traj.y, traj.u, traj.dual)])
+
         return traj
 
 
