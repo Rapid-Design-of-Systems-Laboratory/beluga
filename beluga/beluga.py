@@ -67,7 +67,7 @@ def solve(
         logger.debug(bvp.__repr__())
 
         ocp_transform = traj_mapper.transform
-        ocp_inv_transform = traj_mapper.inv_transform
+        ocp_inv_transform_many = traj_mapper.inv_transform_many
 
     else:
         if ocp_transform is None or ocp_inv_transform is None:
@@ -101,7 +101,10 @@ def solve(
     """
     Post processing and output
     """
-    out = postprocess(continuation_set, ocp_inv_transform)
+    # Calculate the control time-history for each trajectory
+    out = []
+    for continuation_step in continuation_set:
+        out.append(ocp_inv_transform_many(continuation_step))
 
     if pool is not None:
         pool.close()
@@ -113,25 +116,5 @@ def solve(
             filename = 'data.beluga'
 
         save(out, ocp, bvp, filename=filename)
-
-    return out
-
-
-def postprocess(continuation_set, ocp_map_inverse):
-    """
-    Post processes the data after the continuation process has run.
-
-    :param continuation_set: The set of all continuation processes.
-    :param ocp_map_inverse: A mapper converting BVP solutions to OCP solutions.
-    :return: Set of trajectories to be returned to the user.
-    """
-    out = []
-
-    # Calculate the control time-history for each trajectory
-    for cont_num, continuation_step in enumerate(continuation_set):
-        tempset = []
-        for sol_num, sol in enumerate(continuation_step):
-            tempset.append(ocp_map_inverse(sol))
-        out.append(tempset)
 
     return out

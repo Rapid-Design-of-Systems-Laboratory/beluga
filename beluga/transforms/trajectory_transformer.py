@@ -22,11 +22,11 @@ class TrajectoryTransformer(ABC):
 
     def transform_many(self, trajs):
         # TODO Make parallel
-        return map(self.transform, trajs)
+        return [self.transform(traj) for traj in trajs]
 
     def inv_transform_many(self, trajs):
         # TODO Make parallel
-        return map(self.inv_transform, trajs)
+        return [self.inv_transform(traj) for traj in trajs]
 
     def __call__(self, trajs, inv=False):
         if isinstance(trajs, Iterable):
