@@ -13,20 +13,9 @@ from beluga.utils import save
 from beluga.utils.logging import logger, make_a_splash
 
 
-def solve(
-        autoscale=True,
-        bvp=None,
-        bvp_algorithm=None,
-        guess_generator=None,
-        initial_helper=False,
-        method='traditional',
-        n_cpus=1,
-        ocp=None,
-        ocp_transform=None,
-        ocp_inv_transform=None,
-        optim_options=None,
-        steps=None,
-        save_sols=True):
+def solve(autoscale=True, bvp=None, bvp_algorithm=None, guess_generator=None, initial_helper=False,
+          method='traditional', n_cpus=1, ocp=None, ocp_transform=None, ocp_inv_transform=None, optim_options=None,
+          steps=None, save_sols=True):
 
     if optim_options is None:
         optim_options = {}
@@ -67,6 +56,7 @@ def solve(
         logger.debug(bvp.__repr__())
 
         ocp_transform = traj_mapper.transform
+        ocp_inv_transform = traj_mapper.inv_transform
         ocp_inv_transform_many = traj_mapper.inv_transform_many
 
     else:
