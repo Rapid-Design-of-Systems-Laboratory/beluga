@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from beluga.symbolic import Problem
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
+from beluga.utils.logging import logger, fit_string
 
 
 def gamma_norm(const1, const2):
@@ -65,7 +66,7 @@ class ContinuationVariable(object):
         self.steps = []
 
     def __str__(self):
-        return self.name + ' -> ' + str(self.target)
+        return self.name + ' -> ' + '{:.3g}'.format(self.target)
 
 
 class ContinuationStrategy(abc.ABC):
@@ -136,7 +137,7 @@ class ContinuationStrategy(abc.ABC):
         gamma_guess = copy.deepcopy(self.gammas[i])
         gamma_guess.const = const0
         self.ctr += 1
-        logging.beluga('CHOOSE\ttraj #' + str(i) + ' as guess.')
+        logger.debug('CHOOSE\ttraj #' + str(i) + ' as guess.')
         return gamma_guess
 
     def var_iterator(self):
@@ -168,6 +169,9 @@ class ManualStrategy(ContinuationStrategy):
         self.const = functools.partial(self.set, param_type='const')
         self.orig_num_cases = num_cases
         self.constant = self.const
+
+    def __str__(self):
+        return ', '.join(str(continuationVariable) for continuationVariable in self.vars.values())
 
     def reset(self):
         """Resets the internal step counter to zero"""
@@ -236,9 +240,6 @@ class BisectionStrategy(ManualStrategy):
         self.division_ctr = 0
         self.orig_num_cases = initial_num_cases
 
-    def __str__(self):
-        return ', '.join(str(continuationVariable) for continuationVariable in self.vars.values())
-
     def next(self, ignore_last_step=False):
         """Generator class to create BVPs for the continuation step iterations
 
@@ -283,7 +284,7 @@ class BisectionStrategy(ManualStrategy):
         # Increment total number of steps
         self._num_cases = self._num_cases + self.num_divisions-1
 
-        logging.beluga('Increasing number of cases to '+str(self._num_cases)+'\n')
+        logger.debug('Increasing number of cases to '+str(self._num_cases)+'\n')
         self.division_ctr = self.division_ctr + 1
         return super(BisectionStrategy, self).next(True)
 
@@ -526,7 +527,7 @@ def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, a
     bvp_algorithm_.set_inequality_constraint_function(functional_problem.ineq_constraints)
 
     if steps is None:
-        logging.info('Solving OCP...')
+        logger.info('Solving OCP...')
         time0 = time.time()
         if autoscale:
             scale_factors = compute_factors(sol_guess)
@@ -543,33 +544,33 @@ def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, a
         solution_set = [[sol]]
         if sol.converged:
             elapsed_time = time.time() - time0
-            logging.beluga('Problem converged in %0.4f seconds\n' % elapsed_time)
+            logger.debug('Problem converged in %0.4f seconds\n' % elapsed_time)
         else:
-            logging.beluga('Problem failed to converge!\n')
+            logger.debug('Problem failed to converge!\n')
     else:
         for step_idx, step in enumerate(steps):
-            logging.beluga('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
-            # logging.beluga('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
+            logger.debug('\nRunning Continuation Step #{} ({})'.format(step_idx+1, step)+' : ')
+            # logger.debug('Number of Iterations\t\tMax BC Residual\t\tTime to Solution')
             solution_set.append([])
             # Assign solution from last continuation set
             step.reset()
             step.init(sol_guess, bvp)
             try:
-                log_level = logging.getLogger()._displayLevel
+                log_level = logger.display_level_
             except AttributeError:
-                log_level = logging.getLogger().getEffectiveLevel()
+                log_level = logger.getEffectiveLevel()
 
             step_len = len(step)
             continuation_progress = tqdm(
-                step, disable=log_level is not logging.INFO, desc='Continuation #' + str(step_idx+1),
-                ascii=True, unit='trajectory')
+                step, disable=(not (logging.INFO <= log_level < logging.WARN)), file=sys.stdout,
+                desc='Cont. #{} ({})'.format(step_idx + 1, fit_string(str(step), 30)), ascii=True, unit='trajectories')
             for sol_guess in continuation_progress:
                 continuation_progress.total = len(step)
                 if step_len != continuation_progress.total:
                     step_len = continuation_progress.total
                     continuation_progress.refresh()
 
-                logging.beluga('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
+                logger.debug('START \tIter {:d}/{:d}'.format(step.ctr, step.num_cases()))
                 time0 = time.time()
                 if autoscale:
                     scale_factors = compute_factors(sol_guess)
@@ -607,11 +608,11 @@ def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: Problem, pool, a
                 """
                 sol_guess = copy.deepcopy(sol)
                 elapsed_time = time.time() - time0
-                logging.beluga(
+                logger.debug(
                     'STOP  \tIter {:d}/{:d}\tBVP Iters {:d}\tBC Res {:13.8E}\tTime {:13.8f}'
                     .format(step.ctr, step.num_cases(), opt['niter'], max(bc_residuals_unscaled), elapsed_time))
                 solution_set[step_idx].append(copy.deepcopy(sol))
                 if not sol.converged:
-                    logging.beluga('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
+                    logger.debug('Iteration %d/%d failed to converge!\n' % (step.ctr, step.num_cases()))
 
     return solution_set

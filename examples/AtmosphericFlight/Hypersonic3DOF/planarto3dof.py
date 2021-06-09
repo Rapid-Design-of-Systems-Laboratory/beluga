@@ -104,7 +104,7 @@ continuation_steps.add_step('bisection') \
                 .const('gam_0', -0*pi/180) \
                 .const('theta_f', 3*pi/180)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 cont_planar = beluga.solve(ocp=ocp,
                            method='indirect',

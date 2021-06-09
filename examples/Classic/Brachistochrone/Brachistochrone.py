@@ -9,9 +9,9 @@ ocp = beluga.Problem()
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v*cos(theta)', 'm') \
-   .state('y', 'v*sin(theta)', 'm') \
-   .state('v', 'g*sin(theta)', 'm/s')
+ocp.state('x', 'v*cos(theta)', 'm')
+ocp.state('y', 'v*sin(theta)', 'm')
+ocp.state('v', 'g*sin(theta)', 'm/s')
 
 ocp.symmetry(['1', '0', '0'], 'm')
 ocp.symmetry(['0', '1', '0'], 'm')
@@ -54,7 +54,7 @@ continuation_steps.add_step('bisection') \
                 .const('x_f', 10) \
                 .const('y_f', -10)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,

@@ -52,7 +52,7 @@ guess_maker_indirect = beluga.guess_generator(
     time_integrate=0.1
 )
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 continuation_steps = beluga.init_continuation()
 

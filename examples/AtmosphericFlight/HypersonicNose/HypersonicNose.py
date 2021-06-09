@@ -51,7 +51,7 @@ continuation_steps.add_step('bisection') \
                 .num_cases(10, 'log') \
                 .const('eps1', 2e-1)
 
-beluga.add_logger(logging_level=logging.DEBUG, display_level=logging.INFO)
+beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 bvp_solver = beluga.bvp_algorithm('spbvp')
 
