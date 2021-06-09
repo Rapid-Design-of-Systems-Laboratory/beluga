@@ -35,7 +35,7 @@ setup(name="beluga",
       author="Sean Nolan",
       author_email='nolans@pudue.edu',
       platforms=["any"],  # or more specific, e.g. "win32", "cygwin", "osx"
-      python_requires='>3.6',
+      python_requires='>3.7',
       license="MIT",
       url="https://github.com/Rapid-Design-of-Systems-Laboratory/beluga",
       py_modules=['beluga'],
@@ -49,19 +49,18 @@ setup(name="beluga",
       install_requires=requirements,
       extras_require={'dev': requirements_dev},
       include_package_data=True,
-      classifiers=(
+      classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Physics'
-      )
+      ]
       )
