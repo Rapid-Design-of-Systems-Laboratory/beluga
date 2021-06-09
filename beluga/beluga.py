@@ -11,7 +11,7 @@ from beluga.release import __splash__
 from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.utils import save, init_logging
 from beluga.symbolic.data_classes.components_structures import getattr_from_list
-from beluga.symbolic.data_classes.mapping_functions import compile_direct, compile_indirect
+from beluga.symbolic.data_classes import make_direct_method, make_indirect_method, make_postprocessor, make_preprocessor
 from beluga.continuation import run_continuation_set, match_constants_to_states
 
 
@@ -60,9 +60,9 @@ def solve(
     +========================+=================+=======================================+
     | autoscale              | True            | bool                                  |
     +------------------------+-----------------+---------------------------------------+
-    | prob                    | None            | codegen'd BVPs                        |
+    | prob                   | None            | codegen'd BVPs                        |
     +------------------------+-----------------+---------------------------------------+
-    | bvp_algorithm          | None            | prob algorithm                         |
+    | bvp_algorithm          | None            | prob algorithm                        |
     +------------------------+-----------------+---------------------------------------+
     | guess_generator        | None            | guess generator                       |
     +------------------------+-----------------+---------------------------------------+
@@ -130,12 +130,23 @@ def solve(
     logger.debug('Using ' + str(n_cpus) + '/' + str(pathos.multiprocessing.cpu_count()) + ' CPUs. ')
 
     if bvp is None:
-        if method.lower() in ['indirect', 'traditional', 'brysonho', 'diffyg']:
-            bvp = compile_indirect(copy.deepcopy(ocp), method=method, **optim_options)
+        preprocessor = make_preprocessor()
+        processed_ocp = preprocessor(copy.deepcopy(ocp))
+
+        if method.lower() in ['indirect', 'traditional', 'brysonho']:
+            method = 'traditional'
+        
+        if method.lower() in ['traditional', 'diffyg']:
+            RFfunctor = make_indirect_method(copy.deepcopy(processed_ocp), method=method, **optim_options)
+            prob = RFfunctor(copy.deepcopy(processed_ocp))
         elif method == 'direct':
-            bvp = compile_direct(copy.deepcopy(ocp), **optim_options)
+            functor = make_direct_method(copy.deepcopy(processed_ocp), **optim_options)
+            prob = functor(copy.deepcopy(processed_ocp))
         else:
             raise NotImplementedError
+        
+        postprocessor = make_postprocessor()
+        bvp = postprocessor(copy.deepcopy(prob))
 
         logger.debug('Resulting BVP problem:')
         logger.debug(bvp.__repr__())
@@ -175,7 +186,7 @@ def solve(
     """
     Post processing and output
     """
-    out = postprocess(continuation_set, ocp_map_inverse)
+    out = postprocess_continuations(continuation_set, ocp_map_inverse)
 
     if pool is not None:
         pool.close()
@@ -191,7 +202,7 @@ def solve(
     return out
 
 
-def postprocess(continuation_set, ocp_map_inverse):
+def postprocess_continuations(continuation_set, ocp_map_inverse):
     """
     Post processes the data after the continuation process has run.
 

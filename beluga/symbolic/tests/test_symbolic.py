@@ -5,11 +5,11 @@ import numpy as np
 import sympy
 
 from beluga import Problem
-from beluga.symbolic.data_classes.mapping_functions import compile_indirect
+from beluga.symbolic.data_classes.mapping_functions import make_indirect_method, make_preprocessor
 from beluga.symbolic.differential_geometry import exterior_derivative, make_standard_symplectic_form, is_symplectic
-from beluga.numeric.data_classes.Trajectory import Trajectory
+from beluga.numeric.data_classes import Trajectory
 
-METHODS = ['indirect', 'diffyg']
+METHODS = ['traditional', 'diffyg']
 tol = 1e-8
 
 
@@ -40,7 +40,10 @@ def test_composable_functors(method):
 
     problem.scale(m='y', s='y/v', kg=1, rad=1, nd=1)
 
-    bvp = compile_indirect(problem, method=method)
+    preprocessor = make_preprocessor()
+    indirect_method = make_indirect_method(problem, method=method)
+
+    bvp = indirect_method(preprocessor(problem))
     mapper = bvp.map_sol
     mapper_inv = bvp.inv_map_sol
 
