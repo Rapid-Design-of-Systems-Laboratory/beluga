@@ -13,7 +13,7 @@ def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify)
         return None
 
     elif num_options == 1:
-        compiled_option = lambdify_func(args, [*control_options.values()])
+        compiled_option = lambdify_func(args, control_options[0])
 
         def calc_u(_y, _p, _k):
             return np.array(compiled_option(_y, _p, _k))
@@ -30,6 +30,7 @@ def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify)
                 ham_i = ham_func(_y, u_set[n, :], _p, _k)
                 if ham_i < ham:
                     u = u_set[n, :]
+                    ham = ham_i
 
             return u
 
