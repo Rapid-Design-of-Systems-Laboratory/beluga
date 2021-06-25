@@ -10,7 +10,7 @@ from math import *
 import beluga
 import logging
 
-ocp = beluga.SymbolicProblem()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')

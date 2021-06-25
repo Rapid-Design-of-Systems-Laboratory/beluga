@@ -5,7 +5,7 @@ import beluga
 import logging
 import numpy as np
 
-ocp = beluga.SymbolicProblem('Bryson-Denham')
+ocp = beluga.Problem('Bryson-Denham')
 
 # Define independent variables
 ocp.independent('t', 's')

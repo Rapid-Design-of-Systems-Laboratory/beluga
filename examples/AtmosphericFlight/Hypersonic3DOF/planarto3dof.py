@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 '''
 Begin the planar portion of the solution process.
 '''
-ocp = beluga.SymbolicProblem('planarHypersonic')
+ocp = beluga.Problem('planarHypersonic')
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -119,7 +119,7 @@ sol = cont_planar[-1][-1]
 '''
 Begin the 3 dof portion of the solution process.
 '''
-ocp_2 = beluga.SymbolicProblem('hypersonic3DOF')
+ocp_2 = beluga.Problem('hypersonic3DOF')
 
 # Define independent variables
 ocp_2.independent('t', 's')

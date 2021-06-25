@@ -2,7 +2,7 @@ import numpy
 
 from .beluga import solve
 from .continuation import guess_generator, GuessGenerator, ContinuationList as init_continuation
-from .data_classes.symbolic_problem import SymbolicProblem as SymbolicProblem
+from .data_classes.symbolic_problem import SymbolicProblem as Problem
 from .release import __version__, __splash__
 from .solvers import bvp_solvers
 from .solvers.bvp_solvers import bvp_algorithm

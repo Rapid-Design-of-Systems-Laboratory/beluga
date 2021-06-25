@@ -11,7 +11,7 @@ References
 import beluga
 import logging
 
-ocp = beluga.SymbolicProblem()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', 's')
@@ -42,7 +42,7 @@ ocp.initial_constraint('t', 's')
 ocp.terminal_constraint('x1 - x1_f', '1')
 ocp.terminal_constraint('x2 - x2_f', '1')
 
-ocp.path_constraint('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='epstrig')
+ocp.control_constraint('u', '1', lower='u_min', upper='u_max', activator='epsilon1', method='trig')
 
 bvp_solver_indirect = beluga.bvp_algorithm('spbvp')
 

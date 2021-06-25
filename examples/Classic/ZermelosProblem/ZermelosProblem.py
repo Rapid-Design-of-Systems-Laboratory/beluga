@@ -1,7 +1,7 @@
 import beluga
 import logging
 
-ocp = beluga.SymbolicProblem()
+ocp = beluga.Problem()
 
 
 # def drift_x(x, y):

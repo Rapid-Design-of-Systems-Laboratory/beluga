@@ -8,7 +8,7 @@ from beluga.transforms import TrajectoryTransformerList, \
     algebraic_control_law, differential_control_law_traditional, differential_control_law_diffy_g, \
     dualize, dualize_traditional, dualize_diffyg, \
     momentum_shift, normalize_independent,\
-    squash_to_bvp, compute_analytical_jacobians, \
+    squash_to_bvp, compute_analytical_jacobians, hamiltonian_sensitivity_handler, \
     ensure_sympified, apply_quantities, mf_all, regularize_switches
 
 from beluga.utils.logging import logger
@@ -125,6 +125,9 @@ class OptimOptionsRecipe(RecipeBase):
             raise NotImplementedError('Method \"{}\" not implemented. Expected \"traditional\" or \"diffyg\"'
                                       .format(control_method))
 
+        if calc_sensitivities:
+            self.transforms.append(hamiltonian_sensitivity_handler)
+
         if control_method == 'algebraic':
             self.transforms.append(algebraic_control_law)
         elif control_method == 'differential' and method == 'traditional':
@@ -142,9 +145,6 @@ class OptimOptionsRecipe(RecipeBase):
 
         if reduction:
             self.transforms.append(mf_all)
-
-        if calc_sensitivities:
-            self.transforms.append(calc_sensitivities)
 
         self.transforms.append(squash_to_bvp)
 

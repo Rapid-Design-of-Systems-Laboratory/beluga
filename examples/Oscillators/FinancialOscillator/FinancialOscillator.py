@@ -9,7 +9,7 @@ import beluga
 import numpy as np
 import logging
 
-ocp_indirect = beluga.SymbolicProblem()
+ocp_indirect = beluga.Problem()
 
 # Define independent variables
 ocp_indirect.independent('t', 'nd')
@@ -35,7 +35,7 @@ ocp_indirect.path_cost('(x1 + 5*t - 5)**2', 'nd')
 ocp_indirect.initial_constraint('x1 - x1_0', 'nd')
 ocp_indirect.initial_constraint('x2 - x2_0', 'nd')
 ocp_indirect.initial_constraint('t', 'nd')
-ocp_indirect.path_constraint('u', 'rad', lower='-2', upper='2', activator='epsilon1', method='epstrig')
+ocp_indirect.control_constraint('u', 'rad', lower='-2', upper='2', activator='epsilon1', method='trig')
 ocp_indirect.terminal_constraint('t - 1', 'nd')
 
 ocp_indirect.scale(rad=1, nd=1)

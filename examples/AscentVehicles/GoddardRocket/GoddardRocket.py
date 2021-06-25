@@ -8,7 +8,7 @@ import beluga
 import logging
 from math import pi, sqrt
 
-ocp = beluga.SymbolicProblem()
+ocp = beluga.Problem()
 
 # Define independent variables
 ocp.independent('t', '1')

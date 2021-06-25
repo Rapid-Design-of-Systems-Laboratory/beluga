@@ -1,4 +1,5 @@
 import copy
+import time
 
 # from ._bvp import *
 import numpy as np
@@ -102,13 +103,17 @@ class SPBVP(BaseAlgorithm):
             _bc_jac = None
 
         if nquads > 0:
+            comp_time_0 = time.time()
             opt = solve_bvp(_fun, _bc, solinit.t, np.hstack((solinit.y, solinit.q)).T,
                             np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
                             max_nodes=self.max_nodes, fun_jac=_fun_jac, bc_jac=_bc_jac)
+            comp_time = time.time() - comp_time_0
         else:
+            comp_time_0 = time.time()
             opt = solve_bvp(_fun, _bc, solinit.t, solinit.y.T,
                             np.hstack((solinit.dynamical_parameters, solinit.nondynamical_parameters)),
                             max_nodes=self.max_nodes, fun_jac=_fun_jac, bc_jac=_bc_jac)
+            comp_time = time.time() - comp_time_0
 
         sol = Trajectory(solinit)
         sol.t = opt['x']
@@ -123,6 +128,9 @@ class SPBVP(BaseAlgorithm):
             sol.nondynamical_parameters = np.array([])
 
         sol.converged = opt['success']
+        sol.aux['comp_time'] = comp_time
+        sol.aux['niter'] = opt['niter']
+
         out = BVPResult(sol=sol, success=opt['success'], message=opt['message'], rms_residuals=opt['rms_residuals'],
                         niter=opt['niter'])
 
