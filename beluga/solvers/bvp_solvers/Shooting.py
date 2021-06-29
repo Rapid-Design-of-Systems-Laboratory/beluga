@@ -247,7 +247,7 @@ class Shooting(BaseAlgorithm):
         q0g = [None]*n_arcs
         u0g = [None]*n_arcs
         for ii in range(len(gamma_set)):
-            _y0g, _q0g, _u0g = gamma_set[ii](gamma_set[ii].t[0])
+            _y0g, _q0g, _u0g = gamma_set[ii].interpolate(gamma_set[ii].t[0])
             tspan[ii] = gamma_set[ii].t
             y0g[ii] = _y0g
             q0g[ii] = _q0g
@@ -255,7 +255,7 @@ class Shooting(BaseAlgorithm):
 
         def preload(args):
             return prop(derivative_function, quadrature_function, args[0], args[1], args[2],
-                        dyn_param, sol.const)
+                        dyn_param, sol.k)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g))
@@ -286,7 +286,7 @@ class Shooting(BaseAlgorithm):
 
         def preload(args):
             return prop(pickle.loads(derivative_function), pickle.loads(quadrature_function), args[0], args[1], args[2], args[3],
-                        dyn_param, sol.const)
+                        dyn_param, sol.k)
 
         if pool is not None:
             gamma_set_new = pool.map(preload, zip(tspan, y0g, q0g, u0g))
@@ -332,7 +332,7 @@ class Shooting(BaseAlgorithm):
         # for ii in range(n_quads):
         #     dq[ii] = dq[ii] + h
         #     gamma_set_perturbed = [Trajectory(g.t, g.y, g.q + dq) for g in gamma_orig]
-        #     f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, const)
+        #     f = bc_func(gamma_set_perturbed, parameters, nondynamical_params, k)
         #     q[:, ii] = (f-fx)/h
         #     dq[ii] = dq[ii] - h
 
@@ -373,9 +373,9 @@ class Shooting(BaseAlgorithm):
     def _bc_func_multiple_shooting(bc_func=None):
         def _bc_func(gamma_set, p_d, p_n, _, k, *args):
             t0 = gamma_set[0].t[0]
-            y0, q0, u0 = gamma_set[0](t0)
+            y0, q0, u0 = gamma_set[0].interpolate(t0)
             tf = gamma_set[-1].t[-1]
-            yf, qf, uf = gamma_set[-1](tf)
+            yf, qf, uf = gamma_set[-1].interpolate(tf)
             bc1 = np.asarray(
                 [gamma_set[ii].y[-1] - gamma_set[ii + 1].y[0] for ii in range(len(gamma_set) - 1)]).flatten()
             if len(q0) > 0:
@@ -444,16 +444,16 @@ class Shooting(BaseAlgorithm):
         else:
             dtype = float
         sol.q = np.array(sol.q, dtype=beluga.DTYPE)
-        sol.dynamical_parameters = np.array(sol.dynamical_parameters, dtype=beluga.DTYPE)
-        sol.nondynamical_parameters = np.array(sol.nondynamical_parameters, dtype=beluga.DTYPE)
+        sol.p = np.array(sol.p, dtype=beluga.DTYPE)
+        sol.nu = np.array(sol.nu, dtype=beluga.DTYPE)
 
         # n = traj.y[0].shape[0]
-        k = sol.dynamical_parameters.shape[0]
-        # traj.dynamical_parameters = np.hstack((traj.dynamical_parameters, traj.nondynamical_parameters))
-        # traj.nondynamical_parameters = np.empty((0,))
+        k = sol.p.shape[0]
+        # traj.p = np.hstack((traj.p, traj.nu))
+        # traj.nu = np.empty((0,))
 
         fun_wrapped, bc_wrapped, fun_jac_wrapped, bc_jac_wrapped = wrap_functions(
-            self.derivative_function, self.boundarycondition_function, None, None, sol.const, k, dtype)
+            self.derivative_function, self.boundarycondition_function, None, None, sol.k, k, dtype)
 
         pool = kwargs.get('pool', None)
 
@@ -464,13 +464,13 @@ class Shooting(BaseAlgorithm):
         else:
             q0g = sol.q[0, :]
 
-        parameter_guess = sol.dynamical_parameters
-        nondynamical_parameter_guess = sol.nondynamical_parameters
+        parameter_guess = sol.p
+        nondynamical_parameter_guess = sol.nu
 
         # Get some info on the size of the problem
         n_odes = y0g.shape[0]
         n_quads = q0g.shape[0]
-        n_dynparams = sol.dynamical_parameters.shape[0]
+        n_dynparams = sol.p.shape[0]
         # n_nondynparams = nondynamical_parameter_guess.shape[0]
 
         # Make the state-transition ode matrix
@@ -487,8 +487,8 @@ class Shooting(BaseAlgorithm):
         tf = sol.t[-1]
         tn = np.linspace(t0, tf, self.num_arcs+1)
         for trajectory_number in range(self.num_arcs):
-            y0t, q0t, u0t = sol(tn[trajectory_number])
-            yft, qft, uft = sol(tn[trajectory_number+1])
+            y0t, q0t, u0t = sol.interpolate(tn[trajectory_number])
+            yft, qft, uft = sol.interpolate(tn[trajectory_number + 1])
             t_set = np.hstack((tn[trajectory_number], tn[trajectory_number+1]))
             y_set = np.vstack((y0t, yft))
             q_set = np.vstack((q0t, qft))
@@ -538,7 +538,7 @@ class Shooting(BaseAlgorithm):
 
         def _constraint_function_wrapper(X):
             return _constraint_function(X, pick_deriv, pick_quad, n_odes, n_quads, n_dynparams, self.num_arcs,
-                                        sol.const)
+                                        sol.k)
 
         # Set up the jacobian of the constraint function
         def _jacobian_function(xx, deriv_func, quad_func, n_odes, n_quads, n_dynparams, n_arcs):
@@ -791,8 +791,8 @@ class Shooting(BaseAlgorithm):
         sol.q = q_out
         sol.u = u_out
 
-        sol.dynamical_parameters = parameter_guess
-        sol.nondynamical_parameters = nondynamical_parameter_guess
+        sol.p = parameter_guess
+        sol.nu = nondynamical_parameter_guess
         sol.converged = converged
 
         out = BVPResult(sol=sol, success=converged, message=message,

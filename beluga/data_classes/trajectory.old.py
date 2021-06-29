@@ -27,15 +27,15 @@ class Trajectory(object):
             return args[0]
 
         obj.t = np.array([])
-        obj.lam_t = np.array([])
+        obj.dual_t = np.array([])
         obj.y = np.array([])
-        obj.lam = np.array([])
+        obj.dual = np.array([])
         obj.q = np.array([])
         obj.u = np.array([])
-        obj.lam_u = np.array([])
-        obj.p = np.array([])
-        obj.nu = np.array([])
-        obj.k = np.array([])
+        obj.dual_u = np.array([])
+        obj.dynamical_parameters = np.array([])
+        obj.nondynamical_parameters = np.array([])
+        obj.const = np.array([])
         obj.converged = False
         obj.cost = np.nan
 
@@ -60,10 +60,10 @@ class Trajectory(object):
         return obj
 
     def __init__(self, *args, **kwargs):
-        self.interpolator = None
+        self.interpolate = None
         self.set_interpolate_function(self.interpolation_type)
 
-    def interpolate(self, t):
+    def __call__(self, t):
         r"""
         Mapping function for a trajectory.
 
@@ -109,9 +109,9 @@ class Trajectory(object):
         # This builds the interpolation function on the most up to date data
         if ydim == 1:
             if ycolumn:
-                f = self.interpolator(self.t, self.y.T[0])
+                f = self.interpolate(self.t, self.y.T[0])
             else:
-                f = self.interpolator(self.t, self.y)
+                f = self.interpolate(self.t, self.y)
 
             if t.shape == ():
                 y_val = np.array([f(t)])
@@ -120,14 +120,14 @@ class Trajectory(object):
             y_val = y_val.T
 
         else:
-            f = [self.interpolator(self.t, self.y.T[ii]) for ii in range(ydim)]
+            f = [self.interpolate(self.t, self.y.T[ii]) for ii in range(ydim)]
             y_val = np.array([f[ii](t) for ii in range(ydim)]).T
 
         if qdim == 1:
             if qcolumn:
-                f = self.interpolator(self.t, self.q.T[0])
+                f = self.interpolate(self.t, self.q.T[0])
             else:
-                f = self.interpolator(self.t, self.q)
+                f = self.interpolate(self.t, self.q)
             if t.shape == ():
                 q_val = np.array([f(t)])
             else:
@@ -136,14 +136,14 @@ class Trajectory(object):
             q_val = q_val.T
 
         else:
-            f = [self.interpolator(self.t, self.q.T[ii]) for ii in range(qdim)]
+            f = [self.interpolate(self.t, self.q.T[ii]) for ii in range(qdim)]
             q_val = np.array([f[ii](t) for ii in range(qdim)]).T
 
         if udim == 1:
             if ucolumn:
-                f = self.interpolator(self.t, self.u.T[0])
+                f = self.interpolate(self.t, self.u.T[0])
             else:
-                f = self.interpolator(self.t, self.u)
+                f = self.interpolate(self.t, self.u)
             if t.shape == ():
                 u_val = np.array([f(t)])
             else:
@@ -152,7 +152,7 @@ class Trajectory(object):
             u_val = u_val.T
 
         else:
-            f = [self.interpolator(self.t, self.u.T[ii]) for ii in range(udim)]
+            f = [self.interpolate(self.t, self.u.T[ii]) for ii in range(udim)]
             u_val = np.array([f[ii](t) for ii in range(udim)]).T
 
         return y_val, q_val, u_val
@@ -164,10 +164,10 @@ class Trajectory(object):
         :param func: FunctionComponent for interpolation or a string for SciPy's interp1d(kind=func).
         """
         if callable(func):
-            self.interpolator = func
+            self.interpolate = func
         elif isinstance(func, str):
             func = func.lower()
-            self.interpolator = lambda t, y: scipy.interpolate.interp1d(t, y, kind=func)
+            self.interpolate = lambda t, y: scipy.interpolate.interp1d(t, y, kind=func)
 
     def __getitem__(self, item):
         t_val = np.array([])

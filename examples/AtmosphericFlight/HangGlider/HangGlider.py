@@ -103,7 +103,7 @@ continuation_steps.add_step('bisection') \
 
 # continuation_steps.add_step('bisection') \
 #                 .num_cases(15, 'log') \
-#                 .const('eps', 1e1)
+#                 .k('eps', 1e1)
 
 beluga.add_logger(file_level=logging.INFO, display_level=logging.INFO)
 

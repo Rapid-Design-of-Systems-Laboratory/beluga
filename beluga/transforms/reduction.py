@@ -24,22 +24,22 @@ class MFTransformer(TrajectoryTransformer):
         self.fn_q_inv = fn_q_inv
 
     def transform(self, traj: Trajectory) -> Trajectory:
-        cval = self.fn_p(traj.y[0], traj.dual[0], traj.dynamical_parameters, traj.const)
+        cval = self.fn_p(traj.y[0], traj.lam[0], traj.p, traj.k)
         qval = np.ones_like(traj.t)
 
-        traj.dynamical_parameters = np.hstack((traj.dynamical_parameters, cval))
+        traj.p = np.hstack((traj.p, cval))
         for ii, t in enumerate(traj.t):
-            qval[ii] = self.fn_q(traj.y[ii], traj.dual[ii], traj.dynamical_parameters, traj.const)
+            qval[ii] = self.fn_q(traj.y[ii], traj.lam[ii], traj.p, traj.k)
 
         if self.remove_parameter_dict['location'] == 'states':
             traj.y = np.delete(traj.y, np.s_[self.remove_parameter_dict['index']], axis=1)
         elif self.remove_parameter_dict['location'] == 'costates':
-            traj.dual = np.delete(traj.dual, np.s_[self.remove_parameter_dict['index']], axis=1)
+            traj.lam = np.delete(traj.lam, np.s_[self.remove_parameter_dict['index']], axis=1)
 
         if self.remove_symmetry_dict['location'] == 'states':
             traj.y = np.delete(traj.y, np.s_[self.remove_symmetry_dict['index']], axis=1)
         elif self.remove_symmetry_dict['location'] == 'costates':
-            traj.dual = np.delete(traj.dual, np.s_[self.remove_symmetry_dict['index']], axis=1)
+            traj.lam = np.delete(traj.lam, np.s_[self.remove_symmetry_dict['index']], axis=1)
 
         traj.q = np.column_stack((traj.q, qval))
 
@@ -49,8 +49,8 @@ class MFTransformer(TrajectoryTransformer):
         qinv = np.ones_like(traj.t)
         pinv = np.ones_like(traj.t)
         for ii, t in enumerate(traj.t):
-            qinv[ii] = self.fn_q_inv(traj.y[ii], traj.dual[ii], traj.q[ii], traj.dynamical_parameters, traj.const)
-            pinv[ii] = self.fn_p_inv(traj.y[ii], traj.dual[ii], traj.dynamical_parameters, traj.const)
+            qinv[ii] = self.fn_q_inv(traj.y[ii], traj.lam[ii], traj.q[ii], traj.p, traj.k)
+            pinv[ii] = self.fn_p_inv(traj.y[ii], traj.lam[ii], traj.p, traj.k)
 
         state = pinv
         qval = qinv
@@ -59,21 +59,21 @@ class MFTransformer(TrajectoryTransformer):
                 (traj.y[:, :self.remove_parameter_dict['index']], state,
                  traj.y[:, self.remove_parameter_dict['index']:]))
         elif self.remove_parameter_dict['location'] == 'costates':
-            traj.dual = np.column_stack(
-                (traj.dual[:, :self.remove_parameter_dict['index']], state,
-                 traj.dual[:, self.remove_parameter_dict['index']:]))
+            traj.lam = np.column_stack(
+                (traj.lam[:, :self.remove_parameter_dict['index']], state,
+                 traj.lam[:, self.remove_parameter_dict['index']:]))
 
         if self.remove_symmetry_dict['location'] == 'states':
             traj.y = np.column_stack(
                 (traj.y[:, :self.remove_symmetry_dict['index']], qval,
                  traj.y[:, self.remove_symmetry_dict['index']:]))
         elif self.remove_symmetry_dict['location'] == 'costates':
-            traj.dual = np.column_stack(
-                (traj.dual[:, :self.remove_symmetry_dict['index']], qval,
-                 traj.dual[:, self.remove_symmetry_dict['index']:]))
+            traj.lam = np.column_stack(
+                (traj.lam[:, :self.remove_symmetry_dict['index']], qval,
+                 traj.lam[:, self.remove_symmetry_dict['index']:]))
 
         traj.q = np.delete(traj.q, np.s_[-1], axis=1)
-        traj.dynamical_parameters = traj.dynamical_parameters[:-1]
+        traj.p = traj.p[:-1]
         return traj
 
 

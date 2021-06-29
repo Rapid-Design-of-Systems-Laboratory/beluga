@@ -77,13 +77,13 @@ class ControlConstraintTransformer(TrajectoryTransformer):
     def transform(self, traj: Trajectory) -> Trajectory:
         for idx, (t_i, y_i) in enumerate(zip(traj.t, traj.y)):
             traj.u[idx, self.control_idx] = self.map_func(
-                traj.u[idx, self.control_idx], t_i, y_i, traj.dynamical_parameters, traj.const)
+                traj.u[idx, self.control_idx], t_i, y_i, traj.p, traj.k)
         return traj
 
     def inv_transform(self, traj: Trajectory) -> Trajectory:
         for idx, (t_i, y_i) in enumerate(zip(traj.t, traj.y)):
             traj.u[idx, self.control_idx] = self.inv_map_func(
-                traj.u[idx, self.control_idx], t_i, y_i, traj.dynamical_parameters, traj.const)
+                traj.u[idx, self.control_idx], t_i, y_i, traj.p, traj.k)
         return traj
 
 

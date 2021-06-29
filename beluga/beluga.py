@@ -64,19 +64,19 @@ def solve(autoscale=True, bvp=None, bvp_algorithm=None, guess_generator=None, in
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
     solinit = Trajectory()
-    solinit.const = np.array(getattr_from_list(bvp.constants, 'default_val'))
+    solinit.k = np.array(getattr_from_list(bvp.constants, 'default_val'))
     solinit = guess_generator.generate(bvp.functional_problem, solinit, ocp_transform, ocp_inv_transform)
 
     if initial_helper:
         sol_ocp = copy.deepcopy(solinit)
         sol_ocp = match_constants_to_states(ocp, ocp_inv_transform(sol_ocp))
-        solinit.const = sol_ocp.const
+        solinit.k = sol_ocp.k
 
     if bvp.functional_problem.compute_u is not None:
-        u = np.array([bvp.functional_problem.compute_u(solinit.y[0], solinit.dynamical_parameters, solinit.const)])
+        u = np.array([bvp.functional_problem.compute_u(solinit.y[0], solinit.p, solinit.k)])
         for ii in range(len(solinit.t) - 1):
             u = np.vstack(
-                (u, bvp.functional_problem.compute_u(solinit.y[ii + 1], solinit.dynamical_parameters, solinit.const)))
+                (u, bvp.functional_problem.compute_u(solinit.y[ii + 1], solinit.p, solinit.k)))
         solinit.u = u
 
     """

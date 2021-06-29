@@ -27,7 +27,7 @@ VHARD = [1e-3]
 tol = 1e-3
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t1(const):
     def odefun(y, _, k):
         return y[1], y[0] / k[0]
@@ -45,18 +45,18 @@ def test_t1(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = (np.exp(-sol.t / np.sqrt(sol.const)) - np.exp((sol.t - 2) / np.sqrt(sol.const))) / (
-                1 - np.exp(-2.e0 / np.sqrt(sol.const)))
-    e2 = (1. / (sol.const ** (1 / 2) * np.exp(sol.t / sol.const ** (1 / 2))) + np.exp(
-        (sol.t - 2) / sol.const ** (1 / 2)) / sol.const ** (1 / 2)) / (1 / np.exp(2 / sol.const ** (1 / 2)) - 1)
+    e1 = (np.exp(-sol.t / np.sqrt(sol.k)) - np.exp((sol.t - 2) / np.sqrt(sol.k))) / (
+                1 - np.exp(-2.e0 / np.sqrt(sol.k)))
+    e2 = (1. / (sol.k ** (1 / 2) * np.exp(sol.t / sol.k ** (1 / 2))) + np.exp(
+            (sol.t - 2) / sol.k ** (1 / 2)) / sol.k ** (1 / 2)) / (1 / np.exp(2 / sol.k ** (1 / 2)) - 1)
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", HARD)
+@pytest.mark.parametrize("k", HARD)
 def test_t2(const):
     def odefun(y, _, k):
         return y[1], y[1] / k[0]
@@ -74,16 +74,16 @@ def test_t2(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 1], [0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
-    e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
+    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.k)) / (1.e0 - np.exp(-1.e0 / sol.k))
+    e2 = np.exp((sol.t - 1) / sol.k) / (sol.k * (1 / np.exp(1 / sol.k) - 1))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t3(const):
     def odefun(y, _, k):
         return (2 * y[1], 2 * (-(2 + np.cos(np.pi * y[2])) * y[1] + y[0] - (1 + k[0] * np.pi * np.pi) * np.cos(
@@ -108,7 +108,7 @@ def test_t3(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
@@ -117,7 +117,7 @@ def test_t3(const):
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_t4(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * (((1 + k[0]) * y[0] - y[1]) / k[0]), 2
@@ -135,17 +135,17 @@ def test_t4(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.const[0]) * (1 + sol.y[:, 2]) / sol.const[0]))
-    e2 = np.exp(sol.y[:, 2] - 1) - (sol.const[0] + 1) / (
-            sol.const[0] * np.exp((sol.y[:, 2] + 1) * (sol.const[0] + 1) / sol.const[0]))
+    e1 = np.exp(sol.y[:, 2] - 1) + np.exp(-((1 + sol.k[0]) * (1 + sol.y[:, 2]) / sol.k[0]))
+    e2 = np.exp(sol.y[:, 2] - 1) - (sol.k[0] + 1) / (
+            sol.k[0] * np.exp((sol.y[:, 2] + 1) * (sol.k[0] + 1) / sol.k[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t5(const):
     def odefun(y, _, k):
         return (2 * y[1], 2 * ((y[0] + y[2] * y[1] - (1 + k[0] * np.pi ** 2) * np.cos(np.pi * y[2])
@@ -167,7 +167,7 @@ def test_t5(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
@@ -198,17 +198,17 @@ def test_t6():
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([1])
+    solinit.k = np.array([1])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
-    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
-        np.sqrt(2) / (2 * np.sqrt(sol.const[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    e1 = np.cos(np.pi * sol.y[:, 2]) + erf(sol.y[:, 2] / np.sqrt(2 * sol.k[0])) / erf(1 / np.sqrt(2 * sol.k[0]))
+    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.k[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.k[0])) * erf(
+        np.sqrt(2) / (2 * np.sqrt(sol.k[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t7(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * ((-y[2] * y[1] + y[0] - (1.0e0 + k[0] * np.pi ** 2) * np.cos(np.pi * y[2]) - np.pi *
@@ -231,22 +231,22 @@ def test_t7(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [1, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2]) + sol.y[:, 2] + (
-                sol.y[:, 2] * erf(sol.y[:, 2] / np.sqrt(2.0e0 * sol.const[0]))
-                + np.sqrt(2 * sol.const[0] / np.pi) * np.exp(-sol.y[:, 2] ** 2 / (2 * sol.const[0]))) / (
-                 erf(1.0e0 / np.sqrt(2 * sol.const[0])) + np.sqrt(2.0e0 * sol.const[0] / np.pi)
-                 * np.exp(-1 / (2 * sol.const[0])))
-    e2 = erf((np.sqrt(2) * sol.y[:, 2]) / (2 * np.sqrt(sol.const[0]))) / (
-            erf(np.sqrt(2) / (2 * np.sqrt(sol.const[0]))) + (np.sqrt(2) * np.sqrt(sol.const[0])) / (
-                    np.sqrt(np.pi) * np.exp(1 / (2 * sol.const[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2]) + 1
+                sol.y[:, 2] * erf(sol.y[:, 2] / np.sqrt(2.0e0 * sol.k[0]))
+                + np.sqrt(2 * sol.k[0] / np.pi) * np.exp(-sol.y[:, 2] ** 2 / (2 * sol.k[0]))) / (
+                 erf(1.0e0 / np.sqrt(2 * sol.k[0])) + np.sqrt(2.0e0 * sol.k[0] / np.pi)
+                 * np.exp(-1 / (2 * sol.k[0])))
+    e2 = erf((np.sqrt(2) * sol.y[:, 2]) / (2 * np.sqrt(sol.k[0]))) / (
+            erf(np.sqrt(2) / (2 * np.sqrt(sol.k[0]))) + (np.sqrt(2) * np.sqrt(sol.k[0])) / (
+                    np.sqrt(np.pi) * np.exp(1 / (2 * sol.k[0])))) - np.pi * np.sin(np.pi * sol.y[:, 2]) + 1
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t8(const):
     def odefun(y, _, k):
         return y[1], (-y[1] / k[0]), 1
@@ -264,16 +264,16 @@ def test_t8(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [2, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = (2 - np.exp(-1 / sol.const[0]) - np.exp(-sol.y[:, 2] / sol.const[0])) / (1 - np.exp(-1 / sol.const[0]))
-    e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]) * (1 / np.exp(1 / sol.const[0]) - 1))
+    e1 = (2 - np.exp(-1 / sol.k[0]) - np.exp(-sol.y[:, 2] / sol.k[0])) / (1 - np.exp(-1 / sol.k[0]))
+    e2 = -1 / (sol.k[0] * np.exp(sol.y[:, 2] / sol.k[0]) * (1 / np.exp(1 / sol.k[0]) - 1))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_t9(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * (-(4 * y[2] * y[1] + 2 * y[0]) / (k[0] + y[2] ** 2)), 2
@@ -294,16 +294,16 @@ def test_t9(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1 / (1 + const), 0, -1], [1 / (1 + const), 1, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = 1 / (sol.const[0] + sol.y[:, 2] ** 2)
-    e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.const[0]) ** 2
+    e1 = 1 / (sol.k[0] + sol.y[:, 2] ** 2)
+    e2 = -(2 * sol.y[:, 2]) / (sol.y[:, 2] ** 2 + sol.k[0]) ** 2
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t10(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * (-y[2] * y[1] / k[0]), 2
@@ -321,17 +321,17 @@ def test_t10(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [2, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = 1 + erf(sol.y[:, 2] / np.sqrt(2 * sol.const[0])) / erf(1 / np.sqrt(2 * sol.const[0]))
-    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.const[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.const[0])) * erf(
-        np.sqrt(2) / (2 * np.sqrt(sol.const[0]))))
+    e1 = 1 + erf(sol.y[:, 2] / np.sqrt(2 * sol.k[0])) / erf(1 / np.sqrt(2 * sol.k[0]))
+    e2 = np.sqrt(2) / (np.sqrt(np.pi) * np.sqrt(sol.k[0]) * np.exp(sol.y[:, 2] ** 2 / (2 * sol.k[0])) * erf(
+        np.sqrt(2) / (2 * np.sqrt(sol.k[0]))))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t11(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * ((y[0] - k[0] * np.pi ** 2 * np.cos(np.pi * y[2]) - np.cos(np.pi * y[2])) / k[0]), 2
@@ -351,7 +351,7 @@ def test_t11(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [-1, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
     e1 = np.cos(np.pi * sol.y[:, 2])
@@ -360,7 +360,7 @@ def test_t11(const):
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t12(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * ((y[0] - k[0] * np.pi ** 2 * np.cos(np.pi * y[2]) - np.cos(np.pi * y[2])) / k[0]), 2
@@ -380,16 +380,16 @@ def test_t12(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
-    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 - sol.y[:, 2]) / np.sqrt(sol.k[0]))
+    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.k[0])) / np.sqrt(sol.k[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t13(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * ((y[0] - k[0] * np.pi ** 2 * np.cos(np.pi * y[2]) - np.cos(np.pi * y[2])) / k[0]), 2
@@ -409,16 +409,16 @@ def test_t13(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[-1, 0, -1], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0]))
-    e2 = -np.exp(-(sol.y[:, 2] + 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.k[0]))
+    e2 = -np.exp(-(sol.y[:, 2] + 1) / np.sqrt(sol.k[0])) / np.sqrt(sol.k[0]) - np.pi * np.sin(np.pi * sol.y[:, 2])
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t14(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * ((y[0] - k[0] * np.pi ** 2 * np.cos(np.pi * y[2]) - np.cos(np.pi * y[2])) / k[0]), 2
@@ -438,18 +438,18 @@ def test_t14(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, -1], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.const[0])) + np.exp(
-        -(1 - sol.y[:, 2]) / np.sqrt(sol.const[0]))
-    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.const[0])) / np.sqrt(sol.const[0]) - np.pi * np.sin(
-        np.pi * sol.y[:, 2]) - 1 / (np.sqrt(sol.const[0]) * np.exp((sol.y[:, 2] + 1) / np.sqrt(sol.const[0])))
+    e1 = np.cos(np.pi * sol.y[:, 2]) + np.exp(-(1 + sol.y[:, 2]) / np.sqrt(sol.k[0])) + np.exp(
+        -(1 - sol.y[:, 2]) / np.sqrt(sol.k[0]))
+    e2 = np.exp((sol.y[:, 2] - 1) / np.sqrt(sol.k[0])) / np.sqrt(sol.k[0]) - np.pi * np.sin(
+        np.pi * sol.y[:, 2]) - 1 / (np.sqrt(sol.k[0]) * np.exp((sol.y[:, 2] + 1) / np.sqrt(sol.k[0])))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t15(const):
     def odefun(y, _, k):
         return 2 * y[1], 2 * (y[2] * y[0] / k[0]), 2
@@ -467,12 +467,12 @@ def test_t15(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1, 0, -1], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_t16(const):
     def odefun(y, _, k):
         return 1 * y[1], 1 * (-y[0] * np.pi ** 2 / (4 * k[0])), 1
@@ -490,16 +490,16 @@ def test_t16(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.sin(np.pi * sol.y[:, 2] / (2 * np.sqrt(sol.const[0])))
-    e2 = (np.pi * np.cos((np.pi * sol.y[:, 2]) / (2 * np.sqrt(sol.const[0])))) / (2 * np.sqrt(sol.const[0]))
+    e1 = np.sin(np.pi * sol.y[:, 2] / (2 * np.sqrt(sol.k[0])))
+    e2 = (np.pi * np.cos((np.pi * sol.y[:, 2]) / (2 * np.sqrt(sol.k[0])))) / (2 * np.sqrt(sol.k[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t17(const):
     def odefun(y, _, k):
         return 0.2 * y[1], 0.2 * (-3 * k[0] * y[0] / (k[0] + y[2] ** 2) ** 2), 0.2
@@ -519,16 +519,16 @@ def test_t17(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = sol.y[:, 2]/np.sqrt(sol.const[0] + sol.y[:, 2] ** 2)
-    e2 = 1 / np.sqrt(sol.y[:, 2] ** 2 + sol.const[0]) - sol.y[:, 2] ** 2 / (sol.y[:, 2] ** 2 + sol.const[0]) ** (3 / 2)
+    e1 = sol.y[:, 2]/np.sqrt(sol.k[0] + sol.y[:, 2] ** 2)
+    e2 = 1 / np.sqrt(sol.y[:, 2] ** 2 + sol.k[0]) - sol.y[:, 2] ** 2 / (sol.y[:, 2] ** 2 + sol.k[0]) ** (3 / 2)
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", HARD)
+@pytest.mark.parametrize("k", HARD)
 def test_t18(const):
     def odefun(y, _, k):
         return y[1], (-y[1] / k[0]), 1
@@ -546,16 +546,16 @@ def test_t18(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.exp(-sol.y[:, 2] / sol.const[0])
-    e2 = -1 / (sol.const[0] * np.exp(sol.y[:, 2] / sol.const[0]))
+    e1 = np.exp(-sol.y[:, 2] / sol.k[0])
+    e2 = -1 / (sol.k[0] * np.exp(sol.y[:, 2] / sol.k[0]))
     assert all(e1 - sol.y[:, 0] < tol)
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t19(const):
     def odefun(y, _, k):
         return y[1], (-y[1] / k[0]), 1
@@ -573,17 +573,17 @@ def test_t19(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0], [0, 0, 1]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const * 100, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", HARD)
+@pytest.mark.parametrize("k", HARD)
 def test_t21(const):
     def odefun(y, _, k):
         return y[1], (y[0] * (1 + y[0]) - np.exp(-2 * y[2] / np.sqrt(k[0]))) / k[0], 1
@@ -603,7 +603,7 @@ def test_t21(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0, 0], [0, 0, 1]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
     e1 = np.exp(-sol.y[:, 2] / np.sqrt(const))
@@ -612,7 +612,7 @@ def test_t21(const):
     assert all(e2 - sol.y[:, 1] < tol)
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_t22(const):
     def odefun(y, _, k):
         return y[1], -(y[1] + y[0] * y[0]) / k[0]
@@ -630,13 +630,13 @@ def test_t22(const):
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[0, 0], [0, 0]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_t23(const):
     def odefun(y, _, k):
         return y[1], 1 / k[0] * np.sinh(y[0] / k[0])
@@ -654,17 +654,17 @@ def test_t23(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0], [1, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t24(const):
     def odefun(x, _, k):
         a_mat_x = 1 + x[2] ** 2
@@ -701,17 +701,17 @@ def test_t24(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 1, 0], [0.1, 0.1, 1]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t25(const):
     def odefun(y, _, k):
         return y[1], y[0] * (1 - y[1]) / k[0]
@@ -729,17 +729,17 @@ def test_t25(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-1/3, 1], [1/3, 1]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t26(const):
     def odefun(y, _, k):
         return y[1], y[0] * (1 - y[1]) / k[0]
@@ -757,17 +757,17 @@ def test_t26(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 0], [-1/3, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t27(const):
     def odefun(y, _, k):
         return y[1], y[0] * (1 - y[1]) / k[0]
@@ -785,17 +785,17 @@ def test_t27(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 1], [1/3, 1]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t28(const):
     def odefun(y, _, k):
         return y[1], (y[0] - y[0]*y[1]) / k[0]
@@ -813,17 +813,17 @@ def test_t28(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[1, 0], [3/2, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const * 100, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t29(const):
     def odefun(y, _, k):
         return y[1], (y[0] - y[0]*y[1]) / k[0]
@@ -841,17 +841,17 @@ def test_t29(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0], [3/2, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const * 10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", HARD)
+@pytest.mark.parametrize("k", HARD)
 def test_t30(const):
     def odefun(y, _, k):
         return y[1], (y[0] - y[0]*y[1]) / k[0]
@@ -869,17 +869,17 @@ def test_t30(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-7/6, 0], [3/2, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const * 10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t31(const):
     def odefun(y, _, k):
         return np.sin(y[1]), y[2], -y[3] / k[0], \
@@ -902,13 +902,13 @@ def test_t31(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t32(const):
     def odefun(y, _, k):
         return y[1], y[2], y[3], (y[1]*y[2] - y[0]*y[3]) / k[0]
@@ -927,17 +927,17 @@ def test_t32(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[0, 0, 0, 0], [1, 0, 0, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     cc = np.linspace(const*10, const, 10)
     for c in cc:
         sol = copy.deepcopy(sol)
-        sol.const = np.array([c])
+        sol.k = np.array([c])
         sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", VHARD)
+@pytest.mark.parametrize("k", VHARD)
 def test_t33(const):
     def odefun(y, _, k):
         return y[1], (y[0]*y[3] - y[2]*y[1]) / k[0], y[3], y[4], y[5], (-y[2] * y[5] - y[0] * y[1]) / k[0]
@@ -957,13 +957,13 @@ def test_t33(const):
     sol = Trajectory()
     sol.t = np.linspace(0, 1, 2)
     sol.y = np.array([[-1, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]])
-    sol.const = np.array([const])
+    sol.k = np.array([const])
     sol = algo.solve(sol)['traj']
 
     assert sol.converged
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_r2(const):
     def odefun(y, _, k):
         return y[0] / k[0]
@@ -979,16 +979,16 @@ def test_r2(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
-    e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
+    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.k)) / (1.e0 - np.exp(-1.e0 / sol.k))
+    e2 = np.exp((sol.t - 1) / sol.k) / (sol.k * (1 / np.exp(1 / sol.k) - 1))
     assert all(e1 - sol.q[:, 0] < tol)
     assert all(e2 - sol.y[:, 0] < tol)
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_r8(const):
     def odefun(y, _, k):
         return -y[0] / k[0]
@@ -1004,16 +1004,16 @@ def test_r8(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.const)) / (1.e0 - np.exp(-1.e0 / sol.const))
-    e2 = np.exp((sol.t - 1) / sol.const) / (sol.const * (1 / np.exp(1 / sol.const) - 1))
+    e1 = (1.e0 - np.exp((sol.t - 1.e0) / sol.k)) / (1.e0 - np.exp(-1.e0 / sol.k))
+    e2 = np.exp((sol.t - 1) / sol.k) / (sol.k * (1 / np.exp(1 / sol.k) - 1))
     assert all(e1 - sol.q[:, 0] < tol)
     assert all(e2 - sol.y[:, 0] < tol)
 
 
-@pytest.mark.parametrize("const", MEDIUM)
+@pytest.mark.parametrize("k", MEDIUM)
 def test_r18(const):
     def odefun(y, _, k):
         return -y[0] / k[0]
@@ -1029,11 +1029,11 @@ def test_r18(const):
     solinit.t = np.linspace(0, 1, 2)
     solinit.y = np.array([[1], [1]])
     solinit.q = np.array([[0], [0]])
-    solinit.const = np.array([const])
+    solinit.k = np.array([const])
     sol = algo.solve(solinit)['traj']
 
-    e1 = np.exp(-sol.t / sol.const[0])
-    e2 = -1 / (sol.const[0] * np.exp(sol.t / sol.const[0]))
+    e1 = np.exp(-sol.t / sol.k[0])
+    e2 = -1 / (sol.k[0] * np.exp(sol.t / sol.k[0]))
     assert all(e1 - sol.q[:, 0] < tol)
     assert all(e2 - sol.y[:, 0] < tol)
 
@@ -1052,7 +1052,7 @@ def test_spbvp_1():
     solinit = Trajectory()
     solinit.t = np.linspace(0, 4, 4)
     solinit.y = np.array([[0, 1], [0, 1], [0, 1], [0, 1]])
-    solinit.const = np.array([])
+    solinit.k = np.array([])
     out = algo.solve(solinit)['traj']
     assert out.y[0][0] < tol
     assert out.y[0][1] - 2.06641646 < tol
@@ -1068,18 +1068,18 @@ def test_spbvp_1():
 #     # This is calculating the 4th eigenvalue of Mathieu's Equation
 #     # This problem contains an adjustable parameter.
 #
-#     def odefun(X, p, const):
+#     def odefun(X, p, k):
 #         return (p[0]*X[1], p[0]*(-(p[1] - 2 * 5 * np.cos(2 * X[2])) * X[0]), 0)
 #
-#     def bcfun(X0, q0, Xf, qf, p, ndp, const):
+#     def bcfun(X0, q0, Xf, qf, p, ndp, k):
 #         return (X0[1], Xf[1], X0[0] - 1, X0[2], Xf[2]-np.pi)
 #
 #     algo = spbvp(odefun, None, bcfun)
 #     solinit = Trajectory()
 #     solinit.t = np.linspace(0, np.pi, 30)
 #     solinit.y = np.vstack((np.cos(4 * solinit.t), -4 * np.sin(4 * solinit.t), solinit.t)).T
-#     solinit.dynamical_parameters = np.array([np.pi, 15])
-#     solinit.const = np.array([])
+#     solinit.p = np.array([np.pi, 15])
+#     solinit.k = np.array([])
 #
 #     out = algo.solve(solinit)['traj']
 #     assert abs(out.y[-1][2] - np.pi) < tol
@@ -1087,7 +1087,7 @@ def test_spbvp_1():
 #     assert abs(out.y[0][1]) < tol
 #     assert abs(out.y[-1][0] - 1) < tol
 #     assert abs(out.y[-1][1]) < tol
-#     assert abs(out.dynamical_parameters[0] - 17.098740587333868) < tol
+#     assert abs(out.p[0] - 17.098740587333868) < tol
 
 
 def test_spbvp_3():
@@ -1104,7 +1104,7 @@ def test_spbvp_3():
     solinit = Trajectory()
     solinit.t = np.linspace(0, 1, 4)
     solinit.y = np.array([[0], [0], [0], [0]])
-    solinit.dynamical_parameters = np.array([1])
-    solinit.const = np.array([])
+    solinit.p = np.array([1])
+    solinit.k = np.array([])
     out = algo.solve(solinit)['traj']
-    assert abs(out.dynamical_parameters - 2) < tol
+    assert abs(out.p - 2) < tol

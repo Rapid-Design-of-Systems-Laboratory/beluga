@@ -30,7 +30,7 @@ plt.grid(True)
 
 plt.figure()
 for ind, sol in enumerate(continuation):
-    plt.plot(sol.t, sol.dual[:, 0], linestyle='-', color=(1*(ind/L), 0, 1*(L-ind)/L))
+    plt.plot(sol.t, sol.lam[:, 0], linestyle='-', color=(1 * (ind / L), 0, 1 * (L - ind) / L))
 
 plt.title('$\\lambda_{x1}$ History Plot')
 plt.xlabel('Time [s]')
@@ -39,7 +39,7 @@ plt.grid(True)
 
 plt.figure()
 for ind, sol in enumerate(continuation):
-    plt.plot(sol.t, sol.dual[:, 1], linestyle='-', color=(1*(ind/L), 0, 1*(L-ind)/L))
+    plt.plot(sol.t, sol.lam[:, 1], linestyle='-', color=(1 * (ind / L), 0, 1 * (L - ind) / L))
 
 plt.title('$\\lambda_{x2}$ History Plot')
 plt.xlabel('Time [s]')

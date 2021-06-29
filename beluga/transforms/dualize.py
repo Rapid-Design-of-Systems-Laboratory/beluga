@@ -35,20 +35,20 @@ class DualizeTransformer(TrajectoryTransformer):
         self.compute_cost = compile_cost(prob.cost, _dynamic_args, _bc_args, prob.lambdify)
 
     def transform(self, traj: Trajectory, lam=None, nu=None) -> Trajectory:
-        if len(traj.dual) == 0:
-            traj.dual = self.default_costate_values
+        if len(traj.lam) == 0:
+            traj.lam = self.default_costate_values
 
-        if len(traj.nondynamical_parameters) == 0:
-            traj.nondynamical_parameters = self.default_adjoint_values
+        if len(traj.nu) == 0:
+            traj.nu = self.default_adjoint_values
 
         return traj
 
     def inv_transform(self, traj: Trajectory, retain_dual=True) -> Trajectory:
         if not retain_dual:
-            traj.dual = empty_array
-            traj.nondynamical_parameters = empty_array
+            traj.lam = empty_array
+            traj.nu = empty_array
 
-        traj.cost = self.compute_cost(traj.t, traj.y, traj.q, traj.u, traj.dynamical_parameters, traj.const)
+        traj.cost = self.compute_cost(traj.t, traj.y, traj.q, traj.u, traj.p, traj.k)
 
         return traj
 

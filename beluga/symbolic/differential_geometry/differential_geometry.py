@@ -348,11 +348,11 @@ def noether(prob, quantity):
 #
 #     def gamma_map(gamma, parameter_index=parameter_index, symmetry_index=symmetry_index, fn_q=fn_q, fn_p=fn_p):
 #         gamma = copy.deepcopy(gamma)
-#         cval = fn_p(gamma.y[0], gamma.p, gamma.const)
+#         cval = fn_p(gamma.y[0], gamma.p, gamma.k)
 #         qval = np.ones_like(gamma.t)
 #         gamma.p = np.hstack((gamma.p, cval))
 #         for ii, t in enumerate(gamma.t):
-#             qval[ii] = fn_q(gamma.y[ii], gamma.p, gamma.const)
+#             qval[ii] = fn_q(gamma.y[ii], gamma.p, gamma.k)
 #
 #         if parameter_index > symmetry_index:
 #             gamma.y = np.delete(gamma.y, np.s_[parameter_index], axis=1)
@@ -369,8 +369,8 @@ def noether(prob, quantity):
 #         qinv = np.ones_like(gamma.t)
 #         pinv = np.ones_like(gamma.t)
 #         for ii, t in enumerate(gamma.t):
-#             qinv[ii] = fn_q_inv(gamma.y[ii], gamma.q[ii], gamma.p, gamma.const)
-#             pinv[ii] = fn_p_inv(gamma.y[ii], gamma.p, gamma.const)
+#             qinv[ii] = fn_q_inv(gamma.y[ii], gamma.q[ii], gamma.p, gamma.k)
+#             pinv[ii] = fn_p_inv(gamma.y[ii], gamma.p, gamma.k)
 #         # breakpoint()
 #         cval = gamma.p[-1]
 #         state = np.ones_like(gamma.t)*cval

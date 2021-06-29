@@ -186,7 +186,7 @@ guess_maker_2 = beluga.guess_generator(
     'auto',
     start=[sol.y[0, 0], sol.y[0, 1], 0, sol.y[0, 2], sol.y[0, 3], 0],
     direction='forward',
-    costate_guess=[sol.dual[0, 0], sol.dual[0, 1], -0.01, sol.dual[0, 2], sol.dual[0, 3], -0.01],
+    costate_guess=[sol.lam[0, 0], sol.lam[0, 1], -0.01, sol.lam[0, 2], sol.lam[0, 3], -0.01],
     control_guess=[sol.u[0, 0], 0.0],
     use_control_guess=True,
     time_integrate=sol.t[-1],

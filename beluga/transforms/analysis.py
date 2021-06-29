@@ -29,14 +29,14 @@ class HamiltonianSensitivityCalculator(TrajectoryTransformer):
     def inv_transform(self, traj: Trajectory) -> Trajectory:
         # TODO Vectorize
         traj.aux['dH_dxx'] = \
-            np.array([self.dh_dxx_func(_t, _y, _u, _lam, traj.dynamical_parameters, traj.const)
-                      for _t, _y, _u, _lam, in zip(traj.t, traj.y, traj.u, traj.dual)])
+            np.array([self.dh_dxx_func(_t, _y, _u, _lam, traj.p, traj.k)
+                      for _t, _y, _u, _lam, in zip(traj.t, traj.y, traj.u, traj.lam)])
         traj.aux['dH_dux'] = \
-            np.array([self.dh_dux_func(_t, _y, _u, _lam, traj.dynamical_parameters, traj.const)
-                      for _t, _y,  _u, _lam, in zip(traj.t, traj.y, traj.u, traj.dual)])
+            np.array([self.dh_dux_func(_t, _y, _u, _lam, traj.p, traj.k)
+                      for _t, _y,  _u, _lam, in zip(traj.t, traj.y, traj.u, traj.lam)])
         traj.aux['dH_duu'] = \
-            np.array([self.dh_duu_func(_t, _y, _u, _lam, traj.dynamical_parameters, traj.const)
-                      for _t, _y, _u, _lam, in zip(traj.t, traj.y, traj.u, traj.dual)])
+            np.array([self.dh_duu_func(_t, _y, _u, _lam, traj.p, traj.k)
+                      for _t, _y, _u, _lam, in zip(traj.t, traj.y, traj.u, traj.lam)])
 
         return traj
 

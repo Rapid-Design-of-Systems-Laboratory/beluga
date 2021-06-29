@@ -158,7 +158,7 @@ def reconstruct(quadfun, gamma, q0, *args):
     # gam_len = len(gamma)
     temp_q = np.zeros_like(q0)
 
-    dq = np.array([quadfun(gamma(time)[0], *args) for time in gamma.t])
+    dq = np.array([quadfun(gamma_i[1], *args) for gamma_i in gamma])
 
     # Integrate the quad func using compilation quadrature
     qf_m0 = np.vstack([temp_q] + [simps(dq[:ii+2].T, x=gamma.t[:ii+2]) for ii in range(len(gamma.t)-1)])

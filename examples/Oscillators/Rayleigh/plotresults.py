@@ -27,16 +27,16 @@ plt.figure()
 for ind, sol in enumerate(continuation):
     plt.plot(sol.t, sol.u[:, 0], color=(0, 1*(L-ind)/L, 1*(ind/L)))
 
-plt.plot(traj.t, -traj.y[:,0]/6, color='k', linestyle='--')
-plt.plot(traj.t, -traj.y[:,0]/6 - 1, color='k', linestyle='--')
+plt.plot(traj.t, -traj.y[:, 0]/6, color='k', linestyle='--')
+plt.plot(traj.t, -traj.y[:, 0]/6 - 1, color='k', linestyle='--')
 plt.grid(True)
 plt.xlabel('Time [s]')
 plt.ylabel('Control')
 
 plt.figure()
 for ind, sol in enumerate(continuation):
-    plt.plot(sol.t, sol.dual[:, 0], color=(1*(ind/L), 1*(L-ind)/L, 0), label=r'$\lambda_{y_1}$')
-    plt.plot(sol.t, sol.dual[:, 1], color=(0, 1*(L-ind)/L, 1*(ind/L)), label=r'$\lambda_{y_2}$')
+    plt.plot(sol.t, sol.lam[:, 0], color=(1 * (ind / L), 1 * (L - ind) / L, 0), label=r'$\lambda_{y_1}$')
+    plt.plot(sol.t, sol.lam[:, 1], color=(0, 1 * (L - ind) / L, 1 * (ind / L)), label=r'$\lambda_{y_2}$')
 plt.grid(True)
 plt.xlabel('Time [s]')
 plt.ylabel('Costate Variables')

@@ -7,7 +7,7 @@ from beluga.solvers.ivp_solvers import Propagator
 
 def compute_hamiltonian(y, _, aux, u):
     [_, _, v, lam_x, lam_y, lam_v, _] = y[:7]
-    g = aux['const']['g']
+    g = aux['k']['g']
 
     thetta = u[0]
     return lam_x*v*cos(thetta) + g*lam_v*sin(thetta) + lam_y*v*sin(thetta) + 1
@@ -15,7 +15,7 @@ def compute_hamiltonian(y, _, aux, u):
 
 def compute_control(y, p, aux):
     [_, _, v, lam_x, lam_y, lam_v, _] = y[:7]
-    g = aux['const']['g']
+    g = aux['k']['g']
 
     thetta_saved = float('inf')
     ham_saved = float('inf')
@@ -62,7 +62,7 @@ def compute_control(y, p, aux):
 
 def brachisto_ode(_y, _p, aux):
     [_, _, v, lam_x, lam_y, _, tf] = _y[:7]
-    g = aux['const']['g']
+    g = aux['k']['g']
 
     thetta = compute_control(_y, _p, aux)
     xdot = tf*np.array([v*cos(thetta),
@@ -88,7 +88,7 @@ def test_ode45_2():
     q0 = []
     tspan = np.array([0, 1.0])
     prop = Propagator()
-    aux = {'const': {'g': -9.81}}
+    aux = {'k': {'g': -9.81}}
     solout = prop(brachisto_ode, None, tspan, x0, q0, [], aux)
     x1 = solout.y
 

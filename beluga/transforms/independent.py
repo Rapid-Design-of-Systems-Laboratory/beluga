@@ -13,11 +13,11 @@ class MomentumShiftTransformer(TrajectoryTransformer):
     Class for applying a momentum shift (making the independent variable a state variable) to solutions
     """
     def transform(self, traj: Trajectory) -> Trajectory:
-        if len(traj.dual_t) == 0:
-            traj.dual_t = np.zeros_like(traj.t)
+        if len(traj.lam_t) == 0:
+            traj.lam_t = np.zeros_like(traj.t)
 
         traj.y = np.append(traj.y, traj.t[:, np.newaxis], axis=1)
-        traj.dual = np.append(traj.dual, traj.dual_t[:, np.newaxis], axis=1)
+        traj.lam = np.append(traj.lam, traj.lam_t[:, np.newaxis], axis=1)
 
         return traj
 
@@ -25,8 +25,8 @@ class MomentumShiftTransformer(TrajectoryTransformer):
         traj.t = traj.y[:, -1]
         traj.y = np.delete(traj.y, -1, axis=1)
 
-        traj.dual_t = traj.dual[:, -1]
-        traj.dual = np.delete(traj.dual, -1, axis=1)
+        traj.lam_t = traj.lam[:, -1]
+        traj.lam = np.delete(traj.lam, -1, axis=1)
 
         return traj
 
@@ -71,10 +71,10 @@ class NormalizeIndependentTransformer(TrajectoryTransformer):
     def transform(self, traj: Trajectory) -> Trajectory:
 
         if self.delta_ind_idx is None:
-            self.delta_ind_idx = np.shape(traj.dynamical_parameters)[0]
+            self.delta_ind_idx = np.shape(traj.p)[0]
 
         delta_t = traj.t[-1] - traj.t[0]
-        traj.dynamical_parameters = np.insert(traj.dynamical_parameters, self.delta_ind_idx, delta_t)
+        traj.p = np.insert(traj.p, self.delta_ind_idx, delta_t)
 
         traj.t = (traj.t - traj.t[0]) / delta_t
 
@@ -82,10 +82,10 @@ class NormalizeIndependentTransformer(TrajectoryTransformer):
 
     def inv_transform(self, traj: Trajectory) -> Trajectory:
         if self.delta_ind_idx is None:
-            self.delta_ind_idx = np.shape(traj.dynamical_parameters)[0] - 1
+            self.delta_ind_idx = np.shape(traj.p)[0] - 1
 
-        traj.t = traj.t * traj.dynamical_parameters[self.delta_ind_idx]
-        traj.dynamical_parameters = np.delete(traj.dynamical_parameters, self.delta_ind_idx)
+        traj.t = traj.t * traj.p[self.delta_ind_idx]
+        traj.p = np.delete(traj.p, self.delta_ind_idx)
 
         return traj
 

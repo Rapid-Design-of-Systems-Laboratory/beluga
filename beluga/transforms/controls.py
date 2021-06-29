@@ -64,8 +64,8 @@ class AlgebraicControlTransformer(TrajectoryTransformer):
 
     def inv_transform(self, traj: Trajectory) -> Trajectory:
         # TODO Vectorize
-        traj.u = np.array([self.compute_u(_t, _y, _lam, traj.dynamical_parameters, traj.const) for _t, _y, _lam,
-                           in zip(traj.t, traj.y, traj.dual)])
+        traj.u = np.array([self.compute_u(_t, _y, _lam, traj.p, traj.k) for _t, _y, _lam,
+                           in zip(traj.t, traj.y, traj.lam)])
         return traj
 
 
@@ -123,11 +123,11 @@ class DifferentialControlTransformerDiffyG(TrajectoryTransformer):
             else:
                 costate_insert = control_costate * np.ones_like(sol.t)
 
-            sol.dual = np.insert(sol.dual, -1, costate_insert, axis=1)
-            if len(sol.dual_u) == 0:
-                sol.dual_u = np.array([costate_insert])
+            sol.lam = np.insert(sol.lam, -1, costate_insert, axis=1)
+            if len(sol.lam_u) == 0:
+                sol.lam_u = np.array([costate_insert])
             else:
-                sol.dual_u = np.insert(sol.dual_u, -1, costate_insert, axis=1)
+                sol.lam_u = np.insert(sol.lam_u, -1, costate_insert, axis=1)
 
             idx_u_list.append(idx_u)
 
@@ -137,7 +137,7 @@ class DifferentialControlTransformerDiffyG(TrajectoryTransformer):
     def inv_transform(self, sol: Trajectory) -> Trajectory:
         sol.u = sol.y[:, self.control_idxs]
         sol.y = np.delete(sol.y, self.control_idxs, axis=1)
-        sol.dual = np.delete(sol.dual, self.control_idxs, axis=1)
+        sol.lam = np.delete(sol.lam, self.control_idxs, axis=1)
         return sol
 
 

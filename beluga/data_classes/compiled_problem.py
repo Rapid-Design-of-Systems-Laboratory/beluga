@@ -384,7 +384,7 @@ class CompiledProblem:
 
             ref_vals = tuple(
                 [max_mag(_arr) for _arr in [sol.t, sol.y, sol.q]]
-                + [np.fabs(_arr) for _arr in [sol.dynamical_parameters, sol.nondynamical_parameters, sol.const]])
+                + [np.fabs(_arr) for _arr in [sol.p, sol.nu, sol.k]])
 
             unit_factors = compute_unit_factors(*ref_vals)
 
@@ -404,9 +404,9 @@ class CompiledProblem:
             sol.q = op(sol.q, scale_factors[2])
             if sol.u.size > 0:
                 sol.u = op(sol.u, scale_factors[3])
-            sol.dynamical_parameters = op(sol.dynamical_parameters, scale_factors[4])
-            sol.nondynamical_parameters = op(sol.nondynamical_parameters, scale_factors[5])
-            sol.const = op(sol.const, scale_factors[6])
+            sol.p = op(sol.p, scale_factors[4])
+            sol.nu = op(sol.nu, scale_factors[5])
+            sol.k = op(sol.k, scale_factors[6])
 
             return sol
 

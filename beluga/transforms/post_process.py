@@ -16,15 +16,15 @@ class SquashToBVPTransformer(TrajectoryTransformer):
         self.constraint_adjoints_idxs = constraint_adjoints_idxs
 
     def transform(self, traj: Trajectory) -> Trajectory:
-        if len(traj.dual) > 0:
-            traj.y = np.concatenate((traj.y, traj.dual), axis=1)
+        if len(traj.lam) > 0:
+            traj.y = np.concatenate((traj.y, traj.lam), axis=1)
 
         return traj
 
     def inv_transform(self, traj: Trajectory) -> Trajectory:
-        traj.dual = traj.y[:, self.costate_idxs]
+        traj.lam = traj.y[:, self.costate_idxs]
         traj.y = np.delete(traj.y, self.costate_idxs, axis=1)
-        traj.nondynamical_parameters = np.delete(traj.nondynamical_parameters, self.constraint_adjoints_idxs)
+        traj.nu = np.delete(traj.nu, self.constraint_adjoints_idxs)
 
         return traj
 

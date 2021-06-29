@@ -99,7 +99,7 @@ class ContinuationStrategy(abc.ABC):
             if traj.converged is False:
                 norms.append(9e99)
             else:
-                norms.append(gamma_norm(traj.const, const))
+                norms.append(gamma_norm(traj.k, const))
 
         return np.argmin(norms)
 
@@ -126,7 +126,7 @@ class ContinuationStrategy(abc.ABC):
 
         # Update auxiliary variables using previously calculated step sizes
         total_change = 0.0
-        const0 = copy.deepcopy(self.gammas[-1].const)
+        const0 = copy.deepcopy(self.gammas[-1].k)
         for var_name in self.vars:
             jj = self.constant_names.index(var_name)
             const0[jj] = self.vars[var_name].steps[self.ctr]
@@ -134,7 +134,7 @@ class ContinuationStrategy(abc.ABC):
 
         i = int(self.get_closest_gamma(const0))
         gamma_guess = copy.deepcopy(self.gammas[i])
-        gamma_guess.const = const0
+        gamma_guess.k = const0
         self.ctr += 1
         logger.debug('CHOOSE\ttraj #' + str(i) + ' as guess.')
         return gamma_guess
@@ -193,7 +193,7 @@ class ManualStrategy(ContinuationStrategy):
 
             # Set current value of each continuation variable
             jj = self.constant_names.index(var_name)
-            self.vars[var_name].value = sol.const[jj]
+            self.vars[var_name].value = sol.k[jj]
             # Calculate update steps for continuation process
             if self._spacing == 'linear':
                 self.vars[var_name].steps = np.linspace(self.vars[var_name].value,
@@ -344,7 +344,7 @@ class ProductStrategy(ContinuationStrategy):
         self.num_cases(self.num_subdivisions() ** num_vars)
         for var_name in self.vars.keys():
             jj = getattr_from_list(bvp.constants, 'name').index(var_name)
-            self.vars[var_name].value = sol.const[jj]
+            self.vars[var_name].value = sol.k[jj]
 
         ls_set = [np.linspace(self.vars[var_name].value, self.vars[var_name].target,
                               self._num_subdivisions) for var_name in self.vars.keys()]
@@ -376,9 +376,6 @@ class ProductStrategy(ContinuationStrategy):
 
 
 class SparseProductStrategy(ContinuationStrategy):
-    """
-    Defines the bisection continuation strategy.
-    """
     strategy_name = 'sparse_product'
 
     def __init__(self, num_subdivisions=((1,), (0,)), sol=None):
@@ -435,8 +432,8 @@ class SparseProductStrategy(ContinuationStrategy):
         num_vars = len(self.vars)
         for var_name in self.vars.keys():
             jj = getattr_from_list(bvp.constants, 'name').index(var_name)
-            self.vars[var_name].value = sol.const[jj]
-            lower_bounds.append(sol.const[jj])
+            self.vars[var_name].value = sol.k[jj]
+            lower_bounds.append(sol.k[jj])
             upper_bounds.append(self.vars[var_name].target)
 
         major_num_steps = self._num_subdivisions[0]
@@ -586,9 +583,9 @@ def run_continuation_set(bvp_algorithm_, steps, sol_guess, bvp: SymbolicProblem,
                 ya = sol.y[0, :]
                 yb = sol.y[-1, :]
 
-                dp = sol.dynamical_parameters
-                ndp = sol.nondynamical_parameters
-                k = sol.const
+                dp = sol.p
+                ndp = sol.nu
+                k = sol.k
 
                 if sol.q.size > 0:
                     qa = sol.q[0, :]
