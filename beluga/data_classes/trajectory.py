@@ -3,74 +3,63 @@ import scipy.interpolate
 
 import beluga
 
+EMPTY_ARRAY = np.array([])
 
-class Trajectory(object):
+
+class Trajectory:
     r"""
     Class containing information for a trajectory.
 
     .. math::
         \gamma(t) : I \subset \mathbb{R} \rightarrow B
     """
+    def __init__(self, t=EMPTY_ARRAY, y=EMPTY_ARRAY, q=EMPTY_ARRAY, u=EMPTY_ARRAY, p=EMPTY_ARRAY, k=EMPTY_ARRAY,
+                 lam_t=EMPTY_ARRAY, lam=EMPTY_ARRAY, lam_u=EMPTY_ARRAY, nu=EMPTY_ARRAY, aux=None,
+                 interpolation_type='linear'):
 
-    def __new__(cls, *args, **kwargs):
-        r"""
-        Creates a new Trajectory object.
+        self.t = t
+        self.y = y
+        self.q = q
+        self.u = u
+        self.p = p
+        self.k = k
 
-        :param args: :math:`(t, y, q, u)`
-        :param kwargs: Unused.
-        :return: Trajectory object.
-        """
+        self.lam_t = lam_t
+        self.lam = lam
+        self.lam_u = lam_u
+        self.nu = nu
 
-        obj = super(Trajectory, cls).__new__(cls)
+        self.cost = np.nan
 
-        if len(args) > 0 and isinstance(args[0], Trajectory):
-            return args[0]
+        self.converged = False
 
-        obj.t = np.array([])
-        obj.lam_t = np.array([])
-        obj.y = np.array([])
-        obj.lam = np.array([])
-        obj.q = np.array([])
-        obj.u = np.array([])
-        obj.lam_u = np.array([])
-        obj.p = np.array([])
-        obj.nu = np.array([])
-        obj.k = np.array([])
-        obj.converged = False
-        obj.cost = np.nan
+        if aux is None:
+            self.aux = dict()
+        else:
+            self.aux = aux
 
-        obj.aux = dict()
-
-        interpolation_type = kwargs.get('interpolation_type', 'linear').lower()
-        obj.interpolation_type = interpolation_type
-
-        arg_len = len(args)
-        if arg_len >= 1:
-            obj.t = args[0]
-
-        if arg_len >= 2:
-            obj.y = args[1]
-
-        if arg_len >= 3:
-            obj.q = args[2]
-
-        if arg_len >= 4:
-            obj.u = args[3]
-
-        return obj
-
-    def __init__(self, *args, **kwargs):
+        self.interpolation_type = interpolation_type
         self.interpolator = None
         self.set_interpolate_function(self.interpolation_type)
 
+    def __getitem__(self, item):
+
+        out = []
+        for arr in [self.t, self.y, self.q, self.u]:
+            if len(arr) > 0:
+                out.append(arr[item])
+            else:
+                out.append(EMPTY_ARRAY)
+
+        return tuple(out)
+
+    def __len__(self):
+        if self.t is None:
+            return 0
+        else:
+            return len(self.t)
+
     def interpolate(self, t):
-        r"""
-        Mapping function for a trajectory.
-
-        :param t: Time as :math:`t \in \mathbb{R}`
-        :return: Returns position values :math:`(y, q, u) \in B`
-        """
-
         t = np.array(t, dtype=beluga.DTYPE)
         y_val = np.array([])
         q_val = np.array([])
@@ -168,28 +157,3 @@ class Trajectory(object):
         elif isinstance(func, str):
             func = func.lower()
             self.interpolator = lambda t, y: scipy.interpolate.interp1d(t, y, kind=func)
-
-    def __getitem__(self, item):
-        t_val = np.array([])
-        y_val = np.array([])
-        q_val = np.array([])
-        u_val = np.array([])
-        if len(self.t) > 0:
-            t_val = self.t[item]
-
-        if len(self.y) > 0:
-            y_val = self.y[item]
-
-        if len(self.q) > 0:
-            q_val = self.q[item]
-
-        if len(self.u) > 0:
-            u_val = self.u[item]
-
-        return t_val, y_val, q_val, u_val
-
-    def __len__(self):
-        if self.t is None:
-            return 0
-        else:
-            return len(self.t)

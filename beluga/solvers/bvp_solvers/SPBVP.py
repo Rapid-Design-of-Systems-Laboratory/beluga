@@ -115,7 +115,7 @@ class SPBVP(BaseAlgorithm):
                             max_nodes=self.max_nodes, fun_jac=_fun_jac, bc_jac=_bc_jac)
             comp_time = time.time() - comp_time_0
 
-        sol = Trajectory(solinit)
+        sol = copy.copy(solinit)
         sol.t = opt['x']
         sol.y = opt['y'].T[:, :nstates]
         sol.q = opt['y'].T[:, nstates:nstates+nquads]
