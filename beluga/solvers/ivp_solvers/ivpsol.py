@@ -91,12 +91,12 @@ class Propagator(Algorithm):
                 int_sol = solve_ivp(lambda t, _y: eom_func(_y, *args), [tspan[0], tspan[-1]], y0,
                                     rtol=self.reltol, atol=self.abstol, max_step=self.maxstep, method=self.stepper)
             else:
-                T = np.arange(tspan[0], tspan[-1], self.maxstep)
-                if T[-1] != tspan[-1]:
-                    T = np.hstack((T, tspan[-1]))
+                ti = np.arange(tspan[0], tspan[-1], self.maxstep)
+                if ti[-1] != tspan[-1]:
+                    ti = np.hstack((ti, tspan[-1]))
                 int_sol = solve_ivp(lambda t, _y: eom_func(_y, *args), [tspan[0], tspan[-1]], y0,
-                                    rtol=self.reltol, atol=self.abstol, method=self.stepper, t_eval=T)
-            gamma = Trajectory(int_sol.t, int_sol.y.T)
+                                    rtol=self.reltol, atol=self.abstol, method=self.stepper, t_eval=ti)
+            gamma = Trajectory(t=int_sol.t, y=int_sol.y.T)
 
         elif self.program == 'lie':
             dim = y0.shape[0]
@@ -106,14 +106,14 @@ class Propagator(Algorithm):
             vf = VectorField(y)
             vf.set_equationtype('general')
 
-            def M2g(t, y):
-                vec = y[:-1, -1]
+            def m2g(_, _y):
+                vec = _y[:-1, -1]
                 out = eom_func(vec, *args)
-                g = rn(dim+1)
-                g.set_vector(out)
-                return g
+                _g = rn(dim+1)
+                _g.set_vector(out)
+                return _g
 
-            vf.set_M2g(M2g)
+            vf.set_M2g(m2g)
             if self.method == 'RKMK':
                 ts = RKMK()
             else:

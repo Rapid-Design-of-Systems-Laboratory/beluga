@@ -419,8 +419,6 @@ class Shooting(BaseAlgorithm):
                     ff[:, i+n_odes] = (fxh - fx) / step_size
                     p[i] -= step_size
 
-
-
             phi_dot = np.dot(np.vstack((ff, np.zeros((n_params, n_params + n_odes)))),
                              np.vstack((phi, np.hstack((np.zeros((n_params, n_odes)), np.eye(n_params))))))[:n_odes, :]
             return np.hstack((fx, np.reshape(phi_dot, (n_odes * (n_odes + n_params)))))
@@ -485,10 +483,11 @@ class Shooting(BaseAlgorithm):
         gamma_set = []
         t0 = sol.t[0]
         tf = sol.t[-1]
-        tn = np.linspace(t0, tf, self.num_arcs+1)
+        tn = np.linspace(t0, tf, self.num_arcs + 1)
+        node_data = sol.interpolate(tn)
         for trajectory_number in range(self.num_arcs):
-            y0t, q0t, u0t = sol.interpolate(tn[trajectory_number])
-            yft, qft, uft = sol.interpolate(tn[trajectory_number + 1])
+            y0t, q0t, u0t = tuple(item[trajectory_number] for item in node_data)
+            yft, qft, uft = tuple(item[trajectory_number + 1] for item in node_data)
             t_set = np.hstack((tn[trajectory_number], tn[trajectory_number+1]))
             y_set = np.vstack((y0t, yft))
             q_set = np.vstack((q0t, qft))

@@ -3,7 +3,8 @@ import scipy.interpolate
 
 import beluga
 
-EMPTY_ARRAY = np.array([])
+EMPTY_ARRAY = np.empty((0,))
+EMPTY_ARRAY_2D = np.empty((0, 0))
 
 
 class Trajectory:
@@ -13,8 +14,9 @@ class Trajectory:
     .. math::
         \gamma(t) : I \subset \mathbb{R} \rightarrow B
     """
-    def __init__(self, t=EMPTY_ARRAY, y=EMPTY_ARRAY, q=EMPTY_ARRAY, u=EMPTY_ARRAY, p=EMPTY_ARRAY, k=EMPTY_ARRAY,
-                 lam_t=EMPTY_ARRAY, lam=EMPTY_ARRAY, lam_u=EMPTY_ARRAY, nu=EMPTY_ARRAY, aux=None,
+    def __init__(self,
+                 t=EMPTY_ARRAY, y=EMPTY_ARRAY_2D, q=EMPTY_ARRAY_2D, u=EMPTY_ARRAY_2D, p=EMPTY_ARRAY, k=EMPTY_ARRAY,
+                 lam_t=EMPTY_ARRAY, lam=EMPTY_ARRAY_2D, lam_u=EMPTY_ARRAY_2D, nu=EMPTY_ARRAY, aux=None,
                  interpolation_type='linear'):
 
         self.t = t
@@ -61,88 +63,22 @@ class Trajectory:
 
     def interpolate(self, t):
         t = np.array(t, dtype=beluga.DTYPE)
-        y_val = np.array([])
-        q_val = np.array([])
-        u_val = np.array([])
 
         if len(self.t) == 0:
-            return y_val, q_val, u_val
+            return EMPTY_ARRAY_2D, EMPTY_ARRAY_2D, EMPTY_ARRAY_2D
 
-        ycolumn = False
-        if len(self.y.shape) == 1:
-            ydim = 1
-        else:
-            ycolumn = True
-            ydim = self.y.shape[1]
+        y_dim, q_dim, u_dim = self.y.shape[1], self.q.shape[1], self.u.shape[1]
 
-        qcolumn = False
-        if len(self.q.shape) == 1:
-            if self.q.shape[0] == 0:
-                qdim = 0
-            else:
-                qdim = 1
-        else:
-            qcolumn = True
-            qdim = self.q.shape[1]
+        data_in = np.hstack([item for item in (self.y, self.q, self.u) if item.size > 0])
 
-        ucolumn = False
-        if len(self.u.shape) == 1:
-            if self.u.shape[0] == 0:
-                udim = 0
-            else:
-                udim = 1
-        else:
-            ucolumn = True
-            udim = self.u.shape[1]
+        data_out = self.interpolator(self.t, data_in)(t)
 
-        # This builds the interpolation function on the most up to date data
-        if ydim == 1:
-            if ycolumn:
-                f = self.interpolator(self.t, self.y.T[0])
-            else:
-                f = self.interpolator(self.t, self.y)
+        # if len(data_out.shape) == 1:
+        #     data_out = data_out[np.newaxis, :]
 
-            if t.shape == ():
-                y_val = np.array([f(t)])
-            else:
-                y_val = np.array(f(t))
-            y_val = y_val.T
-
-        else:
-            f = [self.interpolator(self.t, self.y.T[ii]) for ii in range(ydim)]
-            y_val = np.array([f[ii](t) for ii in range(ydim)]).T
-
-        if qdim == 1:
-            if qcolumn:
-                f = self.interpolator(self.t, self.q.T[0])
-            else:
-                f = self.interpolator(self.t, self.q)
-            if t.shape == ():
-                q_val = np.array([f(t)])
-            else:
-                q_val = f(t)
-
-            q_val = q_val.T
-
-        else:
-            f = [self.interpolator(self.t, self.q.T[ii]) for ii in range(qdim)]
-            q_val = np.array([f[ii](t) for ii in range(qdim)]).T
-
-        if udim == 1:
-            if ucolumn:
-                f = self.interpolator(self.t, self.u.T[0])
-            else:
-                f = self.interpolator(self.t, self.u)
-            if t.shape == ():
-                u_val = np.array([f(t)])
-            else:
-                u_val = f(t)
-
-            u_val = u_val.T
-
-        else:
-            f = [self.interpolator(self.t, self.u.T[ii]) for ii in range(udim)]
-            u_val = np.array([f[ii](t) for ii in range(udim)]).T
+        y_val = data_out[..., :y_dim]
+        q_val = data_out[..., y_dim:(y_dim + q_dim)]
+        u_val = data_out[..., (y_dim + q_dim):(y_dim + q_dim + u_dim)]
 
         return y_val, q_val, u_val
 
@@ -156,4 +92,8 @@ class Trajectory:
             self.interpolator = func
         elif isinstance(func, str):
             func = func.lower()
-            self.interpolator = lambda t, y: scipy.interpolate.interp1d(t, y, kind=func)
+
+            def _interpolator(_t, _y):
+                return scipy.interpolate.interp1d(_t, _y, kind=func, axis=0, assume_sorted=True)
+
+            self.interpolator = _interpolator
