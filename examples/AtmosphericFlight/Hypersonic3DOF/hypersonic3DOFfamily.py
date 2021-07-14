@@ -22,13 +22,12 @@ L = '(0.5*{}*v**2*{}*Aref)'.format(rho, Cl)
 r = '(re+h)'
 
 # Define equations of motion
-ocp \
-    .state('h', 'v*sin(gam)', 'm') \
-    .state('theta', 'v*cos(gam)*cos(psi)/({}*cos(phi))'.format(r), 'rad') \
-    .state('phi', 'v*cos(gam)*sin(psi)/{}'.format(r), 'rad') \
-    .state('v', '-{}/mass - mu*sin(gam)/{}**2'.format(D, r), 'm/s') \
-    .state('gam', '{}*cos(bank)/(mass*v) - mu/(v*{}**2)*cos(gam) + v/{}*cos(gam)'.format(L, r, r), 'rad') \
-    .state('psi', '{}*sin(bank)/(mass*cos(gam)*v) - v/{}*cos(gam)*cos(psi)*tan(phi)'.format(L, r), 'rad')
+ocp.state('h', 'v*sin(gam)', 'm')
+ocp.state('theta', 'v*cos(gam)*cos(psi)/({}*cos(phi))'.format(r), 'rad')
+ocp.state('phi', 'v*cos(gam)*sin(psi)/{}'.format(r), 'rad')
+ocp.state('v', '-{}/mass - mu*sin(gam)/{}**2'.format(D, r), 'm/s')
+ocp.state('gam', '{}*cos(bank)/(mass*v) - mu/(v*{}**2)*cos(gam) + v/{}*cos(gam)'.format(L, r, r), 'rad')
+ocp.state('psi', '{}*sin(bank)/(mass*cos(gam)*v) - v/{}*cos(gam)*cos(psi)*tan(phi)'.format(L, r), 'rad')
 
 # Define controls
 ocp.control('alpha', 'rad') \

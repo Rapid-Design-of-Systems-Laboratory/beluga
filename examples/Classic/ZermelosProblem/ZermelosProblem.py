@@ -19,8 +19,8 @@ ocp.custom_function('drift_y', drift_y, 'm', ['m'])
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'V*cos(theta)', 'm')   \
-   .state('y', 'V*sin(theta) + drift_y(x)', 'm')
+ocp.state('x', 'V*cos(theta)', 'm')
+ocp.state('y', 'V*sin(theta) + drift_y(x)', 'm')
 
 # Define controls
 ocp.control('theta', 'rad')

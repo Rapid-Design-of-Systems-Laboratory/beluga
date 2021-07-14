@@ -16,10 +16,10 @@ ocp = beluga.Problem('planar_hypersonic')
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('h', 'v*sin(gam)', 'm')   \
-   .state('theta', 'v*cos(gam)/r', 'rad')  \
-   .state('v', '-D/mass - mu*sin(gam)/r**2', 'm/s') \
-   .state('gam', 'L/(mass*v) + (v/r - mu/(v*r**2))*cos(gam)', 'rad')
+ocp.state('h', 'v*sin(gam)', 'm')
+ocp.state('theta', 'v*cos(gam)/r', 'rad')
+ocp.state('v', '-D/mass - mu*sin(gam)/r**2', 'm/s')
+ocp.state('gam', 'L/(mass*v) + (v/r - mu/(v*r**2))*cos(gam)', 'rad')
 
 ocp.constant_of_motion('c1', 'lamTHETA', 'm**2/(s**2*rad)')
 

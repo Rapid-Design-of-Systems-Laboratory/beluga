@@ -7,11 +7,11 @@ ocp = beluga.Problem()
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'v_x', 'm') \
-   .state('y', 'v_y', 'm') \
-   .state('v_x', 'F/mass*cos(theta) - D/mass*v_x/sqrt(v_x**2 + v_y**2)', 'm/s') \
-   .state('v_y', 'F/mass*sin(theta) - D/mass*v_y/sqrt(v_x**2 + v_y**2) - g', 'm/s') \
-   .state('mass', 'md*eps', 'kg')
+ocp.state('x', 'v_x', 'm')
+ocp.state('y', 'v_y', 'm')
+ocp.state('v_x', 'F/mass*cos(theta) - D/mass*v_x/sqrt(v_x**2 + v_y**2)', 'm/s')
+ocp.state('v_y', 'F/mass*sin(theta) - D/mass*v_y/sqrt(v_x**2 + v_y**2) - g', 'm/s')
+ocp.state('mass', 'md*eps', 'kg')
 
 # Define controls
 ocp.control('theta', 'rad')

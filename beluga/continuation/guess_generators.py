@@ -47,7 +47,7 @@ class GuessGenerator(ABC):
 
 
 class AutoGuessGenerator(GuessGenerator):
-    def __init__(self, start=None, direction='forward', time_integrate=1, quad_guess=0.1, costate_guess=0.1,
+    def __init__(self, start=None, direction='forward', time_integrate=1, quad_guess=np.array([]), costate_guess=0.1,
                  control_guess=0.1, use_control_guess=False, param_guess=None):
 
         super().__init__()

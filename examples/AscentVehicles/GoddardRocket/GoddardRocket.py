@@ -18,9 +18,9 @@ ocp.quantity('drag', '1 * d_c * v**2 * exp(-h_c * (h - h_0) / h_0)')
 ocp.quantity('g', 'g_0 * (h_0 / h)**2')
 
 # Define equations of motion
-ocp.state('h', 'v', 'm') \
-   .state('v', '(thrust - drag)/mass - g', 'm/s') \
-   .state('mass', '-thrust/c', 'kg')
+ocp.state('h', 'v', 'm')
+ocp.state('v', '(thrust - drag)/mass - g', 'm/s')
+ocp.state('mass', '-thrust/c', 'kg')
 
 # Define controls
 ocp.control('thrust', '1')

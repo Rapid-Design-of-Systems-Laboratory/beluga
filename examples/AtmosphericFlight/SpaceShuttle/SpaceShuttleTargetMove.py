@@ -23,12 +23,12 @@ ocp = beluga.Problem()
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('h', 'v*sin(gam)', 'ft') \
-    .state('phi', 'v*cos(gam)*sin(psi)/(r*cos(theta))', 'rad') \
-    .state('theta', 'v*cos(gam)*cos(psi)/r', 'rad') \
-    .state('v', '-D/mass - mu*sin(gam)/r**2', 'ft/s') \
-    .state('gam', 'L*cos(bank)/(mass*v) - mu/(v*r**2)*cos(gam) + v/r*cos(gam)', 'rad') \
-    .state('psi', 'L*sin(bank)/(mass*cos(gam)*v) + v/r*cos(gam)*sin(psi)*tan(theta)', 'rad')
+ocp.state('h', 'v*sin(gam)', 'ft')
+ocp.state('phi', 'v*cos(gam)*sin(psi)/(r*cos(theta))', 'rad')
+ocp.state('theta', 'v*cos(gam)*cos(psi)/r', 'rad')
+ocp.state('v', '-D/mass - mu*sin(gam)/r**2', 'ft/s')
+ocp.state('gam', 'L*cos(bank)/(mass*v) - mu/(v*r**2)*cos(gam) + v/r*cos(gam)', 'rad')
+ocp.state('psi', 'L*sin(bank)/(mass*cos(gam)*v) + v/r*cos(gam)*sin(psi)*tan(theta)', 'rad')
 
 # Define quantities used in the problem
 ocp.quantity('rho', 'rho0*exp(-h/H)')

@@ -14,10 +14,10 @@ ocp = beluga.Problem()
 ocp.independent('t', 's')
 
 # Define equations of motion
-ocp.state('x', 'vx', 'm')   \
-   .state('y', 'vy', 'm')  \
-   .state('vx', '1/mass*(-L*(Vy/vr) - D*(vx/vr))', 'm/s') \
-   .state('vy', '1/mass*(L*(vx/vr) - D*(Vy/vr) - W)', 'm/s')
+ocp.state('x', 'vx', 'm')
+ocp.state('y', 'vy', 'm')
+ocp.state('vx', '1/mass*(-L*(Vy/vr) - D*(vx/vr))', 'm/s')
+ocp.state('vy', '1/mass*(L*(vx/vr) - D*(Vy/vr) - W)', 'm/s')
 
 # Define quantities used in the problem
 ocp.quantity('vr', 'sqrt(vx**2 + Vy**2)')

@@ -7,8 +7,8 @@ ocp = beluga.Problem()
 ocp.independent('t', '1')
 
 # Define equations of motion
-ocp.state('y1', 'y2', 'm') \
-   .state('y2', '-y1 + y2*(gam - p*y2**2) + mc*u', 'm')
+ocp.state('y1', 'y2', 'm')
+ocp.state('y2', '-y1 + y2*(gam - p*y2**2) + mc*u', 'm')
 
 # Define controls
 ocp.control('u', 'm')
