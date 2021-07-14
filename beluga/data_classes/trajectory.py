@@ -70,11 +70,7 @@ class Trajectory:
         y_dim, q_dim, u_dim = self.y.shape[1], self.q.shape[1], self.u.shape[1]
 
         data_in = np.hstack([item for item in (self.y, self.q, self.u) if item.size > 0])
-
         data_out = self.interpolator(self.t, data_in)(t)
-
-        # if len(data_out.shape) == 1:
-        #     data_out = data_out[np.newaxis, :]
 
         y_val = data_out[..., :y_dim]
         q_val = data_out[..., y_dim:(y_dim + q_dim)]

@@ -2,39 +2,32 @@
 import copy
 import logging
 import time
+from abc import ABC, abstractmethod
 
 import numpy as np
 
 import beluga
-from beluga.data_classes import trajectory
+from beluga.data_classes.trajectory import Trajectory
 from beluga.data_classes.problem_components import getattr_from_list
 from beluga.data_classes.symbolic_problem import SymbolicProblem
 from beluga.solvers.ivp_solvers import Propagator
 
 
-def guess_generator(*args, **kwargs):
-    """
-    Helper for creating an initial guess generator.
+def guess_generator(mode, *args, **kwargs):
+    if mode == 'auto':
+        generator_object = AutoGuessGenerator(*args, **kwargs)
+    elif mode == 'static':
+        generator_object = StaticGuessGenerator(*args, **kwargs)
+    elif mode == 'ones':
+        generator_object = OnesGuessGenerator(*args, **kwargs)
+    else:
+        raise NotImplementedError('Guess generator mode {} not implemented.'.format(mode))
 
-    :param method: The method used to generate the initial guess
-    :keywords: Additional keyword arguments passed into the guess generator.
-    :return: An instance of the guess generator.
-    """
-    guess_gen = GuessGenerator()
-    guess_gen.setup(*args, **kwargs)
-    return guess_gen
+    return generator_object
 
 
-class GuessGenerator(object):
-    """Generates the initial guess from a variety of sources."""
-    def __init__(self, **kwargs):
-        self.setup_funcs = {'auto': self.setup_auto,
-                            'static': self.setup_static,
-                            'ones': self.setup_ones}
-        self.generate_funcs = {'auto': self.auto,
-                               'static': self.static,
-                               'ones': self.ones}
-        self.setup(**kwargs)
+class GuessGenerator(ABC):
+    def __init__(self, *args, **kwargs):
         self.dae_num_states = 0
 
         self.mode = 'auto'
@@ -48,32 +41,17 @@ class GuessGenerator(object):
         self.control_guess = None
         self.use_control_guess = False
 
-    def setup(self, mode='auto', **kwargs):
-        """Sets up the initial guess generation process"""
-        self.mode = mode
-        if mode in self.setup_funcs:
-            self.setup_funcs[mode](**kwargs)
-        else:
-            raise ValueError('Invalid initial guess mode specified')
+    @abstractmethod
+    def generate(self, *args, **kwargs) -> Trajectory:
+        return Trajectory()
 
-        return self
 
-    def generate(self, *args):
-        """Generates initial guess data from given settings"""
-        if self.mode in self.generate_funcs:
-            return self.generate_funcs[self.mode](*args)
-        else:
-            raise ValueError('Invalid initial guess mode specified')
+class AutoGuessGenerator(GuessGenerator):
+    def __init__(self, start=None, direction='forward', time_integrate=1, quad_guess=0.1, costate_guess=0.1,
+                 control_guess=0.1, use_control_guess=False, param_guess=None):
 
-    def setup_static(self, solinit=None):
-        self.solinit = solinit
+        super().__init__()
 
-    def static(self, bvp_fn, solinit, ocp_map, ocp_map_inverse):
-        """Directly specify initial guess structure"""
-        return ocp_map(self.solinit)
-
-    def setup_auto(self, start=None, direction='forward', time_integrate=1, quad_guess=np.array([]), costate_guess=0.1,
-                   control_guess=0.1, use_control_guess=False, param_guess=None):
         """Setup automatic initial guess generation"""
 
         if direction in ['forward', 'reverse']:
@@ -93,8 +71,7 @@ class GuessGenerator(object):
         self.control_guess = control_guess
         self.use_control_guess = use_control_guess
 
-    def auto(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
-        """Generates initial guess by forward/reverse integration."""
+    def generate(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None) -> Trajectory:
 
         if self.direction == 'forward':
             tspan = np.array([0, self.time_integrate])
@@ -113,7 +90,7 @@ class GuessGenerator(object):
             d0 = np.r_[self.costate_guess]
 
         if isinstance(self.control_guess, float) or isinstance(self.control_guess, float):
-            u0 = self.control_guess*np.ones(self.dae_num_states)
+            u0 = self.control_guess * np.ones(self.dae_num_states)
         else:
             u0 = self.control_guess
 
@@ -152,9 +129,22 @@ class GuessGenerator(object):
 
         return solout
 
-    def setup_ones(self, start=None, direction='forward', time_integrate=1, quad_guess=np.array([]), costate_guess=0.1,
-                   control_guess=0.1, use_control_guess=False, param_guess=None):
-        """Setup automatic initial guess generation"""
+
+class StaticGuessGenerator(GuessGenerator):
+    def __init__(self, solinit):
+        super(StaticGuessGenerator, self).__init__()
+        self.solinit = solinit
+
+    def generate(self, bvp_fn, solinit, ocp_map, ocp_map_inverse) -> Trajectory:
+        """Directly specify initial guess structure"""
+        return ocp_map(self.solinit)
+
+
+class OnesGuessGenerator(GuessGenerator):
+    def __init__(self, start=None, direction='forward', time_integrate=1, quad_guess=np.array([]), costate_guess=0.1,
+                 control_guess=0.1, use_control_guess=False, param_guess=None):
+
+        super().__init__()
 
         if direction in ['forward', 'reverse']:
             self.direction = direction
@@ -173,7 +163,7 @@ class GuessGenerator(object):
         self.control_guess = control_guess
         self.use_control_guess = use_control_guess
 
-    def ones(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None):
+    def generate(self, bvp_fn, solinit, guess_map, guess_map_inverse, param_guess=None) -> Trajectory:
 
         if self.direction == 'forward':
             tspan = np.array([0, self.time_integrate])
@@ -227,7 +217,7 @@ class GuessGenerator(object):
         return solout
 
 
-def match_constants_to_states(prob: SymbolicProblem, sol: trajectory):
+def match_constants_to_states(prob: SymbolicProblem, sol: Trajectory):
     state_names = getattr_from_list(prob.states + [prob.independent_variable], 'name')
 
     initial_states = np.hstack((sol.y[0, :], sol.t[0]))
