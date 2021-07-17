@@ -64,7 +64,8 @@ def compile_cost(symbolic_cost, dynamic_args, bc_args, lambdify_func=jit_lambdif
             cost = compute_initial_cost(_y[0, :], _q[0, :], _p, _k) \
                    + compute_terminal_cost(_y[-1, :], _q[-1, :], _p, _k)
         else:
-            cost = compute_initial_cost(_y[0, :], _q, _p, _k) + compute_terminal_cost(_y[-1, :], _q, _p, _k)
+            cost = compute_initial_cost(_y[0, :], np.array([]), _p, _k) \
+                   + compute_terminal_cost(_y[-1, :], np.array([]), _p, _k)
 
         path_cost = np.array([compute_path_cost(yi, ui, _p, _k) for yi, ui in zip(_y, _u)])
         cost += simps(path_cost, _t, even='last')

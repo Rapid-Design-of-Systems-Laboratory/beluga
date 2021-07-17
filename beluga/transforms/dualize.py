@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import sympy
 
@@ -14,7 +16,7 @@ empty_array = np.array([])
 
 
 class DualizeTransformer(TrajectoryTransformer):
-    def __init__(self, prob, num_costates, num_adjoints):
+    def __init__(self, ocp, num_costates, num_adjoints):
         super(DualizeTransformer, self).__init__()
         self.num_costates = num_costates
         self.num_adjoints = num_adjoints
@@ -22,17 +24,17 @@ class DualizeTransformer(TrajectoryTransformer):
         self.default_costate_values = -np.ones(num_costates)
         self.default_adjoint_values = np.ones(num_adjoints)
 
-        _state_syms = extract_syms(prob.states)
-        _control_syms = extract_syms(prob.controls)
-        _parameter_syms = extract_syms(prob.parameters)
-        _constant_syms = extract_syms(prob.constants)
-        _quad_syms = extract_syms(prob.quads)
-        _constraint_parameters_syms = extract_syms(prob.constraint_parameters)
+        _state_syms = extract_syms(ocp.states)
+        _control_syms = extract_syms(ocp.controls)
+        _parameter_syms = extract_syms(ocp.parameters)
+        _constant_syms = extract_syms(ocp.constants)
+        _quad_syms = extract_syms(ocp.quads)
+        # _constraint_parameters_syms = extract_syms(ocp.constraint_parameters)
 
         _dynamic_args = [_state_syms, _control_syms, _parameter_syms, _constant_syms]
         _bc_args = [_state_syms, _quad_syms, _parameter_syms, _constant_syms]
 
-        self.compute_cost = compile_cost(prob.cost, _dynamic_args, _bc_args, prob.lambdify)
+        self.compute_cost = compile_cost(ocp.cost, _dynamic_args, _bc_args, ocp.lambdify)
 
     def transform(self, traj: Trajectory, lam=None, nu=None) -> Trajectory:
         if len(traj.lam) == 0:
@@ -55,6 +57,8 @@ class DualizeTransformer(TrajectoryTransformer):
 
 def dualize(prob: SymbolicProblem, method='traditional'):
     # TODO Maybe pull is apart a little more (or not)
+
+    ocp = copy.deepcopy(prob)
 
     for idx, constraint in enumerate(prob.equality_constraints['initial']):
         nu_name = '_nu_0_{}'.format(idx)
@@ -134,7 +138,7 @@ def dualize(prob: SymbolicProblem, method='traditional'):
     prob.dualized = True
     prob.prob_type = 'prob'
 
-    traj_mapper = DualizeTransformer(prob, len(prob.costates), len(prob.constraint_adjoints))
+    traj_mapper = DualizeTransformer(ocp, len(prob.costates), len(prob.constraint_adjoints))
 
     return prob, traj_mapper
 
