@@ -46,6 +46,10 @@ var/
 *.dill
 *.blg
 *.beluga
+examples/**/*.json
+examples/**/*.csv
+examples/**/*.npz
+examples/**/*.mat
 *.pkl
 *.pkl2
 *.mat

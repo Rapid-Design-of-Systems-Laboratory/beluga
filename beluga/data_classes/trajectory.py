@@ -1,3 +1,6 @@
+import time
+from typing import Collection
+
 import numpy as np
 import scipy.interpolate
 
@@ -93,3 +96,62 @@ class Trajectory:
                 return scipy.interpolate.interp1d(_t, _y, kind=func, axis=0, assume_sorted=True)
 
             self.interpolator = _interpolator
+
+    def form_data_dict(self, use_arrays: bool = True, include_aux: bool = True) -> dict:
+        # TODO Maybe automate this instead of hardcoding values
+        items_to_export = ['t', 'y', 'q', 'u', 'p', 'k', 'lam_t', 'lam', 'lam_u', 'nu', 'cost']
+
+        data = dict()
+        for key in items_to_export:
+            val = getattr(self, key)
+
+            if isinstance(val, np.ndarray):
+                if val.size == 0:
+                    continue
+                elif not use_arrays:
+                    val = val.tolist()
+
+            data[key] = val
+
+        if include_aux:
+            if not use_arrays:
+                for key, val in self.aux.items():
+                    if isinstance(val, np.ndarray):
+                        self.aux[key] = val.tolist()
+
+            data['aux'] = self.aux
+
+        return data
+
+    def save(self, file_name: str = None, file_format: str = 'json'):
+        if file_name is None:
+            file_name = time.strftime('sol_%m%d%y%H%m%S')
+
+        if file_format == 'json':
+            import json
+
+            with open(file_name + '.json', 'w') as file:
+                json.dump(self.form_data_dict(use_arrays=False), file, indent=4)
+
+        elif file_format == 'csv':
+            raise NotImplementedError('CSV format not yet implemented.')
+            # import os
+            # import csv
+            #
+            # if not os.path.exists(file_name):
+            #     os.mkdir(file_name)
+            #
+            # for key, data in self.form_data_dict(use_arrays=False, include_aux=False).items():
+            #     with open('{0}/{0}_{1}.csv'.format(file_name, key), 'w') as file:
+            #         csv_writer = csv.writer(file)
+            #         csv_writer.writerows(data)
+
+        elif file_format == 'npz':
+            np.savez(file_name, **self.form_data_dict())
+
+        elif file_format == 'mat':
+            from scipy.io import savemat
+            savemat(file_name + '.mat', self.form_data_dict())
+
+        else:
+            raise NotImplementedError('Export format {} not implemented'.format(file_format))
