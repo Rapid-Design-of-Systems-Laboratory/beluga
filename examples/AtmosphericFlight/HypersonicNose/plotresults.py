@@ -1,8 +1,7 @@
 from beluga.utils import load
 import matplotlib.pyplot as plt
 
-data = load('indirect_data.beluga')
-sol_set = data['solutions']
+sol_set = load('indirect_data.json')
 sol_indirect = sol_set[-1][-1]
 
 # data = load('direct_data.blg')

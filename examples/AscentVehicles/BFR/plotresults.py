@@ -19,8 +19,7 @@ bfr_mass1f = 85e3
 bfr_massflow0 = -615.8468*31
 bfr_massflow1 = -615.8468*7
 
-data = load('data.beluga')
-sol_set = data['solutions']
+sol_set = load('BFR.npz')
 
 sol = sol_set[-1][-1]
 

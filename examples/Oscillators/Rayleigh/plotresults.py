@@ -1,8 +1,7 @@
 from beluga.utils import load
 import matplotlib.pyplot as plt
 
-data = load('data.beluga')
-sol_set = data['solutions']
+sol_set = load('data.json')
 traj = sol_set[-1][-1]
 
 continuation = sol_set[-1]

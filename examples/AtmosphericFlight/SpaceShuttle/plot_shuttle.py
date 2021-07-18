@@ -9,8 +9,7 @@ rcParams['font.family'] = 'serif'
 rcParams['font.size'] = 8
 rcParams['mathtext.fontset'] = 'stix'
 
-data = load('space_shuttle.beluga')
-sol = data['solutions'][-1][-1]
+sol = load('space_shuttle_xi.json')[-1][-1]
 
 t = sol.t
 

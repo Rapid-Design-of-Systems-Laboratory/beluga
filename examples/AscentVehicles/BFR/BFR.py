@@ -100,7 +100,7 @@ guess_maker = beluga.guess_generator(
     use_control_guess=True
 )
 
-beluga.add_logger(file_level=logging.INFO, display_level=logging.DEBUG)
+beluga.add_logger(file_level=logging.INFO, display_level=logging.INFO)
 
 continuation_steps = beluga.init_continuation()
 
@@ -133,4 +133,6 @@ sol_set = beluga.solve(
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=True)
+    autoscale=True,
+    save_sols='BFR.npz'
+)

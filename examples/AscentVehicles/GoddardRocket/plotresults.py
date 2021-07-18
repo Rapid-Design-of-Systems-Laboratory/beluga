@@ -19,8 +19,7 @@ c = 0.5 * sqrt(g_0 * h_0)
 d_c = 0.5 * v_c * m_0 / g_0
 thrust_max = t_c * g_0 * m_0
 
-data = load('data.beluga')
-sol_set = data['solutions']
+sol_set = load('data.json')
 
 sol = sol_set[-1][-1]
 

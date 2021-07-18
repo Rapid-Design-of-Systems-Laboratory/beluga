@@ -1,14 +1,13 @@
 from beluga.utils import load
 import matplotlib.pyplot as plt
 
-data = load('data.beluga')
-sol_set = data['solutions']
+sol_set = load('data.json')
 
 sol = sol_set[-1][-1]
 
 plt.figure()
-plt.plot(sol.t, sol.y[:,0], label='Altitude')
-plt.plot(sol.t, sol.y[:,1], label='Velocity')
+plt.plot(sol.t, sol.y[:, 0], label='Altitude')
+plt.plot(sol.t, sol.y[:, 1], label='Velocity')
 plt.xlabel('Time [s]')
 plt.ylabel('States [nd]')
 plt.title('Moon Lander States')

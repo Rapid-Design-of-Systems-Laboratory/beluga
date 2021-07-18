@@ -14,8 +14,8 @@ from beluga.utils.logging import logger, make_a_splash
 
 
 def solve(autoscale=True, bvp=None, bvp_algorithm=None, guess_generator=None, initial_helper=False,
-          method='traditional', n_cpus=1, ocp=None, ocp_transform=None, ocp_inv_transform=None, optim_options=None,
-          steps=None, save_sols=True):
+          method='traditional', n_cpus=1, ocp=None, ocp_transform=None, ocp_inv_transform=None,
+          ocp_inv_transform_many=None, optim_options=None, steps=None, save_sols=True):
 
     if optim_options is None:
         optim_options = {}
@@ -60,7 +60,7 @@ def solve(autoscale=True, bvp=None, bvp_algorithm=None, guess_generator=None, in
         ocp_inv_transform_many = traj_mapper.inv_transform_many
 
     else:
-        if ocp_transform is None or ocp_inv_transform is None:
+        if ocp_transform is None or ocp_inv_transform is None or ocp_inv_transform_many is None:
             raise ValueError('BVP problem must have an associated \'ocp_map\' and \'ocp_map_inverse\'')
 
     solinit = Trajectory()
@@ -103,8 +103,8 @@ def solve(autoscale=True, bvp=None, bvp_algorithm=None, guess_generator=None, in
         if isinstance(save_sols, str):
             filename = save_sols
         else:
-            filename = 'data.beluga'
+            filename = 'data.json'
 
-        save(out, ocp, bvp, filename=filename)
+        save(out, filename=filename)
 
     return out

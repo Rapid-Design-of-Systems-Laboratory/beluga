@@ -150,5 +150,5 @@ sol_set = beluga.solve(
     guess_generator=guess_maker,
     optim_options={'control_method': 'differential', 'analytical_jacobian': False},
     initial_helper=True,
-    save_sols='space_shuttle.beluga'
+    save_sols='space_shuttle.json'
 )

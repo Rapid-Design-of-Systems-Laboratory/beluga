@@ -10,8 +10,7 @@ rcParams['font.family'] = 'serif'
 rcParams['font.size'] = 12
 rcParams['mathtext.fontset'] = 'stix'
 
-data = load('space_shuttle.beluga')
-sols = data['solutions'][-1]
+sols = load('space_shuttle_xi.json')[-1]
 
 
 fig = plt.figure(figsize=(6.5, 5))

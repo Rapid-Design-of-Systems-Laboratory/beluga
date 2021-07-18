@@ -62,7 +62,7 @@ beluga.solve(ocp=ocp,
              steps=continuation_steps,
              guess_generator=guess_maker,
              autoscale=False,
-             save_sols='indirect_data.beluga')
+             save_sols='indirect_data.json')
 
 # bvp_solver = beluga.bvp_algorithm('Collocation', num_nodes=60)
 

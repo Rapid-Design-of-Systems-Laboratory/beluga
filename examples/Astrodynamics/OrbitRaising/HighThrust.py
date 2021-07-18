@@ -73,7 +73,7 @@ sol_set_collocation = beluga.solve(
     bvp_algorithm=bvp_solver_collocation,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    save_sols='highthrust_collocation_data.beluga',
+    save_sols='highthrust_collocation_data.json',
     optim_options={'control_method': 'algebraic'}
 )
 
@@ -83,6 +83,6 @@ sol_set_shooting = beluga.solve(
     bvp_algorithm=bvp_solver_shooting,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    save_sols='highthrust_shooting_data.beluga',
+    save_sols='highthrust_shooting_data.json',
     optim_options={'control_method': 'algebraic'}
 )

@@ -19,22 +19,22 @@ class Trajectory:
     """
     def __init__(self,
                  t=EMPTY_ARRAY, y=EMPTY_ARRAY_2D, q=EMPTY_ARRAY_2D, u=EMPTY_ARRAY_2D, p=EMPTY_ARRAY, k=EMPTY_ARRAY,
-                 lam_t=EMPTY_ARRAY, lam=EMPTY_ARRAY_2D, lam_u=EMPTY_ARRAY_2D, nu=EMPTY_ARRAY, aux=None,
+                 lam_t=EMPTY_ARRAY, lam=EMPTY_ARRAY_2D, lam_u=EMPTY_ARRAY_2D, nu=EMPTY_ARRAY, cost=np.nan, aux=None,
                  interpolation_type='linear'):
 
-        self.t = t
-        self.y = y
-        self.q = q
-        self.u = u
-        self.p = p
-        self.k = k
+        self.t = np.array(t)
+        self.y = np.array(y)
+        self.q = np.array(q)
+        self.u = np.array(u)
+        self.p = np.array(p)
+        self.k = np.array(k)
 
-        self.lam_t = lam_t
-        self.lam = lam
-        self.lam_u = lam_u
-        self.nu = nu
+        self.lam_t = np.array(lam_t)
+        self.lam = np.array(lam)
+        self.lam_u = np.array(lam_u)
+        self.nu = np.array(nu)
 
-        self.cost = np.nan
+        self.cost = cost
 
         self.converged = False
 

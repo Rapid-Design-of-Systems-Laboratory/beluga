@@ -2,10 +2,8 @@ from beluga.utils import load
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = load('lowthrust_shooting_data.beluga')
-sol_set_shooting = data['solutions']
-data = load('lowthrust_collocation_data.beluga')
-sol_set_collocation = data['solutions']
+sol_set_shooting = load('lowthrust_shooting_data.json')
+sol_set_collocation = load('lowthrust_collocation_data.json')
 
 sol_c = sol_set_collocation[-1][-1]
 sol_s = sol_set_shooting[-1][-1]

@@ -2,8 +2,7 @@ from beluga.utils import load
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = load('space_shuttle.beluga')
-sol_set = data['solutions']
+sol_set = load('space_shuttle.json')
 
 sol = sol_set[-1][-1]
 

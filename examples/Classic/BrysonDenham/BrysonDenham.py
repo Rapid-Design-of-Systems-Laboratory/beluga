@@ -79,4 +79,4 @@ sol_set_indirect = beluga.solve(
     steps=continuation_steps,
     guess_generator=guess_maker_indirect,
     autoscale=False,
-    save_sols='indirect_data.blg')
+    save_sols='indirect_data.json')
