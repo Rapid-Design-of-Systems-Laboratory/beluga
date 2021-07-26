@@ -76,7 +76,7 @@ class AutoGuessGenerator(GuessGenerator):
         if self.direction == 'forward':
             tspan = np.array([0, self.time_integrate])
         elif self.direction == 'reverse':
-            tspan = np.array([0, -self.time_integrate])
+            tspan = np.array([self.time_integrate, 0])
         else:
             tspan = np.array([0, self.time_integrate])
 
@@ -119,6 +119,14 @@ class AutoGuessGenerator(GuessGenerator):
         solivp = prop(bvp_fn.deriv_func, bvp_fn.quad_func, sol.t, sol.y[0], sol.q[0],
                       sol.p, sol.k)
         solout = copy.deepcopy(solivp)
+
+        if self.direction == 'reverse':
+            solout.y = solout.y[::-1, :]
+            solout.q = solout.q[::-1, :]
+            solout.u = solout.u[::-1, :]
+            solout.lam = solout.lam[::-1, :]
+            solout.lam_u = solout.lam_u[::-1, :]
+
         solout.p = sol.p
         solout.nu = sol.nu
         solout.k = sol.k

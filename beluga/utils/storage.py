@@ -21,13 +21,6 @@ def save(sol_set, filename='data.json'):
 
     elif filetype == 'mat':
         raise NotImplementedError
-        # from scipy.io import savemat
-        #
-        # parsed_data = dict()
-        # for idx, cont in enumerate(sol_set):
-        #     parsed_data[idx] = [sol.form_data_dict() for sol in cont]
-        #
-        # savemat(filename + '.mat', parsed_data)
 
     else:
         raise NotImplementedError('File type {} not supported'.format(filetype))
