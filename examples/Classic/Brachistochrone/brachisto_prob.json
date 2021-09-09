@@ -1,0 +1,47 @@
+{
+  "independent": {"name": "t", "units": "s"},
+  "states": [
+    {"name": "x", "eom": "v*cos(theta)", "units": "m"},
+    {"name": "y", "eom": "v*sin(theta)", "units": "m"},
+    {"name": "v", "eom": "-g*sin(theta)", "units": "m/s"}
+  ],
+  "controls": [
+    {"name": "theta", "units": "rad"}
+  ],
+  "constants": [
+    {"name": "g", "default_value": 9.81, "units": "m/s**2"},
+    {"name": "x_f", "default_value": 0, "units": "m"},
+    {"name": "y_f", "default_value": 0, "units": "m"}
+  ],
+  "constraints": {
+    "equality": {
+      "initial": [
+        {"expr": "t", "units": "s"},
+        {"expr": "x", "units": "m"},
+        {"expr": "y", "units": "m"},
+        {"expr": "v", "units": "m/s"}
+      ],
+      "path": [],
+      "terminal": [
+        {"expr": "x - x_f", "units": "m"},
+        {"expr": "y - y_f", "units": "m"}
+      ]
+    },
+    "inequality": {
+      "initial": [],
+      "path": [],
+      "terminal": []
+    }
+  },
+  "cost": {
+    "initial": "0",
+    "path": "1",
+    "terminal": "0",
+    "units": "1"
+  },
+  "units": [
+    {"name": "m", "scale": "y"},
+    {"name": "s", "scale": "y/v"},
+    {"name": "rad", "scale": "1"}
+  ]
+}

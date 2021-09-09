@@ -13,6 +13,9 @@ ocp.state('x', 'v*cos(theta)', 'm')
 ocp.state('y', 'v*sin(theta)', 'm')
 ocp.state('v', 'g*sin(theta)', 'm/s')
 
+ocp.symmetry(['1', '0', '0'], 'm')
+ocp.symmetry(['0', '1', '0'], 'm')
+
 # Define controls
 ocp.control('theta', 'rad')
 
@@ -55,10 +58,11 @@ beluga.add_logger(file_level=logging.DEBUG, display_level=logging.INFO)
 
 sol_set = beluga.solve(
     ocp=ocp,
-    method='traditional',
+    method='diffyg',
+    optim_options={'reduction': True},
     bvp_algorithm=bvp_solver,
     steps=continuation_steps,
     guess_generator=guess_maker,
-    autoscale=True,
+    autoscale=False,
     initial_helper=True
 )
