@@ -57,10 +57,13 @@ class InputOCP:
     def add_constant(self, name, default_value, units):
         pass
 
-    def set_cost(self, initial, path, terminal, units):
-        pass
-
     def add_constraint(self, location, expr, u):
         pass
 
-    
+    def set_cost(self, initial, path, terminal):
+        pass
+
+    def add_unit(self, name, scale_expr):
+        pass
+
+
