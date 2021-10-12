@@ -1,6 +1,5 @@
 import time
-
-from logging import Logger, INFO
+from typing import Union, Callable
 
 
 class Timer:
@@ -20,15 +19,12 @@ class Timer:
     end_time = None
     total_time = None
 
-    def __init__(self, logger: Logger = None, logging_level: int = INFO, log_prefix: str = 'Run Time: '):
+    def __init__(self, logging_func: Union[Callable, None] = None, log_prefix: str = 'Run Time: '):
         """
-
-        :param logger: logger to log to (None will use print() instead
-        :param logging_level: level for logging
+        :param logging_func: function to call to display elapsed time (ex. print, logging.info, logger.debug)
         :param log_prefix: string to prefix log message
         """
-        self.logger = logger
-        self.logging_level = logging_level
+        self.logging_func = logging_func
         self.log_prefix = log_prefix
 
     def __enter__(self):
@@ -65,11 +61,9 @@ class Timer:
         Log or print elapsed time
         :return:
         """
-        log_string = self.log_prefix + self.form_log_string()
-        if self.logger is None:
-            print(log_string)
-        else:
-            self.logger.log(self.logging_level, log_string)
+        if self.logging_func is not None:
+            log_string = self.log_prefix + self.form_log_string()
+            self.logging_func(log_string)
 
 
 class PerfTimer(Timer):
@@ -100,7 +94,7 @@ class TimerNS(Timer):
         Method to format string to display elapsed time in seconds and nanoseconds
         :return:
         """
-        return '{:.6g} seconds ({} ns)'.format(self.total_time * 10**-9, self.total_time)
+        return '{:.6g} seconds ({} ns)'.format(self.total_time * 1e-9, self.total_time)
 
 
 class PerfTimerNS(TimerNS):
