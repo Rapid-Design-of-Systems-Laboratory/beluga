@@ -22,7 +22,7 @@ def compile_control(control_options, args, ham_func, lambdify_func=jit_lambdify)
         compiled_options = lambdify_func(args, control_options)
 
         def calc_u(_y, _p, _k):
-            u_set = np.reshape(compiled_options(_y, _p, _k), (num_options, -1))
+            u_set = np.reshape(np.array(compiled_options(_y, _p, _k)), (num_options, -1))
 
             u = u_set[0, :]
             ham = ham_func(_y, u, _p, _k)
