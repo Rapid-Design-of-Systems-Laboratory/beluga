@@ -204,7 +204,7 @@ class AlgebraicControlMapper(SolMapper):
             ham_func = prob.lambdify(_args_w_control, prob.hamiltonian.expr)
 
             def calc_u(_t, _y, _lam, _p, _k):
-                u_set = np.array(compiled_options(_t, _y, _lam, _p, _k))
+                u_set = np.reshape(np.array(compiled_options(_t, _y, _lam, _p, _k)), (num_options, -1))
 
                 u = u_set[0, :]
                 ham = ham_func(_t, _y, _lam, u, _p, _k)
