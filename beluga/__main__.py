@@ -53,7 +53,7 @@ Example:
 
 Help:
   For help using this tool, please open an issue on the Github repository:
-  https://github.rcac.purdue.edu/RDSL/beluga
+  https://github.com/Rapid-Design-of-Systems-Laboratory/beluga
 
 """
 import os

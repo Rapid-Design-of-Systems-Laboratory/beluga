@@ -1,14 +1,7 @@
 import beluga
 import numpy as np
-from scipy.integrate import solve_ivp, simps
+from scipy.integrate import solve_ivp, simpson
 import copy
-
-from liepack.flow import RKMK, Flow
-from liepack.domain.hspaces import HManifold
-from liepack.domain.liegroups import RN
-from liepack.domain.liealgebras import rn
-from liepack import exp
-from liepack.field import VectorField
 
 from beluga.numeric.data_classes.Trajectory import Trajectory
 
@@ -98,32 +91,6 @@ class Propagator(Algorithm):
                                     rtol=self.reltol, atol=self.abstol, method=self.stepper, t_eval=T)
             gamma = Trajectory(int_sol.t, int_sol.y.T)
 
-        elif self.program == 'lie':
-            dim = y0.shape[0]
-            g = rn(dim+1)
-            g.set_vector(y0)
-            y = HManifold(RN(dim+1, exp(g)))
-            vf = VectorField(y)
-            vf.set_equationtype('general')
-
-            def M2g(t, y):
-                vec = y[:-1, -1]
-                out = eom_func(vec, *args)
-                g = rn(dim+1)
-                g.set_vector(out)
-                return g
-
-            vf.set_M2g(M2g)
-            if self.method == 'RKMK':
-                ts = RKMK()
-            else:
-                raise NotImplementedError
-
-            ts.setmethod(self.stepper)
-            f = Flow(ts, vf, variablestep=self.variable_step)
-            ti, yi = f(y, tspan[0], tspan[-1], self.maxstep)
-            gamma = Trajectory(ti, np.vstack([_[:-1, -1] for _ in yi]))  # Hardcoded assuming RN
-
         else:
             raise NotImplementedError
 
@@ -161,7 +128,7 @@ def reconstruct(quadfun, gamma, q0, *args):
     dq = np.array([quadfun(gamma(time)[0], *args) for time in gamma.t])
 
     # Integrate the quad func using numeric quadrature
-    qf_m0 = np.vstack([temp_q] + [simps(dq[:ii+2].T, x=gamma.t[:ii+2]) for ii in range(len(gamma.t)-1)])
+    qf_m0 = np.vstack([temp_q] + [simpson(dq[:ii+2].T, x=gamma.t[:ii+2]) for ii in range(len(gamma.t)-1)])
 
     # Add the initial state to get the final state.
     if len(q0) == 0:
@@ -215,7 +182,7 @@ def integrate_quads(quadfun, tspan, gamma, *args):
     dq = np.array([quadfun(time, gamma(time)[0], *args) for time in t_interp])
 
     # Integrate the quad func using numeric quadrature
-    qf_m0 = simps(dq.T, x=t_interp)
+    qf_m0 = simpson(dq.T, x=t_interp)
 
     # Add the initial state to get the final state.
     if len(q0) == 0:

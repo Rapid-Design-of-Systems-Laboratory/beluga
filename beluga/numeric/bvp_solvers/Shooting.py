@@ -11,7 +11,7 @@ from beluga.numeric.data_classes.Trajectory import Trajectory
 from beluga.utils.logging import logger
 from scipy.sparse import coo_matrix, csc_matrix
 from scipy.sparse.linalg import splu
-from scipy.optimize.slsqp import approx_jacobian
+from scipy.optimize._slsqp_py import approx_jacobian # TODO: Technically a non public function from scipy. Remove reliance on it.
 from scipy.optimize import minimize, root, fsolve
 
 scipy_minimize_algorithms = {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',

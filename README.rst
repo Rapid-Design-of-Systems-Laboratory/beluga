@@ -1,6 +1,8 @@
 beluga
 ======
 
+This project is unmaintained.
+
 .. image:: https://cdn.jsdelivr.net/gh/Rapid-Design-of-Systems-Laboratory/beluga@master/rdsl.png
     :align: right
 

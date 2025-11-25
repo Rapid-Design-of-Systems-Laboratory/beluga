@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.integrate import simps
+from scipy.integrate import simpson
 
 from beluga.numeric.compilation import jit_lambdify, jit_compile_func
 from beluga.symbolic.data_classes.components_structures import CostStruct
@@ -52,7 +52,7 @@ def compile_cost(symbolic_cost: CostStruct, dynamic_args, bc_args, lambdify_func
             cost = compute_initial_cost(_y[0, :], _q, _p, _k) + compute_terminal_cost(_y[-1, :], _q, _p, _k)
 
         path_cost = np.array([compute_path_cost(yi, ui, _p, _k) for yi, ui in zip(_y, _u)])
-        cost += simps(path_cost, _t, even='last')
+        cost += simpson(path_cost, _t)
 
         return cost
 
